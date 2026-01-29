@@ -111,8 +111,9 @@ const DEFAULT_SETTINGS = {
     // Links to include
     links: {
       website: true,
+      pitchVideo: true,
       deck: true,
-      pitchVideo: true
+      article: true
     }
   }
 };
