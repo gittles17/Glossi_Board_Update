@@ -329,11 +329,16 @@
           </div>
         </div>
         <div class="settings-section">
-          <h3>Audio Transcription</h3>
-          <p class="settings-description">OpenAI Whisper for transcribing audio files.</p>
+          <h3>Audio Transcription (OpenAI)</h3>
+          <p class="settings-description">Enter your OpenAI API key for Whisper audio transcription.</p>
+          <div class="input-group">
+            <label for="openai-api-key">OpenAI API Key</label>
+            <input type="password" id="openai-api-key" class="input" placeholder="sk-proj-...">
+            <button class="btn btn-secondary btn-sm" id="toggle-openai-key">Show</button>
+          </div>
           <div class="api-status" id="openai-status">
-            <span class="status-indicator connected"></span>
-            <span class="status-text">Connected (pre-configured)</span>
+            <span class="status-indicator"></span>
+            <span class="status-text">Not configured</span>
           </div>
         </div>
         <div class="settings-section">

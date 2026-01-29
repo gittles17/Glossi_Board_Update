@@ -504,6 +504,17 @@ class GlossiDashboard {
       }
     });
 
+    document.getElementById('toggle-openai-key').addEventListener('click', (e) => {
+      const input = document.getElementById('openai-api-key');
+      if (input.type === 'password') {
+        input.type = 'text';
+        e.target.textContent = 'Hide';
+      } else {
+        input.type = 'password';
+        e.target.textContent = 'Show';
+      }
+    });
+
     document.getElementById('settings-save').addEventListener('click', () => {
       this.saveSettings();
     });
@@ -1808,6 +1819,7 @@ class GlossiDashboard {
    */
   async saveSettings() {
     const apiKey = document.getElementById('api-key').value.trim();
+    const openaiApiKey = document.getElementById('openai-api-key').value.trim();
     
     // Get section order from DOM
     const container = document.getElementById('email-sections-sortable');
@@ -1838,8 +1850,9 @@ class GlossiDashboard {
     };
     
     // Update storage and local settings
-    this.settings = storage.updateSettings({ apiKey, email: emailSettings });
+    this.settings = storage.updateSettings({ apiKey, openaiApiKey, email: emailSettings });
     aiProcessor.setApiKey(apiKey);
+    OPENAI_API_KEY = openaiApiKey || null;
 
     // Close modal first
     this.hideModal('settings-modal');
@@ -1877,6 +1890,21 @@ class GlossiDashboard {
     } else {
       statusEl.classList.remove('connected');
       statusEl.querySelector('.status-text').textContent = 'Not configured';
+    }
+
+    // OpenAI API key status
+    const openaiStatusEl = document.getElementById('openai-status');
+    const openaiApiKey = document.getElementById('openai-api-key');
+    
+    openaiApiKey.value = this.settings.openaiApiKey || '';
+    OPENAI_API_KEY = this.settings.openaiApiKey || null;
+
+    if (this.settings.openaiApiKey) {
+      openaiStatusEl.classList.add('connected');
+      openaiStatusEl.querySelector('.status-text').textContent = 'Connected';
+    } else {
+      openaiStatusEl.classList.remove('connected');
+      openaiStatusEl.querySelector('.status-text').textContent = 'Not configured';
     }
 
     // Populate email settings
