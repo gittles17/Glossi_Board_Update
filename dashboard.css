@@ -844,20 +844,20 @@ body::after {
 }
 
 .add-link-btn {
-  margin-top: var(--space-2);
-  font-size: 12px;
-  padding: var(--space-2) var(--space-3);
-  color: var(--text-muted);
-  border: 1px dashed var(--border-color);
-  border-radius: var(--radius-md);
-  background: transparent;
-  transition: all var(--duration-fast);
+  padding: 6px 10px !important;
+  color: var(--text-muted) !important;
+  border: 1px dashed var(--border-color) !important;
+  background: transparent !important;
 }
 
 .add-link-btn:hover {
-  color: var(--text-secondary);
-  border-color: var(--border-color-light);
-  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-secondary) !important;
+  border-color: var(--border-color-light) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+#quick-links-container {
+  display: contents;
 }
 
 /* Color Picker */
