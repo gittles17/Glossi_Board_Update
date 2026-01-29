@@ -1,39 +1,36 @@
 /**
- * Glossi Board Dashboard - Premium Edition
- * Apple/Peloton-level visual design with Auris Design System
+ * Glossi Board Dashboard
+ * Built with Auris Design System
  */
 
 /* ============================================
-   CSS CUSTOM PROPERTIES
+   CSS CUSTOM PROPERTIES - AURIS DESIGN TOKENS
    ============================================ */
 :root {
-  /* Backgrounds - Auris Design System */
+  /* Backgrounds - Auris (blue-tinted dark) */
   --bg-primary: #0a0d12;
   --bg-secondary: #090b0f;
-  --bg-card: #0d1117;
-  --bg-card-hover: #131921;
-  --bg-elevated: #111720;
-  --bg-glass: rgba(13, 17, 23, 0.8);
-  --bg-glass-hover: rgba(19, 25, 33, 0.85);
+  --bg-card: #08090d;
+  --bg-card-hover: #0c0e14;
+  --bg-elevated: #0c0e14;
+  --bg-surface: #090b0f;
 
-  /* Borders */
-  --border-color: rgba(255, 255, 255, 0.06);
-  --border-color-light: rgba(255, 255, 255, 0.1);
-  --border-color-focus: rgba(122, 174, 212, 0.4);
+  /* Borders - Auris */
+  --border-color: #262626;
+  --border-color-light: #333333;
+  --border-subtle: #1a1a1a;
 
-  /* Text */
+  /* Text - Auris */
   --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --text-muted: rgba(255, 255, 255, 0.4);
-  --text-dim: rgba(255, 255, 255, 0.25);
+  --text-secondary: #a3a3a3;
+  --text-muted: #737373;
+  --text-dim: #525252;
 
   /* Accents - Auris Palette */
   --accent-green: #5BB09A;
   --accent-green-dim: rgba(91, 176, 154, 0.15);
-  --accent-green-glow: rgba(91, 176, 154, 0.25);
   --accent-blue: #7AAED4;
   --accent-blue-dim: rgba(122, 174, 212, 0.15);
-  --accent-blue-glow: rgba(122, 174, 212, 0.25);
   --accent-purple: #9A85C9;
   --accent-purple-dim: rgba(154, 133, 201, 0.15);
   --accent-orange: #E09055;
@@ -41,11 +38,11 @@
   --accent-red: #D4918A;
   --accent-red-dim: rgba(212, 145, 138, 0.15);
 
-  /* Typography */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  /* Typography - Auris */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Monaco', monospace;
 
-  /* Spacing - 8px grid */
+  /* Spacing - Auris */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -61,33 +58,32 @@
   --nav-height: 64px;
   --panel-gap: 24px;
 
-  /* Border Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  /* Border Radius - Auris */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
   --radius-full: 9999px;
 
-  /* Shadows - Premium layered */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.25);
-  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.3);
-  --shadow-glow-green: 0 0 40px rgba(91, 176, 154, 0.15);
-  --shadow-glow-blue: 0 0 40px rgba(122, 174, 212, 0.15);
+  /* Shadows - Auris (simple, dark) */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.7);
+  --shadow-focus-blue: 0 0 0 3px rgba(122, 174, 212, 0.15);
+  --shadow-focus-green: 0 0 0 3px rgba(91, 176, 154, 0.15);
 
-  /* Animations - Spring-based */
+  /* Transitions - Auris */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Duration scale */
-  --duration-fast: 150ms;
-  --duration-normal: 250ms;
-  --duration-slow: 400ms;
-  --duration-slower: 600ms;
+  /* Duration */
+  --duration-fast: 100ms;
+  --duration-normal: 150ms;
+  --duration-slow: 200ms;
+  --duration-slower: 400ms;
 }
 
 /* ============================================
@@ -116,41 +112,27 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   overflow: hidden;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
-/* Subtle animated gradient background */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: 
-    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(91, 176, 154, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(122, 174, 212, 0.06) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Noise texture overlay */
+/* Subtle noise texture - Auris style */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
-  opacity: 0.025;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  background-size: 200px 200px;
+  opacity: 0.10;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='2' intercept='-0.5'/%3E%3CfeFuncG type='linear' slope='2' intercept='-0.5'/%3E%3CfeFuncB type='linear' slope='2.2' intercept='-0.4'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 350px 350px;
   z-index: 10000;
 }
 
 /* ============================================
-   TOP NAVIGATION - Frosted Glass
+   TOP NAVIGATION
    ============================================ */
 .top-nav {
   height: var(--nav-height);
-  background: var(--bg-glass);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -288,11 +270,10 @@ body::after {
   top: calc(100% + 8px);
   right: 0;
   min-width: 240px;
-  background: linear-gradient(180deg, rgba(22, 27, 34, 0.98) 0%, rgba(13, 17, 23, 0.98) 100%);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
   opacity: 0;
   visibility: hidden;
   transform: translateY(-8px) scale(0.95);
@@ -636,19 +617,17 @@ body::after {
 }
 
 /* ============================================
-   PANELS - Premium Glass Cards
+   PANELS - Auris Cards
    ============================================ */
 .panel {
-  background: var(--bg-glass);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  transition: all var(--duration-slow) var(--ease-out-expo);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--duration-normal) ease;
 }
 
 .panel:hover {
@@ -1889,9 +1868,7 @@ body::after {
   left: 50%;
   transform: translateX(-50%) scale(0.95);
   width: 440px;
-  background: var(--bg-glass);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  background: var(--bg-card);
   border: 2px dashed var(--border-color-light);
   border-radius: var(--radius-xl);
   padding: var(--space-10);
@@ -2003,9 +1980,7 @@ body::after {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
