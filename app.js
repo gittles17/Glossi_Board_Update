@@ -17,6 +17,7 @@ class GlossiDashboard {
     this.pendingReview = null;
     this.animationObserver = null;
     this.editingTalkingPointIndex = null;
+    this.editingLinkId = null;
     
     // Name aliases for display
     this.nameAliases = {
@@ -584,6 +585,35 @@ class GlossiDashboard {
       this.saveTalkingPoint();
     });
 
+    // Link modal
+    document.getElementById('add-link-btn').addEventListener('click', () => {
+      this.openAddLink();
+    });
+
+    document.getElementById('link-modal-close').addEventListener('click', () => {
+      this.hideModal('link-modal');
+    });
+
+    document.getElementById('link-cancel').addEventListener('click', () => {
+      this.hideModal('link-modal');
+    });
+
+    document.getElementById('link-save').addEventListener('click', () => {
+      this.saveLink();
+    });
+
+    document.getElementById('link-delete').addEventListener('click', () => {
+      this.deleteLink();
+    });
+
+    // Color picker
+    document.querySelectorAll('.color-option').forEach(option => {
+      option.addEventListener('click', () => {
+        document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+        option.classList.add('selected');
+      });
+    });
+
     // Review modal
     document.getElementById('modal-close').addEventListener('click', () => {
       this.hideModal('review-modal');
@@ -637,6 +667,7 @@ class GlossiDashboard {
     this.renderStats();
     this.renderPipeline();
     this.renderTalkingPoints();
+    this.renderQuickLinks();
     this.renderMeetingSelector();
     
     const currentMeeting = meetingsManager.getCurrentMeeting();
@@ -760,6 +791,170 @@ class GlossiDashboard {
   }
 
   /**
+   * Render quick links dynamically
+   */
+  renderQuickLinks() {
+    const container = document.getElementById('quick-links-container');
+    const links = storage.getQuickLinks();
+
+    const iconMap = {
+      globe: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="2" y1="12" x2="22" y2="12"></line>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+      </svg>`,
+      video: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+      </svg>`,
+      document: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+      </svg>`,
+      book: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+      </svg>`,
+      link: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+      </svg>`
+    };
+
+    // Map old color names to CSS classes
+    const colorClassMap = {
+      'default': '',
+      'red': 'video',
+      'blue': 'deck',
+      'purple': 'article',
+      'green': 'green',
+      'orange': 'orange'
+    };
+
+    container.innerHTML = links.map(link => {
+      const icon = iconMap[link.icon] || iconMap.link;
+      const colorClass = colorClassMap[link.color] || link.color || '';
+      return `
+        <a href="${link.url}" target="_blank" class="quick-link ${colorClass}" data-link-id="${link.id}" onclick="event.preventDefault(); if(event.shiftKey) { window.dashboard.editLink('${link.id}'); } else { window.open('${link.url}', '_blank'); }">
+          ${icon}
+          <span>${link.name}</span>
+        </a>
+      `;
+    }).join('');
+  }
+
+  /**
+   * Open add link modal
+   */
+  openAddLink() {
+    this.editingLinkId = null;
+    document.getElementById('link-modal-title').textContent = 'Add Link';
+    document.getElementById('link-name').value = '';
+    document.getElementById('link-url').value = '';
+    document.getElementById('link-email-label').value = '';
+    document.getElementById('link-email-enabled').checked = true;
+    document.getElementById('link-delete').style.display = 'none';
+    
+    // Reset color picker
+    document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+    document.querySelector('.color-option.default').classList.add('selected');
+    
+    this.showModal('link-modal');
+  }
+
+  /**
+   * Edit a link
+   */
+  editLink(id) {
+    const links = storage.getQuickLinks();
+    const link = links.find(l => l.id === id);
+    if (!link) return;
+
+    this.editingLinkId = id;
+    document.getElementById('link-modal-title').textContent = 'Edit Link';
+    document.getElementById('link-name').value = link.name;
+    document.getElementById('link-url').value = link.url;
+    document.getElementById('link-email-label').value = link.emailLabel || '';
+    document.getElementById('link-email-enabled').checked = link.emailEnabled !== false;
+    document.getElementById('link-delete').style.display = 'block';
+    
+    // Set color picker
+    document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+    const colorOption = document.querySelector(`.color-option.${link.color || 'default'}`);
+    if (colorOption) colorOption.classList.add('selected');
+    
+    this.showModal('link-modal');
+  }
+
+  /**
+   * Save link
+   */
+  saveLink() {
+    const name = document.getElementById('link-name').value.trim();
+    const url = document.getElementById('link-url').value.trim();
+    const emailLabel = document.getElementById('link-email-label').value.trim();
+    const emailEnabled = document.getElementById('link-email-enabled').checked;
+    const selectedColor = document.querySelector('.color-option.selected');
+    const color = selectedColor ? selectedColor.dataset.color : 'default';
+
+    if (!name || !url) {
+      this.showToast('Please enter a name and URL', 'error');
+      return;
+    }
+
+    // Determine icon based on URL
+    let icon = 'link';
+    if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com')) {
+      icon = 'video';
+    } else if (url.includes('docsend.com') || url.includes('docs.google.com') || url.includes('.pdf')) {
+      icon = 'document';
+    } else if (url.includes('medium.com') || url.includes('a16z.com') || url.includes('substack.com')) {
+      icon = 'book';
+    } else if (url.includes('.io') || url.includes('.com') || url.includes('.co')) {
+      icon = 'globe';
+    }
+
+    const linkData = {
+      name,
+      url,
+      icon,
+      color,
+      emailEnabled,
+      emailLabel: emailLabel || name
+    };
+
+    if (this.editingLinkId) {
+      storage.updateQuickLink(this.editingLinkId, linkData);
+      this.showToast('Link updated', 'success');
+    } else {
+      storage.addQuickLink(linkData);
+      this.showToast('Link added', 'success');
+    }
+
+    this.data = storage.getData();
+    this.hideModal('link-modal');
+    this.renderQuickLinks();
+    this.renderSettingsStatus(); // Refresh email link toggles
+  }
+
+  /**
+   * Delete a link
+   */
+  deleteLink() {
+    if (!this.editingLinkId) return;
+    
+    if (confirm('Are you sure you want to delete this link?')) {
+      storage.deleteQuickLink(this.editingLinkId);
+      this.data = storage.getData();
+      this.hideModal('link-modal');
+      this.renderQuickLinks();
+      this.renderSettingsStatus();
+      this.showToast('Link deleted', 'success');
+    }
+  }
+
+  /**
    * Animate list items with stagger effect
    */
   animateListItems(container, selector) {
@@ -801,7 +996,6 @@ class GlossiDashboard {
     const counts = emailSettings.counts || { pipelineDeals: 5, talkingPoints: 4 };
     const signature = emailSettings.signature || 'JG';
     const greeting = emailSettings.greeting || '';
-    const links = emailSettings.links || { website: true, pitchVideo: true, deck: true, article: true };
 
     // Get current week range
     const weekRange = this.getWeekRange(new Date());
@@ -917,21 +1111,17 @@ class GlossiDashboard {
     body += 'Best,\n';
     body += `${signature}\n\n`;
     
-    // Links
-    if (links.website || links.pitchVideo || links.deck || links.article) {
+    // Links - dynamically from quickLinks
+    const quickLinks = storage.getQuickLinks();
+    const enabledLinks = quickLinks.filter(link => link.emailEnabled !== false);
+    
+    if (enabledLinks.length > 0) {
       body += '---\n';
-      if (links.website) {
-        body += 'Website: https://glossi.io\n';
-      }
-      if (links.pitchVideo) {
-        body += 'Pitch Video: https://www.youtube.com/watch?v=kXbQqM35iHA\n';
-      }
-      if (links.deck) {
-        body += 'Deck: https://docsend.com/view/sqmwqnjh9zk8pncu\n';
-      }
-      if (links.article) {
-        body += 'a16z - AI World Models: https://a16z.com/ai-is-learning-to-build-reality/';
-      }
+      enabledLinks.forEach((link, index) => {
+        const label = link.emailLabel || link.name;
+        body += `${label}: ${link.url}`;
+        if (index < enabledLinks.length - 1) body += '\n';
+      });
     }
 
     // Open default email app (Outlook)
@@ -1857,16 +2047,18 @@ class GlossiDashboard {
         talkingPoints: parseInt(document.getElementById('email-talking-points-count').value) || 4
       },
       signature: document.getElementById('email-signature').value.trim() || 'JG',
-      greeting: document.getElementById('email-greeting').value.trim(),
-      links: {
-        website: document.getElementById('email-link-website').checked,
-        pitchVideo: document.getElementById('email-link-video').checked,
-        deck: document.getElementById('email-link-deck').checked,
-        article: document.getElementById('email-link-article').checked
-      }
+      greeting: document.getElementById('email-greeting').value.trim()
     };
+
+    // Update link email settings
+    const linkToggles = document.querySelectorAll('#email-links-toggles input[data-link-id]');
+    linkToggles.forEach(toggle => {
+      const linkId = toggle.dataset.linkId;
+      storage.updateQuickLink(linkId, { emailEnabled: toggle.checked });
+    });
     
     // Update storage and local settings
+    this.data = storage.getData();
     this.settings = storage.updateSettings({ apiKey, openaiApiKey, email: emailSettings });
     aiProcessor.setApiKey(apiKey);
     OPENAI_API_KEY = openaiApiKey || null;
@@ -1958,11 +2150,16 @@ class GlossiDashboard {
     document.getElementById('email-signature').value = email.signature || 'JG';
     document.getElementById('email-greeting').value = email.greeting || '';
 
-    // Links
-    document.getElementById('email-link-website').checked = links.website !== false;
-    document.getElementById('email-link-video').checked = links.pitchVideo !== false;
-    document.getElementById('email-link-deck').checked = links.deck !== false;
-    document.getElementById('email-link-article').checked = links.article !== false;
+    // Render link toggles dynamically
+    const linksContainer = document.getElementById('email-links-toggles');
+    const quickLinks = storage.getQuickLinks();
+    linksContainer.innerHTML = quickLinks.map(link => `
+      <label class="toggle-row">
+        <input type="checkbox" data-link-id="${link.id}" ${link.emailEnabled !== false ? 'checked' : ''}>
+        <span class="toggle-switch"></span>
+        <span class="toggle-label">Include ${link.name}</span>
+      </label>
+    `).join('');
   }
 
   /**

@@ -80,6 +80,12 @@ const DEFAULT_DATA = {
       content: 'We\'ve spent 2 years building with enterprise. Sales motion just started. This is the inflection point.'
     }
   ],
+  quickLinks: [
+    { id: 'website', name: 'Glossi.io', url: 'https://glossi.io', icon: 'globe', color: 'default', emailEnabled: true, emailLabel: 'Website' },
+    { id: 'video', name: 'Pitch Video', url: 'https://www.youtube.com/watch?v=kXbQqM35iHA', icon: 'video', color: 'red', emailEnabled: true, emailLabel: 'Pitch Video' },
+    { id: 'deck', name: 'Deck', url: 'https://docsend.com/view/sqmwqnjh9zk8pncu', icon: 'document', color: 'blue', emailEnabled: true, emailLabel: 'Deck' },
+    { id: 'article', name: 'a16z Article', url: 'https://a16z.com/ai-is-learning-to-build-reality/', icon: 'book', color: 'purple', emailEnabled: true, emailLabel: 'a16z - AI World Models' }
+  ],
   lastUpdated: new Date().toISOString()
 };
 
@@ -107,14 +113,7 @@ const DEFAULT_SETTINGS = {
     // Signature
     signature: 'JG',
     // Custom greeting/intro (optional)
-    greeting: '',
-    // Links to include
-    links: {
-      website: true,
-      pitchVideo: true,
-      deck: true,
-      article: true
-    }
+    greeting: ''
   }
 };
 
@@ -349,6 +348,61 @@ class Storage {
   deleteTalkingPoint(index) {
     if (index >= 0 && index < this.data.talkingPoints.length) {
       this.data.talkingPoints.splice(index, 1);
+      this.data.lastUpdated = new Date().toISOString();
+      this.scheduleSave();
+    }
+    return this.data;
+  }
+
+  /**
+   * Get quick links
+   */
+  getQuickLinks() {
+    return this.data.quickLinks || [];
+  }
+
+  /**
+   * Add a quick link
+   */
+  addQuickLink(link) {
+    if (!this.data.quickLinks) {
+      this.data.quickLinks = [];
+    }
+    const newLink = {
+      id: 'link_' + Date.now(),
+      name: link.name,
+      url: link.url,
+      icon: link.icon || 'link',
+      color: link.color || 'default',
+      emailEnabled: link.emailEnabled !== false,
+      emailLabel: link.emailLabel || link.name
+    };
+    this.data.quickLinks.push(newLink);
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return this.data;
+  }
+
+  /**
+   * Update a quick link
+   */
+  updateQuickLink(id, updates) {
+    const index = this.data.quickLinks.findIndex(l => l.id === id);
+    if (index >= 0) {
+      this.data.quickLinks[index] = { ...this.data.quickLinks[index], ...updates };
+      this.data.lastUpdated = new Date().toISOString();
+      this.scheduleSave();
+    }
+    return this.data;
+  }
+
+  /**
+   * Delete a quick link
+   */
+  deleteQuickLink(id) {
+    const index = this.data.quickLinks.findIndex(l => l.id === id);
+    if (index >= 0) {
+      this.data.quickLinks.splice(index, 1);
       this.data.lastUpdated = new Date().toISOString();
       this.scheduleSave();
     }
