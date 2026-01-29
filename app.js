@@ -202,6 +202,15 @@ class GlossiDashboard {
     const container = document.getElementById('email-sections-sortable');
     if (!container) return;
 
+    // Disable dragging on touch devices to allow scrolling
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (isTouchDevice) {
+      container.querySelectorAll('.sortable-item').forEach(item => {
+        item.removeAttribute('draggable');
+      });
+      return; // Skip drag setup on touch devices
+    }
+
     let draggedItem = null;
 
     container.addEventListener('dragstart', (e) => {

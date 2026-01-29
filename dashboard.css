@@ -2789,6 +2789,7 @@ body::after {
   .modal-overlay {
     padding: 0;
     align-items: stretch;
+    overflow: hidden;
   }
 
   .modal {
@@ -2800,6 +2801,7 @@ body::after {
     height: 100dvh; /* Dynamic viewport height for mobile */
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
   .modal.modal-large {
@@ -2819,11 +2821,14 @@ body::after {
 
   .modal-body {
     padding: var(--space-4);
-    flex: 1;
-    overflow-y: scroll;
+    flex: 1 1 auto;
+    overflow-y: scroll !important;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
+    overscroll-behavior-y: contain;
     min-height: 0; /* Important for flex children to scroll */
+    max-height: none;
+    touch-action: pan-y;
+    position: relative;
   }
 
   .modal-footer {
@@ -2921,7 +2926,17 @@ body::after {
   .sortable-item {
     padding: var(--space-3);
     border-radius: var(--radius-lg);
-    touch-action: manipulation;
+  }
+
+  /* Allow vertical scrolling in modal */
+  .modal-body {
+    touch-action: pan-y;
+  }
+
+  /* Disable drag on mobile - use buttons instead */
+  .sortable-item[draggable="true"] {
+    -webkit-user-drag: none;
+    user-drag: none;
   }
 
   .drag-handle {
