@@ -801,7 +801,7 @@ class GlossiDashboard {
     const counts = emailSettings.counts || { pipelineDeals: 5, talkingPoints: 4 };
     const signature = emailSettings.signature || 'JG';
     const greeting = emailSettings.greeting || '';
-    const links = emailSettings.links || { website: true, pitchVideo: true };
+    const links = emailSettings.links || { website: true, deck: true, pitchVideo: true };
 
     // Get current week range
     const weekRange = this.getWeekRange(new Date());
@@ -918,10 +918,13 @@ class GlossiDashboard {
     body += `${signature}\n\n`;
     
     // Links
-    if (links.website || links.pitchVideo) {
+    if (links.website || links.deck || links.pitchVideo) {
       body += '---\n';
       if (links.website) {
         body += 'Website: https://glossi.io\n';
+      }
+      if (links.deck) {
+        body += 'Deck: https://docsend.com/view/sqmwqnjh9zk8pncu\n';
       }
       if (links.pitchVideo) {
         body += 'Pitch Video: https://www.youtube.com/watch?v=kXbQqM35iHA';
@@ -1854,6 +1857,7 @@ class GlossiDashboard {
       greeting: document.getElementById('email-greeting').value.trim(),
       links: {
         website: document.getElementById('email-link-website').checked,
+        deck: document.getElementById('email-link-deck').checked,
         pitchVideo: document.getElementById('email-link-video').checked
       }
     };
@@ -1952,6 +1956,7 @@ class GlossiDashboard {
 
     // Links
     document.getElementById('email-link-website').checked = links.website !== false;
+    document.getElementById('email-link-deck').checked = links.deck !== false;
     document.getElementById('email-link-video').checked = links.pitchVideo !== false;
   }
 

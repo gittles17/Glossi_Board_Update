@@ -111,6 +111,7 @@ const DEFAULT_SETTINGS = {
     // Links to include
     links: {
       website: true,
+      deck: true,
       pitchVideo: true
     }
   }
