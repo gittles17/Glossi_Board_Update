@@ -113,7 +113,15 @@
 
           <!-- Key Decisions -->
           <div class="meeting-section">
-            <h4>Key Decisions</h4>
+            <div class="section-header-row">
+              <h4>Key Decisions</h4>
+              <button class="add-btn-small" id="add-decision-btn" title="Add decision">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+            </div>
             <ul class="decisions-list" id="decisions-list">
               <li class="empty-state">No decisions recorded.</li>
             </ul>
@@ -205,7 +213,15 @@
         <div class="section-card">
           <div class="card-header">
             <h3>Pipeline Highlights</h3>
-            <span class="badge badge-green">HOT</span>
+            <div class="card-header-right">
+              <button class="add-btn-small" id="add-pipeline-btn" title="Add pipeline deal">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+              <span class="badge badge-green">HOT</span>
+            </div>
           </div>
           <div class="pipeline-list" id="pipeline-hot">
             <!-- Populated by JS -->
@@ -518,6 +534,73 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="talking-point-cancel">Cancel</button>
         <button class="btn btn-primary" id="talking-point-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Decision Modal -->
+  <div class="modal-overlay" id="decision-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Add Decision</h2>
+        <button class="btn-icon modal-close" id="decision-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="notes-input-section">
+          <label for="decision-text">Decision</label>
+          <input type="text" id="decision-text" placeholder="e.g., Approved Q2 marketing budget" class="input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="decision-cancel">Cancel</button>
+        <button class="btn btn-primary" id="decision-save">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pipeline Modal -->
+  <div class="modal-overlay" id="pipeline-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="pipeline-modal-title">Add Pipeline Deal</h2>
+        <button class="btn-icon modal-close" id="pipeline-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="notes-input-section">
+          <label for="pipeline-name">Company Name</label>
+          <input type="text" id="pipeline-name" placeholder="e.g., Acme Corp" class="input">
+        </div>
+        <div class="notes-input-section">
+          <label for="pipeline-value">Deal Value</label>
+          <input type="text" id="pipeline-value" placeholder="e.g., $50K" class="input">
+        </div>
+        <div class="notes-input-section">
+          <label for="pipeline-stage">Stage</label>
+          <select id="pipeline-stage" class="input">
+            <option value="discovery">Discovery</option>
+            <option value="demo">Demo</option>
+            <option value="validation">Validation</option>
+            <option value="pilot">Pilot</option>
+          </select>
+        </div>
+        <div class="notes-input-section">
+          <label for="pipeline-timing">Timing</label>
+          <input type="text" id="pipeline-timing" placeholder="e.g., Q1" class="input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="pipeline-cancel">Cancel</button>
+        <button class="btn btn-primary" id="pipeline-save">Add</button>
       </div>
     </div>
   </div>

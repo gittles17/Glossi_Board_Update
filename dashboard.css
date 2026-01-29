@@ -1125,6 +1125,12 @@ body::after {
   color: var(--text-primary);
 }
 
+.card-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 /* ============================================
    BADGES - Refined
    ============================================ */

@@ -552,6 +552,50 @@ class GlossiDashboard {
       }
     });
 
+    document.getElementById('add-decision-btn').addEventListener('click', () => {
+      const meeting = meetingsManager.getCurrentMeeting();
+      if (meeting) {
+        this.showModal('decision-modal');
+        document.getElementById('decision-text').value = '';
+        document.getElementById('decision-text').focus();
+      } else {
+        this.showToast('Add meeting notes first', 'info');
+      }
+    });
+
+    document.getElementById('decision-modal-close').addEventListener('click', () => {
+      this.hideModal('decision-modal');
+    });
+
+    document.getElementById('decision-cancel').addEventListener('click', () => {
+      this.hideModal('decision-modal');
+    });
+
+    document.getElementById('decision-save').addEventListener('click', () => {
+      this.saveDecision();
+    });
+
+    document.getElementById('add-pipeline-btn').addEventListener('click', () => {
+      this.showModal('pipeline-modal');
+      document.getElementById('pipeline-name').value = '';
+      document.getElementById('pipeline-value').value = '';
+      document.getElementById('pipeline-stage').value = 'discovery';
+      document.getElementById('pipeline-timing').value = '';
+      document.getElementById('pipeline-name').focus();
+    });
+
+    document.getElementById('pipeline-modal-close').addEventListener('click', () => {
+      this.hideModal('pipeline-modal');
+    });
+
+    document.getElementById('pipeline-cancel').addEventListener('click', () => {
+      this.hideModal('pipeline-modal');
+    });
+
+    document.getElementById('pipeline-save').addEventListener('click', () => {
+      this.savePipelineDeal();
+    });
+
     document.getElementById('notes-modal-close').addEventListener('click', () => {
       this.hideModal('notes-modal');
     });
@@ -1477,6 +1521,57 @@ class GlossiDashboard {
         statusEl.classList.remove('has-progress');
       }
     }
+  }
+
+  /**
+   * Save a new decision
+   */
+  saveDecision() {
+    const text = document.getElementById('decision-text').value.trim();
+    if (!text) {
+      this.showToast('Please enter a decision', 'error');
+      return;
+    }
+
+    const meeting = meetingsManager.getCurrentMeeting();
+    if (!meeting) return;
+
+    if (!meeting.decisions) {
+      meeting.decisions = [];
+    }
+    meeting.decisions.push(text);
+    meetingsManager.updateMeeting(meeting);
+    
+    this.hideModal('decision-modal');
+    this.renderMeeting(meeting);
+    this.showToast('Decision added', 'success');
+  }
+
+  /**
+   * Save a new pipeline deal
+   */
+  savePipelineDeal() {
+    const name = document.getElementById('pipeline-name').value.trim();
+    const value = document.getElementById('pipeline-value').value.trim();
+    const stage = document.getElementById('pipeline-stage').value;
+    const timing = document.getElementById('pipeline-timing').value.trim();
+
+    if (!name) {
+      this.showToast('Please enter a company name', 'error');
+      return;
+    }
+
+    storage.addDeal('inProgress', {
+      name,
+      value: value || '$TBD',
+      stage,
+      timing: timing || 'TBD'
+    });
+
+    this.data = storage.getData();
+    this.hideModal('pipeline-modal');
+    this.renderPipeline();
+    this.showToast('Pipeline deal added', 'success');
   }
 
   /**
