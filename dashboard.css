@@ -1177,13 +1177,45 @@ body::after {
   justify-content: space-between;
   padding: var(--space-3) var(--space-4);
   margin: 0 calc(var(--space-4) * -1);
+  margin-bottom: var(--space-2);
   border-radius: var(--radius-md);
   transition: all var(--duration-normal) var(--ease-out-expo);
   cursor: default;
+  border-left: 3px solid transparent;
+}
+
+.pipeline-item:last-child {
+  margin-bottom: 0;
 }
 
 .pipeline-item:hover {
   background: rgba(255, 255, 255, 0.03);
+}
+
+/* Stage-based left borders */
+.pipeline-item[data-stage="pilot"] {
+  border-left-color: var(--accent-green);
+}
+
+.pipeline-item[data-stage="validation"] {
+  border-left-color: var(--accent-blue);
+}
+
+.pipeline-item[data-stage="demo"] {
+  border-left-color: var(--accent-purple);
+}
+
+.pipeline-item[data-stage="discovery"] {
+  border-left-color: var(--text-muted);
+}
+
+/* Hot deals highlight */
+.pipeline-item.hot {
+  background: rgba(91, 176, 154, 0.06);
+}
+
+.pipeline-item.hot:hover {
+  background: rgba(91, 176, 154, 0.1);
 }
 
 .pipeline-item .company {
@@ -1484,12 +1516,14 @@ body::after {
 }
 
 .meeting-section h4 {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
   margin-bottom: var(--space-4);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--accent-green);
 }
 
 .section-header-row {
@@ -1510,9 +1544,31 @@ body::after {
 }
 
 .section-header-row .meeting-status {
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-mono);
-  color: var(--text-muted);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.section-header-row .meeting-status.has-progress {
+  color: var(--accent-green);
+}
+
+/* Action Items Progress Bar */
+.action-progress-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  margin-bottom: var(--space-4);
+  overflow: hidden;
+}
+
+.action-progress-fill {
+  height: 100%;
+  background: var(--accent-green);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  width: 0%;
 }
 
 .add-btn-small {
@@ -1584,6 +1640,15 @@ body::after {
   list-style: none;
 }
 
+/* Summary section emphasis */
+.meeting-section:first-child .summary-list {
+  background: rgba(91, 176, 154, 0.04);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin: 0 calc(var(--space-2) * -1);
+  border: 1px solid rgba(91, 176, 154, 0.1);
+}
+
 .summary-list li,
 .decisions-list li {
   font-size: 14px;
@@ -1594,12 +1659,20 @@ body::after {
   line-height: 1.6;
 }
 
+/* Summary items are larger and more spaced */
+.summary-list li {
+  font-size: 15px;
+  color: var(--text-primary);
+  padding: var(--space-3) 0;
+  padding-left: var(--space-5);
+}
+
 .summary-list li::before,
 .decisions-list li::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 12px;
+  top: 14px;
   width: 6px;
   height: 6px;
   border-radius: 50%;

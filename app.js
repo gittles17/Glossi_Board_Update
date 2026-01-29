@@ -736,15 +736,18 @@ class GlossiDashboard {
       .sort((a, b) => (stagePriority[b.stage] || 0) - (stagePriority[a.stage] || 0))
       .slice(0, 4);
 
-    container.innerHTML = topDeals.map((deal, index) => `
-      <div class="pipeline-item" style="animation-delay: ${0.4 + index * 0.05}s">
+    container.innerHTML = topDeals.map((deal, index) => {
+      const isHot = deal.stage === 'pilot' || deal.stage === 'validation';
+      return `
+      <div class="pipeline-item ${isHot ? 'hot' : ''}" data-stage="${deal.stage}" style="animation-delay: ${0.4 + index * 0.05}s">
         <div>
           <span class="company">${deal.name}</span>
           <span class="stage">${deal.stage}</span>
         </div>
         <span class="value">${deal.value}</span>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     // Add staggered entrance animation
     this.animateListItems(container, '.pipeline-item');
@@ -1225,6 +1228,16 @@ class GlossiDashboard {
     const progress = meetingsManager.getTodoProgress(meeting);
     document.getElementById('todo-progress').textContent = 
       `${progress.completed}/${progress.total} complete`;
+    
+    // Update progress bar
+    const percentage = progress.total > 0 ? (progress.completed / progress.total) * 100 : 0;
+    document.getElementById('action-progress-fill').style.width = `${percentage}%`;
+    const statusEl = document.getElementById('meeting-status');
+    if (progress.completed > 0) {
+      statusEl.classList.add('has-progress');
+    } else {
+      statusEl.classList.remove('has-progress');
+    }
 
     // Summary (editable with delete)
     const summaryContainer = document.getElementById('meeting-summary');
@@ -1453,6 +1466,16 @@ class GlossiDashboard {
       const progress = meetingsManager.getTodoProgress(meeting);
       document.getElementById('todo-progress').textContent = 
         `${progress.completed}/${progress.total} complete`;
+      
+      // Update progress bar
+      const percentage = progress.total > 0 ? (progress.completed / progress.total) * 100 : 0;
+      document.getElementById('action-progress-fill').style.width = `${percentage}%`;
+      const statusEl = document.getElementById('meeting-status');
+      if (progress.completed > 0) {
+        statusEl.classList.add('has-progress');
+      } else {
+        statusEl.classList.remove('has-progress');
+      }
     }
   }
 
@@ -1599,6 +1622,8 @@ class GlossiDashboard {
    */
   renderEmptyMeeting() {
     document.getElementById('todo-progress').textContent = '0/0 complete';
+    document.getElementById('action-progress-fill').style.width = '0%';
+    document.getElementById('meeting-status').classList.remove('has-progress');
     document.getElementById('meeting-summary').innerHTML = 
       '<li class="empty-state">No meeting notes yet. Click + to add notes.</li>';
     document.getElementById('todo-list').innerHTML = 
