@@ -1181,7 +1181,6 @@ body::after {
   border-radius: var(--radius-md);
   transition: all var(--duration-normal) var(--ease-out-expo);
   cursor: default;
-  border-left: 3px solid transparent;
 }
 
 .pipeline-item:last-child {
@@ -1190,32 +1189,6 @@ body::after {
 
 .pipeline-item:hover {
   background: rgba(255, 255, 255, 0.03);
-}
-
-/* Stage-based left borders */
-.pipeline-item[data-stage="pilot"] {
-  border-left-color: var(--accent-green);
-}
-
-.pipeline-item[data-stage="validation"] {
-  border-left-color: var(--accent-blue);
-}
-
-.pipeline-item[data-stage="demo"] {
-  border-left-color: var(--accent-purple);
-}
-
-.pipeline-item[data-stage="discovery"] {
-  border-left-color: var(--text-muted);
-}
-
-/* Hot deals highlight */
-.pipeline-item.hot {
-  background: rgba(91, 176, 154, 0.06);
-}
-
-.pipeline-item.hot:hover {
-  background: rgba(91, 176, 154, 0.1);
 }
 
 .pipeline-item .company {
@@ -1522,8 +1495,6 @@ body::after {
   letter-spacing: 0.05em;
   color: var(--text-secondary);
   margin-bottom: var(--space-4);
-  padding-left: var(--space-3);
-  border-left: 2px solid var(--accent-green);
 }
 
 .section-header-row {
