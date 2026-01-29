@@ -1596,14 +1596,6 @@ body::after {
   list-style: none;
 }
 
-/* Summary section emphasis */
-.meeting-section:first-child .summary-list {
-  background: rgba(91, 176, 154, 0.04);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  margin: 0 calc(var(--space-2) * -1);
-  border: 1px solid rgba(91, 176, 154, 0.1);
-}
 
 .summary-list li,
 .decisions-list li {
@@ -1628,12 +1620,11 @@ body::after {
   content: '';
   position: absolute;
   left: 0;
-  top: 14px;
-  width: 6px;
-  height: 6px;
+  top: 12px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
-  background: var(--accent-green);
-  box-shadow: 0 0 6px var(--accent-green-glow);
+  background: var(--text-muted);
 }
 
 .summary-list li.empty-state,
@@ -2720,19 +2711,6 @@ body::after {
 .meeting-section h4 {
   position: relative;
   display: inline-block;
-}
-
-.meeting-section h4::before {
-  content: '';
-  position: absolute;
-  left: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 4px;
-  background: var(--accent-green);
-  border-radius: 50%;
-  opacity: 0.5;
 }
 
 /* Stats hover glow intensify */
