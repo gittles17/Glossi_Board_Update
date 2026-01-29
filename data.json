@@ -1,0 +1,102 @@
+{
+  "company": {
+    "name": "Glossi",
+    "tagline": "AI-powered visuals. Pixel-perfect products.",
+    "description": "Generate unlimited product images and videos without ever compromising your brand.",
+    "demoUrl": "https://www.youtube.com/watch?v=kXbQqM35iHA"
+  },
+  "timeline": [
+    {
+      "id": "enterprise",
+      "title": "2 Years with Enterprise",
+      "description": "Built and refined Glossi alongside Crate & Barrel, HOKA, and other major brands. Deep product-market fit.",
+      "status": "completed"
+    },
+    {
+      "id": "ai",
+      "title": "AI Integration",
+      "description": "Successfully shipped AI texturing, AI backgrounds, and world models that understand 3D space.",
+      "status": "completed"
+    },
+    {
+      "id": "sales",
+      "title": "Sales Motion Started",
+      "description": "Enterprise sales launched 3 months ago. $1.2M+ pipeline already. Strong early traction.",
+      "status": "active"
+    },
+    {
+      "id": "seed",
+      "title": "Seed Round",
+      "description": "Raising to ramp sales and close pipeline. World models unlock the next wave of features.",
+      "status": "future"
+    }
+  ],
+  "pipeline": {
+    "totalValue": "$1.2M+",
+    "closestToClose": [
+      { "name": "MagnaFlow", "value": "$36-50K", "stage": "pilot", "timing": "Q1" },
+      { "name": "Peleman", "value": "$50K", "stage": "demo", "timing": "Q1" },
+      { "name": "3Day Blinds", "value": "$50K", "stage": "validation", "timing": "Q1" },
+      { "name": "Centric Brands", "value": "$50K", "stage": "demo", "timing": "Q1" }
+    ],
+    "inProgress": [
+      { "name": "Sunday Dinner", "value": "$500K", "stage": "discovery", "timing": "Q1" },
+      { "name": "Checkpoint", "value": "$75K", "stage": "demo", "timing": "Q2" },
+      { "name": "Bob Mills Furniture", "value": "$50K", "stage": "demo", "timing": "Q1-Q2" },
+      { "name": "Silverside", "value": "$50K", "stage": "discovery", "timing": "Q1" },
+      { "name": "Filson", "value": "$50K", "stage": "discovery", "timing": "Q1" },
+      { "name": "Fisher Footwear", "value": "$50K", "stage": "discovery", "timing": "Q1" }
+    ],
+    "partnerships": [
+      { "name": "VNTANA", "value": "$50K", "timing": "Q2", "note": "Joint case study" },
+      { "name": "Vyking", "value": "$50K", "timing": "Q2", "note": "Active in environment" },
+      { "name": "Sharpthink", "value": "$50K", "timing": "Q3", "note": "Co-pilot case study" }
+    ],
+    "exploring": "Building relationships with EY, PWC, KPMG, Deloitte, Accenture for enterprise distribution."
+  },
+  "stats": [
+    { "value": "$1.2M+", "label": "Pipeline Value", "note": "built in 3 months" },
+    { "value": "10+", "label": "Active Prospects", "note": "in various stages" },
+    { "value": "3", "label": "Partnerships", "note": "strategic integrations" }
+  ],
+  "moat": [
+    {
+      "number": "01",
+      "title": "3D Pipeline Integration",
+      "description": "We work with actual 3D product data, not images. Deep integration with existing brand workflows."
+    },
+    {
+      "number": "02",
+      "title": "Enterprise Relationships",
+      "description": "Active pilots with major brands. Each integration deepens switching costs."
+    },
+    {
+      "number": "03",
+      "title": "Brand Trust Requirements",
+      "description": "Enterprise brands need reliability that 'good enough' AI can't deliver."
+    }
+  ],
+  "talkingPoints": [
+    {
+      "title": "The Problem is Real",
+      "content": "Current AI tools rebuild your product every time. Materials drift, proportions shift. It's not reliable enough for enterprise scale."
+    },
+    {
+      "title": "Our Approach is Different",
+      "content": "We use 3D as the source of truth. The product is composited in, never generated. Pixel-perfect every time."
+    },
+    {
+      "title": "We Have Traction",
+      "content": "$1.2M+ pipeline built in 3 months. Real conversations with real enterprise buyers who have real budgets."
+    },
+    {
+      "title": "The Moat is Deep",
+      "content": "3D pipeline integration, enterprise relationships, and brand trust requirements create compounding defensibility."
+    },
+    {
+      "title": "Why Now",
+      "content": "We've spent 2 years building with enterprise. Sales motion just started. This is the inflection point."
+    }
+  ],
+  "lastUpdated": "2026-01-28T00:00:00.000Z"
+}

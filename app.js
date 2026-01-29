@@ -1,0 +1,2063 @@
+/**
+ * Glossi Board Dashboard - Main Application
+ * Ties together all modules and handles UI interactions
+ */
+
+import { storage } from './modules/storage.js';
+import { aiProcessor } from './modules/ai-processor.js';
+import { meetingsManager } from './modules/meetings.js';
+
+// OpenAI API key for Whisper transcription (set in settings)
+let OPENAI_API_KEY = null;
+
+class GlossiDashboard {
+  constructor() {
+    this.data = null;
+    this.settings = null;
+    this.pendingReview = null;
+    this.animationObserver = null;
+    this.editingTalkingPointIndex = null;
+    
+    // Name aliases for display
+    this.nameAliases = {
+      'rs': 'Ricky',
+      'jg': 'Jonathan',
+      'adam': 'Adam',
+      'ricky': 'Ricky',
+      'jonathan': 'Jonathan'
+    };
+    
+    // Available team members for quick assignment
+    this.teamMembers = ['Ricky', 'Jonathan', 'Adam', 'Unassigned'];
+  }
+
+  /**
+   * Resolve name alias to full name
+   */
+  resolveOwnerName(name) {
+    if (!name) return 'Unassigned';
+    const lower = name.toLowerCase().trim();
+    return this.nameAliases[lower] || name;
+  }
+
+  /**
+   * Initialize the dashboard
+   */
+  async init() {
+    // Initialize storage and load data
+    const { data, settings, meetings } = await storage.init();
+    this.data = data;
+    this.settings = settings;
+
+    // Initialize AI processor with API key
+    if (settings.apiKey) {
+      aiProcessor.setApiKey(settings.apiKey);
+    }
+
+    // Initialize meetings manager
+    meetingsManager.init(storage, (meeting) => this.renderMeeting(meeting));
+
+    // Setup UI event listeners
+    this.setupEventListeners();
+
+    // Setup intersection observer for animations
+    this.setupAnimationObserver();
+
+    // Render initial state
+    this.render();
+
+    // Trigger entrance animations
+    requestAnimationFrame(() => {
+      this.animateStatsOnLoad();
+    });
+
+    console.log('Glossi Dashboard initialized');
+  }
+
+  /**
+   * Setup intersection observer for scroll animations
+   */
+  setupAnimationObserver() {
+    this.animationObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('animate-in');
+            this.animationObserver.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+    );
+  }
+
+  /**
+   * Setup the settings drop zone for file uploads
+   */
+  /**
+   * Setup hamburger menu dropdown
+   */
+  setupMenuDropdown() {
+    const menuBtn = document.getElementById('menu-btn');
+    const dropdown = document.getElementById('dropdown-menu');
+    const menuDropZone = document.getElementById('menu-drop-zone');
+    const menuFileInput = document.getElementById('menu-file-input');
+
+    // Toggle menu on button click
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('open');
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target) && !menuBtn.contains(e.target)) {
+        dropdown.classList.remove('open');
+      }
+    });
+
+    // Menu drop zone - click to browse
+    menuDropZone.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menuFileInput.click();
+    });
+
+    // Menu drop zone - file selected
+    menuFileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        dropdown.classList.remove('open');
+        this.processDroppedFile(e.target.files[0]);
+        menuFileInput.value = '';
+      }
+    });
+
+    // Menu drop zone - drag events
+    menuDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      menuDropZone.classList.add('drag-over');
+    });
+
+    menuDropZone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      menuDropZone.classList.remove('drag-over');
+    });
+
+    menuDropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      menuDropZone.classList.remove('drag-over');
+      dropdown.classList.remove('open');
+
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        this.processDroppedFile(files[0]);
+      }
+    });
+
+    // Paste text submission
+    const pasteInput = document.getElementById('menu-paste-input');
+    const pasteSubmit = document.getElementById('paste-submit-btn');
+
+    pasteSubmit.addEventListener('click', () => {
+      const text = pasteInput.value.trim();
+      if (text) {
+        dropdown.classList.remove('open');
+        this.handleDroppedContent({ content: { text }, type: 'text', fileName: 'Pasted text' });
+        pasteInput.value = '';
+      }
+    });
+
+    // Submit on Ctrl+Enter
+    pasteInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        pasteSubmit.click();
+      }
+      e.stopPropagation(); // Prevent menu from closing
+    });
+
+    // Prevent menu close when clicking in textarea
+    pasteInput.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    // Menu items
+    document.getElementById('menu-share').addEventListener('click', () => {
+      dropdown.classList.remove('open');
+      this.shareViaEmail();
+    });
+
+    document.getElementById('menu-settings').addEventListener('click', () => {
+      dropdown.classList.remove('open');
+      this.renderSettingsStatus(); // Load current settings into form
+      this.showModal('settings-modal');
+    });
+  }
+
+  /**
+   * Setup drag-and-drop for email section reordering
+   */
+  setupEmailSectionDragDrop() {
+    const container = document.getElementById('email-sections-sortable');
+    if (!container) return;
+
+    let draggedItem = null;
+
+    container.addEventListener('dragstart', (e) => {
+      const item = e.target.closest('.sortable-item');
+      if (!item) return;
+      
+      draggedItem = item;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', item.dataset.section);
+    });
+
+    container.addEventListener('dragend', (e) => {
+      const item = e.target.closest('.sortable-item');
+      if (item) {
+        item.classList.remove('dragging');
+      }
+      // Remove drag-over from all items
+      container.querySelectorAll('.sortable-item').forEach(el => {
+        el.classList.remove('drag-over');
+      });
+      draggedItem = null;
+    });
+
+    container.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      
+      const afterElement = this.getDragAfterElement(container, e.clientY);
+      const currentItem = e.target.closest('.sortable-item');
+      
+      // Remove drag-over from all items
+      container.querySelectorAll('.sortable-item').forEach(el => {
+        el.classList.remove('drag-over');
+      });
+      
+      // Add drag-over to the item we're over
+      if (currentItem && currentItem !== draggedItem) {
+        currentItem.classList.add('drag-over');
+      }
+    });
+
+    container.addEventListener('dragleave', (e) => {
+      const item = e.target.closest('.sortable-item');
+      if (item) {
+        item.classList.remove('drag-over');
+      }
+    });
+
+    container.addEventListener('drop', (e) => {
+      e.preventDefault();
+      
+      if (!draggedItem) return;
+      
+      const afterElement = this.getDragAfterElement(container, e.clientY);
+      
+      if (afterElement === null) {
+        container.appendChild(draggedItem);
+      } else {
+        container.insertBefore(draggedItem, afterElement);
+      }
+      
+      // Remove all drag states
+      container.querySelectorAll('.sortable-item').forEach(el => {
+        el.classList.remove('drag-over', 'dragging');
+      });
+    });
+  }
+
+  /**
+   * Get the element to insert after based on mouse position
+   */
+  getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.sortable-item:not(.dragging)')];
+    
+    return draggableElements.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      
+      if (offset < 0 && offset > closest.offset) {
+        return { offset: offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+
+  /**
+   * Process a dropped or selected file
+   */
+  async processDroppedFile(file) {
+    const fileType = this.getFileType(file);
+    
+    if (!fileType) {
+      this.showToast('Unsupported file type', 'error');
+      return;
+    }
+
+    this.hideModal('settings-modal');
+    
+    try {
+      let content = {};
+      
+      if (fileType === 'image') {
+        content = await this.processImageFile(file);
+      } else if (fileType === 'pdf') {
+        content = await this.processPDFFile(file);
+      } else if (fileType === 'text') {
+        content = await this.processTextFile(file);
+      } else if (fileType === 'audio') {
+        this.showToast('Transcribing audio...', 'info');
+        content = await this.processAudioFile(file);
+      }
+
+      content.type = fileType;
+      content.fileName = file.name;
+
+      this.handleDroppedContent(content);
+    } catch (error) {
+      this.showToast('Failed to process file: ' + error.message, 'error');
+    }
+  }
+
+  /**
+   * Get file type from file object
+   */
+  getFileType(file) {
+    const imageTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+    const pdfTypes = ['application/pdf'];
+    const textTypes = ['text/plain', 'text/markdown'];
+    const audioTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/mp4', 'audio/webm', 'audio/ogg'];
+
+    if (imageTypes.includes(file.type)) return 'image';
+    if (pdfTypes.includes(file.type)) return 'pdf';
+    if (textTypes.includes(file.type) || file.name.endsWith('.md') || file.name.endsWith('.txt')) return 'text';
+    if (audioTypes.includes(file.type) || 
+        file.name.endsWith('.mp3') || 
+        file.name.endsWith('.wav') || 
+        file.name.endsWith('.m4a') ||
+        file.name.endsWith('.webm') ||
+        file.name.endsWith('.ogg')) return 'audio';
+    
+    return null;
+  }
+
+  /**
+   * Process image file
+   */
+  processImageFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        resolve({ content: { dataUrl: e.target.result } });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /**
+   * Process PDF file
+   */
+  async processPDFFile(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(item => item.str).join(' ') + '\n';
+    }
+    
+    return { content: { text } };
+  }
+
+  /**
+   * Process text file
+   */
+  processTextFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        resolve({ content: { text: e.target.result } });
+      };
+      reader.onerror = reject;
+      reader.readAsText(file);
+    });
+  }
+
+  /**
+   * Process audio file using OpenAI Whisper API
+   */
+  async processAudioFile(file) {
+    const apiKey = this.settings.openaiApiKey || OPENAI_API_KEY;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('model', 'whisper-1');
+    formData.append('response_format', 'text');
+
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Transcription failed: ${error}`);
+    }
+
+    const transcript = await response.text();
+    return { content: { text: transcript } };
+  }
+
+  /**
+   * Animate stats with counting effect on load
+   */
+  animateStatsOnLoad() {
+    const statElements = document.querySelectorAll('.stat-value');
+    statElements.forEach((el, index) => {
+      const finalValue = el.textContent;
+      const delay = 300 + (index * 100);
+      
+      // Start with empty
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(10px)';
+      
+      setTimeout(() => {
+        el.style.transition = 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+        
+        // Animate numbers if it contains a number
+        if (/\$[\d.]+/.test(finalValue)) {
+          this.animateNumber(el, finalValue);
+        }
+      }, delay);
+    });
+  }
+
+  /**
+   * Animate a number with counting effect
+   */
+  animateNumber(element, finalValue) {
+    const match = finalValue.match(/\$([\d.]+)/);
+    if (!match) return;
+    
+    const targetNum = parseFloat(match[1]);
+    const suffix = finalValue.replace(/\$[\d.]+/, '').trim();
+    const duration = 800;
+    const startTime = performance.now();
+    
+    const animate = (currentTime) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Ease out expo
+      const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      const currentNum = (targetNum * eased).toFixed(1);
+      
+      element.textContent = `$${currentNum}${suffix}`;
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        element.textContent = finalValue;
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  }
+
+  /**
+   * Setup all UI event listeners
+   */
+  setupEventListeners() {
+    // Hamburger menu
+    this.setupMenuDropdown();
+    
+    // Email section drag-drop reordering
+    this.setupEmailSectionDragDrop();
+
+    // Settings modal
+    document.getElementById('settings-modal-close').addEventListener('click', () => {
+      this.hideModal('settings-modal');
+    });
+
+    document.getElementById('toggle-api-key').addEventListener('click', (e) => {
+      const input = document.getElementById('api-key');
+      if (input.type === 'password') {
+        input.type = 'text';
+        e.target.textContent = 'Hide';
+      } else {
+        input.type = 'password';
+        e.target.textContent = 'Show';
+      }
+    });
+
+    document.getElementById('settings-save').addEventListener('click', () => {
+      this.saveSettings();
+    });
+
+    document.getElementById('export-data').addEventListener('click', () => {
+      this.exportData();
+    });
+
+    // Meeting notes modal
+    document.getElementById('add-notes-btn').addEventListener('click', () => {
+      this.showNotesModal();
+    });
+
+    // Small add buttons for summary and todos
+    document.getElementById('add-summary-btn').addEventListener('click', () => {
+      this.addNewSummaryItem();
+    });
+
+    document.getElementById('add-todo-btn').addEventListener('click', () => {
+      const meeting = meetingsManager.getCurrentMeeting();
+      if (meeting) {
+        this.addNewTodo(meeting.id);
+      } else {
+        this.showToast('Add meeting notes first', 'info');
+      }
+    });
+
+    document.getElementById('notes-modal-close').addEventListener('click', () => {
+      this.hideModal('notes-modal');
+    });
+
+    document.getElementById('notes-cancel').addEventListener('click', () => {
+      this.hideModal('notes-modal');
+    });
+
+    document.getElementById('notes-process').addEventListener('click', () => {
+      this.processMeetingNotes();
+    });
+
+    document.getElementById('notes-save-direct').addEventListener('click', () => {
+      this.saveMeetingDirectly();
+    });
+
+    // Talking point modal
+    document.getElementById('add-talking-point-btn').addEventListener('click', () => {
+      this.openAddTalkingPoint();
+    });
+
+    document.getElementById('talking-point-modal-close').addEventListener('click', () => {
+      this.hideModal('talking-point-modal');
+    });
+
+    document.getElementById('talking-point-cancel').addEventListener('click', () => {
+      this.hideModal('talking-point-modal');
+    });
+
+    document.getElementById('talking-point-save').addEventListener('click', () => {
+      this.saveTalkingPoint();
+    });
+
+    // Review modal
+    document.getElementById('modal-close').addEventListener('click', () => {
+      this.hideModal('review-modal');
+      this.pendingReview = null;
+    });
+
+    document.getElementById('review-reject').addEventListener('click', () => {
+      this.hideModal('review-modal');
+      this.pendingReview = null;
+      this.showToast('Changes rejected', 'info');
+    });
+
+    document.getElementById('review-accept').addEventListener('click', () => {
+      this.applyPendingChanges();
+    });
+
+    // Meeting selector
+    document.getElementById('meeting-select').addEventListener('change', (e) => {
+      if (e.target.value === 'latest') {
+        const latest = meetingsManager.getCurrentMeeting();
+        if (latest) this.renderMeeting(latest);
+      } else {
+        const meeting = meetingsManager.setCurrentMeeting(e.target.value);
+        if (meeting) this.renderMeeting(meeting);
+      }
+    });
+
+    // Close modals on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          this.hideModal(overlay.id);
+        }
+      });
+    });
+
+    // Close modals on escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.visible').forEach(modal => {
+          this.hideModal(modal.id);
+        });
+      }
+    });
+  }
+
+  /**
+   * Render all dashboard components
+   */
+  render() {
+    this.renderStats();
+    this.renderPipeline();
+    this.renderTalkingPoints();
+    this.renderMeetingSelector();
+    
+    const currentMeeting = meetingsManager.getCurrentMeeting();
+    if (currentMeeting) {
+      this.renderMeeting(currentMeeting);
+    }
+
+    this.renderSettingsStatus();
+  }
+
+  /**
+   * Render stats row with trend indicators
+   */
+  renderStats() {
+    const stats = this.data.stats;
+    const trends = storage.getStatTrends();
+    
+    // Update stat values
+    document.getElementById('stat-pipeline').textContent = 
+      stats.find(s => s.id === 'pipeline')?.value || '$1.2M+';
+    document.getElementById('stat-prospects').textContent = 
+      stats.find(s => s.id === 'prospects')?.value || '10+';
+    document.getElementById('stat-partnerships').textContent = 
+      stats.find(s => s.id === 'partnerships')?.value || '3';
+
+    // Update closed deals (calculated from pipeline data)
+    const closedStats = storage.getClosedDealsStats();
+    document.getElementById('stat-closed').textContent = closedStats.count;
+    document.getElementById('stat-closed-revenue').textContent = `${closedStats.revenueStr} revenue`;
+
+    // Update trend indicators
+    this.updateTrendIndicator('pipeline', trends.pipeline);
+    this.updateTrendIndicator('prospects', trends.prospects);
+    this.updateTrendIndicator('partnerships', trends.partnerships);
+  }
+
+  /**
+   * Update a single trend indicator
+   */
+  updateTrendIndicator(statId, trendData) {
+    const trendEl = document.getElementById(`trend-${statId}`);
+    if (!trendEl || !trendData) return;
+
+    trendEl.setAttribute('data-trend', trendData.trend);
+    
+    const changeEl = trendEl.querySelector('.trend-change');
+    if (changeEl) {
+      changeEl.textContent = trendData.changeDisplay || '';
+    }
+  }
+
+  /**
+   * Render pipeline highlights with staggered animations
+   * Shows top deals from both closestToClose and inProgress
+   */
+  renderPipeline() {
+    const container = document.getElementById('pipeline-hot');
+    
+    // Get all clients from storage (this is the same source as pipeline report)
+    const allClients = storage.getAllPipelineClients();
+    
+    // Sort by stage priority (pilot > validation > demo > discovery) and take top 4
+    const stagePriority = { pilot: 4, validation: 3, demo: 2, discovery: 1, partnership: 0 };
+    const topDeals = allClients
+      .filter(c => c.category !== 'partnerships')
+      .sort((a, b) => (stagePriority[b.stage] || 0) - (stagePriority[a.stage] || 0))
+      .slice(0, 4);
+
+    container.innerHTML = topDeals.map((deal, index) => `
+      <div class="pipeline-item" style="animation-delay: ${0.4 + index * 0.05}s">
+        <div>
+          <span class="company">${deal.name}</span>
+          <span class="stage">${deal.stage}</span>
+        </div>
+        <span class="value">${deal.value}</span>
+      </div>
+    `).join('');
+
+    // Add staggered entrance animation
+    this.animateListItems(container, '.pipeline-item');
+  }
+
+  /**
+   * Render talking points with full explanations and staggered animations
+   */
+  renderTalkingPoints() {
+    const container = document.getElementById('talking-points');
+    const points = this.data.talkingPoints || [];
+
+    if (points.length === 0) {
+      container.innerHTML = '<div class="empty-state">No talking points yet. Click + to add one.</div>';
+      return;
+    }
+
+    container.innerHTML = points.map((point, index) => `
+      <div class="talking-point-full" style="animation-delay: ${0.45 + index * 0.05}s" data-index="${index}">
+        <div class="talking-point-header">
+          <span class="number">${index + 1}</span>
+          <span class="title">${point.title}</span>
+          <div class="talking-point-actions">
+            <button class="edit-btn" onclick="window.dashboard.editTalkingPoint(${index})" title="Edit">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+            <button class="delete-btn" onclick="window.dashboard.deleteTalkingPoint(${index})" title="Delete">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <p class="description">${point.content || point.description || 'Key differentiator for investor conversations.'}</p>
+      </div>
+    `).join('');
+
+    // Add staggered entrance animation
+    this.animateListItems(container, '.talking-point-full');
+  }
+
+  /**
+   * Animate list items with stagger effect
+   */
+  animateListItems(container, selector) {
+    const items = container.querySelectorAll(selector);
+    items.forEach((item, index) => {
+      item.style.opacity = '0';
+      item.style.transform = 'translateX(-10px)';
+      
+      setTimeout(() => {
+        item.style.transition = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+        item.style.opacity = '1';
+        item.style.transform = 'translateX(0)';
+      }, 400 + index * 60);
+    });
+  }
+
+  /**
+   * Refresh pipeline view
+   */
+  refreshPipelineViews() {
+    this.renderPipeline();
+  }
+
+  /**
+   * Share weekly update via email
+   */
+  shareViaEmail() {
+    const data = this.data;
+    const stats = data.stats;
+    const talkingPoints = data.talkingPoints;
+    
+    // Get email settings with defaults
+    const emailSettings = this.settings.email || {};
+    const sectionOrder = emailSettings.sectionOrder || ['metrics', 'pipeline', 'talkingPoints', 'highlights', 'decisions', 'actionItems'];
+    const sections = emailSettings.sections || {
+      metrics: true, pipeline: true, talkingPoints: true,
+      highlights: true, decisions: true, actionItems: true
+    };
+    const counts = emailSettings.counts || { pipelineDeals: 5, talkingPoints: 4 };
+    const signature = emailSettings.signature || 'JG';
+    const greeting = emailSettings.greeting || '';
+    const links = emailSettings.links || { website: true, pitchVideo: true };
+
+    // Get current week range
+    const weekRange = this.getWeekRange(new Date());
+
+    // Get current meeting data
+    const meeting = meetingsManager.getCurrentMeeting();
+
+    // Get top pipeline deals
+    const allClients = storage.getAllPipelineClients();
+    const stagePriority = { pilot: 4, validation: 3, demo: 2, discovery: 1, partnership: 0 };
+    const topDeals = allClients
+      .filter(c => c.category !== 'partnerships')
+      .sort((a, b) => (stagePriority[b.stage] || 0) - (stagePriority[a.stage] || 0))
+      .slice(0, counts.pipelineDeals);
+
+    // Section renderers
+    const sectionRenderers = {
+      metrics: () => {
+        let content = 'KEY METRICS\n';
+        stats.forEach(stat => {
+          content += `- ${stat.label}: ${stat.value}\n`;
+        });
+        return content + '\n---\n\n';
+      },
+      pipeline: () => {
+        const pipelineTotal = data.pipeline?.totalValue || '$1.2M+';
+        let content = `PIPELINE HOT (${pipelineTotal})\n`;
+        topDeals.forEach((deal, i) => {
+          content += `${i + 1}. ${deal.name} - ${deal.stage} - ${deal.value}\n`;
+        });
+        return content + '\n---\n\n';
+      },
+      talkingPoints: () => {
+        if (!talkingPoints || talkingPoints.length === 0) return '';
+        let content = 'KEY TALKING POINTS\n';
+        talkingPoints.slice(0, counts.talkingPoints).forEach((point, i) => {
+          content += `${i + 1}. ${point.title}\n`;
+          if (point.content) {
+            content += `   ${point.content}\n`;
+          }
+        });
+        return content + '\n---\n\n';
+      },
+      highlights: () => {
+        let content = "THIS WEEK'S HIGHLIGHTS\n";
+        if (meeting?.summary && meeting.summary.length > 0) {
+          meeting.summary.forEach(item => {
+            content += `- ${item}\n`;
+          });
+        } else {
+          content += '- No highlights recorded\n';
+        }
+        return content + '\n---\n\n';
+      },
+      decisions: () => {
+        let content = 'KEY DECISIONS\n';
+        if (meeting?.decisions && meeting.decisions.length > 0) {
+          meeting.decisions.forEach(decision => {
+            content += `- ${decision}\n`;
+          });
+        } else {
+          content += '- No decisions recorded\n';
+        }
+        return content + '\n---\n\n';
+      },
+      actionItems: () => {
+        let content = 'ACTION ITEMS\n';
+        if (meeting?.todos && meeting.todos.length > 0) {
+          const todosByOwner = {};
+          meeting.todos.forEach(todo => {
+            const owner = this.resolveOwnerName(todo.owner);
+            if (!todosByOwner[owner]) {
+              todosByOwner[owner] = [];
+            }
+            todosByOwner[owner].push(todo);
+          });
+          Object.entries(todosByOwner).forEach(([owner, todos]) => {
+            content += `\n${owner}:\n`;
+            todos.forEach(todo => {
+              const checkbox = todo.completed ? '[x]' : '[ ]';
+              content += `${checkbox} ${todo.text}\n`;
+            });
+          });
+        } else {
+          content += '- No action items\n';
+        }
+        return content + '\n---\n\n';
+      }
+    };
+
+    // Build email body
+    let body = '';
+
+    // Header
+    body += 'GLOSSI\n';
+    body += `Weekly Update - ${weekRange}\n\n`;
+    
+    // Custom greeting if provided
+    if (greeting) {
+      body += `${greeting}\n\n`;
+    }
+    
+    body += '---\n\n';
+
+    // Render sections in configured order
+    sectionOrder.forEach(sectionKey => {
+      if (sections[sectionKey] && sectionRenderers[sectionKey]) {
+        body += sectionRenderers[sectionKey]();
+      }
+    });
+
+    // Footer with signature
+    body += 'Best,\n';
+    body += `${signature}\n\n`;
+    
+    // Links
+    if (links.website || links.pitchVideo) {
+      body += '---\n';
+      if (links.website) {
+        body += 'Website: https://glossi.io\n';
+      }
+      if (links.pitchVideo) {
+        body += 'Pitch Video: https://www.youtube.com/watch?v=kXbQqM35iHA';
+      }
+    }
+
+    // Open default email app (Outlook)
+    const subject = `Glossi Weekly Update - ${weekRange}`;
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    window.location.href = mailtoLink;
+    this.showToast('Opening Outlook...', 'success');
+  }
+
+  /**
+   * Render meeting selector dropdown
+   */
+  renderMeetingSelector() {
+    const select = document.getElementById('meeting-select');
+    const meetings = meetingsManager.getAllMeetings();
+    
+    console.log('Rendering meeting selector, meetings:', meetings.length);
+
+    // Get current week range
+    const thisWeekRange = this.getWeekRange(new Date());
+    const thisWeekKey = this.getWeekKey(new Date());
+
+    // Group meetings by week, keeping only the most recent per week
+    const weekMap = new Map();
+    meetings.forEach(meeting => {
+      const meetingDate = new Date(meeting.date);
+      const weekKey = this.getWeekKey(meetingDate);
+      const weekRange = this.getWeekRange(meetingDate);
+      
+      // Skip if this is the current week (handled separately)
+      if (weekKey === thisWeekKey) return;
+      
+      // Keep only the most recent meeting per week
+      if (!weekMap.has(weekKey) || new Date(meeting.date) > new Date(weekMap.get(weekKey).date)) {
+        weekMap.set(weekKey, { meeting, weekRange });
+      }
+    });
+
+    // Check if there's a meeting this week
+    const thisWeekMeeting = meetings.find(m => this.getWeekKey(new Date(m.date)) === thisWeekKey);
+    
+    // Build select options
+    select.innerHTML = `<option value="latest">${thisWeekRange}${thisWeekMeeting ? '' : ' (empty)'}</option>`;
+
+    // Add past weeks (sorted by date, most recent first)
+    const sortedWeeks = Array.from(weekMap.entries())
+      .sort((a, b) => new Date(b[1].meeting.date) - new Date(a[1].meeting.date));
+    
+    sortedWeeks.forEach(([weekKey, { meeting, weekRange }]) => {
+      select.innerHTML += `<option value="${meeting.id}">${weekRange}</option>`;
+    });
+  }
+
+  /**
+   * Get week key for grouping (e.g., "2026-W05")
+   */
+  getWeekKey(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    const week1 = new Date(d.getFullYear(), 0, 4);
+    const weekNum = 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+    return `${d.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+  }
+
+  /**
+   * Get week range string (e.g., "Jan 27 - Feb 2")
+   */
+  getWeekRange(date) {
+    const day = date.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    
+    const monday = new Date(date);
+    monday.setDate(date.getDate() + diffToMonday);
+    
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    const formatDate = (d) => {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${months[d.getMonth()]} ${d.getDate()}`;
+    };
+    
+    return `${formatDate(monday)} - ${formatDate(sunday)}`;
+  }
+
+  /**
+   * Render a meeting
+   */
+  renderMeeting(meeting) {
+    if (!meeting) {
+      this.renderEmptyMeeting();
+      return;
+    }
+
+    // Store current meeting ID for editing
+    this.currentMeetingId = meeting.id;
+
+    // Progress
+    const progress = meetingsManager.getTodoProgress(meeting);
+    document.getElementById('todo-progress').textContent = 
+      `${progress.completed}/${progress.total} complete`;
+
+    // Summary (editable with delete)
+    const summaryContainer = document.getElementById('meeting-summary');
+    if (meeting.summary && meeting.summary.length > 0) {
+      summaryContainer.innerHTML = meeting.summary.map((item, index) => 
+        `<li class="deletable-item">
+          <span class="editable-item" contenteditable="true" data-type="summary" data-index="${index}">${item}</span>
+          <button class="delete-btn" onclick="window.dashboard.deleteSummaryItem('${meeting.id}', ${index})" title="Delete">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </li>`
+      ).join('');
+      this.setupEditableListeners(summaryContainer, 'summary', meeting.id);
+    } else {
+      summaryContainer.innerHTML = '<li class="empty-state">No summary yet.</li>';
+    }
+
+    // Todos (grouped by owner, editable)
+    const todoContainer = document.getElementById('todo-list');
+    if (meeting.todos && meeting.todos.length > 0) {
+      // Group todos by resolved owner name
+      const todosByOwner = {};
+      meeting.todos.forEach(todo => {
+        const owner = this.resolveOwnerName(todo.owner);
+        if (!todosByOwner[owner]) {
+          todosByOwner[owner] = [];
+        }
+        todosByOwner[owner].push(todo);
+      });
+
+      // Render grouped todos
+      let html = '';
+      Object.entries(todosByOwner).forEach(([owner, todos]) => {
+        html += `
+          <div class="todo-group">
+            <div class="todo-group-header">${owner}</div>
+            ${todos.map(todo => `
+              <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}">
+                <div class="todo-checkbox ${todo.completed ? 'checked' : ''}" onclick="window.dashboard.toggleTodo('${meeting.id}', '${todo.id}')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </div>
+                <div class="todo-content">
+                  <span class="todo-text editable-item" contenteditable="true" data-type="todo-text" data-todo-id="${todo.id}">${todo.text}</span>
+                  <span class="todo-owner-edit editable-item" contenteditable="true" data-type="todo-owner" data-todo-id="${todo.id}" title="Click to change assignee">${this.resolveOwnerName(todo.owner)}</span>
+                </div>
+                <button class="delete-btn" onclick="window.dashboard.deleteTodo('${meeting.id}', '${todo.id}')" title="Delete">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      });
+      
+      todoContainer.innerHTML = html;
+      this.setupTodoEditListeners(todoContainer, meeting.id);
+    } else {
+      todoContainer.innerHTML = '<div class="empty-state">No action items yet.</div>';
+    }
+
+    // Decisions (editable)
+    const decisionsContainer = document.getElementById('decisions-list');
+    if (meeting.decisions && meeting.decisions.length > 0) {
+      decisionsContainer.innerHTML = meeting.decisions.map((decision, index) => 
+        `<li class="editable-item" contenteditable="true" data-type="decision" data-index="${index}">${decision}</li>`
+      ).join('');
+      this.setupEditableListeners(decisionsContainer, 'decision', meeting.id);
+    } else {
+      decisionsContainer.innerHTML = '<li class="empty-state">No decisions recorded.</li>';
+    }
+  }
+
+  /**
+   * Setup editable listeners for summary and decisions
+   */
+  setupEditableListeners(container, type, meetingId) {
+    const items = container.querySelectorAll('.editable-item');
+    items.forEach(item => {
+      // Save on blur
+      item.addEventListener('blur', (e) => {
+        const index = parseInt(e.target.dataset.index);
+        const newValue = e.target.textContent.trim();
+        this.updateMeetingField(meetingId, type, index, newValue);
+      });
+
+      // Save on Enter (prevent newline)
+      item.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.target.blur();
+        }
+      });
+
+      // Visual feedback on focus
+      item.addEventListener('focus', (e) => {
+        e.target.classList.add('editing');
+      });
+
+      item.addEventListener('blur', (e) => {
+        e.target.classList.remove('editing');
+      });
+    });
+  }
+
+  /**
+   * Setup editable listeners for todo items
+   */
+  setupTodoEditListeners(container, meetingId) {
+    const editables = container.querySelectorAll('.editable-item');
+    editables.forEach(item => {
+      item.addEventListener('blur', (e) => {
+        const todoId = e.target.dataset.todoId;
+        const type = e.target.dataset.type;
+        const newValue = e.target.textContent.trim();
+        
+        if (type === 'todo-text') {
+          this.updateTodoText(meetingId, todoId, newValue);
+        } else if (type === 'todo-owner') {
+          this.updateTodoOwner(meetingId, todoId, newValue);
+          // Re-render to regroup by owner
+          const meeting = meetingsManager.getMeeting(meetingId);
+          if (meeting) {
+            this.renderMeeting(meeting);
+          }
+        }
+      });
+
+      item.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.target.blur();
+        }
+      });
+
+      item.addEventListener('focus', (e) => {
+        e.target.classList.add('editing');
+      });
+
+      item.addEventListener('blur', (e) => {
+        e.target.classList.remove('editing');
+      });
+    });
+  }
+
+  /**
+   * Update a meeting field (summary or decision)
+   */
+  updateMeetingField(meetingId, type, index, newValue) {
+    const meeting = meetingsManager.getMeeting(meetingId);
+    if (!meeting) return;
+
+    if (type === 'summary') {
+      if (!meeting.summary) meeting.summary = [];
+      meeting.summary[index] = newValue;
+    } else if (type === 'decision') {
+      if (!meeting.decisions) meeting.decisions = [];
+      meeting.decisions[index] = newValue;
+    }
+
+    meetingsManager.updateMeeting(meeting);
+  }
+
+  /**
+   * Update todo text
+   */
+  updateTodoText(meetingId, todoId, newText) {
+    const meeting = meetingsManager.getMeeting(meetingId);
+    if (!meeting || !meeting.todos) return;
+
+    const todo = meeting.todos.find(t => t.id === todoId);
+    if (todo) {
+      todo.text = newText;
+      meetingsManager.updateMeeting(meeting);
+    }
+  }
+
+  /**
+   * Update todo owner
+   */
+  updateTodoOwner(meetingId, todoId, newOwner) {
+    const meeting = meetingsManager.getMeeting(meetingId);
+    if (!meeting || !meeting.todos) return;
+
+    const todo = meeting.todos.find(t => t.id === todoId);
+    if (todo) {
+      // Resolve alias to full name
+      todo.owner = this.resolveOwnerName(newOwner);
+      meetingsManager.updateMeeting(meeting);
+    }
+  }
+
+  /**
+   * Delete a summary item
+   */
+  deleteSummaryItem(meetingId, index) {
+    const meeting = meetingsManager.getMeeting(meetingId);
+    if (!meeting || !meeting.summary) return;
+
+    meeting.summary.splice(index, 1);
+    meetingsManager.updateMeeting(meeting);
+    this.renderMeeting(meeting);
+  }
+
+  /**
+   * Delete a todo item
+   */
+  deleteTodo(meetingId, todoId) {
+    const meeting = meetingsManager.getMeeting(meetingId);
+    if (!meeting || !meeting.todos) return;
+
+    const index = meeting.todos.findIndex(t => t.id === todoId);
+    if (index !== -1) {
+      meeting.todos.splice(index, 1);
+      meetingsManager.updateMeeting(meeting);
+      this.renderMeeting(meeting);
+      
+      // Update progress display
+      const progress = meetingsManager.getTodoProgress(meeting);
+      document.getElementById('todo-progress').textContent = 
+        `${progress.completed}/${progress.total} complete`;
+    }
+  }
+
+  /**
+   * Open modal to add a new talking point
+   */
+  openAddTalkingPoint() {
+    this.editingTalkingPointIndex = null;
+    document.getElementById('talking-point-modal-title').textContent = 'Add Talking Point';
+    document.getElementById('talking-point-title').value = '';
+    document.getElementById('talking-point-content').value = '';
+    this.showModal('talking-point-modal');
+  }
+
+  /**
+   * Open modal to edit an existing talking point
+   */
+  editTalkingPoint(index) {
+    const points = this.data.talkingPoints || [];
+    if (index < 0 || index >= points.length) return;
+
+    const point = points[index];
+    this.editingTalkingPointIndex = index;
+    document.getElementById('talking-point-modal-title').textContent = 'Edit Talking Point';
+    document.getElementById('talking-point-title').value = point.title || '';
+    document.getElementById('talking-point-content').value = point.content || point.description || '';
+    this.showModal('talking-point-modal');
+  }
+
+  /**
+   * Save talking point (add or update)
+   */
+  saveTalkingPoint() {
+    const title = document.getElementById('talking-point-title').value.trim();
+    const content = document.getElementById('talking-point-content').value.trim();
+
+    if (!title) {
+      this.showToast('Please enter a title', 'error');
+      return;
+    }
+
+    if (this.editingTalkingPointIndex !== null) {
+      storage.updateTalkingPoint(this.editingTalkingPointIndex, title, content);
+      this.showToast('Talking point updated', 'success');
+    } else {
+      storage.addTalkingPoint(title, content);
+      this.showToast('Talking point added', 'success');
+    }
+
+    this.data = storage.getData();
+    this.hideModal('talking-point-modal');
+    this.renderTalkingPoints();
+  }
+
+  /**
+   * Delete a talking point
+   */
+  deleteTalkingPoint(index) {
+    if (confirm('Delete this talking point?')) {
+      storage.deleteTalkingPoint(index);
+      this.data = storage.getData();
+      this.renderTalkingPoints();
+      this.showToast('Talking point deleted', 'success');
+    }
+  }
+
+  /**
+   * Add a new summary item
+   */
+  addNewSummaryItem() {
+    const meeting = meetingsManager.getCurrentMeeting();
+    if (!meeting) {
+      this.showToast('Add meeting notes first', 'info');
+      return;
+    }
+
+    if (!meeting.summary) {
+      meeting.summary = [];
+    }
+
+    meeting.summary.push('New summary point');
+    meetingsManager.updateMeeting(meeting);
+    
+    // Re-render and focus the new item
+    this.renderMeeting(meeting);
+    
+    // Focus the new summary item
+    setTimeout(() => {
+      const summaryItems = document.querySelectorAll('#meeting-summary .editable-item');
+      const newItem = summaryItems[summaryItems.length - 1];
+      if (newItem) {
+        newItem.focus();
+        const range = document.createRange();
+        range.selectNodeContents(newItem);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }, 50);
+  }
+
+  /**
+   * Add a new todo item
+   */
+  addNewTodo(meetingId) {
+    const meeting = meetingsManager.getMeeting(meetingId);
+    if (!meeting) return;
+
+    if (!meeting.todos) {
+      meeting.todos = [];
+    }
+
+    // Create new todo
+    const newTodo = {
+      id: `todo-${Date.now()}`,
+      text: 'New action item',
+      owner: 'Unassigned',
+      completed: false
+    };
+
+    meeting.todos.push(newTodo);
+    meetingsManager.updateMeeting(meeting);
+    
+    // Re-render and focus the new item
+    this.renderMeeting(meeting);
+    
+    // Focus the new todo text for immediate editing
+    setTimeout(() => {
+      const newTodoEl = document.querySelector(`[data-todo-id="${newTodo.id}"] .todo-text`);
+      if (newTodoEl) {
+        newTodoEl.focus();
+        // Select all text for easy replacement
+        const range = document.createRange();
+        range.selectNodeContents(newTodoEl);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }, 50);
+  }
+
+  /**
+   * Render empty meeting state
+   */
+  renderEmptyMeeting() {
+    document.getElementById('todo-progress').textContent = '0/0 complete';
+    document.getElementById('meeting-summary').innerHTML = 
+      '<li class="empty-state">No meeting notes yet. Click + to add notes.</li>';
+    document.getElementById('todo-list').innerHTML = 
+      '<div class="empty-state">No action items yet.</div>';
+    document.getElementById('decisions-list').innerHTML = 
+      '<li class="empty-state">No decisions recorded.</li>';
+  }
+
+  /**
+   * Toggle a todo item with premium animation
+   */
+  toggleTodo(meetingId, todoId) {
+    // Find the checkbox element and add animation
+    const todoItem = document.querySelector(`[data-todo-id="${todoId}"]`);
+    const checkbox = todoItem?.querySelector('.todo-checkbox');
+    
+    if (checkbox) {
+      // Add click feedback
+      checkbox.style.transform = 'scale(0.9)';
+      setTimeout(() => {
+        checkbox.style.transform = '';
+      }, 100);
+    }
+
+    const meeting = meetingsManager.toggleTodo(meetingId, todoId);
+    if (meeting) {
+      // Re-render with animation
+      this.renderMeeting(meeting);
+      
+      // Show subtle success feedback
+      const progress = meetingsManager.getTodoProgress(meeting);
+      if (progress.completed === progress.total && progress.total > 0) {
+        this.showToast('All tasks complete!', 'success');
+      }
+    }
+  }
+
+  /**
+   * Show notes modal
+   */
+  showNotesModal() {
+    // Set default date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('meeting-date-input').value = today;
+    document.getElementById('meeting-title').value = '';
+    document.getElementById('meeting-notes-input').value = '';
+    
+    this.showModal('notes-modal');
+  }
+
+  /**
+   * Process meeting notes with Claude
+   */
+  async processMeetingNotes() {
+    const title = document.getElementById('meeting-title').value.trim() || 'Weekly Board Sync';
+    const date = document.getElementById('meeting-date-input').value;
+    const notes = document.getElementById('meeting-notes-input').value.trim();
+
+    if (!notes) {
+      this.showToast('Please enter meeting notes', 'error');
+      return;
+    }
+
+    if (!aiProcessor.isConfigured()) {
+      this.showToast('Please configure your Anthropic API key in Settings', 'error');
+      return;
+    }
+
+    // Show loading state
+    this.hideModal('notes-modal');
+    this.showModal('review-modal');
+    document.getElementById('review-content').innerHTML = `
+      <div class="review-loading">
+        <div class="spinner"></div>
+        <p>Claude is analyzing your meeting notes...</p>
+      </div>
+    `;
+
+    try {
+      console.log('Processing meeting notes with AI...');
+      const result = await aiProcessor.processMeetingNotes(notes, title, date);
+      console.log('AI result:', result);
+      
+      // Store pending data
+      this.pendingReview = {
+        type: 'meeting',
+        title,
+        date,
+        rawNotes: notes,
+        aiData: result
+      };
+
+      // Show review content
+      this.renderMeetingReview(result);
+    } catch (error) {
+      console.error('Meeting notes processing error:', error);
+      this.hideModal('review-modal');
+      this.showToast('Failed to process notes: ' + error.message, 'error');
+    }
+  }
+
+  /**
+   * Save meeting directly without AI processing
+   */
+  saveMeetingDirectly() {
+    const title = document.getElementById('meeting-title').value.trim() || 'Weekly Board Sync';
+    const date = document.getElementById('meeting-date-input').value;
+    const notes = document.getElementById('meeting-notes-input').value.trim();
+
+    if (!notes) {
+      this.showToast('Please enter meeting notes', 'error');
+      return;
+    }
+
+    // Create meeting with basic structure (no AI)
+    const meeting = meetingsManager.createMeeting(title, date, notes, {
+      summary: [notes.substring(0, 200) + (notes.length > 200 ? '...' : '')],
+      todos: [],
+      decisions: [],
+      pipelineUpdates: [],
+      talkingPointSuggestions: []
+    });
+
+    this.hideModal('notes-modal');
+    this.renderMeetingSelector();
+    this.renderMeeting(meeting);
+    this.showToast('Meeting saved!', 'success');
+  }
+
+  /**
+   * Render meeting review in modal
+   */
+  renderMeetingReview(result) {
+    let html = '';
+
+    // Summary
+    if (result.summary?.length > 0) {
+      html += `
+        <div class="review-section">
+          <h4>Summary</h4>
+          ${result.summary.map(item => `
+            <div class="review-item">
+              <span class="content">${item}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // Action Items
+    if (result.todos?.length > 0) {
+      html += `
+        <div class="review-section">
+          <h4>Action Items</h4>
+          ${result.todos.map(todo => `
+            <div class="review-item">
+              <span class="label">${todo.owner || 'Unassigned'}</span>
+              <span class="content">${todo.text}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // Decisions
+    if (result.decisions?.length > 0) {
+      html += `
+        <div class="review-section">
+          <h4>Key Decisions</h4>
+          ${result.decisions.map(decision => `
+            <div class="review-item">
+              <span class="content">${decision}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // Pipeline Updates
+    if (result.pipelineUpdates?.length > 0) {
+      html += `
+        <div class="review-section">
+          <h4>Pipeline Updates Detected</h4>
+          ${result.pipelineUpdates.map(update => `
+            <div class="review-item">
+              <span class="label">${update.company}</span>
+              <span class="content">${update.update}</span>
+              ${update.newValue ? `<span class="diff-add">${update.newValue}</span>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // Talking Point Suggestions
+    if (result.talkingPointSuggestions?.length > 0) {
+      html += `
+        <div class="review-section">
+          <h4>Suggested Talking Points</h4>
+          ${result.talkingPointSuggestions.map(point => `
+            <div class="review-item">
+              <span class="label">${point.title}</span>
+              <span class="content">${point.content}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    if (!html) {
+      html = '<p style="color: var(--text-muted); text-align: center;">No significant items extracted from the notes.</p>';
+    }
+
+    document.getElementById('review-content').innerHTML = html;
+  }
+
+  /**
+   * Handle dropped content
+   */
+  async handleDroppedContent(droppedContent) {
+    if (!aiProcessor.isConfigured()) {
+      this.showToast('Please configure your Anthropic API key in Settings to analyze content', 'error');
+      return;
+    }
+
+    // Show loading
+    this.showModal('review-modal');
+    document.getElementById('review-content').innerHTML = `
+      <div class="review-loading">
+        <div class="spinner"></div>
+        <p>Claude Opus is analyzing your ${droppedContent.type}...</p>
+      </div>
+    `;
+
+    try {
+      let textContent = '';
+      
+      if (droppedContent.type === 'text') {
+        textContent = droppedContent.content.text;
+      } else if (droppedContent.type === 'pdf') {
+        textContent = droppedContent.content.text;
+      } else if (droppedContent.type === 'image') {
+        // For images, we note that we received an image
+        textContent = `[Image file: ${droppedContent.fileName}]\n\nPlease note: I've received an image file. In a production environment, this would be analyzed using vision capabilities.`;
+      }
+
+      const result = await aiProcessor.analyzeContent(textContent, droppedContent.type);
+      
+      this.pendingReview = {
+        type: 'content',
+        fileName: droppedContent.fileName,
+        aiData: result
+      };
+
+      this.renderContentReview(result);
+    } catch (error) {
+      this.hideModal('review-modal');
+      this.showToast('Failed to analyze content: ' + error.message, 'error');
+    }
+  }
+
+  /**
+   * Render content review in modal
+   */
+  renderContentReview(result) {
+    let html = `
+      <div class="review-section">
+        <h4>Content Analysis</h4>
+        <div class="review-item">
+          <span class="content">${result.contentSummary}</span>
+          <span class="badge badge-${result.relevance === 'high' ? 'green' : result.relevance === 'medium' ? 'orange' : 'blue'}" style="margin-top: 8px;">
+            ${result.relevance} relevance
+          </span>
+        </div>
+      </div>
+    `;
+
+    if (result.suggestedUpdates?.length > 0) {
+      html += `
+        <div class="review-section">
+          <h4>Suggested Updates</h4>
+          ${result.suggestedUpdates.map(update => `
+            <div class="review-item">
+              <span class="label">${update.section} - ${update.type}</span>
+              <span class="content">${update.description}</span>
+              ${update.currentValue ? `<span class="diff-remove">${update.currentValue}</span>` : ''}
+              <span class="diff-add">${update.newValue}</span>
+              <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">${update.reason}</p>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else {
+      html += `
+        <div class="review-section">
+          <h4>No Updates Suggested</h4>
+          <div class="review-item">
+            <span class="content">${result.noUpdatesReason || 'No relevant updates identified.'}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    document.getElementById('review-content').innerHTML = html;
+  }
+
+  /**
+   * Apply pending changes from review
+   */
+  applyPendingChanges() {
+    if (!this.pendingReview) {
+      this.hideModal('review-modal');
+      return;
+    }
+
+    console.log('Applying pending changes:', this.pendingReview);
+    let pipelineChanged = false;
+
+    if (this.pendingReview.type === 'meeting') {
+      // Create the meeting
+      console.log('Creating meeting with data:', this.pendingReview.aiData);
+      const meeting = meetingsManager.createMeeting(
+        this.pendingReview.title,
+        this.pendingReview.date,
+        this.pendingReview.rawNotes,
+        this.pendingReview.aiData
+      );
+      console.log('Meeting created:', meeting);
+
+      // Apply any pipeline updates
+      if (this.pendingReview.aiData.pipelineUpdates && this.pendingReview.aiData.pipelineUpdates.length > 0) {
+        this.pendingReview.aiData.pipelineUpdates.forEach(update => {
+          if (update.isNewClient) {
+            // Add new client to pipeline
+            storage.addDeal('inProgress', {
+              name: update.company,
+              value: update.newValue || '$50K',
+              stage: update.newStage || 'discovery',
+              timing: 'TBD'
+            });
+            pipelineChanged = true;
+          } else if (update.newStage) {
+            // Update existing client stage
+            // Try to find in closestToClose first, then inProgress
+            const updated = storage.updateDeal('closestToClose', update.company, {
+              stage: update.newStage,
+              value: update.newValue || undefined
+            });
+            if (!updated || !updated.pipeline.closestToClose.find(d => d.name === update.company)) {
+              storage.updateDeal('inProgress', update.company, {
+                stage: update.newStage,
+                value: update.newValue || undefined
+              });
+            }
+            pipelineChanged = true;
+          }
+        });
+      }
+
+      // Apply talking point suggestions (just add them)
+      if (this.pendingReview.aiData.talkingPointSuggestions) {
+        this.pendingReview.aiData.talkingPointSuggestions.forEach(point => {
+          storage.addTalkingPoint(point.title, point.content);
+        });
+      }
+
+      // Save pipeline snapshot if changes were made
+      if (pipelineChanged) {
+        storage.savePipelineSnapshot(`Meeting: ${this.pendingReview.title}`);
+      }
+
+      this.renderMeetingSelector();
+      this.renderMeeting(meeting);
+      this.renderTalkingPoints();
+      this.renderPipeline();
+      this.renderStats(); // Refresh stats to update trends
+      this.showToast('Meeting saved successfully', 'success');
+    } else if (this.pendingReview.type === 'content') {
+      // Apply content updates
+      const updates = this.pendingReview.aiData.suggestedUpdates || [];
+      
+      updates.forEach(update => {
+        if (update.section === 'pipeline' && update.type === 'add') {
+          storage.addDeal('inProgress', {
+            name: update.newValue,
+            value: '$50K',
+            stage: 'discovery',
+            timing: 'TBD'
+          });
+          pipelineChanged = true;
+        } else if (update.section === 'talkingPoints') {
+          storage.addTalkingPoint(update.newValue.split(':')[0], update.newValue);
+        } else if (update.section === 'stats') {
+          // Handle stat updates
+          const statId = update.description.toLowerCase().includes('pipeline') ? 'pipeline' :
+                        update.description.toLowerCase().includes('prospect') ? 'prospects' : null;
+          if (statId) {
+            const stats = storage.getData().stats;
+            const statIndex = stats.findIndex(s => s.id === statId);
+            if (statIndex !== -1) {
+              stats[statIndex].value = update.newValue;
+              storage.updateSection('stats', stats);
+            }
+          }
+        }
+      });
+
+      // Save pipeline snapshot if changes were made
+      if (pipelineChanged) {
+        storage.savePipelineSnapshot('Content update');
+      }
+
+      this.render();
+      this.showToast('Updates applied successfully', 'success');
+    }
+
+    this.hideModal('review-modal');
+    this.pendingReview = null;
+  }
+
+  /**
+   * Save settings
+   */
+  async saveSettings() {
+    const apiKey = document.getElementById('api-key').value.trim();
+    
+    // Get section order from DOM
+    const container = document.getElementById('email-sections-sortable');
+    const sectionOrder = [...container.querySelectorAll('.sortable-item')]
+      .map(item => item.dataset.section);
+    
+    // Collect email settings
+    const emailSettings = {
+      sectionOrder,
+      sections: {
+        metrics: document.getElementById('email-metrics').checked,
+        pipeline: document.getElementById('email-pipeline').checked,
+        talkingPoints: document.getElementById('email-talking-points').checked,
+        highlights: document.getElementById('email-highlights').checked,
+        decisions: document.getElementById('email-decisions').checked,
+        actionItems: document.getElementById('email-action-items').checked
+      },
+      counts: {
+        pipelineDeals: parseInt(document.getElementById('email-pipeline-count').value) || 5,
+        talkingPoints: parseInt(document.getElementById('email-talking-points-count').value) || 4
+      },
+      signature: document.getElementById('email-signature').value.trim() || 'JG',
+      greeting: document.getElementById('email-greeting').value.trim(),
+      links: {
+        website: document.getElementById('email-link-website').checked,
+        pitchVideo: document.getElementById('email-link-video').checked
+      }
+    };
+    
+    // Update storage and local settings
+    this.settings = storage.updateSettings({ apiKey, email: emailSettings });
+    aiProcessor.setApiKey(apiKey);
+
+    // Close modal first
+    this.hideModal('settings-modal');
+
+    // Test connection if key provided
+    if (apiKey) {
+      this.showToast('Testing API connection...', 'info');
+      const connected = await aiProcessor.testConnection();
+      
+      if (connected) {
+        this.showToast('API connected successfully', 'success');
+      } else {
+        this.showToast('API connection failed. Please check your key.', 'error');
+      }
+    } else {
+      this.showToast('Settings saved', 'success');
+    }
+
+    // Update UI status
+    this.renderSettingsStatus();
+  }
+
+  /**
+   * Render settings status
+   */
+  renderSettingsStatus() {
+    const statusEl = document.getElementById('api-status');
+    const apiKey = document.getElementById('api-key');
+    
+    apiKey.value = this.settings.apiKey || '';
+
+    if (aiProcessor.isConfigured()) {
+      statusEl.classList.add('connected');
+      statusEl.querySelector('.status-text').textContent = 'Connected';
+    } else {
+      statusEl.classList.remove('connected');
+      statusEl.querySelector('.status-text').textContent = 'Not configured';
+    }
+
+    // Populate email settings
+    const email = this.settings.email || {};
+    const sections = email.sections || {};
+    const counts = email.counts || {};
+    const links = email.links || {};
+    const sectionOrder = email.sectionOrder || ['metrics', 'pipeline', 'talkingPoints', 'highlights', 'decisions', 'actionItems'];
+
+    // Reorder DOM elements based on stored order
+    const container = document.getElementById('email-sections-sortable');
+    if (container) {
+      sectionOrder.forEach(sectionKey => {
+        const item = container.querySelector(`[data-section="${sectionKey}"]`);
+        if (item) {
+          container.appendChild(item);
+        }
+      });
+    }
+
+    // Section toggles
+    document.getElementById('email-metrics').checked = sections.metrics !== false;
+    document.getElementById('email-pipeline').checked = sections.pipeline !== false;
+    document.getElementById('email-talking-points').checked = sections.talkingPoints !== false;
+    document.getElementById('email-highlights').checked = sections.highlights !== false;
+    document.getElementById('email-decisions').checked = sections.decisions !== false;
+    document.getElementById('email-action-items').checked = sections.actionItems !== false;
+
+    // Counts
+    document.getElementById('email-pipeline-count').value = counts.pipelineDeals || 5;
+    document.getElementById('email-talking-points-count').value = counts.talkingPoints || 4;
+
+    // Signature and greeting
+    document.getElementById('email-signature').value = email.signature || 'JG';
+    document.getElementById('email-greeting').value = email.greeting || '';
+
+    // Links
+    document.getElementById('email-link-website').checked = links.website !== false;
+    document.getElementById('email-link-video').checked = links.pitchVideo !== false;
+  }
+
+  /**
+   * Export all data
+   */
+  exportData() {
+    const data = storage.exportData();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `glossi-dashboard-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    
+    URL.revokeObjectURL(url);
+    this.showToast('Data exported successfully', 'success');
+  }
+
+  /**
+   * Import data
+   */
+  importData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const success = storage.importData(event.target.result);
+        if (success) {
+          this.data = storage.getData();
+          this.render();
+          this.showToast('Data imported successfully', 'success');
+        } else {
+          this.showToast('Failed to import data', 'error');
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    input.click();
+  }
+
+  /**
+   * Show modal
+   */
+  showModal(modalId) {
+    document.getElementById(modalId).classList.add('visible');
+  }
+
+  /**
+   * Hide modal
+   */
+  hideModal(modalId) {
+    document.getElementById(modalId).classList.remove('visible');
+  }
+
+  /**
+   * Show toast notification with premium animation
+   */
+  showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icons = {
+      success: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
+      error: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+      info: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`
+    };
+    
+    toast.innerHTML = `
+      <span class="toast-icon ${type}">${icons[type] || icons.info}</span>
+      <span class="toast-message">${message}</span>
+      <div class="toast-progress"></div>
+    `;
+
+    container.appendChild(toast);
+
+    // Add progress bar animation
+    const progressBar = toast.querySelector('.toast-progress');
+    if (progressBar) {
+      progressBar.style.cssText = `
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 2px;
+        background: ${type === 'success' ? 'var(--accent-green)' : type === 'error' ? 'var(--accent-red)' : 'var(--accent-blue)'};
+        width: 100%;
+        transform-origin: left;
+        animation: toast-progress 4s linear forwards;
+      `;
+    }
+
+    // Auto remove after 4 seconds with exit animation
+    setTimeout(() => {
+      toast.style.animation = 'toast-out 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+
+  /**
+   * Add ripple effect to element
+   */
+  addRipple(element, event) {
+    const ripple = document.createElement('span');
+    const rect = element.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const x = event.clientX - rect.left - size / 2;
+    const y = event.clientY - rect.top - size / 2;
+    
+    ripple.style.cssText = `
+      position: absolute;
+      width: ${size}px;
+      height: ${size}px;
+      left: ${x}px;
+      top: ${y}px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 50%;
+      transform: scale(0);
+      animation: ripple 0.6s ease-out forwards;
+      pointer-events: none;
+    `;
+    
+    element.style.position = 'relative';
+    element.style.overflow = 'hidden';
+    element.appendChild(ripple);
+    
+    setTimeout(() => ripple.remove(), 600);
+  }
+}
+
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+  window.dashboard = new GlossiDashboard();
+  window.dashboard.init();
+});
+
+export default GlossiDashboard;
