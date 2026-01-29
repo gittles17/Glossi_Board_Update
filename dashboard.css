@@ -2807,12 +2807,27 @@ body::after {
    RESPONSIVE
    ============================================ */
 @media (max-width: 1200px) {
+  body {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
   .dashboard-container {
     grid-template-columns: 1fr;
-    overflow-y: auto;
+    overflow-y: visible;
     height: auto;
     min-height: 100vh;
     padding-bottom: 100px;
+  }
+
+  .panel {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .panel-content {
+    overflow-y: visible;
+    max-height: none;
   }
 
   .panel {
