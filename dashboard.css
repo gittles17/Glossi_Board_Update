@@ -799,6 +799,28 @@ body::after {
   border-color: rgba(255, 0, 0, 0.25);
 }
 
+.quick-link.deck {
+  color: #66b3ff;
+  border-color: rgba(102, 179, 255, 0.15);
+  background: rgba(102, 179, 255, 0.05);
+}
+
+.quick-link.deck:hover {
+  background: rgba(102, 179, 255, 0.1);
+  border-color: rgba(102, 179, 255, 0.25);
+}
+
+.quick-link.article {
+  color: #a78bfa;
+  border-color: rgba(167, 139, 250, 0.15);
+  background: rgba(167, 139, 250, 0.05);
+}
+
+.quick-link.article:hover {
+  background: rgba(167, 139, 250, 0.1);
+  border-color: rgba(167, 139, 250, 0.25);
+}
+
 .quick-link.copy {
   padding: 6px 8px;
   color: var(--text-muted);
