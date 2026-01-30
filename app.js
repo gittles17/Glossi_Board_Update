@@ -1172,6 +1172,69 @@ class GlossiDashboard {
   }
 
   /**
+   * Setup drag and drop for todo items between owner groups
+   */
+  setupTodoDragDrop(meetingId) {
+    const todoItems = document.querySelectorAll('.todo-item[draggable="true"]');
+    const todoGroups = document.querySelectorAll('.todo-group-items');
+
+    todoItems.forEach(item => {
+      item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', item.dataset.todoId);
+        e.dataTransfer.effectAllowed = 'move';
+        item.classList.add('dragging');
+      });
+
+      item.addEventListener('dragend', () => {
+        item.classList.remove('dragging');
+        todoGroups.forEach(group => group.classList.remove('drag-over'));
+      });
+    });
+
+    todoGroups.forEach(group => {
+      group.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        group.classList.add('drag-over');
+      });
+
+      group.addEventListener('dragleave', (e) => {
+        if (!group.contains(e.relatedTarget)) {
+          group.classList.remove('drag-over');
+        }
+      });
+
+      group.addEventListener('drop', (e) => {
+        e.preventDefault();
+        group.classList.remove('drag-over');
+        
+        const todoId = e.dataTransfer.getData('text/plain');
+        const newOwner = group.closest('.todo-group').dataset.owner;
+        
+        if (todoId && newOwner) {
+          this.moveTodoToOwner(meetingId, todoId, newOwner);
+        }
+      });
+    });
+  }
+
+  /**
+   * Move todo to a new owner
+   */
+  moveTodoToOwner(meetingId, todoId, newOwner) {
+    const meeting = meetingsManager.getMeeting(meetingId);
+    if (!meeting || !meeting.todos) return;
+
+    const todo = meeting.todos.find(t => t.id === todoId);
+    if (todo && this.resolveOwnerName(todo.owner) !== newOwner) {
+      todo.owner = newOwner;
+      meetingsManager.updateMeeting(meeting);
+      this.renderMeeting(meeting);
+      this.showToast(`Moved to ${newOwner}`, 'success');
+    }
+  }
+
+  /**
    * Format stage name for display
    */
   formatStageName(stage) {
@@ -1629,33 +1692,36 @@ class GlossiDashboard {
       let html = '';
       Object.entries(todosByOwner).forEach(([owner, todos]) => {
         html += `
-          <div class="todo-group">
+          <div class="todo-group" data-owner="${owner}">
             <div class="todo-group-header">${owner}</div>
-            ${todos.map(todo => `
-              <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}">
-                <div class="todo-checkbox ${todo.completed ? 'checked' : ''}" onclick="window.dashboard.toggleTodo('${meeting.id}', '${todo.id}')">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
+            <div class="todo-group-items">
+              ${todos.map(todo => `
+                <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}" draggable="true">
+                  <div class="todo-checkbox ${todo.completed ? 'checked' : ''}" onclick="window.dashboard.toggleTodo('${meeting.id}', '${todo.id}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </div>
+                  <div class="todo-content">
+                    <span class="todo-text editable-item" contenteditable="true" data-type="todo-text" data-todo-id="${todo.id}">${todo.text}</span>
+                    <span class="todo-owner-edit editable-item" contenteditable="true" data-type="todo-owner" data-todo-id="${todo.id}" title="Click to change assignee">${this.resolveOwnerName(todo.owner)}</span>
+                  </div>
+                  <button class="delete-btn" onclick="window.dashboard.deleteTodo('${meeting.id}', '${todo.id}')" title="Delete">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
                 </div>
-                <div class="todo-content">
-                  <span class="todo-text editable-item" contenteditable="true" data-type="todo-text" data-todo-id="${todo.id}">${todo.text}</span>
-                  <span class="todo-owner-edit editable-item" contenteditable="true" data-type="todo-owner" data-todo-id="${todo.id}" title="Click to change assignee">${this.resolveOwnerName(todo.owner)}</span>
-                </div>
-                <button class="delete-btn" onclick="window.dashboard.deleteTodo('${meeting.id}', '${todo.id}')" title="Delete">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </div>
-            `).join('')}
+              `).join('')}
+            </div>
           </div>
         `;
       });
       
       todoContainer.innerHTML = html;
       this.setupTodoEditListeners(todoContainer, meeting.id);
+      this.setupTodoDragDrop(meeting.id);
     } else {
       todoContainer.innerHTML = '<div class="empty-state">No action items yet.</div>';
     }

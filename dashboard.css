@@ -1804,6 +1804,21 @@ body::after {
   gap: var(--space-2);
 }
 
+.todo-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 40px;
+  padding: var(--space-1);
+  margin: calc(var(--space-1) * -1);
+  border-radius: var(--radius-md);
+  transition: background var(--duration-fast);
+}
+
+.todo-group-items.drag-over {
+  background: rgba(74, 222, 128, 0.08);
+}
+
 .todo-group-header {
   font-size: 11px;
   font-weight: 600;
@@ -1855,6 +1870,16 @@ body::after {
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   transition: all var(--duration-normal) var(--ease-out-expo);
+  cursor: grab;
+}
+
+.todo-item:active {
+  cursor: grabbing;
+}
+
+.todo-item.dragging {
+  opacity: 0.4;
+  transform: scale(0.98);
 }
 
 .todo-item:hover {
