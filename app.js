@@ -185,6 +185,11 @@ class GlossiDashboard {
     });
 
     // Menu items
+    document.getElementById('menu-add-notes').addEventListener('click', () => {
+      dropdown.classList.remove('open');
+      this.showNotesModal();
+    });
+
     document.getElementById('menu-share').addEventListener('click', () => {
       dropdown.classList.remove('open');
       this.shareViaEmail();
@@ -192,7 +197,7 @@ class GlossiDashboard {
 
     document.getElementById('menu-settings').addEventListener('click', () => {
       dropdown.classList.remove('open');
-      this.renderSettingsStatus(); // Load current settings into form
+      this.renderSettingsStatus();
       this.showModal('settings-modal');
     });
   }
