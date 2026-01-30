@@ -1021,18 +1021,34 @@ class GlossiDashboard {
   }
 
   /**
-   * Delete a link
+   * Delete a link with optimistic UI update
    */
   deleteLink() {
     if (!this.editingLinkId) return;
     
     if (confirm('Are you sure you want to delete this link?')) {
-      storage.deleteQuickLink(this.editingLinkId);
-      this.data = storage.getData();
+      const linkId = this.editingLinkId;
+      
+      // Close modal immediately
       this.hideModal('link-modal');
-      this.renderQuickLinks();
-      this.renderSettingsStatus();
+      
+      // Optimistic: Animate removal
+      const link = document.querySelector(`.quick-link[data-link-id="${linkId}"]`);
+      if (link) {
+        link.style.opacity = '0';
+        link.style.transform = 'scale(0.9)';
+        link.style.transition = 'all 0.15s ease-out';
+      }
+      
       this.showToast('Link deleted', 'success');
+      
+      // Persist and re-render after animation
+      setTimeout(() => {
+        storage.deleteQuickLink(linkId);
+        this.data = storage.getData();
+        this.renderQuickLinks();
+        this.renderSettingsStatus();
+      }, 150);
     }
   }
 
@@ -1157,18 +1173,37 @@ class GlossiDashboard {
   }
 
   /**
-   * Move investor to a new stage
+   * Move investor to a new stage with optimistic UI update
    */
   moveInvestorToStage(investorId, newStage) {
     const seedRaise = storage.getSeedRaise();
     const investor = seedRaise.investors.find(inv => inv.id === investorId);
     
-    if (investor && investor.stage !== newStage) {
-      storage.updateInvestor(investorId, { stage: newStage });
-      this.data = storage.getData();
-      this.renderSeedRaise();
-      this.showToast(`Moved to ${this.formatStageName(newStage)}`, 'success');
+    if (!investor || investor.stage === newStage) return;
+
+    // Optimistic: Move DOM element immediately
+    const card = document.querySelector(`.investor-card[data-investor-id="${investorId}"]`);
+    const targetColumn = document.getElementById(`stage-${newStage}`);
+    
+    if (card && targetColumn) {
+      // Animate the move
+      card.style.opacity = '0.5';
+      card.style.transform = 'scale(0.95)';
+      
+      requestAnimationFrame(() => {
+        targetColumn.appendChild(card);
+        card.style.opacity = '';
+        card.style.transform = '';
+      });
     }
+
+    // Persist in background
+    storage.updateInvestor(investorId, { stage: newStage });
+    this.data = storage.getData();
+    
+    // Delayed re-render to update totals and sync state
+    setTimeout(() => this.renderSeedRaise(), 150);
+    this.showToast(`Moved to ${this.formatStageName(newStage)}`, 'success');
   }
 
   /**
@@ -1219,19 +1254,44 @@ class GlossiDashboard {
   }
 
   /**
-   * Move todo to a new owner
+   * Move todo to a new owner with optimistic UI update
    */
   moveTodoToOwner(meetingId, todoId, newOwner) {
     const meeting = meetingsManager.getMeeting(meetingId);
     if (!meeting || !meeting.todos) return;
 
     const todo = meeting.todos.find(t => t.id === todoId);
-    if (todo && this.resolveOwnerName(todo.owner) !== newOwner) {
-      todo.owner = newOwner;
-      meetingsManager.updateMeeting(meeting);
-      this.renderMeeting(meeting);
-      this.showToast(`Moved to ${newOwner}`, 'success');
+    if (!todo || this.resolveOwnerName(todo.owner) === newOwner) return;
+
+    // Optimistic: Move DOM element immediately
+    const todoEl = document.querySelector(`[data-todo-id="${todoId}"]`);
+    const targetGroup = document.querySelector(`.todo-group[data-owner="${newOwner}"] .todo-group-items`);
+    
+    if (todoEl && targetGroup) {
+      // Animate the move
+      todoEl.style.opacity = '0.5';
+      todoEl.style.transform = 'scale(0.95)';
+      
+      requestAnimationFrame(() => {
+        targetGroup.appendChild(todoEl);
+        todoEl.style.opacity = '';
+        todoEl.style.transform = '';
+        
+        // Update the owner badge in the UI
+        const ownerBadge = todoEl.querySelector('.todo-owner-edit');
+        if (ownerBadge) {
+          ownerBadge.textContent = newOwner;
+        }
+      });
     }
+
+    // Persist in background and do full re-render to sync state
+    todo.owner = newOwner;
+    meetingsManager.updateMeeting(meeting);
+    
+    // Delayed re-render to ensure data consistency
+    setTimeout(() => this.renderMeeting(meeting), 150);
+    this.showToast(`Moved to ${newOwner}`, 'success');
   }
 
   /**
@@ -1356,17 +1416,33 @@ class GlossiDashboard {
   }
 
   /**
-   * Delete an investor
+   * Delete an investor with optimistic UI update
    */
   deleteInvestor() {
     if (!this.editingInvestorId) return;
     
     if (confirm('Are you sure you want to delete this investor?')) {
-      storage.deleteInvestor(this.editingInvestorId);
-      this.data = storage.getData();
+      const investorId = this.editingInvestorId;
+      
+      // Close modal immediately
       this.hideModal('investor-modal');
-      this.renderSeedRaise();
+      
+      // Optimistic: Animate card removal
+      const card = document.querySelector(`.investor-card[data-investor-id="${investorId}"]`);
+      if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.9)';
+        card.style.transition = 'all 0.15s ease-out';
+      }
+      
       this.showToast('Investor deleted', 'success');
+      
+      // Persist and re-render after animation
+      setTimeout(() => {
+        storage.deleteInvestor(investorId);
+        this.data = storage.getData();
+        this.renderSeedRaise();
+      }, 150);
     }
   }
 
@@ -1869,59 +1945,92 @@ class GlossiDashboard {
   }
 
   /**
-   * Delete a summary item
+   * Delete a summary item with optimistic UI update
    */
   deleteSummaryItem(meetingId, index) {
     const meeting = meetingsManager.getMeeting(meetingId);
     if (!meeting || !meeting.summary) return;
 
-    meeting.summary.splice(index, 1);
-    meetingsManager.updateMeeting(meeting);
-    this.renderMeeting(meeting);
+    // Optimistic: Animate removal immediately
+    const summaryItems = document.querySelectorAll('#meeting-summary .deletable-item');
+    const itemEl = summaryItems[index];
+    if (itemEl) {
+      itemEl.style.opacity = '0';
+      itemEl.style.transform = 'translateX(-10px)';
+      itemEl.style.transition = 'all 0.15s ease-out';
+    }
+
+    // Persist and re-render after animation
+    setTimeout(() => {
+      meeting.summary.splice(index, 1);
+      meetingsManager.updateMeeting(meeting);
+      this.renderMeeting(meeting);
+    }, 150);
     this.showToast('Summary item deleted', 'success');
   }
 
   /**
-   * Delete a decision
+   * Delete a decision with optimistic UI update
    */
   deleteDecision(meetingId, index) {
     const meeting = meetingsManager.getMeeting(meetingId);
     if (!meeting || !meeting.decisions) return;
 
-    meeting.decisions.splice(index, 1);
-    meetingsManager.updateMeeting(meeting);
-    this.renderMeeting(meeting);
+    // Optimistic: Animate removal immediately
+    const decisionItems = document.querySelectorAll('#decisions-list .deletable-item');
+    const itemEl = decisionItems[index];
+    if (itemEl) {
+      itemEl.style.opacity = '0';
+      itemEl.style.transform = 'translateX(-10px)';
+      itemEl.style.transition = 'all 0.15s ease-out';
+    }
+
+    // Persist and re-render after animation
+    setTimeout(() => {
+      meeting.decisions.splice(index, 1);
+      meetingsManager.updateMeeting(meeting);
+      this.renderMeeting(meeting);
+    }, 150);
     this.showToast('Decision deleted', 'success');
   }
 
   /**
-   * Delete a todo item
+   * Delete a todo item with optimistic UI update
    */
   deleteTodo(meetingId, todoId) {
     const meeting = meetingsManager.getMeeting(meetingId);
     if (!meeting || !meeting.todos) return;
 
     const index = meeting.todos.findIndex(t => t.id === todoId);
-    if (index !== -1) {
+    if (index === -1) return;
+
+    // Optimistic: Animate removal immediately
+    const todoEl = document.querySelector(`[data-todo-id="${todoId}"]`);
+    if (todoEl) {
+      todoEl.style.opacity = '0';
+      todoEl.style.transform = 'translateX(-10px)';
+      todoEl.style.transition = 'all 0.15s ease-out';
+    }
+
+    // Update progress immediately
+    const todo = meeting.todos[index];
+    const totalBefore = meeting.todos.length;
+    const completedBefore = meeting.todos.filter(t => t.completed).length;
+    const newTotal = totalBefore - 1;
+    const newCompleted = todo.completed ? completedBefore - 1 : completedBefore;
+    
+    document.getElementById('todo-progress').textContent = 
+      `${newCompleted}/${newTotal} complete`;
+    const percentage = newTotal > 0 ? (newCompleted / newTotal) * 100 : 0;
+    document.getElementById('action-progress-fill').style.width = `${percentage}%`;
+
+    // Persist and re-render after animation
+    setTimeout(() => {
       meeting.todos.splice(index, 1);
       meetingsManager.updateMeeting(meeting);
       this.renderMeeting(meeting);
-      
-      // Update progress display
-      const progress = meetingsManager.getTodoProgress(meeting);
-      document.getElementById('todo-progress').textContent = 
-        `${progress.completed}/${progress.total} complete`;
-      
-      // Update progress bar
-      const percentage = progress.total > 0 ? (progress.completed / progress.total) * 100 : 0;
-      document.getElementById('action-progress-fill').style.width = `${percentage}%`;
-      const statusEl = document.getElementById('meeting-status');
-      if (progress.completed > 0) {
-        statusEl.classList.add('has-progress');
-      } else {
-        statusEl.classList.remove('has-progress');
-      }
-    }
+    }, 150);
+    this.showToast('Action item deleted', 'success');
   }
 
   /**
@@ -2027,14 +2136,27 @@ class GlossiDashboard {
   }
 
   /**
-   * Delete a talking point
+   * Delete a talking point with optimistic UI update
    */
   deleteTalkingPoint(index) {
     if (confirm('Delete this talking point?')) {
-      storage.deleteTalkingPoint(index);
-      this.data = storage.getData();
-      this.renderTalkingPoints();
+      // Optimistic: Animate removal
+      const cards = document.querySelectorAll('#key-talking-points .talking-point-card');
+      const card = cards[index];
+      if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.95)';
+        card.style.transition = 'all 0.15s ease-out';
+      }
+      
       this.showToast('Talking point deleted', 'success');
+      
+      // Persist and re-render after animation
+      setTimeout(() => {
+        storage.deleteTalkingPoint(index);
+        this.data = storage.getData();
+        this.renderTalkingPoints();
+      }, 150);
     }
   }
 
@@ -2129,30 +2251,43 @@ class GlossiDashboard {
   }
 
   /**
-   * Toggle a todo item with premium animation
+   * Toggle a todo item with optimistic UI update
    */
   toggleTodo(meetingId, todoId) {
-    // Find the checkbox element and add animation
     const todoItem = document.querySelector(`[data-todo-id="${todoId}"]`);
     const checkbox = todoItem?.querySelector('.todo-checkbox');
     
-    if (checkbox) {
-      // Add click feedback
-      checkbox.style.transform = 'scale(0.9)';
-      setTimeout(() => {
-        checkbox.style.transform = '';
-      }, 100);
-    }
+    if (!todoItem || !checkbox) return;
 
-    const meeting = meetingsManager.toggleTodo(meetingId, todoId);
+    // Optimistic: Update UI immediately
+    const isCompleting = !todoItem.classList.contains('completed');
+    todoItem.classList.toggle('completed', isCompleting);
+    checkbox.classList.toggle('checked', isCompleting);
+    
+    // Add satisfying click feedback
+    checkbox.style.transform = 'scale(0.85)';
+    requestAnimationFrame(() => {
+      checkbox.style.transform = '';
+    });
+
+    // Update progress bar immediately
+    const meeting = meetingsManager.getMeeting(meetingId);
     if (meeting) {
-      // Re-render with animation
-      this.renderMeeting(meeting);
-      
-      // Show subtle success feedback
-      const progress = meetingsManager.getTodoProgress(meeting);
-      if (progress.completed === progress.total && progress.total > 0) {
-        this.showToast('All tasks complete!', 'success');
+      const todo = meeting.todos.find(t => t.id === todoId);
+      if (todo) {
+        todo.completed = isCompleting;
+        const progress = meetingsManager.getTodoProgress(meeting);
+        document.getElementById('todo-progress').textContent = 
+          `${progress.completed}/${progress.total} complete`;
+        const percentage = progress.total > 0 ? (progress.completed / progress.total) * 100 : 0;
+        document.getElementById('action-progress-fill').style.width = `${percentage}%`;
+        
+        // Persist in background
+        meetingsManager.updateMeeting(meeting);
+        
+        if (progress.completed === progress.total && progress.total > 0) {
+          this.showToast('All tasks complete!', 'success');
+        }
       }
     }
   }
