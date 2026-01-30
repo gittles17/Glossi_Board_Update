@@ -1628,11 +1628,19 @@ class GlossiDashboard {
       todoContainer.innerHTML = '<div class="empty-state">No action items yet.</div>';
     }
 
-    // Decisions (editable)
+    // Decisions (editable with delete)
     const decisionsContainer = document.getElementById('decisions-list');
     if (meeting.decisions && meeting.decisions.length > 0) {
       decisionsContainer.innerHTML = meeting.decisions.map((decision, index) => 
-        `<li class="editable-item" contenteditable="true" data-type="decision" data-index="${index}">${decision}</li>`
+        `<li class="deletable-item">
+          <span class="editable-item" contenteditable="true" data-type="decision" data-index="${index}">${decision}</span>
+          <button class="delete-btn" onclick="window.dashboard.deleteDecision('${meeting.id}', ${index})" title="Delete">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </li>`
       ).join('');
       this.setupEditableListeners(decisionsContainer, 'decision', meeting.id);
     } else {
@@ -1769,6 +1777,20 @@ class GlossiDashboard {
     meeting.summary.splice(index, 1);
     meetingsManager.updateMeeting(meeting);
     this.renderMeeting(meeting);
+    this.showToast('Summary item deleted', 'success');
+  }
+
+  /**
+   * Delete a decision
+   */
+  deleteDecision(meetingId, index) {
+    const meeting = meetingsManager.getMeeting(meetingId);
+    if (!meeting || !meeting.decisions) return;
+
+    meeting.decisions.splice(index, 1);
+    meetingsManager.updateMeeting(meeting);
+    this.renderMeeting(meeting);
+    this.showToast('Decision deleted', 'success');
   }
 
   /**
