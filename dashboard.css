@@ -334,13 +334,8 @@ body::after {
   background: rgba(74, 222, 128, 0.05);
 }
 
-.menu-paste-zone {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.menu-paste-zone textarea {
-  flex: 1;
+.menu-paste-input {
+  width: 100%;
   padding: var(--space-2) var(--space-3);
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
@@ -348,34 +343,15 @@ body::after {
   color: var(--text-primary);
   font-size: 13px;
   font-family: var(--font-sans);
-  resize: none;
-  min-height: 36px;
 }
 
-.menu-paste-zone textarea:focus {
+.menu-paste-input:focus {
   outline: none;
   border-color: var(--border-color-light);
 }
 
-.menu-paste-zone textarea::placeholder {
+.menu-paste-input::placeholder {
   color: var(--text-dim);
-}
-
-.paste-submit-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  background: var(--accent-green);
-  border: none;
-  border-radius: var(--radius-md);
-  color: var(--bg-primary);
-  cursor: pointer;
-  transition: all var(--duration-fast);
-}
-
-.paste-submit-btn:hover {
-  opacity: 0.9;
 }
 
 .dropdown-divider {

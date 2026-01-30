@@ -160,26 +160,22 @@ class GlossiDashboard {
 
     // Paste text submission
     const pasteInput = document.getElementById('menu-paste-input');
-    const pasteSubmit = document.getElementById('paste-submit-btn');
 
-    pasteSubmit.addEventListener('click', () => {
-      const text = pasteInput.value.trim();
-      if (text) {
-        dropdown.classList.remove('open');
-        this.handleDroppedContent({ content: { text }, type: 'text', fileName: 'Pasted text' });
-        pasteInput.value = '';
-      }
-    });
-
-    // Submit on Ctrl+Enter
+    // Submit on Enter
     pasteInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        pasteSubmit.click();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const text = pasteInput.value.trim();
+        if (text) {
+          dropdown.classList.remove('open');
+          this.handleDroppedContent({ content: { text }, type: 'text', fileName: 'Pasted text' });
+          pasteInput.value = '';
+        }
       }
-      e.stopPropagation(); // Prevent menu from closing
+      e.stopPropagation();
     });
 
-    // Prevent menu close when clicking in textarea
+    // Prevent menu close when clicking in input
     pasteInput.addEventListener('click', (e) => {
       e.stopPropagation();
     });
