@@ -1037,15 +1037,6 @@ body::after {
   border-color: var(--border-color-light);
 }
 
-/* Pipeline card accent */
-.section-card-pipeline {
-  background: rgba(91, 176, 154, 0.03);
-  border-left: 3px solid var(--accent-green);
-}
-
-.section-card-pipeline .card-header {
-  background: rgba(91, 176, 154, 0.02);
-}
 
 .section-card .card-header {
   display: flex;
@@ -1425,26 +1416,11 @@ body::after {
 .meeting-section {
   padding: var(--space-6) var(--space-6);
   border-bottom: 1px solid var(--border-color);
-  border-left: 3px solid transparent;
-  margin-left: -1px;
 }
 
 .meeting-section:last-child {
   border-bottom: none;
   padding-bottom: var(--space-4);
-}
-
-/* Section accent colors */
-#summary-section {
-  border-left-color: var(--accent-green);
-}
-
-#decisions-section {
-  border-left-color: var(--accent-blue);
-}
-
-#actions-section {
-  border-left-color: var(--accent-orange);
 }
 
 .meeting-section h4 {
