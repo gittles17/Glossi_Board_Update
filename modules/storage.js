@@ -86,6 +86,10 @@ const DEFAULT_DATA = {
     { id: 'deck', name: 'Deck', url: 'https://docsend.com/view/sqmwqnjh9zk8pncu', icon: 'document', color: 'blue', emailEnabled: true, emailLabel: 'Deck' },
     { id: 'article', name: 'a16z Article', url: 'https://a16z.com/ai-is-learning-to-build-reality/', icon: 'book', color: 'purple', emailEnabled: true, emailLabel: 'a16z - AI World Models' }
   ],
+  seedRaise: {
+    target: '$500K',
+    investors: []
+  },
   lastUpdated: new Date().toISOString()
 };
 
@@ -119,6 +123,9 @@ const DEFAULT_SETTINGS = {
 
 // Pipeline stages in order of progression
 const PIPELINE_STAGES = ['discovery', 'demo', 'validation', 'pilot', 'closed'];
+
+// Seed raise funnel stages
+const SEED_RAISE_STAGES = ['interested', 'inTalks', 'committed', 'closed'];
 
 class Storage {
   constructor() {
@@ -407,6 +414,89 @@ class Storage {
       this.scheduleSave();
     }
     return this.data;
+  }
+
+  /**
+   * Get seed raise data
+   */
+  getSeedRaise() {
+    if (!this.data.seedRaise) {
+      this.data.seedRaise = { target: '$500K', investors: [] };
+    }
+    return this.data.seedRaise;
+  }
+
+  /**
+   * Add an investor to seed raise
+   */
+  addInvestor(investor) {
+    if (!this.data.seedRaise) {
+      this.data.seedRaise = { target: '$500K', investors: [] };
+    }
+    const newInvestor = {
+      id: 'inv_' + Date.now(),
+      name: investor.name,
+      amount: investor.amount || '$TBD',
+      stage: investor.stage || 'interested',
+      notes: investor.notes || ''
+    };
+    this.data.seedRaise.investors.push(newInvestor);
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return newInvestor;
+  }
+
+  /**
+   * Update an investor
+   */
+  updateInvestor(id, updates) {
+    if (!this.data.seedRaise) return null;
+    const index = this.data.seedRaise.investors.findIndex(i => i.id === id);
+    if (index >= 0) {
+      this.data.seedRaise.investors[index] = {
+        ...this.data.seedRaise.investors[index],
+        ...updates
+      };
+      this.data.lastUpdated = new Date().toISOString();
+      this.scheduleSave();
+      return this.data.seedRaise.investors[index];
+    }
+    return null;
+  }
+
+  /**
+   * Delete an investor
+   */
+  deleteInvestor(id) {
+    if (!this.data.seedRaise) return false;
+    const index = this.data.seedRaise.investors.findIndex(i => i.id === id);
+    if (index >= 0) {
+      this.data.seedRaise.investors.splice(index, 1);
+      this.data.lastUpdated = new Date().toISOString();
+      this.scheduleSave();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Update seed raise target
+   */
+  updateSeedTarget(target) {
+    if (!this.data.seedRaise) {
+      this.data.seedRaise = { target: '$500K', investors: [] };
+    }
+    this.data.seedRaise.target = target;
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return this.data.seedRaise;
+  }
+
+  /**
+   * Get seed raise stages constant
+   */
+  getSeedRaiseStages() {
+    return SEED_RAISE_STAGES;
   }
 
   /**

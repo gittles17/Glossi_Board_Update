@@ -247,6 +247,67 @@
     </section>
   </main>
 
+  <!-- Seed Raise Funnel Section -->
+  <section class="seed-raise-section">
+    <div class="seed-raise-header">
+      <h2>Seed Raise</h2>
+      <div class="seed-raise-progress">
+        <span class="raised" id="seed-raised">$0</span>
+        <span class="progress-divider">/</span>
+        <span class="target" id="seed-target">$500K</span>
+        <div class="seed-progress-bar">
+          <div class="seed-progress-fill" id="seed-progress-fill"></div>
+        </div>
+        <span class="progress-percent" id="seed-percent">0%</span>
+      </div>
+      <button class="add-btn-small" id="add-investor-btn" title="Add Investor">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="funnel-kanban">
+      <div class="funnel-column" data-stage="interested">
+        <div class="column-header">
+          <span class="column-title">Interested</span>
+          <span class="column-count" id="count-interested">(0)</span>
+        </div>
+        <div class="column-items" id="stage-interested">
+          <!-- Investor cards rendered here -->
+        </div>
+      </div>
+      <div class="funnel-column" data-stage="inTalks">
+        <div class="column-header">
+          <span class="column-title">In Talks</span>
+          <span class="column-count" id="count-inTalks">(0)</span>
+        </div>
+        <div class="column-items" id="stage-inTalks">
+          <!-- Investor cards rendered here -->
+        </div>
+      </div>
+      <div class="funnel-column" data-stage="committed">
+        <div class="column-header">
+          <span class="column-title">Committed</span>
+          <span class="column-count" id="count-committed">(0)</span>
+        </div>
+        <div class="column-items" id="stage-committed">
+          <!-- Investor cards rendered here -->
+        </div>
+      </div>
+      <div class="funnel-column" data-stage="closed">
+        <div class="column-header">
+          <span class="column-title">Closed</span>
+          <span class="column-count" id="count-closed">(0)</span>
+        </div>
+        <div class="column-items" id="stage-closed">
+          <!-- Investor cards rendered here -->
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Review Modal -->
   <div class="modal-overlay" id="review-modal">
     <div class="modal">
@@ -653,6 +714,49 @@
         <button class="btn btn-danger" id="link-delete" style="margin-right: auto; display: none;">Delete</button>
         <button class="btn btn-secondary" id="link-cancel">Cancel</button>
         <button class="btn btn-primary" id="link-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Investor Modal -->
+  <div class="modal-overlay" id="investor-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="investor-modal-title">Add Investor</h2>
+        <button class="btn-icon modal-close" id="investor-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="notes-input-section">
+          <label for="investor-name">Investor Name</label>
+          <input type="text" id="investor-name" placeholder="e.g., John Smith or Acme Ventures" class="input">
+        </div>
+        <div class="notes-input-section">
+          <label for="investor-amount">Amount</label>
+          <input type="text" id="investor-amount" placeholder="e.g., $50K" class="input">
+        </div>
+        <div class="notes-input-section">
+          <label for="investor-stage">Stage</label>
+          <select id="investor-stage" class="input">
+            <option value="interested">Interested</option>
+            <option value="inTalks">In Talks</option>
+            <option value="committed">Committed</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+        <div class="notes-input-section">
+          <label for="investor-notes">Notes (optional)</label>
+          <textarea id="investor-notes" class="input textarea" rows="2" placeholder="Any additional context..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="investor-delete" style="margin-right: auto; display: none;">Delete</button>
+        <button class="btn btn-secondary" id="investor-cancel">Cancel</button>
+        <button class="btn btn-primary" id="investor-save">Save</button>
       </div>
     </div>
   </div>

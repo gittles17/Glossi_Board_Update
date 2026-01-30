@@ -18,6 +18,7 @@ class GlossiDashboard {
     this.animationObserver = null;
     this.editingTalkingPointIndex = null;
     this.editingLinkId = null;
+    this.editingInvestorId = null;
     
     // Name aliases for display
     this.nameAliases = {
@@ -650,6 +651,27 @@ class GlossiDashboard {
       this.deleteLink();
     });
 
+    // Investor modal
+    document.getElementById('add-investor-btn').addEventListener('click', () => {
+      this.openAddInvestor();
+    });
+
+    document.getElementById('investor-modal-close').addEventListener('click', () => {
+      this.hideModal('investor-modal');
+    });
+
+    document.getElementById('investor-cancel').addEventListener('click', () => {
+      this.hideModal('investor-modal');
+    });
+
+    document.getElementById('investor-save').addEventListener('click', () => {
+      this.saveInvestor();
+    });
+
+    document.getElementById('investor-delete').addEventListener('click', () => {
+      this.deleteInvestor();
+    });
+
     // Color picker
     document.querySelectorAll('.color-option').forEach(option => {
       option.addEventListener('click', () => {
@@ -712,6 +734,7 @@ class GlossiDashboard {
     this.renderPipeline();
     this.renderTalkingPoints();
     this.renderQuickLinks();
+    this.renderSeedRaise();
     this.renderMeetingSelector();
     
     const currentMeeting = meetingsManager.getCurrentMeeting();
@@ -998,6 +1021,172 @@ class GlossiDashboard {
       this.renderQuickLinks();
       this.renderSettingsStatus();
       this.showToast('Link deleted', 'success');
+    }
+  }
+
+  /**
+   * Render seed raise funnel section
+   */
+  renderSeedRaise() {
+    const seedRaise = storage.getSeedRaise();
+    const investors = seedRaise.investors || [];
+    const stages = ['interested', 'inTalks', 'committed', 'closed'];
+    
+    // Calculate progress (committed + closed amounts)
+    const { raised, percent } = this.calculateRaiseProgress(investors, seedRaise.target);
+    
+    // Update progress display
+    document.getElementById('seed-raised').textContent = raised;
+    document.getElementById('seed-target').textContent = seedRaise.target;
+    document.getElementById('seed-percent').textContent = `${percent}%`;
+    document.getElementById('seed-progress-fill').style.width = `${Math.min(percent, 100)}%`;
+    
+    // Render each column
+    stages.forEach(stage => {
+      const container = document.getElementById(`stage-${stage}`);
+      const stageInvestors = investors.filter(inv => inv.stage === stage);
+      const countEl = document.getElementById(`count-${stage}`);
+      
+      if (countEl) {
+        countEl.textContent = `(${stageInvestors.length})`;
+      }
+      
+      if (stageInvestors.length === 0) {
+        container.innerHTML = '<div class="empty-state">No investors</div>';
+      } else {
+        container.innerHTML = stageInvestors.map(inv => `
+          <div class="investor-card" data-id="${inv.id}" onclick="window.dashboard.editInvestor('${inv.id}')">
+            <div class="investor-info">
+              <span class="investor-name">${inv.name}</span>
+              <span class="investor-amount">${inv.amount}</span>
+              ${inv.notes ? `<span class="investor-notes">${inv.notes}</span>` : ''}
+            </div>
+          </div>
+        `).join('');
+      }
+    });
+  }
+
+  /**
+   * Calculate raise progress from committed and closed investors
+   */
+  calculateRaiseProgress(investors, target) {
+    // Parse target
+    const targetNum = this.parseAmount(target);
+    
+    // Sum committed and closed amounts
+    let raisedNum = 0;
+    investors.forEach(inv => {
+      if (inv.stage === 'committed' || inv.stage === 'closed') {
+        raisedNum += this.parseAmount(inv.amount);
+      }
+    });
+    
+    // Format raised amount
+    let raised = '$0';
+    if (raisedNum >= 1000000) {
+      raised = `$${(raisedNum / 1000000).toFixed(1)}M`;
+    } else if (raisedNum >= 1000) {
+      raised = `$${Math.round(raisedNum / 1000)}K`;
+    } else if (raisedNum > 0) {
+      raised = `$${raisedNum}`;
+    }
+    
+    // Calculate percent
+    const percent = targetNum > 0 ? Math.round((raisedNum / targetNum) * 100) : 0;
+    
+    return { raised, raisedNum, percent };
+  }
+
+  /**
+   * Parse amount string to number
+   */
+  parseAmount(amount) {
+    if (!amount || amount === '$TBD') return 0;
+    const match = String(amount).match(/\$?([\d.]+)([KMB])?/i);
+    if (!match) return 0;
+    let num = parseFloat(match[1]);
+    const suffix = (match[2] || '').toUpperCase();
+    if (suffix === 'K') num *= 1000;
+    else if (suffix === 'M') num *= 1000000;
+    else if (suffix === 'B') num *= 1000000000;
+    return num;
+  }
+
+  /**
+   * Open add investor modal
+   */
+  openAddInvestor() {
+    this.editingInvestorId = null;
+    document.getElementById('investor-modal-title').textContent = 'Add Investor';
+    document.getElementById('investor-name').value = '';
+    document.getElementById('investor-amount').value = '';
+    document.getElementById('investor-stage').value = 'interested';
+    document.getElementById('investor-notes').value = '';
+    document.getElementById('investor-delete').style.display = 'none';
+    this.showModal('investor-modal');
+    document.getElementById('investor-name').focus();
+  }
+
+  /**
+   * Edit an existing investor
+   */
+  editInvestor(id) {
+    const seedRaise = storage.getSeedRaise();
+    const investor = seedRaise.investors.find(inv => inv.id === id);
+    if (!investor) return;
+    
+    this.editingInvestorId = id;
+    document.getElementById('investor-modal-title').textContent = 'Edit Investor';
+    document.getElementById('investor-name').value = investor.name;
+    document.getElementById('investor-amount').value = investor.amount;
+    document.getElementById('investor-stage').value = investor.stage;
+    document.getElementById('investor-notes').value = investor.notes || '';
+    document.getElementById('investor-delete').style.display = 'block';
+    this.showModal('investor-modal');
+  }
+
+  /**
+   * Save investor (add or update)
+   */
+  saveInvestor() {
+    const name = document.getElementById('investor-name').value.trim();
+    const amount = document.getElementById('investor-amount').value.trim();
+    const stage = document.getElementById('investor-stage').value;
+    const notes = document.getElementById('investor-notes').value.trim();
+    
+    if (!name) {
+      this.showToast('Please enter an investor name', 'error');
+      return;
+    }
+    
+    if (this.editingInvestorId) {
+      // Update existing
+      storage.updateInvestor(this.editingInvestorId, { name, amount: amount || '$TBD', stage, notes });
+      this.showToast('Investor updated', 'success');
+    } else {
+      // Add new
+      storage.addInvestor({ name, amount: amount || '$TBD', stage, notes });
+      this.showToast('Investor added', 'success');
+    }
+    
+    this.data = storage.getData();
+    this.hideModal('investor-modal');
+    this.renderSeedRaise();
+  }
+
+  /**
+   * Delete an investor
+   */
+  deleteInvestor() {
+    if (!this.editingInvestorId) return;
+    
+    if (confirm('Are you sure you want to delete this investor?')) {
+      storage.deleteInvestor(this.editingInvestorId);
+      this.data = storage.getData();
+      this.hideModal('investor-modal');
+      this.renderSeedRaise();
+      this.showToast('Investor deleted', 'success');
     }
   }
 
