@@ -7,13 +7,13 @@
    CSS CUSTOM PROPERTIES - AURIS DESIGN TOKENS
    ============================================ */
 :root {
-  /* Backgrounds - Green-tinted dark (BFL style) */
-  --bg-primary: #0d1512;
-  --bg-secondary: #111916;
-  --bg-card: #151d1a;
-  --bg-card-hover: #1a2320;
-  --bg-elevated: #1a2320;
-  --bg-surface: #111916;
+  /* Backgrounds - Dark (BFL style) */
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0a;
+  --bg-card: #111111;
+  --bg-card-hover: #161616;
+  --bg-elevated: #161616;
+  --bg-surface: #0a0a0a;
 
   /* Borders - Minimal (BFL style) */
   --border-color: rgba(255, 255, 255, 0.08);
@@ -953,10 +953,10 @@ body::after {
 
 .stat-mini .stat-revenue {
   display: block;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--accent-green);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--text-secondary);
   margin-top: var(--space-1);
 }
 
@@ -1143,11 +1143,10 @@ body::after {
 }
 
 .pipeline-item .value {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 14px;
-  font-weight: 600;
-  color: var(--accent-green);
-  font-variant-numeric: tabular-nums;
+  font-weight: 300;
+  color: var(--text-primary);
 }
 
 .pipeline-item .stage {
@@ -2693,9 +2692,6 @@ body::after {
   transform: translateX(4px);
 }
 
-.pipeline-item:hover .value {
-  text-shadow: 0 0 20px var(--accent-green-glow);
-}
 
 /* Talking point hover */
 .talking-point-mini {
@@ -3356,23 +3352,24 @@ body::after {
 }
 
 .seed-raise-progress .raised {
-  font-family: var(--font-mono);
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--accent-green);
+  font-family: var(--font-sans);
+  font-size: 36px;
+  font-weight: 300;
+  color: var(--text-primary);
   line-height: 1;
 }
 
 .seed-raise-progress .progress-divider {
-  color: var(--text-muted);
-  font-size: 20px;
+  color: var(--text-dim);
+  font-size: 24px;
+  font-weight: 300;
 }
 
 .seed-raise-progress .target {
-  font-family: var(--font-mono);
-  font-size: 18px;
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 24px;
+  font-weight: 300;
+  color: var(--text-muted);
 }
 
 .seed-progress-bar {
@@ -3445,10 +3442,10 @@ body::after {
 }
 
 .funnel-column .column-total {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--accent-green);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--text-primary);
 }
 
 .funnel-column .column-total:empty {
@@ -3546,10 +3543,10 @@ body::after {
 }
 
 .investor-card .investor-amount {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent-green);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--text-secondary);
 }
 
 .investor-card .investor-notes {
@@ -3617,11 +3614,11 @@ body::after {
   }
 
   .seed-raise-progress .raised {
-    font-size: 14px;
+    font-size: 24px;
   }
 
   .seed-raise-progress .target {
-    font-size: 12px;
+    font-size: 18px;
   }
 
   .investor-card {
@@ -3633,6 +3630,6 @@ body::after {
   }
 
   .investor-card .investor-amount {
-    font-size: 11px;
+    font-size: 12px;
   }
 }
