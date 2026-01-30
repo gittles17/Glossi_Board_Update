@@ -7,18 +7,18 @@
    CSS CUSTOM PROPERTIES - AURIS DESIGN TOKENS
    ============================================ */
 :root {
-  /* Backgrounds - Auris (blue-tinted dark) */
-  --bg-primary: #0a0d12;
-  --bg-secondary: #090b0f;
-  --bg-card: #08090d;
-  --bg-card-hover: #0c0e14;
-  --bg-elevated: #0c0e14;
-  --bg-surface: #090b0f;
+  /* Backgrounds - Green-tinted dark (BFL style) */
+  --bg-primary: #0d1512;
+  --bg-secondary: #111916;
+  --bg-card: #151d1a;
+  --bg-card-hover: #1a2320;
+  --bg-elevated: #1a2320;
+  --bg-surface: #111916;
 
-  /* Borders - Auris */
-  --border-color: #262626;
-  --border-color-light: #333333;
-  --border-subtle: #1a1a1a;
+  /* Borders - Minimal (BFL style) */
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-color-light: rgba(255, 255, 255, 0.12);
+  --border-subtle: rgba(255, 255, 255, 0.04);
 
   /* Text - Auris */
   --text-primary: #ffffff;
@@ -924,7 +924,7 @@ body::after {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: var(--space-4) var(--space-4);
+  padding: var(--space-5) var(--space-4);
   text-align: center;
   transition: all var(--duration-fast) ease;
 }
@@ -933,34 +933,21 @@ body::after {
   border-color: var(--border-color-light);
 }
 
-/* Primary stat (Pipeline) gets emphasis */
-.stat-mini:first-child {
-  background: rgba(91, 176, 154, 0.08);
-  border-color: rgba(91, 176, 154, 0.2);
-}
-
-.stat-mini:first-child .stat-value {
-  font-size: 28px;
-}
-
 .stat-mini .stat-value {
   display: block;
-  font-family: var(--font-mono);
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--accent-green);
+  font-family: var(--font-sans);
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--text-primary);
   line-height: 1.2;
   letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
 }
 
 .stat-mini .stat-label {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   margin-top: var(--space-2);
 }
 
@@ -968,24 +955,14 @@ body::after {
   display: block;
   font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--accent-green);
   margin-top: var(--space-1);
-  opacity: 0.85;
 }
 
-/* Stat Trend Indicators */
+/* Stat Trend Indicators - hidden for clean look */
 .stat-trend {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  margin-top: var(--space-2);
-  font-size: 11px;
-  font-weight: 600;
-  position: relative;
-  z-index: 1;
-  height: 18px;
+  display: none;
 }
 
 .stat-trend[data-trend="up"] {

@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glossi - Board Updates (BFL Style)</title>
+  <meta name="theme-color" content="#000000">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="dashboard-bfl.css">
+</head>
+<body>
+  <!-- Top Navigation -->
+  <header class="top-nav">
+    <div class="nav-left">
+      <img src="Asset 3.svg" alt="Glossi" class="logo-img">
+      <span class="logo-divider"></span>
+      <span class="nav-title">Board Updates</span>
+    </div>
+    <div class="nav-right">
+      <!-- Hamburger Menu -->
+      <div class="menu-container">
+        <button class="btn-icon" id="menu-btn" title="Menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+        <div class="dropdown-menu" id="dropdown-menu">
+          <div class="menu-upload-section">
+            <span class="menu-section-label">Add Content</span>
+            <div class="menu-drop-zone" id="menu-drop-zone">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>Drop files or click</span>
+              <input type="file" id="menu-file-input" accept=".png,.jpg,.jpeg,.pdf,.txt,.md,.mp3,.wav,.m4a" style="display: none;">
+            </div>
+            <div class="menu-paste-zone">
+              <textarea id="menu-paste-input" placeholder="Paste text here..." rows="1"></textarea>
+              <button class="paste-submit-btn" id="paste-submit-btn" title="Submit (Cmd+Enter)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="menu-actions">
+            <button class="menu-action-btn menu-action-primary" id="menu-share">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                <polyline points="16 6 12 2 8 6"></polyline>
+                <line x1="12" y1="2" x2="12" y2="15"></line>
+              </svg>
+              Share
+            </button>
+            <button class="menu-action-btn" id="menu-settings">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+              Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Seed Raise Funnel Section -->
+  <section class="seed-raise-section">
+    <div class="seed-raise-header">
+      <h2>Seed Raise</h2>
+      <div class="seed-raise-progress">
+        <span class="raised" id="seed-raised">$0</span>
+        <span class="progress-divider">/</span>
+        <span class="target" id="seed-target">$500K</span>
+        <div class="seed-progress-bar">
+          <div class="seed-progress-fill" id="seed-progress-fill"></div>
+        </div>
+        <span class="progress-percent" id="seed-percent">0%</span>
+      </div>
+      <button class="add-btn-small" id="add-investor-btn" title="Add Investor">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="funnel-kanban">
+      <div class="funnel-column" data-stage="interested">
+        <div class="column-header">
+          <div class="column-header-left">
+            <span class="column-title">Interested</span>
+            <span class="column-count" id="count-interested">(0)</span>
+          </div>
+          <span class="column-total" id="total-interested"></span>
+        </div>
+        <div class="column-items" id="stage-interested">
+          <!-- Investor cards rendered here -->
+        </div>
+      </div>
+      <div class="funnel-column" data-stage="inTalks">
+        <div class="column-header">
+          <div class="column-header-left">
+            <span class="column-title">In Talks</span>
+            <span class="column-count" id="count-inTalks">(0)</span>
+          </div>
+          <span class="column-total" id="total-inTalks"></span>
+        </div>
+        <div class="column-items" id="stage-inTalks">
+          <!-- Investor cards rendered here -->
+        </div>
+      </div>
+      <div class="funnel-column" data-stage="committed">
+        <div class="column-header">
+          <div class="column-header-left">
+            <span class="column-title">Committed</span>
+            <span class="column-count" id="count-committed">(0)</span>
+          </div>
+          <span class="column-total" id="total-committed"></span>
+        </div>
+        <div class="column-items" id="stage-committed">
+          <!-- Investor cards rendered here -->
+        </div>
+      </div>
+      <div class="funnel-column" data-stage="closed">
+        <div class="column-header">
+          <div class="column-header-left">
+            <span class="column-title">Closed</span>
+            <span class="column-count" id="count-closed">(0)</span>
+          </div>
+          <span class="column-total" id="total-closed"></span>
+        </div>
+        <div class="column-items" id="stage-closed">
+          <!-- Investor cards rendered here -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Dashboard Container -->
+  <main class="dashboard-container">
+    <!-- Left Panel: Meeting Minutes (Last Week at a Glance) -->
+    <section class="panel panel-left">
+      <div class="panel-header">
+        <h2>Week at a Glance</h2>
+        <div class="header-controls">
+          <select id="meeting-select" class="time-filter">
+            <option value="latest">This Week</option>
+            <!-- Populated by JS with past weeks -->
+          </select>
+          <button class="btn btn-icon btn-secondary" id="add-notes-btn" title="Add Notes">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel-content">
+        <!-- Current Meeting Summary -->
+        <div class="meeting-card" id="current-meeting">
+          <!-- Summary Section -->
+          <div class="meeting-section collapsible" id="summary-section">
+            <div class="section-header-row clickable" data-toggle="summary-content">
+              <div class="section-header-left">
+                <button class="collapse-toggle" aria-expanded="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <h4>Summary</h4>
+                <span class="item-count" id="summary-count"></span>
+              </div>
+              <button class="add-btn-small" id="add-summary-btn" title="Add summary point">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+            </div>
+            <div class="section-content" id="summary-content">
+              <ul class="summary-list" id="meeting-summary">
+                <li class="empty-state">No meeting notes yet. Click + to add notes.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Key Decisions -->
+          <div class="meeting-section collapsible" id="decisions-section">
+            <div class="section-header-row clickable" data-toggle="decisions-content">
+              <div class="section-header-left">
+                <button class="collapse-toggle" aria-expanded="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <h4>Key Decisions</h4>
+                <span class="item-count" id="decisions-count"></span>
+              </div>
+              <button class="add-btn-small" id="add-decision-btn" title="Add decision">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+            </div>
+            <div class="section-content" id="decisions-content">
+              <ul class="decisions-list" id="decisions-list">
+                <li class="empty-state">No decisions recorded.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Action Items -->
+          <div class="meeting-section collapsible" id="actions-section">
+            <div class="section-header-row clickable" data-toggle="actions-content">
+              <div class="section-header-left">
+                <button class="collapse-toggle" aria-expanded="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <h4>Action Items</h4>
+              </div>
+              <div class="section-header-right">
+                <button class="add-btn-small" id="add-todo-btn" title="Add action item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+                <span class="meeting-status" id="meeting-status">
+                  <span id="todo-progress">0/0 complete</span>
+                </span>
+              </div>
+            </div>
+            <div class="section-content" id="actions-content">
+              <div class="action-progress-bar" id="action-progress-bar">
+                <div class="action-progress-fill" id="action-progress-fill"></div>
+              </div>
+              <div class="todo-list" id="todo-list">
+                <div class="empty-state">No action items yet.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Right Panel: Cheat Sheet Summary -->
+    <section class="panel panel-right">
+      <div class="panel-header">
+        <h2>Investor Cheat Sheet</h2>
+      </div>
+      
+      <div class="panel-content" id="cheatsheet-panel">
+        <!-- Important Links (compact) -->
+        <div class="quick-links">
+          <div id="quick-links-container">
+            <!-- Links rendered dynamically -->
+          </div>
+          <button class="quick-link add-link-btn" id="add-link-btn" title="Add Link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Quick Stats with Trends -->
+        <div class="stats-row">
+          <div class="stat-mini">
+            <span class="stat-value" id="stat-pipeline">$1.2M+</span>
+            <span class="stat-label">Pipeline</span>
+            <span class="stat-trend" id="trend-pipeline" data-trend="neutral">
+              <span class="trend-icon"></span>
+              <span class="trend-change"></span>
+            </span>
+          </div>
+          <div class="stat-mini">
+            <span class="stat-value" id="stat-prospects">10+</span>
+            <span class="stat-label">Prospects</span>
+            <span class="stat-trend" id="trend-prospects" data-trend="neutral">
+              <span class="trend-icon"></span>
+              <span class="trend-change"></span>
+            </span>
+          </div>
+          <div class="stat-mini">
+            <span class="stat-value" id="stat-partnerships">3</span>
+            <span class="stat-label">Partnerships</span>
+            <span class="stat-trend" id="trend-partnerships" data-trend="neutral">
+              <span class="trend-icon"></span>
+              <span class="trend-change"></span>
+            </span>
+          </div>
+          <div class="stat-mini stat-closed">
+            <span class="stat-value" id="stat-closed">0</span>
+            <span class="stat-label">Closed</span>
+            <span class="stat-revenue" id="stat-closed-revenue">$0 revenue</span>
+          </div>
+        </div>
+
+        <!-- Pipeline Summary -->
+        <div class="section-card section-card-pipeline">
+          <div class="card-header">
+            <h3>Pipeline Highlights</h3>
+            <div class="card-header-right">
+              <button class="add-btn-small" id="add-pipeline-btn" title="Add pipeline deal">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+              <span class="badge badge-green">HOT</span>
+            </div>
+          </div>
+          <div class="pipeline-list" id="pipeline-hot">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Key Talking Points -->
+        <div class="section-card">
+          <div class="card-header">
+            <h3>Key Talking Points</h3>
+            <button class="add-btn-small" id="add-talking-point-btn" title="Add talking point">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="talking-points-expanded" id="talking-points">
+            <!-- Populated by JS with full explanations -->
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Review Modal -->
+  <div class="modal-overlay" id="review-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Review Suggested Changes</h2>
+        <button class="btn-icon modal-close" id="modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="review-content">
+        <!-- Populated by JS with AI suggestions -->
+        <div class="review-loading">
+          <div class="spinner"></div>
+          <p>Claude Opus is analyzing your content...</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="review-reject">Reject All</button>
+        <button class="btn btn-primary" id="review-accept">Accept Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meeting Notes Modal -->
+  <div class="modal-overlay" id="notes-modal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2>Add Meeting Notes</h2>
+        <button class="btn-icon modal-close" id="notes-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="notes-input-section">
+          <label for="meeting-title">Meeting Title</label>
+          <input type="text" id="meeting-title" placeholder="Weekly Board Sync" class="input">
+        </div>
+        <div class="notes-input-section">
+          <label for="meeting-date-input">Date</label>
+          <input type="date" id="meeting-date-input" class="input">
+        </div>
+        <div class="notes-input-section">
+          <label for="meeting-notes-input">Meeting Notes</label>
+          <textarea id="meeting-notes-input" class="input textarea" placeholder="Paste your meeting notes here. Claude Opus will analyze them and extract:
+- Key summary points
+- Action items with owners
+- Important decisions made
+- Updates to pipeline or talking points"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="notes-cancel">Cancel</button>
+        <button class="btn btn-secondary" id="notes-save-direct">Save as Notes</button>
+        <button class="btn btn-primary" id="notes-process">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          Process with AI
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="btn-icon modal-close" id="settings-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-section">
+          <h3>Claude API Configuration</h3>
+          <p class="settings-description">Enter your Anthropic API key to enable AI-powered features.</p>
+          <div class="input-group">
+            <label for="api-key">Anthropic API Key</label>
+            <input type="password" id="api-key" class="input" placeholder="sk-ant-...">
+            <button class="btn btn-secondary btn-sm" id="toggle-api-key">Show</button>
+          </div>
+          <div class="api-status" id="api-status">
+            <span class="status-indicator"></span>
+            <span class="status-text">Not configured</span>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>Audio Transcription (OpenAI)</h3>
+          <p class="settings-description">Enter your OpenAI API key for Whisper audio transcription.</p>
+          <div class="input-group">
+            <label for="openai-api-key">OpenAI API Key</label>
+            <input type="password" id="openai-api-key" class="input" placeholder="sk-proj-...">
+            <button class="btn btn-secondary btn-sm" id="toggle-openai-key">Show</button>
+          </div>
+          <div class="api-status" id="openai-status">
+            <span class="status-indicator"></span>
+            <span class="status-text">Not configured</span>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>Seed Raise</h3>
+          <p class="settings-description">Set your fundraising target for the seed raise tracker.</p>
+          <div class="input-group input-group-inline">
+            <label for="seed-raise-target">Target Amount</label>
+            <input type="text" id="seed-raise-target" class="input input-sm" placeholder="e.g., $500K" value="$500K">
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>Data Storage</h3>
+          <p class="settings-description">Your data is stored locally in JSON files.</p>
+          <div class="storage-actions">
+            <button class="btn btn-secondary" id="export-data">Export All Data</button>
+          </div>
+        </div>
+
+        <div class="settings-section email-settings">
+          <h3>Investor Email Format</h3>
+          <p class="settings-description">Customize which sections appear in your weekly investor update emails.</p>
+          
+          <p class="settings-sublabel">Drag to reorder sections</p>
+          <div class="email-sections-sortable" id="email-sections-sortable">
+            <div class="sortable-item" data-section="metrics" draggable="true">
+              <span class="drag-handle">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="9" cy="6" r="2"></circle>
+                  <circle cx="15" cy="6" r="2"></circle>
+                  <circle cx="9" cy="12" r="2"></circle>
+                  <circle cx="15" cy="12" r="2"></circle>
+                  <circle cx="9" cy="18" r="2"></circle>
+                  <circle cx="15" cy="18" r="2"></circle>
+                </svg>
+              </span>
+              <label class="toggle-row">
+                <input type="checkbox" id="email-metrics" checked>
+                <span class="toggle-switch"></span>
+                <span class="toggle-label">Key Metrics</span>
+              </label>
+            </div>
+            <div class="sortable-item" data-section="pipeline" draggable="true">
+              <span class="drag-handle">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="9" cy="6" r="2"></circle>
+                  <circle cx="15" cy="6" r="2"></circle>
+                  <circle cx="9" cy="12" r="2"></circle>
+                  <circle cx="15" cy="12" r="2"></circle>
+                  <circle cx="9" cy="18" r="2"></circle>
+                  <circle cx="15" cy="18" r="2"></circle>
+                </svg>
+              </span>
+              <label class="toggle-row">
+                <input type="checkbox" id="email-pipeline" checked>
+                <span class="toggle-switch"></span>
+                <span class="toggle-label">Pipeline Hot</span>
+              </label>
+            </div>
+            <div class="sortable-item" data-section="talkingPoints" draggable="true">
+              <span class="drag-handle">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="9" cy="6" r="2"></circle>
+                  <circle cx="15" cy="6" r="2"></circle>
+                  <circle cx="9" cy="12" r="2"></circle>
+                  <circle cx="15" cy="12" r="2"></circle>
+                  <circle cx="9" cy="18" r="2"></circle>
+                  <circle cx="15" cy="18" r="2"></circle>
+                </svg>
+              </span>
+              <label class="toggle-row">
+                <input type="checkbox" id="email-talking-points" checked>
+                <span class="toggle-switch"></span>
+                <span class="toggle-label">Key Talking Points</span>
+              </label>
+            </div>
+            <div class="sortable-item" data-section="highlights" draggable="true">
+              <span class="drag-handle">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="9" cy="6" r="2"></circle>
+                  <circle cx="15" cy="6" r="2"></circle>
+                  <circle cx="9" cy="12" r="2"></circle>
+                  <circle cx="15" cy="12" r="2"></circle>
+                  <circle cx="9" cy="18" r="2"></circle>
+                  <circle cx="15" cy="18" r="2"></circle>
+                </svg>
+              </span>
+              <label class="toggle-row">
+                <input type="checkbox" id="email-highlights" checked>
+                <span class="toggle-switch"></span>
+                <span class="toggle-label">This Week's Highlights</span>
+              </label>
+            </div>
+            <div class="sortable-item" data-section="decisions" draggable="true">
+              <span class="drag-handle">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="9" cy="6" r="2"></circle>
+                  <circle cx="15" cy="6" r="2"></circle>
+                  <circle cx="9" cy="12" r="2"></circle>
+                  <circle cx="15" cy="12" r="2"></circle>
+                  <circle cx="9" cy="18" r="2"></circle>
+                  <circle cx="15" cy="18" r="2"></circle>
+                </svg>
+              </span>
+              <label class="toggle-row">
+                <input type="checkbox" id="email-decisions" checked>
+                <span class="toggle-switch"></span>
+                <span class="toggle-label">Key Decisions</span>
+              </label>
+            </div>
+            <div class="sortable-item" data-section="actionItems" draggable="true">
+              <span class="drag-handle">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="9" cy="6" r="2"></circle>
+                  <circle cx="15" cy="6" r="2"></circle>
+                  <circle cx="9" cy="12" r="2"></circle>
+                  <circle cx="15" cy="12" r="2"></circle>
+                  <circle cx="9" cy="18" r="2"></circle>
+                  <circle cx="15" cy="18" r="2"></circle>
+                </svg>
+              </span>
+              <label class="toggle-row">
+                <input type="checkbox" id="email-action-items" checked>
+                <span class="toggle-switch"></span>
+                <span class="toggle-label">Action Items</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="email-counts">
+            <div class="input-group input-group-inline">
+              <label for="email-pipeline-count">Pipeline deals to show</label>
+              <input type="number" id="email-pipeline-count" class="input input-sm" min="1" max="10" value="5">
+            </div>
+            <div class="input-group input-group-inline">
+              <label for="email-talking-points-count">Talking points to show</label>
+              <input type="number" id="email-talking-points-count" class="input input-sm" min="1" max="10" value="4">
+            </div>
+          </div>
+
+          <div class="email-signature">
+            <div class="input-group">
+              <label for="email-signature">Signature</label>
+              <input type="text" id="email-signature" class="input" placeholder="JG" value="JG">
+            </div>
+            <div class="input-group">
+              <label for="email-greeting">Custom greeting (optional)</label>
+              <input type="text" id="email-greeting" class="input" placeholder="e.g., Hope you had a great week!">
+            </div>
+          </div>
+
+          <div class="email-links">
+            <p class="settings-sublabel">Footer Links</p>
+            <div id="email-links-toggles">
+              <!-- Link toggles rendered dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="settings-save">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Talking Point Modal -->
+  <div class="modal-overlay" id="talking-point-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="talking-point-modal-title">Add Talking Point</h2>
+        <button class="btn-icon modal-close" id="talking-point-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="notes-input-section">
+          <label for="talking-point-title">Title</label>
+          <input type="text" id="talking-point-title" placeholder="e.g., 3D Asset Pipeline" class="input">
+        </div>
+        <div class="notes-input-section">
+          <label for="talking-point-content">Description</label>
+          <textarea id="talking-point-content" class="input textarea" rows="4" placeholder="Key differentiator or compelling narrative for investor conversations..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="talking-point-cancel">Cancel</button>
+        <button class="btn btn-primary" id="talking-point-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Decision Modal -->
+  <div class="modal-overlay" id="decision-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Add Decision</h2>
+        <button class="btn-icon modal-close" id="decision-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="notes-input-section">
+          <label for="decision-text">Decision</label>
+          <input type="text" id="decision-text" placeholder="e.g., Approved Q2 marketing budget" class="input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="decision-cancel">Cancel</button>
+        <button class="btn btn-primary" id="decision-save">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pipeline Modal -->
+  <div class="modal-overlay" id="pipeline-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="pipeline-modal-title">Add Pipeline Deal</h2>
+        <button class="btn-icon modal-close" id="pipeline-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="notes-input-section">
+          <label for="pipeline-name">Company Name</label>
+          <input type="text" id="pipeline-name" placeholder="e.g., Acme Corp" class="input">
+        </div>
+        <div class="notes-input-section">
+          <label for="pipeline-value">Deal Value</label>
+          <input type="text" id="pipeline-value" placeholder="e.g., $50K" class="input">
+        </div>
+        <div class="notes-input-section">
+          <label for="pipeline-stage">Stage</label>
+          <select id="pipeline-stage" class="input">
+            <option value="discovery">Discovery</option>
+            <option value="demo">Demo</option>
+            <option value="validation">Validation</option>
+            <option value="pilot">Pilot</option>
+          </select>
+        </div>
+        <div class="notes-input-section">
+          <label for="pipeline-timing">Timing</label>
+          <input type="text" id="pipeline-timing" placeholder="e.g., Q1" class="input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="pipeline-cancel">Cancel</button>
+        <button class="btn btn-primary" id="pipeline-save">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Link Modal -->
+  <div class="modal-overlay" id="link-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="link-modal-title">Add Link</h2>
+        <button class="btn-icon modal-close" id="link-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="notes-input-section">
+          <label for="link-name">Display Name</label>
+          <input type="text" id="link-name" placeholder="e.g., Product Demo" class="input">
+        </div>
+        <div class="notes-input-section">
+          <label for="link-url">URL</label>
+          <input type="url" id="link-url" placeholder="https://..." class="input">
+        </div>
+        <div class="notes-input-section">
+          <label for="link-email-label">Email Label (optional)</label>
+          <input type="text" id="link-email-label" placeholder="Label shown in emails" class="input">
+        </div>
+        <div class="notes-input-section">
+          <label>Color</label>
+          <div class="color-picker">
+            <button type="button" class="color-option default selected" data-color="default"></button>
+            <button type="button" class="color-option red" data-color="red"></button>
+            <button type="button" class="color-option blue" data-color="blue"></button>
+            <button type="button" class="color-option purple" data-color="purple"></button>
+            <button type="button" class="color-option green" data-color="green"></button>
+            <button type="button" class="color-option orange" data-color="orange"></button>
+          </div>
+        </div>
+        <div class="notes-input-section">
+          <label class="toggle-row">
+            <input type="checkbox" id="link-email-enabled" checked>
+            <span class="toggle-switch"></span>
+            <span class="toggle-label">Include in investor emails</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="link-delete" style="margin-right: auto; display: none;">Delete</button>
+        <button class="btn btn-secondary" id="link-cancel">Cancel</button>
+        <button class="btn btn-primary" id="link-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Investor Modal -->
+  <div class="modal-overlay" id="investor-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="investor-modal-title">Add Investor</h2>
+        <button class="btn-icon modal-close" id="investor-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="notes-input-section">
+          <label for="investor-name">Investor Name</label>
+          <input type="text" id="investor-name" placeholder="e.g., John Smith or Acme Ventures" class="input">
+        </div>
+        <div class="notes-input-section">
+          <label for="investor-amount">Amount</label>
+          <input type="text" id="investor-amount" placeholder="e.g., $50K" class="input">
+        </div>
+        <div class="notes-input-section">
+          <label for="investor-stage">Stage</label>
+          <select id="investor-stage" class="input">
+            <option value="interested">Interested</option>
+            <option value="inTalks">In Talks</option>
+            <option value="committed">Committed</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+        <div class="notes-input-section">
+          <label for="investor-notes">Notes (optional)</label>
+          <textarea id="investor-notes" class="input textarea" rows="2" placeholder="Any additional context..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="investor-delete" style="margin-right: auto; display: none;">Delete</button>
+        <button class="btn btn-secondary" id="investor-cancel">Cancel</button>
+        <button class="btn btn-primary" id="investor-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- PDF Export Template (hidden) -->
+  <div id="pdf-template" style="display: none;"></div>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script>
+    // Set PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
