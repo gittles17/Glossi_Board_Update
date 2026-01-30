@@ -672,6 +672,15 @@ class GlossiDashboard {
       this.deleteInvestor();
     });
 
+    // Edit seed raise target
+    document.getElementById('edit-target-btn').addEventListener('click', () => {
+      this.editSeedTarget();
+    });
+
+    document.getElementById('seed-target').addEventListener('click', () => {
+      this.editSeedTarget();
+    });
+
     // Color picker
     document.querySelectorAll('.color-option').forEach(option => {
       option.addEventListener('click', () => {
@@ -1187,6 +1196,23 @@ class GlossiDashboard {
       this.hideModal('investor-modal');
       this.renderSeedRaise();
       this.showToast('Investor deleted', 'success');
+    }
+  }
+
+  /**
+   * Edit the seed raise target
+   */
+  editSeedTarget() {
+    const seedRaise = storage.getSeedRaise();
+    const currentTarget = seedRaise.target || '$500K';
+    
+    const newTarget = prompt('Enter fundraise target (e.g., $500K, $1M):', currentTarget);
+    
+    if (newTarget && newTarget.trim()) {
+      storage.updateSeedTarget(newTarget.trim());
+      this.data = storage.getData();
+      this.renderSeedRaise();
+      this.showToast('Target updated', 'success');
     }
   }
 
