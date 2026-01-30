@@ -724,6 +724,22 @@ class GlossiDashboard {
         });
       }
     });
+
+    // Collapsible sections
+    document.querySelectorAll('.section-header-row.clickable').forEach(header => {
+      header.addEventListener('click', (e) => {
+        // Don't collapse when clicking add button
+        if (e.target.closest('.add-btn-small')) return;
+        
+        const section = header.closest('.meeting-section');
+        section.classList.toggle('collapsed');
+        
+        const toggle = header.querySelector('.collapse-toggle');
+        if (toggle) {
+          toggle.setAttribute('aria-expanded', !section.classList.contains('collapsed'));
+        }
+      });
+    });
   }
 
   /**
@@ -1046,9 +1062,26 @@ class GlossiDashboard {
       const container = document.getElementById(`stage-${stage}`);
       const stageInvestors = investors.filter(inv => inv.stage === stage);
       const countEl = document.getElementById(`count-${stage}`);
+      const totalEl = document.getElementById(`total-${stage}`);
       
       if (countEl) {
         countEl.textContent = `(${stageInvestors.length})`;
+      }
+      
+      // Calculate and display stage total
+      if (totalEl) {
+        const stageTotal = stageInvestors.reduce((sum, inv) => sum + this.parseAmount(inv.amount), 0);
+        if (stageTotal > 0) {
+          if (stageTotal >= 1000000) {
+            totalEl.textContent = `$${(stageTotal / 1000000).toFixed(1)}M`;
+          } else if (stageTotal >= 1000) {
+            totalEl.textContent = `$${Math.round(stageTotal / 1000)}K`;
+          } else {
+            totalEl.textContent = `$${stageTotal}`;
+          }
+        } else {
+          totalEl.textContent = '';
+        }
       }
       
       if (stageInvestors.length === 0) {
@@ -1563,7 +1596,10 @@ class GlossiDashboard {
 
     // Summary (editable with delete)
     const summaryContainer = document.getElementById('meeting-summary');
-    if (meeting.summary && meeting.summary.length > 0) {
+    const summaryCount = meeting.summary?.length || 0;
+    document.getElementById('summary-count').textContent = summaryCount > 0 ? summaryCount : '';
+    
+    if (summaryCount > 0) {
       summaryContainer.innerHTML = meeting.summary.map((item, index) => 
         `<li class="deletable-item">
           <span class="editable-item" contenteditable="true" data-type="summary" data-index="${index}">${item}</span>
@@ -1630,7 +1666,10 @@ class GlossiDashboard {
 
     // Decisions (editable with delete)
     const decisionsContainer = document.getElementById('decisions-list');
-    if (meeting.decisions && meeting.decisions.length > 0) {
+    const decisionsCount = meeting.decisions?.length || 0;
+    document.getElementById('decisions-count').textContent = decisionsCount > 0 ? decisionsCount : '';
+    
+    if (decisionsCount > 0) {
       decisionsContainer.innerHTML = meeting.decisions.map((decision, index) => 
         `<li class="deletable-item">
           <span class="editable-item" contenteditable="true" data-type="decision" data-index="${index}">${decision}</span>
