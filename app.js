@@ -1052,10 +1052,10 @@ class GlossiDashboard {
       }
       
       if (stageInvestors.length === 0) {
-        container.innerHTML = '<div class="empty-state">No investors</div>';
+        container.innerHTML = '<div class="empty-state drop-hint">Drop here</div>';
       } else {
         container.innerHTML = stageInvestors.map(inv => `
-          <div class="investor-card" data-id="${inv.id}" onclick="window.dashboard.editInvestor('${inv.id}')">
+          <div class="investor-card" data-id="${inv.id}" draggable="true">
             <div class="investor-info">
               <span class="investor-name">${inv.name}</span>
               <span class="investor-amount">${inv.amount}</span>
@@ -1065,6 +1065,94 @@ class GlossiDashboard {
         `).join('');
       }
     });
+
+    // Setup drag and drop
+    this.setupInvestorDragDrop();
+  }
+
+  /**
+   * Setup drag and drop for investor cards
+   */
+  setupInvestorDragDrop() {
+    const cards = document.querySelectorAll('.investor-card[draggable="true"]');
+    const columns = document.querySelectorAll('.column-items');
+
+    cards.forEach(card => {
+      card.addEventListener('dragstart', (e) => {
+        card.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', card.dataset.id);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        document.querySelectorAll('.column-items').forEach(col => {
+          col.classList.remove('drag-over');
+        });
+      });
+
+      // Click to edit (not drag)
+      card.addEventListener('click', (e) => {
+        if (!card.classList.contains('dragging')) {
+          this.editInvestor(card.dataset.id);
+        }
+      });
+    });
+
+    columns.forEach(column => {
+      column.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        column.classList.add('drag-over');
+      });
+
+      column.addEventListener('dragleave', (e) => {
+        // Only remove if leaving the column entirely
+        if (!column.contains(e.relatedTarget)) {
+          column.classList.remove('drag-over');
+        }
+      });
+
+      column.addEventListener('drop', (e) => {
+        e.preventDefault();
+        column.classList.remove('drag-over');
+        
+        const investorId = e.dataTransfer.getData('text/plain');
+        const newStage = column.id.replace('stage-', '');
+        
+        if (investorId && newStage) {
+          this.moveInvestorToStage(investorId, newStage);
+        }
+      });
+    });
+  }
+
+  /**
+   * Move investor to a new stage
+   */
+  moveInvestorToStage(investorId, newStage) {
+    const seedRaise = storage.getSeedRaise();
+    const investor = seedRaise.investors.find(inv => inv.id === investorId);
+    
+    if (investor && investor.stage !== newStage) {
+      storage.updateInvestor(investorId, { stage: newStage });
+      this.data = storage.getData();
+      this.renderSeedRaise();
+      this.showToast(`Moved to ${this.formatStageName(newStage)}`, 'success');
+    }
+  }
+
+  /**
+   * Format stage name for display
+   */
+  formatStageName(stage) {
+    const names = {
+      interested: 'Interested',
+      inTalks: 'In Talks',
+      committed: 'Committed',
+      closed: 'Closed'
+    };
+    return names[stage] || stage;
   }
 
   /**

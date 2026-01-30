@@ -3436,13 +3436,42 @@ body::after {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: pointer;
+  cursor: grab;
   transition: all var(--duration-fast) ease;
+  user-select: none;
 }
 
 .investor-card:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-color-light);
+}
+
+.investor-card:active {
+  cursor: grabbing;
+}
+
+.investor-card.dragging {
+  opacity: 0.5;
+  transform: scale(0.98);
+}
+
+/* Drop zone styling */
+.column-items.drag-over {
+  background: rgba(91, 176, 154, 0.1);
+  border: 2px dashed var(--accent-green);
+  border-radius: var(--radius-md);
+}
+
+.column-items .drop-hint {
+  color: var(--text-muted);
+  border: 2px dashed transparent;
+  border-radius: var(--radius-md);
+  transition: all var(--duration-fast);
+}
+
+.column-items.drag-over .drop-hint {
+  color: var(--accent-green);
+  border-color: transparent;
 }
 
 .investor-card .investor-info {
