@@ -612,8 +612,8 @@ body::after {
   grid-template-columns: 1fr 1fr;
   gap: var(--panel-gap);
   padding: var(--space-6);
-  padding-top: calc(var(--nav-height) + var(--space-6));
-  min-height: calc(100vh - 100px);
+  padding-top: 0;
+  min-height: calc(100vh - 300px);
   position: relative;
   z-index: 1;
 }
@@ -3294,7 +3294,7 @@ body::after {
    ============================================ */
 .seed-raise-section {
   padding: var(--space-6);
-  padding-top: 0;
+  padding-top: calc(var(--nav-height) + var(--space-6));
   max-width: 1600px;
   margin: 0 auto;
 }
