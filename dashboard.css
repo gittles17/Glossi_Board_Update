@@ -285,7 +285,7 @@ body::after {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 160px;
+  min-width: 220px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -295,7 +295,7 @@ body::after {
   transform: translateY(-8px);
   transition: all var(--duration-fast);
   z-index: 200;
-  padding: var(--space-2);
+  padding: var(--space-3);
 }
 
 .dropdown-menu.open {
@@ -304,17 +304,97 @@ body::after {
   transform: translateY(0);
 }
 
+.menu-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.menu-drop-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.menu-drop-zone:hover {
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
+}
+
+.menu-drop-zone.drag-over {
+  border-color: var(--accent-green);
+  background: rgba(74, 222, 128, 0.05);
+}
+
+.menu-paste-zone {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.menu-paste-zone textarea {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  resize: none;
+  min-height: 36px;
+}
+
+.menu-paste-zone textarea:focus {
+  outline: none;
+  border-color: var(--border-color-light);
+}
+
+.menu-paste-zone textarea::placeholder {
+  color: var(--text-dim);
+}
+
+.paste-submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  background: var(--accent-green);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--bg-primary);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.paste-submit-btn:hover {
+  opacity: 0.9;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: var(--space-3) 0;
+}
+
 .dropdown-item {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   width: 100%;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   background: transparent;
   border: none;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all var(--duration-fast);
@@ -333,12 +413,6 @@ body::after {
 
 .dropdown-item:hover svg {
   color: var(--text-primary);
-}
-
-.dropdown-divider {
-  height: 1px;
-  background: var(--border-color);
-  margin: var(--space-2) 0;
 }
 
 .menu-actions {

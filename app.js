@@ -185,11 +185,6 @@ class GlossiDashboard {
     });
 
     // Menu items
-    document.getElementById('menu-add-notes').addEventListener('click', () => {
-      dropdown.classList.remove('open');
-      this.showNotesModal();
-    });
-
     document.getElementById('menu-share').addEventListener('click', () => {
       dropdown.classList.remove('open');
       this.shareViaEmail();
