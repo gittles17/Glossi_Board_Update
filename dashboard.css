@@ -38,9 +38,9 @@
   --accent-red: #D4918A;
   --accent-red-dim: rgba(212, 145, 138, 0.15);
 
-  /* Typography - Auris */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', 'Monaco', monospace;
+  /* Typography - BFL Style */
+  --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
 
   /* Spacing - Auris */
   --space-1: 4px;
