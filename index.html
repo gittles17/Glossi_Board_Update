@@ -79,13 +79,7 @@
       <div class="seed-raise-progress">
         <span class="raised" id="seed-raised">$0</span>
         <span class="progress-divider">/</span>
-        <span class="target" id="seed-target" title="Click to edit">$500K</span>
-        <button class="edit-target-btn" id="edit-target-btn" title="Edit target">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-          </svg>
-        </button>
+        <span class="target" id="seed-target">$500K</span>
         <div class="seed-progress-bar">
           <div class="seed-progress-fill" id="seed-progress-fill"></div>
         </div>
@@ -420,6 +414,14 @@
           <div class="api-status" id="openai-status">
             <span class="status-indicator"></span>
             <span class="status-text">Not configured</span>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>Seed Raise</h3>
+          <p class="settings-description">Set your fundraising target for the seed raise tracker.</p>
+          <div class="input-group input-group-inline">
+            <label for="seed-raise-target">Target Amount</label>
+            <input type="text" id="seed-raise-target" class="input input-sm" placeholder="e.g., $500K" value="$500K">
           </div>
         </div>
         <div class="settings-section">

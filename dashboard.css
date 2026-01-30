@@ -3337,30 +3337,6 @@ body::after {
   font-family: var(--font-mono);
   font-size: 14px;
   color: var(--text-secondary);
-  cursor: pointer;
-  transition: color var(--duration-fast);
-}
-
-.seed-raise-progress .target:hover {
-  color: var(--text-primary);
-}
-
-.edit-target-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm);
-  transition: all var(--duration-fast);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.edit-target-btn:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.1);
 }
 
 .seed-progress-bar {

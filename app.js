@@ -672,15 +672,6 @@ class GlossiDashboard {
       this.deleteInvestor();
     });
 
-    // Edit seed raise target
-    document.getElementById('edit-target-btn').addEventListener('click', () => {
-      this.editSeedTarget();
-    });
-
-    document.getElementById('seed-target').addEventListener('click', () => {
-      this.editSeedTarget();
-    });
-
     // Color picker
     document.querySelectorAll('.color-option').forEach(option => {
       option.addEventListener('click', () => {
@@ -1199,22 +1190,6 @@ class GlossiDashboard {
     }
   }
 
-  /**
-   * Edit the seed raise target
-   */
-  editSeedTarget() {
-    const seedRaise = storage.getSeedRaise();
-    const currentTarget = seedRaise.target || '$500K';
-    
-    const newTarget = prompt('Enter fundraise target (e.g., $500K, $1M):', currentTarget);
-    
-    if (newTarget && newTarget.trim()) {
-      storage.updateSeedTarget(newTarget.trim());
-      this.data = storage.getData();
-      this.renderSeedRaise();
-      this.showToast('Target updated', 'success');
-    }
-  }
 
   /**
    * Animate list items with stagger effect
@@ -2391,6 +2366,12 @@ class GlossiDashboard {
       const linkId = toggle.dataset.linkId;
       storage.updateQuickLink(linkId, { emailEnabled: toggle.checked });
     });
+
+    // Update seed raise target
+    const seedRaiseTarget = document.getElementById('seed-raise-target').value.trim();
+    if (seedRaiseTarget) {
+      storage.updateSeedTarget(seedRaiseTarget);
+    }
     
     // Update storage and local settings
     this.data = storage.getData();
@@ -2417,6 +2398,7 @@ class GlossiDashboard {
 
     // Update UI status
     this.renderSettingsStatus();
+    this.renderSeedRaise();
   }
 
   /**
@@ -2495,6 +2477,10 @@ class GlossiDashboard {
         <span class="toggle-label">Include ${link.name}</span>
       </label>
     `).join('');
+
+    // Seed raise target
+    const seedRaise = storage.getSeedRaise();
+    document.getElementById('seed-raise-target').value = seedRaise.target || '$500K';
   }
 
   /**
