@@ -3295,8 +3295,6 @@ body::after {
 .seed-raise-section {
   padding: var(--space-6);
   padding-top: calc(var(--nav-height) + var(--space-6));
-  max-width: 1600px;
-  margin: 0 auto;
 }
 
 .seed-raise-header {
