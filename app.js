@@ -1122,6 +1122,16 @@ class GlossiDashboard {
     const cards = document.querySelectorAll('.investor-card[draggable="true"]');
     const columns = document.querySelectorAll('.column-items');
 
+    // Disable dragging on touch devices to allow scrolling
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (isTouchDevice) {
+      cards.forEach(card => {
+        card.removeAttribute('draggable');
+        card.addEventListener('click', () => this.editInvestor(card.dataset.id));
+      });
+      return; // Skip drag setup on touch devices
+    }
+
     cards.forEach(card => {
       card.addEventListener('dragstart', (e) => {
         card.classList.add('dragging');
@@ -1212,6 +1222,13 @@ class GlossiDashboard {
   setupTodoDragDrop(meetingId) {
     const todoItems = document.querySelectorAll('.todo-item[draggable="true"]');
     const todoGroups = document.querySelectorAll('.todo-group-items');
+
+    // Disable dragging on touch devices to allow scrolling
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (isTouchDevice) {
+      todoItems.forEach(item => item.removeAttribute('draggable'));
+      return; // Skip drag setup on touch devices
+    }
 
     todoItems.forEach(item => {
       item.addEventListener('dragstart', (e) => {
