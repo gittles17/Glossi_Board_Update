@@ -321,8 +321,15 @@ class GlossiDashboard {
       } else if (fileType === 'text') {
         content = await this.processTextFile(file);
       } else if (fileType === 'audio') {
+        // Check for OpenAI API key first
+        const openaiKey = this.settings.openaiApiKey || OPENAI_API_KEY;
+        if (!openaiKey) {
+          this.showToast('Please configure your OpenAI API key in Settings for audio transcription', 'error');
+          return;
+        }
         this.showToast('Transcribing audio...', 'info');
         content = await this.processAudioFile(file);
+        this.showToast('Transcription complete, analyzing...', 'info');
       }
 
       content.type = fileType;
@@ -330,6 +337,7 @@ class GlossiDashboard {
 
       this.handleDroppedContent(content);
     } catch (error) {
+      console.error('File processing error:', error);
       this.showToast('Failed to process file: ' + error.message, 'error');
     }
   }
@@ -407,6 +415,10 @@ class GlossiDashboard {
   async processAudioFile(file) {
     const apiKey = this.settings.openaiApiKey || OPENAI_API_KEY;
     
+    if (!apiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+    
     const formData = new FormData();
     formData.append('file', file);
     formData.append('model', 'whisper-1');
@@ -421,11 +433,18 @@ class GlossiDashboard {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Transcription failed: ${error}`);
+      const errorText = await response.text();
+      console.error('Whisper API error:', errorText);
+      throw new Error(`Transcription failed: ${response.status}`);
     }
 
     const transcript = await response.text();
+    
+    if (!transcript || transcript.trim().length === 0) {
+      throw new Error('No speech detected in audio');
+    }
+    
+    console.log('Audio transcription:', transcript.substring(0, 100) + '...');
     return { content: { text: transcript } };
   }
 
