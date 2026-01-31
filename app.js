@@ -302,10 +302,12 @@ class GlossiDashboard {
    * Process a dropped or selected file
    */
   async processDroppedFile(file) {
+    console.log('Processing file:', file.name, 'MIME type:', file.type);
     const fileType = this.getFileType(file);
+    console.log('Detected as:', fileType);
     
     if (!fileType) {
-      this.showToast('Unsupported file type', 'error');
+      this.showToast('Unsupported file type: ' + (file.type || file.name), 'error');
       return;
     }
 
@@ -349,17 +351,23 @@ class GlossiDashboard {
     const imageTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
     const pdfTypes = ['application/pdf'];
     const textTypes = ['text/plain', 'text/markdown'];
-    const audioTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/mp4', 'audio/webm', 'audio/ogg'];
+    const audioTypes = [
+      'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/mp4', 
+      'audio/webm', 'audio/ogg', 'audio/x-m4a', 'audio/aac', 'audio/x-wav',
+      'audio/mp4a-latm', 'audio/3gpp', 'audio/amr', 'video/mp4' // voice memos can be video/mp4
+    ];
+    const audioExtensions = ['.mp3', '.wav', '.m4a', '.webm', '.ogg', '.aac', '.mp4', '.3gp', '.amr'];
 
     if (imageTypes.includes(file.type)) return 'image';
     if (pdfTypes.includes(file.type)) return 'pdf';
     if (textTypes.includes(file.type) || file.name.endsWith('.md') || file.name.endsWith('.txt')) return 'text';
-    if (audioTypes.includes(file.type) || 
-        file.name.endsWith('.mp3') || 
-        file.name.endsWith('.wav') || 
-        file.name.endsWith('.m4a') ||
-        file.name.endsWith('.webm') ||
-        file.name.endsWith('.ogg')) return 'audio';
+    
+    // Check audio by MIME type or extension
+    const lowerName = file.name.toLowerCase();
+    if (audioTypes.includes(file.type) || file.type.startsWith('audio/') || 
+        audioExtensions.some(ext => lowerName.endsWith(ext))) {
+      return 'audio';
+    }
     
     return null;
   }
