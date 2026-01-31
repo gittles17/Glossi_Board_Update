@@ -329,8 +329,23 @@ class GlossiDashboard {
           this.showToast('Please configure your OpenAI API key in Settings for audio transcription', 'error');
           return;
         }
+        
+        // Check file size (Whisper limit is 25MB)
+        const fileSizeMB = file.size / (1024 * 1024);
+        console.log('Audio file size:', fileSizeMB.toFixed(2), 'MB');
+        
+        if (fileSizeMB > 25) {
+          this.showToast(`Audio file too large (${fileSizeMB.toFixed(1)}MB). Max is 25MB. Try a shorter clip or compress the file.`, 'error');
+          return;
+        }
+        
+        if (fileSizeMB > 15) {
+          this.showToast('Large audio file - transcription may take a minute...', 'info');
+        } else {
+          this.showToast('Transcribing audio...', 'info');
+        }
+        
         console.log('Starting audio transcription...');
-        this.showToast('Transcribing audio...', 'info');
         content = await this.processAudioFile(file);
         console.log('Transcription result:', content);
         this.showToast('Transcription complete, analyzing...', 'info');
@@ -432,30 +447,49 @@ class GlossiDashboard {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('model', 'whisper-1');
-    formData.append('response_format', 'text');
+    formData.append('response_format', 'verbose_json'); // Get more details including duration
 
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: formData
-    });
+    // Use AbortController for timeout (5 minutes for large files)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 min timeout
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Whisper API error:', errorText);
-      throw new Error(`Transcription failed: ${response.status}`);
+    try {
+      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: formData,
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Whisper API error:', errorText);
+        throw new Error(`Transcription failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const transcript = result.text;
+      
+      console.log('Audio duration:', result.duration, 'seconds');
+      console.log('Audio transcription length:', transcript?.length, 'chars');
+      console.log('Transcription preview:', transcript?.substring(0, 200) + '...');
+      
+      if (!transcript || transcript.trim().length === 0) {
+        throw new Error('No speech detected in audio');
+      }
+      
+      return { content: { text: transcript } };
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Transcription timed out - try a shorter audio file');
+      }
+      throw error;
     }
-
-    const transcript = await response.text();
-    
-    if (!transcript || transcript.trim().length === 0) {
-      throw new Error('No speech detected in audio');
-    }
-    
-    console.log('Audio transcription:', transcript.substring(0, 100) + '...');
-    return { content: { text: transcript } };
   }
 
   /**
