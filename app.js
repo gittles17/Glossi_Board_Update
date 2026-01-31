@@ -329,8 +329,10 @@ class GlossiDashboard {
           this.showToast('Please configure your OpenAI API key in Settings for audio transcription', 'error');
           return;
         }
+        console.log('Starting audio transcription...');
         this.showToast('Transcribing audio...', 'info');
         content = await this.processAudioFile(file);
+        console.log('Transcription result:', content);
         this.showToast('Transcription complete, analyzing...', 'info');
       }
 
@@ -2542,15 +2544,19 @@ class GlossiDashboard {
    * Handle dropped content - analyze with AI then show destination options
    */
   async handleDroppedContent(droppedContent) {
+    console.log('handleDroppedContent called with:', droppedContent.type, droppedContent.fileName);
+    
     // Store the pending content
     this.pendingDroppedContent = droppedContent;
     
     // Check for API key
     if (!aiProcessor.isConfigured()) {
+      console.log('Anthropic API key not configured');
       this.showToast('Please configure your Anthropic API key in Settings', 'error');
       return;
     }
     
+    console.log('Starting AI analysis...');
     // Analyze immediately with AI
     await this.analyzeAndShowOptions();
   }
@@ -2578,12 +2584,19 @@ class GlossiDashboard {
       
       if (content.type === 'image' && content.content.dataUrl) {
         // Use Claude Vision API for images
+        console.log('Analyzing image with vision...');
         analysisResult = await this.analyzeImageWithVision(content.content.dataUrl, content.fileName);
       } else {
-        // Use text analysis for text/PDF
+        // Use text analysis for text/PDF/audio transcript
         const textContent = content.content.text || '';
+        console.log('Analyzing text content, length:', textContent.length);
+        if (!textContent) {
+          throw new Error('No text content to analyze');
+        }
         analysisResult = await this.analyzeTextContent(textContent);
       }
+      
+      console.log('Analysis complete:', analysisResult?.substring(0, 100));
       
       // Store the analysis result
       this.pendingAnalysis = analysisResult;
