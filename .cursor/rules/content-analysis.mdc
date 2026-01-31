@@ -1,0 +1,39 @@
+---
+description: Rules for analyzing dropped audio and text content in Glossi dashboard
+alwaysApply: true
+---
+
+# Content Analysis Rules
+
+## Spelling
+Always use "Glossi" (not "Glossy").
+
+## Audio Workflow
+When processing dropped audio files:
+1. **Transcription**: Use OpenAI Whisper API to convert speech to text
+2. **Analysis**: Send transcript to Claude to summarize and extract key takeaways
+3. **Progress**: Show progress bar during upload and processing
+4. **Destination**: Present user with choice to save to "Thoughts" or "Key Talking Points"
+
+## Text/PDF/Image Workflow
+When processing dropped text, PDF, or image files:
+1. **Analysis**: Use Claude (vision for images) to analyze and summarize
+2. **Format**: Extract TITLE, SUMMARY, and KEY POINTS
+3. **Destination**: Present user with choice to save to "Thoughts" or "Key Talking Points"
+
+## Analysis Output Format
+Claude should return analysis in this format:
+```
+TITLE: [brief descriptive title, max 8 words]
+SUMMARY: [1-2 sentence summary]
+KEY POINTS:
+- [key point 1]
+- [key point 2]
+- [key point 3 if applicable]
+```
+
+## User Experience
+- Show progress bar with percentage during long operations
+- Display real upload progress (0-50%) then simulated processing progress (50-95%)
+- Thoughts are collapsible by default, showing only the title
+- Users can edit analysis text inline after saving
