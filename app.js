@@ -339,16 +339,12 @@ class GlossiDashboard {
           return;
         }
         
-        if (fileSizeMB > 15) {
-          this.showToast('Large audio file - transcription may take a minute...', 'info');
-        } else {
-          this.showToast('Transcribing audio...', 'info');
-        }
+        // Show progress overlay
+        this.showProgress('Processing Audio');
         
         console.log('Starting audio transcription...');
         content = await this.processAudioFile(file);
         console.log('Transcription result:', content);
-        this.showToast('Transcription complete, analyzing...', 'info');
       }
 
       content.type = fileType;
@@ -357,6 +353,7 @@ class GlossiDashboard {
       this.handleDroppedContent(content);
     } catch (error) {
       console.error('File processing error:', error);
+      this.hideProgress();
       this.showToast('Failed to process file: ' + error.message, 'error');
     }
   }
@@ -435,7 +432,7 @@ class GlossiDashboard {
   }
 
   /**
-   * Process audio file using OpenAI Whisper API
+   * Process audio file using OpenAI Whisper API with progress tracking
    */
   async processAudioFile(file) {
     const apiKey = this.settings.openaiApiKey || OPENAI_API_KEY;
@@ -447,48 +444,125 @@ class GlossiDashboard {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('model', 'whisper-1');
-    formData.append('response_format', 'verbose_json'); // Get more details including duration
+    formData.append('response_format', 'verbose_json');
 
-    // Use AbortController for timeout (5 minutes for large files)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 min timeout
-
-    try {
-      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: formData,
-        signal: controller.signal
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      
+      // Track upload progress (0-50%)
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const uploadPercent = Math.round((e.loaded / e.total) * 50);
+          this.updateProgress(uploadPercent, 'Uploading audio...');
+        }
       });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Whisper API error:', errorText);
-        throw new Error(`Transcription failed: ${response.status}`);
-      }
-
-      const result = await response.json();
-      const transcript = result.text;
       
-      console.log('Audio duration:', result.duration, 'seconds');
-      console.log('Audio transcription length:', transcript?.length, 'chars');
-      console.log('Transcription preview:', transcript?.substring(0, 200) + '...');
+      xhr.upload.addEventListener('load', () => {
+        // Upload complete, now processing (50-95%)
+        this.updateProgress(50, 'Processing with Whisper AI...');
+        this.simulateProcessingProgress(50, 95, 60000); // Simulate over 60 seconds
+      });
       
-      if (!transcript || transcript.trim().length === 0) {
-        throw new Error('No speech detected in audio');
-      }
+      xhr.addEventListener('load', () => {
+        this.stopProgressSimulation();
+        
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            const transcript = result.text;
+            
+            console.log('Audio duration:', result.duration, 'seconds');
+            console.log('Audio transcription length:', transcript?.length, 'chars');
+            
+            if (!transcript || transcript.trim().length === 0) {
+              reject(new Error('No speech detected in audio'));
+              return;
+            }
+            
+            this.updateProgress(100, 'Transcription complete!');
+            setTimeout(() => this.hideProgress(), 500);
+            
+            resolve({ content: { text: transcript } });
+          } catch (e) {
+            reject(new Error('Failed to parse transcription response'));
+          }
+        } else {
+          console.error('Whisper API error:', xhr.responseText);
+          reject(new Error(`Transcription failed: ${xhr.status}`));
+        }
+      });
       
-      return { content: { text: transcript } };
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error('Transcription timed out - try a shorter audio file');
+      xhr.addEventListener('error', () => {
+        this.stopProgressSimulation();
+        this.hideProgress();
+        reject(new Error('Network error during transcription'));
+      });
+      
+      xhr.addEventListener('timeout', () => {
+        this.stopProgressSimulation();
+        this.hideProgress();
+        reject(new Error('Transcription timed out - try a shorter audio file'));
+      });
+      
+      xhr.open('POST', 'https://api.openai.com/v1/audio/transcriptions');
+      xhr.setRequestHeader('Authorization', `Bearer ${apiKey}`);
+      xhr.timeout = 300000; // 5 min timeout
+      xhr.send(formData);
+    });
+  }
+
+  /**
+   * Show progress overlay
+   */
+  showProgress(title = 'Processing') {
+    document.getElementById('progress-title').textContent = title;
+    document.getElementById('progress-overlay').classList.add('visible');
+    this.updateProgress(0, 'Starting...');
+  }
+
+  /**
+   * Update progress bar
+   */
+  updateProgress(percent, status) {
+    document.getElementById('progress-bar').style.width = `${percent}%`;
+    document.getElementById('progress-percent').textContent = `${percent}%`;
+    if (status) {
+      document.getElementById('progress-status').textContent = status;
+    }
+  }
+
+  /**
+   * Hide progress overlay
+   */
+  hideProgress() {
+    document.getElementById('progress-overlay').classList.remove('visible');
+  }
+
+  /**
+   * Simulate progress during API processing
+   */
+  simulateProcessingProgress(from, to, duration) {
+    this.stopProgressSimulation();
+    const startTime = Date.now();
+    
+    this.progressInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(from + ((to - from) * (elapsed / duration)), to);
+      this.updateProgress(Math.round(progress), 'Processing with Whisper AI...');
+      
+      if (progress >= to) {
+        this.stopProgressSimulation();
       }
-      throw error;
+    }, 500);
+  }
+
+  /**
+   * Stop progress simulation
+   */
+  stopProgressSimulation() {
+    if (this.progressInterval) {
+      clearInterval(this.progressInterval);
+      this.progressInterval = null;
     }
   }
 

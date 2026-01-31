@@ -3060,6 +3060,73 @@ body::after {
 }
 
 /* ============================================
+   PROGRESS OVERLAY
+   ============================================ */
+.progress-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 400;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.progress-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.progress-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  min-width: 320px;
+  max-width: 400px;
+  text-align: center;
+}
+
+.progress-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.progress-status {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: var(--space-4);
+}
+
+.progress-bar-container {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: var(--space-3);
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent-green), var(--accent-green-bright));
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+.progress-percent {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--accent-green);
+}
+
+/* ============================================
    TOAST NOTIFICATIONS - Premium
    ============================================ */
 .toast-container {
