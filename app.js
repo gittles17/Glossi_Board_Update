@@ -2526,24 +2526,105 @@ class GlossiDashboard {
   }
 
   /**
-   * Save content to thoughts
+   * Save content to thoughts with AI digest
    */
-  saveToThoughts() {
+  async saveToThoughts() {
     if (!this.pendingDroppedContent) return;
     
     const content = this.pendingDroppedContent;
-    const thought = {
-      type: content.type,
-      content: content.type === 'image' ? content.fileName : (content.content.text || ''),
-      preview: content.type === 'image' ? content.content.dataUrl : null,
-      fileName: content.fileName
-    };
-    
-    storage.addThought(thought);
-    this.hideModal('content-action-modal');
-    this.renderThoughts();
-    this.showToast('Saved to Thoughts', 'success');
     this.pendingDroppedContent = null;
+    this.hideModal('content-action-modal');
+    
+    // For images without AI, save directly
+    if (content.type === 'image') {
+      const thought = {
+        type: 'image',
+        content: content.fileName || 'Image',
+        preview: content.content.dataUrl,
+        fileName: content.fileName
+      };
+      storage.addThought(thought);
+      this.renderThoughts();
+      this.showToast('Saved to Thoughts', 'success');
+      return;
+    }
+    
+    // For text/PDF, use AI to create a digestible summary
+    const rawText = content.content.text || '';
+    
+    if (!aiProcessor.isConfigured()) {
+      // Save raw if no API key
+      const thought = {
+        type: content.type,
+        content: rawText,
+        fileName: content.fileName
+      };
+      storage.addThought(thought);
+      this.renderThoughts();
+      this.showToast('Saved to Thoughts', 'success');
+      return;
+    }
+    
+    // Show loading toast
+    this.showToast('Analyzing and organizing thought...', 'info');
+    
+    try {
+      // Use Claude to create a digestible summary
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.settings.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 500,
+          messages: [{
+            role: 'user',
+            content: `Summarize this content into a clear, digestible format. Create a brief title and 2-3 key bullet points. Keep it concise.
+
+Content:
+${rawText.substring(0, 3000)}
+
+Respond in this exact format:
+TITLE: [brief title, max 8 words]
+- [key point 1]
+- [key point 2]
+- [key point 3 if needed]`
+          }]
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to analyze');
+      }
+      
+      const result = await response.json();
+      const digest = result.content[0].text;
+      
+      const thought = {
+        type: content.type,
+        content: digest,
+        rawContent: rawText.substring(0, 500),
+        fileName: content.fileName
+      };
+      
+      storage.addThought(thought);
+      this.renderThoughts();
+      this.showToast('Thought saved', 'success');
+    } catch (error) {
+      // Fallback to raw content
+      const thought = {
+        type: content.type,
+        content: rawText.substring(0, 500) + (rawText.length > 500 ? '...' : ''),
+        fileName: content.fileName
+      };
+      storage.addThought(thought);
+      this.renderThoughts();
+      this.showToast('Saved to Thoughts', 'success');
+    }
   }
 
   /**
@@ -2607,7 +2688,7 @@ class GlossiDashboard {
     countEl.textContent = thoughts.length > 0 ? `(${thoughts.length})` : '';
     
     if (thoughts.length === 0) {
-      container.innerHTML = '<div class="empty-state">Drop text or images to save ideas here</div>';
+      container.innerHTML = '';
       return;
     }
     
@@ -2635,15 +2716,50 @@ class GlossiDashboard {
         `;
       }
       
+      // Parse digested content (TITLE: ... followed by bullet points)
+      const content = thought.content || '';
+      const titleMatch = content.match(/^TITLE:\s*(.+?)(?:\n|$)/i);
+      const title = titleMatch ? titleMatch[1].trim() : null;
+      const bullets = content.match(/^-\s*.+$/gm) || [];
+      
+      if (title || bullets.length > 0) {
+        // Digested format
+        return `
+          <div class="thought-item thought-digested" data-thought-id="${thought.id}">
+            <div class="thought-digest">
+              ${title ? `<div class="thought-title">${this.escapeHtml(title)}</div>` : ''}
+              ${bullets.length > 0 ? `
+                <ul class="thought-bullets">
+                  ${bullets.map(b => `<li>${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
+                </ul>
+              ` : ''}
+            </div>
+            <div class="thought-meta">
+              <span class="thought-date">${date}</span>
+              <button class="delete-btn" onclick="window.dashboard.deleteThought('${thought.id}')" title="Delete">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+      
+      // Raw content fallback
       return `
         <div class="thought-item" data-thought-id="${thought.id}">
-          <div class="thought-content">${this.escapeHtml(thought.content)}</div>
-          <button class="delete-btn" onclick="window.dashboard.deleteThought('${thought.id}')" title="Delete">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
+          <div class="thought-content">${this.escapeHtml(content)}</div>
+          <div class="thought-meta">
+            <span class="thought-date">${date}</span>
+            <button class="delete-btn" onclick="window.dashboard.deleteThought('${thought.id}')" title="Delete">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
         </div>
       `;
     }).join('');
