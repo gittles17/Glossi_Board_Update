@@ -812,7 +812,7 @@
   <div class="modal-overlay" id="content-action-modal">
     <div class="modal modal-small">
       <div class="modal-header">
-        <h2>What would you like to do?</h2>
+        <h2>Content Analysis</h2>
         <button class="btn-icon modal-close" id="content-action-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -821,23 +821,23 @@
         </button>
       </div>
       <div class="modal-body">
-        <div class="content-preview" id="content-preview"></div>
-        <div class="action-buttons-stack">
-          <button class="btn btn-action" id="action-save-thought">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-              <polyline points="17 21 17 13 7 13 7 21"></polyline>
-              <polyline points="7 3 7 8 15 8"></polyline>
+        <div class="content-analysis-result" id="content-analysis-result">
+          <!-- Analysis result rendered here -->
+        </div>
+        <div class="action-buttons-row" id="content-action-buttons" style="display: none;">
+          <button class="btn btn-action-secondary" id="action-save-thought">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
             Save to Thoughts
           </button>
-          <button class="btn btn-action" id="action-analyze-ai">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          <button class="btn btn-action-primary" id="action-add-talking-point">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
-            Analyze with AI
+            Add to Talking Points
           </button>
         </div>
       </div>

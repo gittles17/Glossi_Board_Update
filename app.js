@@ -16,6 +16,7 @@ class GlossiDashboard {
     this.settings = null;
     this.pendingReview = null;
     this.pendingDroppedContent = null;
+    this.pendingAnalysis = null;
     this.animationObserver = null;
     this.editingTalkingPointIndex = null;
     this.editingLinkId = null;
@@ -697,14 +698,15 @@ class GlossiDashboard {
     document.getElementById('content-action-close').addEventListener('click', () => {
       this.hideModal('content-action-modal');
       this.pendingDroppedContent = null;
+      this.pendingAnalysis = null;
     });
 
     document.getElementById('action-save-thought').addEventListener('click', () => {
-      this.saveToThoughts();
+      this.saveAnalysisToThoughts();
     });
 
-    document.getElementById('action-analyze-ai').addEventListener('click', () => {
-      this.analyzeWithAI();
+    document.getElementById('action-add-talking-point').addEventListener('click', () => {
+      this.addToTalkingPoints();
     });
 
     // Meeting selector
@@ -2505,176 +2507,258 @@ class GlossiDashboard {
   }
 
   /**
-   * Handle dropped content - show action choice modal
+   * Handle dropped content - analyze with AI then show destination options
    */
   async handleDroppedContent(droppedContent) {
     // Store the pending content
     this.pendingDroppedContent = droppedContent;
     
-    // Show preview in action modal
-    const previewEl = document.getElementById('content-preview');
-    if (droppedContent.type === 'image' && droppedContent.content.dataUrl) {
-      previewEl.innerHTML = `<img src="${droppedContent.content.dataUrl}" alt="Preview">`;
-    } else if (droppedContent.type === 'text' || droppedContent.type === 'pdf') {
-      const text = droppedContent.content.text || '';
-      previewEl.textContent = text.substring(0, 200) + (text.length > 200 ? '...' : '');
-    } else {
-      previewEl.textContent = droppedContent.fileName || 'Content';
+    // Check for API key
+    if (!aiProcessor.isConfigured()) {
+      this.showToast('Please configure your Anthropic API key in Settings', 'error');
+      return;
     }
     
-    this.showModal('content-action-modal');
+    // Analyze immediately with AI
+    await this.analyzeAndShowOptions();
   }
 
   /**
-   * Save content to thoughts with AI digest
+   * Analyze content with AI (including vision for images) and show destination options
    */
-  async saveToThoughts() {
+  async analyzeAndShowOptions() {
     if (!this.pendingDroppedContent) return;
     
     const content = this.pendingDroppedContent;
-    this.pendingDroppedContent = null;
-    this.hideModal('content-action-modal');
     
-    // For images without AI, save directly
-    if (content.type === 'image') {
-      const thought = {
-        type: 'image',
-        content: content.fileName || 'Image',
-        preview: content.content.dataUrl,
-        fileName: content.fileName
-      };
-      storage.addThought(thought);
-      this.renderThoughts();
-      this.showToast('Saved to Thoughts', 'success');
-      return;
-    }
-    
-    // For text/PDF, use AI to create a digestible summary
-    const rawText = content.content.text || '';
-    
-    if (!aiProcessor.isConfigured()) {
-      // Save raw if no API key
-      const thought = {
-        type: content.type,
-        content: rawText,
-        fileName: content.fileName
-      };
-      storage.addThought(thought);
-      this.renderThoughts();
-      this.showToast('Saved to Thoughts', 'success');
-      return;
-    }
-    
-    // Show loading toast
-    this.showToast('Analyzing and organizing thought...', 'info');
-    
+    // Show loading modal
+    this.showModal('content-action-modal');
+    document.getElementById('content-analysis-result').innerHTML = `
+      <div class="analysis-loading">
+        <div class="spinner"></div>
+        <p>Analyzing ${content.type}...</p>
+      </div>
+    `;
+    document.getElementById('content-action-buttons').style.display = 'none';
+
     try {
-      // Use Claude to create a digestible summary
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.settings.apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 500,
-          messages: [{
-            role: 'user',
-            content: `Summarize this content into a clear, digestible format. Create a brief title and 2-3 key bullet points. Keep it concise.
-
-Content:
-${rawText.substring(0, 3000)}
-
-Respond in this exact format:
-TITLE: [brief title, max 8 words]
-- [key point 1]
-- [key point 2]
-- [key point 3 if needed]`
-          }]
-        })
-      });
+      let analysisResult;
       
-      if (!response.ok) {
-        throw new Error('Failed to analyze');
+      if (content.type === 'image' && content.content.dataUrl) {
+        // Use Claude Vision API for images
+        analysisResult = await this.analyzeImageWithVision(content.content.dataUrl, content.fileName);
+      } else {
+        // Use text analysis for text/PDF
+        const textContent = content.content.text || '';
+        analysisResult = await this.analyzeTextContent(textContent);
       }
       
-      const result = await response.json();
-      const digest = result.content[0].text;
+      // Store the analysis result
+      this.pendingAnalysis = analysisResult;
       
-      const thought = {
-        type: content.type,
-        content: digest,
-        rawContent: rawText.substring(0, 500),
-        fileName: content.fileName
-      };
+      // Show the result with destination options
+      this.showAnalysisWithOptions(analysisResult, content.type);
       
-      storage.addThought(thought);
-      this.renderThoughts();
-      this.showToast('Thought saved', 'success');
     } catch (error) {
-      // Fallback to raw content
-      const thought = {
-        type: content.type,
-        content: rawText.substring(0, 500) + (rawText.length > 500 ? '...' : ''),
-        fileName: content.fileName
-      };
-      storage.addThought(thought);
-      this.renderThoughts();
-      this.showToast('Saved to Thoughts', 'success');
+      console.error('Analysis error:', error);
+      this.hideModal('content-action-modal');
+      this.showToast('Failed to analyze: ' + error.message, 'error');
+      this.pendingDroppedContent = null;
     }
   }
 
   /**
-   * Analyze content with AI (original flow)
+   * Analyze image using Claude Vision API
    */
-  async analyzeWithAI() {
-    if (!this.pendingDroppedContent) return;
-    
-    const droppedContent = this.pendingDroppedContent;
-    this.pendingDroppedContent = null;
-    this.hideModal('content-action-modal');
-    
-    if (!aiProcessor.isConfigured()) {
-      this.showToast('Please configure your Anthropic API key in Settings to analyze content', 'error');
-      return;
+  async analyzeImageWithVision(dataUrl, fileName) {
+    // Extract base64 data and media type from dataUrl
+    const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!matches) {
+      throw new Error('Invalid image data');
     }
+    
+    const mediaType = matches[1];
+    const base64Data = matches[2];
+    
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.settings.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mediaType,
+                data: base64Data
+              }
+            },
+            {
+              type: 'text',
+              text: `Analyze this image and extract the key information. Create a digestible summary.
 
-    // Show loading
-    this.showModal('review-modal');
-    document.getElementById('review-content').innerHTML = `
-      <div class="review-loading">
-        <div class="spinner"></div>
-        <p>Claude Opus is analyzing your ${droppedContent.type}...</p>
+Respond in this exact format:
+TITLE: [brief descriptive title, max 8 words]
+SUMMARY: [1-2 sentence summary of what the image contains]
+KEY POINTS:
+- [key insight or information 1]
+- [key insight or information 2]
+- [key insight or information 3 if applicable]`
+            }
+          ]
+        }]
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Vision API failed');
+    }
+    
+    const result = await response.json();
+    return result.content[0].text;
+  }
+
+  /**
+   * Analyze text content using Claude
+   */
+  async analyzeTextContent(text) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.settings.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `Analyze this content and create a digestible summary.
+
+Content:
+${text.substring(0, 4000)}
+
+Respond in this exact format:
+TITLE: [brief descriptive title, max 8 words]
+SUMMARY: [1-2 sentence summary]
+KEY POINTS:
+- [key point 1]
+- [key point 2]
+- [key point 3 if applicable]`
+        }]
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Analysis failed');
+    }
+    
+    const result = await response.json();
+    return result.content[0].text;
+  }
+
+  /**
+   * Show analysis result with destination options
+   */
+  showAnalysisWithOptions(analysis, contentType) {
+    // Parse the analysis
+    const titleMatch = analysis.match(/^TITLE:\s*(.+?)(?:\n|$)/im);
+    const summaryMatch = analysis.match(/^SUMMARY:\s*(.+?)(?:\n|$)/im);
+    const keyPointsMatch = analysis.match(/KEY POINTS:\s*([\s\S]*?)$/im);
+    
+    const title = titleMatch ? titleMatch[1].trim() : 'Content Analysis';
+    const summary = summaryMatch ? summaryMatch[1].trim() : '';
+    const keyPointsText = keyPointsMatch ? keyPointsMatch[1].trim() : '';
+    const keyPoints = keyPointsText.match(/^-\s*.+$/gm) || [];
+    
+    let html = `
+      <div class="analysis-result">
+        <h4 class="analysis-title">${this.escapeHtml(title)}</h4>
+        ${summary ? `<p class="analysis-summary">${this.escapeHtml(summary)}</p>` : ''}
+        ${keyPoints.length > 0 ? `
+          <ul class="analysis-points">
+            ${keyPoints.map(p => `<li>${this.escapeHtml(p.replace(/^-\s*/, ''))}</li>`).join('')}
+          </ul>
+        ` : ''}
       </div>
     `;
+    
+    document.getElementById('content-analysis-result').innerHTML = html;
+    document.getElementById('content-action-buttons').style.display = 'flex';
+  }
 
-    try {
-      let textContent = '';
-      
-      if (droppedContent.type === 'text') {
-        textContent = droppedContent.content.text;
-      } else if (droppedContent.type === 'pdf') {
-        textContent = droppedContent.content.text;
-      } else if (droppedContent.type === 'image') {
-        textContent = `[Image file: ${droppedContent.fileName}]\n\nPlease note: I've received an image file. In a production environment, this would be analyzed using vision capabilities.`;
-      }
-
-      const result = await aiProcessor.analyzeContent(textContent, droppedContent.type);
-      
-      this.pendingReview = {
-        type: 'content',
-        fileName: droppedContent.fileName,
-        aiData: result
-      };
-
-      this.renderContentReview(result);
-    } catch (error) {
-      this.hideModal('review-modal');
-      this.showToast('Failed to analyze content: ' + error.message, 'error');
+  /**
+   * Add analysis to Key Talking Points
+   */
+  addToTalkingPoints() {
+    if (!this.pendingAnalysis) return;
+    
+    // Parse title and content from analysis
+    const titleMatch = this.pendingAnalysis.match(/^TITLE:\s*(.+?)(?:\n|$)/im);
+    const title = titleMatch ? titleMatch[1].trim() : 'New Talking Point';
+    
+    // Get summary and key points as content
+    const summaryMatch = this.pendingAnalysis.match(/^SUMMARY:\s*(.+?)(?:\n|$)/im);
+    const keyPointsMatch = this.pendingAnalysis.match(/KEY POINTS:\s*([\s\S]*?)$/im);
+    
+    let content = '';
+    if (summaryMatch) {
+      content = summaryMatch[1].trim();
     }
+    if (keyPointsMatch) {
+      const points = keyPointsMatch[1].trim().split('\n').filter(p => p.trim().startsWith('-'));
+      if (points.length > 0) {
+        content += (content ? ' ' : '') + points.map(p => p.replace(/^-\s*/, '')).join(' ');
+      }
+    }
+    
+    // Add to talking points
+    storage.addTalkingPoint(title, content || 'Key insight from analyzed content.');
+    this.data = storage.getData();
+    
+    this.hideModal('content-action-modal');
+    this.renderTalkingPoints();
+    this.showToast('Added to Key Talking Points', 'success');
+    
+    this.pendingAnalysis = null;
+    this.pendingDroppedContent = null;
+  }
+
+  /**
+   * Save analysis to Thoughts
+   */
+  saveAnalysisToThoughts() {
+    if (!this.pendingAnalysis) return;
+    
+    const content = this.pendingDroppedContent;
+    const thought = {
+      type: content?.type || 'text',
+      content: this.pendingAnalysis,
+      preview: content?.type === 'image' ? content.content.dataUrl : null,
+      fileName: content?.fileName
+    };
+    
+    storage.addThought(thought);
+    
+    this.hideModal('content-action-modal');
+    this.renderThoughts();
+    this.showToast('Saved to Thoughts', 'success');
+    
+    this.pendingAnalysis = null;
+    this.pendingDroppedContent = null;
   }
 
   /**
