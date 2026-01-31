@@ -2796,91 +2796,62 @@ KEY POINTS:
       const bullets = content.match(/^-\s*.+$/gm) || [];
       const hasAnalysis = title || summary || bullets.length > 0;
       
-      // Image with analysis (analyzed image)
-      if (thought.type === 'image' && thought.preview && hasAnalysis) {
-        return `
-          <div class="thought-item thought-image-analyzed" data-thought-id="${thought.id}">
-            <img src="${thought.preview}" alt="${thought.fileName || 'Image'}" class="thought-image-thumb" onclick="window.dashboard.showImagePreview('${thought.id}')">
-            <div class="thought-analysis">
-              ${title ? `<div class="thought-title" contenteditable="true" data-field="title" data-thought-id="${thought.id}">${this.escapeHtml(title)}</div>` : ''}
-              ${summary ? `<div class="thought-summary" contenteditable="true" data-field="summary" data-thought-id="${thought.id}">${this.escapeHtml(summary)}</div>` : ''}
-              ${bullets.length > 0 ? `
-                <ul class="thought-bullets">
-                  ${bullets.map((b, i) => `<li contenteditable="true" data-field="bullet-${i}" data-thought-id="${thought.id}">${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
-                </ul>
-              ` : ''}
-            </div>
-            <div class="thought-meta">
-              <span class="thought-date">${date}</span>
-              <span class="thought-type">image</span>
-              <button class="delete-btn" onclick="window.dashboard.deleteThought('${thought.id}')" title="Delete">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
-          </div>
-        `;
-      }
+      // Get display title for collapsed header
+      const displayTitle = title || (thought.fileName ? thought.fileName : 'Untitled thought');
+      const typeLabel = thought.type === 'image' ? 'image' : (thought.type === 'audio' ? 'audio' : '');
       
-      // Image without analysis (just saved image)
+      // Build expandable content
+      let expandableContent = '';
+      
       if (thought.type === 'image' && thought.preview) {
-        return `
-          <div class="thought-item thought-image" data-thought-id="${thought.id}">
-            <img src="${thought.preview}" alt="${thought.fileName || 'Image'}" class="thought-image-preview" onclick="window.dashboard.showImagePreview('${thought.id}')">
-            <div class="thought-meta">
-              <span class="thought-date">${date}</span>
-              <span class="thought-type">image</span>
-              <button class="delete-btn" onclick="window.dashboard.deleteThought('${thought.id}')" title="Delete">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
+        expandableContent = `
+          <div class="thought-expand-content">
+            <img src="${thought.preview}" alt="${thought.fileName || 'Image'}" class="thought-image-thumb" onclick="event.stopPropagation(); window.dashboard.showImagePreview('${thought.id}')" style="width: 60px; height: 60px; margin-bottom: 8px;">
+            ${summary ? `<div class="thought-summary" contenteditable="true" data-field="summary" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(summary)}</div>` : ''}
+            ${bullets.length > 0 ? `
+              <ul class="thought-bullets">
+                ${bullets.map((b, i) => `<li contenteditable="true" data-field="bullet-${i}" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
+              </ul>
+            ` : ''}
           </div>
+        `;
+      } else if (hasAnalysis) {
+        expandableContent = `
+          <div class="thought-expand-content">
+            ${summary ? `<div class="thought-summary" contenteditable="true" data-field="summary" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(summary)}</div>` : ''}
+            ${bullets.length > 0 ? `
+              <ul class="thought-bullets">
+                ${bullets.map((b, i) => `<li contenteditable="true" data-field="bullet-${i}" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
+              </ul>
+            ` : ''}
+          </div>
+        `;
+      } else {
+        expandableContent = `
+          <div class="thought-content" contenteditable="true" data-field="raw" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(content)}</div>
         `;
       }
       
-      // Text with analysis (digested format)
-      if (hasAnalysis) {
-        return `
-          <div class="thought-item thought-digested" data-thought-id="${thought.id}">
-            <div class="thought-digest">
-              ${title ? `<div class="thought-title" contenteditable="true" data-field="title" data-thought-id="${thought.id}">${this.escapeHtml(title)}</div>` : ''}
-              ${summary ? `<div class="thought-summary" contenteditable="true" data-field="summary" data-thought-id="${thought.id}">${this.escapeHtml(summary)}</div>` : ''}
-              ${bullets.length > 0 ? `
-                <ul class="thought-bullets">
-                  ${bullets.map((b, i) => `<li contenteditable="true" data-field="bullet-${i}" data-thought-id="${thought.id}">${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
-                </ul>
-              ` : ''}
-            </div>
-            <div class="thought-meta">
-              <span class="thought-date">${date}</span>
-              <button class="delete-btn" onclick="window.dashboard.deleteThought('${thought.id}')" title="Delete">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
-          </div>
-        `;
-      }
-      
-      // Raw content fallback
       return `
-        <div class="thought-item" data-thought-id="${thought.id}">
-          <div class="thought-content">${this.escapeHtml(content)}</div>
-          <div class="thought-meta">
-            <span class="thought-date">${date}</span>
-            <button class="delete-btn" onclick="window.dashboard.deleteThought('${thought.id}')" title="Delete">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
+        <div class="thought-item" data-thought-id="${thought.id}" onclick="window.dashboard.toggleThought('${thought.id}')">
+          <div class="thought-header">
+            <svg class="thought-expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+            <div class="thought-header-content">
+              <span class="thought-header-title" contenteditable="true" data-field="title" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(displayTitle)}</span>
+              ${typeLabel ? `<span class="thought-type">${typeLabel}</span>` : ''}
+              <span class="thought-date">${date}</span>
+              <button class="delete-btn" onclick="event.stopPropagation(); window.dashboard.deleteThought('${thought.id}')" title="Delete">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="thought-expandable">
+            ${expandableContent}
           </div>
         </div>
       `;
@@ -2888,6 +2859,16 @@ KEY POINTS:
     
     // Setup edit listeners after render
     setTimeout(() => this.setupThoughtEditListeners(), 0);
+  }
+
+  /**
+   * Toggle thought expand/collapse
+   */
+  toggleThought(id) {
+    const el = document.querySelector(`.thought-item[data-thought-id="${id}"]`);
+    if (el) {
+      el.classList.toggle('expanded');
+    }
   }
 
   /**

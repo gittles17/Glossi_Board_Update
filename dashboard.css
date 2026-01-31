@@ -1434,17 +1434,68 @@ body::after {
 
 .thought-item {
   display: flex;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: 0;
   padding: var(--space-3);
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   transition: all 0.15s ease-out;
+  cursor: pointer;
 }
 
 .thought-item:hover {
   background: rgba(255, 255, 255, 0.04);
   border-color: var(--border-color-light);
+}
+
+/* Collapsible thought structure */
+.thought-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.thought-expand-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.thought-item.expanded .thought-expand-icon {
+  transform: rotate(90deg);
+}
+
+.thought-header-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.thought-header-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.thought-expandable {
+  display: none;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-color);
+}
+
+.thought-item.expanded .thought-expandable {
+  display: block;
 }
 
 .thought-item.thought-image {
@@ -1589,11 +1640,28 @@ body::after {
 .thought-item .delete-btn {
   opacity: 0;
   flex-shrink: 0;
-  align-self: flex-start;
+  margin-left: auto;
 }
 
 .thought-item:hover .delete-btn {
   opacity: 0.5;
+}
+
+.thought-header-content .thought-date {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.thought-header-content .thought-type {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-green);
+  background: var(--accent-green-dim);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
 }
 
 /* Digested thought format */
