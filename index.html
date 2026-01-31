@@ -333,6 +333,17 @@
             <!-- Populated by JS with full explanations -->
           </div>
         </div>
+
+        <!-- Thoughts Repository -->
+        <div class="section-card section-thoughts">
+          <div class="card-header">
+            <h3>Thoughts</h3>
+            <span class="thoughts-count" id="thoughts-count"></span>
+          </div>
+          <div class="thoughts-list" id="thoughts-list">
+            <div class="empty-state">Drop text or images to save ideas here</div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
@@ -794,6 +805,42 @@
         <button class="btn btn-danger" id="investor-delete" style="margin-right: auto; display: none;">Delete</button>
         <button class="btn btn-secondary" id="investor-cancel">Cancel</button>
         <button class="btn btn-primary" id="investor-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content Action Modal -->
+  <div class="modal-overlay" id="content-action-modal">
+    <div class="modal modal-small">
+      <div class="modal-header">
+        <h2>What would you like to do?</h2>
+        <button class="btn-icon modal-close" id="content-action-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="content-preview" id="content-preview"></div>
+        <div class="action-buttons-stack">
+          <button class="btn btn-action" id="action-save-thought">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            Save to Thoughts
+          </button>
+          <button class="btn btn-action" id="action-analyze-ai">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            Analyze with AI
+          </button>
+        </div>
       </div>
     </div>
   </div>

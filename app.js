@@ -15,6 +15,7 @@ class GlossiDashboard {
     this.data = null;
     this.settings = null;
     this.pendingReview = null;
+    this.pendingDroppedContent = null;
     this.animationObserver = null;
     this.editingTalkingPointIndex = null;
     this.editingLinkId = null;
@@ -692,6 +693,20 @@ class GlossiDashboard {
       this.applyPendingChanges();
     });
 
+    // Content action modal
+    document.getElementById('content-action-close').addEventListener('click', () => {
+      this.hideModal('content-action-modal');
+      this.pendingDroppedContent = null;
+    });
+
+    document.getElementById('action-save-thought').addEventListener('click', () => {
+      this.saveToThoughts();
+    });
+
+    document.getElementById('action-analyze-ai').addEventListener('click', () => {
+      this.analyzeWithAI();
+    });
+
     // Meeting selector
     document.getElementById('meeting-select').addEventListener('change', (e) => {
       if (e.target.value === 'latest') {
@@ -745,6 +760,7 @@ class GlossiDashboard {
     this.renderStats();
     this.renderPipeline();
     this.renderTalkingPoints();
+    this.renderThoughts();
     this.renderQuickLinks();
     this.renderSeedRaise();
     this.renderMeetingSelector();
@@ -2489,9 +2505,57 @@ class GlossiDashboard {
   }
 
   /**
-   * Handle dropped content
+   * Handle dropped content - show action choice modal
    */
   async handleDroppedContent(droppedContent) {
+    // Store the pending content
+    this.pendingDroppedContent = droppedContent;
+    
+    // Show preview in action modal
+    const previewEl = document.getElementById('content-preview');
+    if (droppedContent.type === 'image' && droppedContent.content.dataUrl) {
+      previewEl.innerHTML = `<img src="${droppedContent.content.dataUrl}" alt="Preview">`;
+    } else if (droppedContent.type === 'text' || droppedContent.type === 'pdf') {
+      const text = droppedContent.content.text || '';
+      previewEl.textContent = text.substring(0, 200) + (text.length > 200 ? '...' : '');
+    } else {
+      previewEl.textContent = droppedContent.fileName || 'Content';
+    }
+    
+    this.showModal('content-action-modal');
+  }
+
+  /**
+   * Save content to thoughts
+   */
+  saveToThoughts() {
+    if (!this.pendingDroppedContent) return;
+    
+    const content = this.pendingDroppedContent;
+    const thought = {
+      type: content.type,
+      content: content.type === 'image' ? content.fileName : (content.content.text || ''),
+      preview: content.type === 'image' ? content.content.dataUrl : null,
+      fileName: content.fileName
+    };
+    
+    storage.addThought(thought);
+    this.hideModal('content-action-modal');
+    this.renderThoughts();
+    this.showToast('Saved to Thoughts', 'success');
+    this.pendingDroppedContent = null;
+  }
+
+  /**
+   * Analyze content with AI (original flow)
+   */
+  async analyzeWithAI() {
+    if (!this.pendingDroppedContent) return;
+    
+    const droppedContent = this.pendingDroppedContent;
+    this.pendingDroppedContent = null;
+    this.hideModal('content-action-modal');
+    
     if (!aiProcessor.isConfigured()) {
       this.showToast('Please configure your Anthropic API key in Settings to analyze content', 'error');
       return;
@@ -2514,7 +2578,6 @@ class GlossiDashboard {
       } else if (droppedContent.type === 'pdf') {
         textContent = droppedContent.content.text;
       } else if (droppedContent.type === 'image') {
-        // For images, we note that we received an image
         textContent = `[Image file: ${droppedContent.fileName}]\n\nPlease note: I've received an image file. In a production environment, this would be analyzed using vision capabilities.`;
       }
 
@@ -2531,6 +2594,85 @@ class GlossiDashboard {
       this.hideModal('review-modal');
       this.showToast('Failed to analyze content: ' + error.message, 'error');
     }
+  }
+
+  /**
+   * Render thoughts list
+   */
+  renderThoughts() {
+    const thoughts = storage.getThoughts();
+    const container = document.getElementById('thoughts-list');
+    const countEl = document.getElementById('thoughts-count');
+    
+    countEl.textContent = thoughts.length > 0 ? `(${thoughts.length})` : '';
+    
+    if (thoughts.length === 0) {
+      container.innerHTML = '<div class="empty-state">Drop text or images to save ideas here</div>';
+      return;
+    }
+    
+    container.innerHTML = thoughts.map(thought => {
+      const date = new Date(thought.createdAt).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+      
+      if (thought.type === 'image' && thought.preview) {
+        return `
+          <div class="thought-item thought-image" data-thought-id="${thought.id}">
+            <img src="${thought.preview}" alt="${thought.fileName || 'Image'}" class="thought-image-preview">
+            <div class="thought-meta">
+              <span class="thought-date">${date}</span>
+              <span class="thought-type">image</span>
+              <button class="delete-btn" onclick="window.dashboard.deleteThought('${thought.id}')" title="Delete">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+      
+      return `
+        <div class="thought-item" data-thought-id="${thought.id}">
+          <div class="thought-content">${this.escapeHtml(thought.content)}</div>
+          <button class="delete-btn" onclick="window.dashboard.deleteThought('${thought.id}')" title="Delete">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  /**
+   * Delete a thought
+   */
+  deleteThought(id) {
+    const el = document.querySelector(`[data-thought-id="${id}"]`);
+    if (el) {
+      el.style.opacity = '0';
+      el.style.transform = 'scale(0.95)';
+    }
+    
+    setTimeout(() => {
+      storage.deleteThought(id);
+      this.renderThoughts();
+    }, 150);
+    this.showToast('Thought deleted', 'success');
+  }
+
+  /**
+   * Escape HTML for safe rendering
+   */
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   /**

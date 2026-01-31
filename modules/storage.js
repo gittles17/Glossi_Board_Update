@@ -86,6 +86,7 @@ const DEFAULT_DATA = {
     { id: 'deck', name: 'Deck', url: 'https://docsend.com/view/sqmwqnjh9zk8pncu', icon: 'document', color: 'blue', emailEnabled: true, emailLabel: 'Deck' },
     { id: 'article', name: 'a16z Article', url: 'https://a16z.com/ai-is-learning-to-build-reality/', icon: 'book', color: 'purple', emailEnabled: true, emailLabel: 'a16z - AI World Models' }
   ],
+  thoughts: [],
   seedRaise: {
     target: '$500K',
     investors: []
@@ -355,6 +356,48 @@ class Storage {
   deleteTalkingPoint(index) {
     if (index >= 0 && index < this.data.talkingPoints.length) {
       this.data.talkingPoints.splice(index, 1);
+      this.data.lastUpdated = new Date().toISOString();
+      this.scheduleSave();
+    }
+    return this.data;
+  }
+
+  /**
+   * Get all thoughts
+   */
+  getThoughts() {
+    return this.data.thoughts || [];
+  }
+
+  /**
+   * Add a new thought
+   */
+  addThought(thought) {
+    if (!this.data.thoughts) {
+      this.data.thoughts = [];
+    }
+    const newThought = {
+      id: 'thought_' + Date.now(),
+      type: thought.type || 'text',
+      content: thought.content,
+      preview: thought.preview || null,
+      fileName: thought.fileName || null,
+      createdAt: new Date().toISOString()
+    };
+    this.data.thoughts.unshift(newThought); // Add to beginning
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return newThought;
+  }
+
+  /**
+   * Delete a thought
+   */
+  deleteThought(id) {
+    if (!this.data.thoughts) return this.data;
+    const index = this.data.thoughts.findIndex(t => t.id === id);
+    if (index !== -1) {
+      this.data.thoughts.splice(index, 1);
       this.data.lastUpdated = new Date().toISOString();
       this.scheduleSave();
     }
