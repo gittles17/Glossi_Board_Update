@@ -709,6 +709,11 @@ class GlossiDashboard {
       this.addToTalkingPoints();
     });
 
+    // Image preview modal
+    document.getElementById('image-preview-close').addEventListener('click', () => {
+      this.hideModal('image-preview-modal');
+    });
+
     // Meeting selector
     document.getElementById('meeting-select').addEventListener('change', (e) => {
       if (e.target.value === 'latest') {
@@ -2795,13 +2800,13 @@ KEY POINTS:
       if (thought.type === 'image' && thought.preview && hasAnalysis) {
         return `
           <div class="thought-item thought-image-analyzed" data-thought-id="${thought.id}">
-            <img src="${thought.preview}" alt="${thought.fileName || 'Image'}" class="thought-image-thumb" onclick="window.open('${thought.preview}', '_blank')">
+            <img src="${thought.preview}" alt="${thought.fileName || 'Image'}" class="thought-image-thumb" onclick="window.dashboard.showImagePreview('${thought.id}')">
             <div class="thought-analysis">
-              ${title ? `<div class="thought-title">${this.escapeHtml(title)}</div>` : ''}
-              ${summary ? `<div class="thought-summary">${this.escapeHtml(summary)}</div>` : ''}
+              ${title ? `<div class="thought-title" contenteditable="true" data-field="title" data-thought-id="${thought.id}">${this.escapeHtml(title)}</div>` : ''}
+              ${summary ? `<div class="thought-summary" contenteditable="true" data-field="summary" data-thought-id="${thought.id}">${this.escapeHtml(summary)}</div>` : ''}
               ${bullets.length > 0 ? `
                 <ul class="thought-bullets">
-                  ${bullets.map(b => `<li>${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
+                  ${bullets.map((b, i) => `<li contenteditable="true" data-field="bullet-${i}" data-thought-id="${thought.id}">${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
                 </ul>
               ` : ''}
             </div>
@@ -2823,7 +2828,7 @@ KEY POINTS:
       if (thought.type === 'image' && thought.preview) {
         return `
           <div class="thought-item thought-image" data-thought-id="${thought.id}">
-            <img src="${thought.preview}" alt="${thought.fileName || 'Image'}" class="thought-image-preview">
+            <img src="${thought.preview}" alt="${thought.fileName || 'Image'}" class="thought-image-preview" onclick="window.dashboard.showImagePreview('${thought.id}')">
             <div class="thought-meta">
               <span class="thought-date">${date}</span>
               <span class="thought-type">image</span>
@@ -2843,11 +2848,11 @@ KEY POINTS:
         return `
           <div class="thought-item thought-digested" data-thought-id="${thought.id}">
             <div class="thought-digest">
-              ${title ? `<div class="thought-title">${this.escapeHtml(title)}</div>` : ''}
-              ${summary ? `<div class="thought-summary">${this.escapeHtml(summary)}</div>` : ''}
+              ${title ? `<div class="thought-title" contenteditable="true" data-field="title" data-thought-id="${thought.id}">${this.escapeHtml(title)}</div>` : ''}
+              ${summary ? `<div class="thought-summary" contenteditable="true" data-field="summary" data-thought-id="${thought.id}">${this.escapeHtml(summary)}</div>` : ''}
               ${bullets.length > 0 ? `
                 <ul class="thought-bullets">
-                  ${bullets.map(b => `<li>${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
+                  ${bullets.map((b, i) => `<li contenteditable="true" data-field="bullet-${i}" data-thought-id="${thought.id}">${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
                 </ul>
               ` : ''}
             </div>
@@ -2880,6 +2885,9 @@ KEY POINTS:
         </div>
       `;
     }).join('');
+    
+    // Setup edit listeners after render
+    setTimeout(() => this.setupThoughtEditListeners(), 0);
   }
 
   /**
@@ -2897,6 +2905,90 @@ KEY POINTS:
       this.renderThoughts();
     }, 150);
     this.showToast('Thought deleted', 'success');
+  }
+
+  /**
+   * Show image preview modal
+   */
+  showImagePreview(thoughtId) {
+    const thoughts = storage.getThoughts();
+    const thought = thoughts.find(t => t.id === thoughtId);
+    if (!thought || !thought.preview) return;
+    
+    document.getElementById('image-preview-img').src = thought.preview;
+    this.showModal('image-preview-modal');
+  }
+
+  /**
+   * Update thought content when edited
+   */
+  updateThoughtContent(thoughtId, field, newValue) {
+    const thoughts = storage.getThoughts();
+    const thought = thoughts.find(t => t.id === thoughtId);
+    if (!thought) return;
+    
+    // Parse current content
+    let content = thought.content || '';
+    
+    if (field === 'title') {
+      // Update title
+      if (content.match(/^TITLE:/im)) {
+        content = content.replace(/^TITLE:\s*.+$/im, `TITLE: ${newValue}`);
+      } else {
+        content = `TITLE: ${newValue}\n${content}`;
+      }
+    } else if (field === 'summary') {
+      // Update summary
+      if (content.match(/^SUMMARY:/im)) {
+        content = content.replace(/^SUMMARY:\s*.+$/im, `SUMMARY: ${newValue}`);
+      } else {
+        const titleMatch = content.match(/^TITLE:.+\n?/im);
+        if (titleMatch) {
+          content = content.replace(titleMatch[0], `${titleMatch[0]}SUMMARY: ${newValue}\n`);
+        } else {
+          content = `SUMMARY: ${newValue}\n${content}`;
+        }
+      }
+    } else if (field.startsWith('bullet-')) {
+      // Update bullet point
+      const bulletIndex = parseInt(field.replace('bullet-', ''));
+      const bullets = content.match(/^-\s*.+$/gm) || [];
+      if (bulletIndex < bullets.length) {
+        const oldBullet = bullets[bulletIndex];
+        content = content.replace(oldBullet, `- ${newValue}`);
+      }
+    }
+    
+    // Update storage
+    thought.content = content;
+    storage.data.thoughts = thoughts;
+    storage.scheduleSave();
+  }
+
+  /**
+   * Setup thought edit listeners
+   */
+  setupThoughtEditListeners() {
+    const container = document.getElementById('thoughts-list');
+    if (!container) return;
+    
+    container.querySelectorAll('[contenteditable="true"]').forEach(el => {
+      el.addEventListener('blur', (e) => {
+        const thoughtId = e.target.dataset.thoughtId;
+        const field = e.target.dataset.field;
+        const newValue = e.target.textContent.trim();
+        if (thoughtId && field && newValue) {
+          this.updateThoughtContent(thoughtId, field, newValue);
+        }
+      });
+      
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.target.blur();
+        }
+      });
+    });
   }
 
   /**

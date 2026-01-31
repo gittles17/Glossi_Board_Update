@@ -1460,26 +1460,30 @@ body::after {
 
 /* Image with analysis */
 .thought-item.thought-image-analyzed {
-  flex-direction: column;
+  flex-direction: row;
+  align-items: flex-start;
   gap: var(--space-3);
 }
 
 .thought-item .thought-image-thumb {
-  width: 80px;
-  height: 60px;
+  width: 40px;
+  height: 40px;
   object-fit: cover;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  transition: all 0.15s ease;
   flex-shrink: 0;
+  border: 1px solid var(--border-color);
 }
 
 .thought-item .thought-image-thumb:hover {
   opacity: 0.8;
+  border-color: var(--accent-green);
 }
 
 .thought-item .thought-analysis {
   flex: 1;
+  min-width: 0;
 }
 
 .thought-item .thought-summary {
@@ -1487,6 +1491,63 @@ body::after {
   color: var(--text-muted);
   line-height: 1.5;
   margin-bottom: var(--space-2);
+}
+
+/* Editable thought content */
+.thought-item .thought-title[contenteditable="true"],
+.thought-item .thought-summary[contenteditable="true"],
+.thought-item .thought-content[contenteditable="true"] {
+  cursor: text;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease;
+}
+
+.thought-item .thought-title[contenteditable="true"]:hover,
+.thought-item .thought-summary[contenteditable="true"]:hover,
+.thought-item .thought-content[contenteditable="true"]:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.thought-item .thought-title[contenteditable="true"]:focus,
+.thought-item .thought-summary[contenteditable="true"]:focus,
+.thought-item .thought-content[contenteditable="true"]:focus {
+  background: rgba(255, 255, 255, 0.06);
+  outline: none;
+}
+
+/* Image preview modal */
+.modal-image-preview {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.modal-image-preview img {
+  max-width: 100%;
+  max-height: 85vh;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.image-preview-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  color: white;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: var(--radius-full);
+}
+
+.image-preview-close:hover {
+  background: rgba(0, 0, 0, 0.7);
 }
 
 .thought-item .thought-content {
