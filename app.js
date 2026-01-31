@@ -2782,6 +2782,44 @@ KEY POINTS:
         day: 'numeric' 
       });
       
+      // Parse digested content (TITLE: ... followed by bullet points)
+      const content = thought.content || '';
+      const titleMatch = content.match(/^TITLE:\s*(.+?)(?:\n|$)/i);
+      const summaryMatch = content.match(/^SUMMARY:\s*(.+?)(?:\n|$)/im);
+      const title = titleMatch ? titleMatch[1].trim() : null;
+      const summary = summaryMatch ? summaryMatch[1].trim() : null;
+      const bullets = content.match(/^-\s*.+$/gm) || [];
+      const hasAnalysis = title || summary || bullets.length > 0;
+      
+      // Image with analysis (analyzed image)
+      if (thought.type === 'image' && thought.preview && hasAnalysis) {
+        return `
+          <div class="thought-item thought-image-analyzed" data-thought-id="${thought.id}">
+            <img src="${thought.preview}" alt="${thought.fileName || 'Image'}" class="thought-image-thumb" onclick="window.open('${thought.preview}', '_blank')">
+            <div class="thought-analysis">
+              ${title ? `<div class="thought-title">${this.escapeHtml(title)}</div>` : ''}
+              ${summary ? `<div class="thought-summary">${this.escapeHtml(summary)}</div>` : ''}
+              ${bullets.length > 0 ? `
+                <ul class="thought-bullets">
+                  ${bullets.map(b => `<li>${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
+                </ul>
+              ` : ''}
+            </div>
+            <div class="thought-meta">
+              <span class="thought-date">${date}</span>
+              <span class="thought-type">image</span>
+              <button class="delete-btn" onclick="window.dashboard.deleteThought('${thought.id}')" title="Delete">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+      
+      // Image without analysis (just saved image)
       if (thought.type === 'image' && thought.preview) {
         return `
           <div class="thought-item thought-image" data-thought-id="${thought.id}">
@@ -2800,18 +2838,13 @@ KEY POINTS:
         `;
       }
       
-      // Parse digested content (TITLE: ... followed by bullet points)
-      const content = thought.content || '';
-      const titleMatch = content.match(/^TITLE:\s*(.+?)(?:\n|$)/i);
-      const title = titleMatch ? titleMatch[1].trim() : null;
-      const bullets = content.match(/^-\s*.+$/gm) || [];
-      
-      if (title || bullets.length > 0) {
-        // Digested format
+      // Text with analysis (digested format)
+      if (hasAnalysis) {
         return `
           <div class="thought-item thought-digested" data-thought-id="${thought.id}">
             <div class="thought-digest">
               ${title ? `<div class="thought-title">${this.escapeHtml(title)}</div>` : ''}
+              ${summary ? `<div class="thought-summary">${this.escapeHtml(summary)}</div>` : ''}
               ${bullets.length > 0 ? `
                 <ul class="thought-bullets">
                   ${bullets.map(b => `<li>${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
