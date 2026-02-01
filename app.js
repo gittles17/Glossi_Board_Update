@@ -3317,9 +3317,12 @@ Respond with JSON:
             const thoughtIdx = parseInt(itemId.replace('thought-', ''));
             const thoughtData = data.thoughts?.[thoughtIdx];
             if (thoughtData) {
+              // Use the reason as title if available, otherwise create from content
+              const thoughtTitle = thoughtData.reason || thoughtData.content.substring(0, 50);
               storage.addThought({
                 type: 'text',
-                content: `TITLE: Reference Note\nSUMMARY: ${thoughtData.content}`,
+                content: `TITLE: ${thoughtTitle}\nSUMMARY: ${thoughtData.content}`,
+                fileName: this.pendingDroppedContent?.fileName,
                 suggestedCategory: null
               });
               appliedCount++;
@@ -4459,6 +4462,7 @@ Content: "${content.substring(0, 300)}"`
       
       // Get display title for collapsed header
       const displayTitle = title || (thought.fileName ? thought.fileName : 'Untitled thought');
+      const sourceFile = thought.fileName || thought.originalSource?.fileName;
       const itemCount = thought.isGrouped && thought.items ? thought.items.length : 0;
       const typeLabel = thought.type === 'image' ? 'image' : 
                         thought.type === 'audio' ? 'audio' : 
@@ -4543,6 +4547,7 @@ Content: "${content.substring(0, 300)}"`
             </svg>
             <div class="thought-header-content">
               <span class="thought-header-title" contenteditable="true" data-field="title" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(displayTitle)}</span>
+              ${sourceFile && sourceFile !== displayTitle ? `<span class="thought-source">from ${this.escapeHtml(sourceFile)}</span>` : ''}
               ${typeLabel ? `<span class="thought-type">${typeLabel}</span>` : ''}
               ${suggestionBadge}
               <span class="thought-date">${date}</span>

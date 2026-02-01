@@ -1580,8 +1580,16 @@ body::after {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex: 1;
+  flex-shrink: 1;
   min-width: 0;
+}
+
+.thought-source {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .thought-expandable {
