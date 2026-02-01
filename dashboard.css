@@ -1252,9 +1252,55 @@ body::after {
   padding: var(--space-4) var(--space-5);
 }
 
-.talking-point-full {
-  padding: var(--space-4) 0;
+/* Category grouping */
+.talking-point-category {
+  margin-bottom: var(--space-4);
+}
+
+.talking-point-category:last-child {
+  margin-bottom: 0;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--border-color);
+}
+
+.category-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.category-count {
+  font-size: 10px;
+  color: var(--accent-green);
+  background: var(--accent-green-dim);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.category-points {
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-category {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: var(--space-2) 0;
+}
+
+.talking-point-full {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   transition: all 0.15s ease-out;
 }
 
@@ -1302,7 +1348,7 @@ body::after {
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.6;
-  margin-left: 36px;
+  margin-left: 0;
   margin-top: var(--space-1);
 }
 
@@ -1637,14 +1683,38 @@ body::after {
   border-radius: var(--radius-sm);
 }
 
-.thought-item .delete-btn {
+.thought-item .delete-btn,
+.thought-item .promote-btn {
   opacity: 0;
   flex-shrink: 0;
+}
+
+.thought-item .promote-btn {
   margin-left: auto;
 }
 
-.thought-item:hover .delete-btn {
+.thought-item:hover .delete-btn,
+.thought-item:hover .promote-btn {
   opacity: 0.5;
+}
+
+.promote-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast);
+}
+
+.promote-btn:hover {
+  color: var(--accent-green);
+  background: var(--accent-green-dim);
 }
 
 .thought-header-content .thought-date {
@@ -1953,6 +2023,104 @@ body::after {
   color: var(--text-secondary);
   margin-bottom: var(--space-4);
   line-height: 1.6;
+}
+
+/* Promote to Talking Points Modal */
+.promote-modal-content {
+  text-align: left;
+}
+
+.promote-preview {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.promote-preview h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.promote-preview p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.promote-categories {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.category-select-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.category-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.category-option {
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.category-option:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-color-light);
+  color: var(--text-primary);
+}
+
+.category-option.ai-recommended {
+  border-color: var(--accent-green-dim);
+  background: rgba(74, 222, 128, 0.05);
+}
+
+.category-option.suggested {
+  background: var(--accent-green-dim);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.ai-suggestion {
+  margin-top: var(--space-2);
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ai-suggestion .suggestion-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ai-suggestion .suggestion-loading {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .btn-action-secondary {

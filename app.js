@@ -993,40 +993,85 @@ class GlossiDashboard {
   }
 
   /**
-   * Render talking points with full explanations and staggered animations
+   * Render talking points grouped by category with staggered animations
    */
   renderTalkingPoints() {
     const container = document.getElementById('talking-points');
     const points = this.data.talkingPoints || [];
+    const categories = storage.getTalkingPointCategories();
+    
+    const categoryLabels = {
+      core: 'Core Value Prop',
+      traction: 'Traction & Proof',
+      market: 'Market & Timing',
+      testimonials: 'Customer Validation'
+    };
 
     if (points.length === 0) {
       container.innerHTML = '<div class="empty-state">No talking points yet. Click + to add one.</div>';
       return;
     }
 
-    container.innerHTML = points.map((point, index) => `
-      <div class="talking-point-full" style="animation-delay: ${0.45 + index * 0.05}s" data-index="${index}">
-        <div class="talking-point-header">
-          <span class="number">${index + 1}</span>
-          <span class="title">${point.title}</span>
-          <div class="talking-point-actions">
-            <button class="edit-btn" onclick="window.dashboard.editTalkingPoint(${index})" title="Edit">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
-            </button>
-            <button class="delete-btn" onclick="window.dashboard.deleteTalkingPoint(${index})" title="Delete">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
+    // Group points by category
+    const grouped = {};
+    categories.forEach(cat => grouped[cat] = []);
+    
+    points.forEach((point, index) => {
+      const cat = point.category || 'core';
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push({ ...point, originalIndex: index });
+    });
+
+    let html = '';
+    let animIndex = 0;
+    
+    categories.forEach(category => {
+      const catPoints = grouped[category];
+      if (catPoints.length === 0 && category !== 'testimonials') return;
+      
+      html += `
+        <div class="talking-point-category" data-category="${category}">
+          <div class="category-header">
+            <span class="category-label">${categoryLabels[category] || category}</span>
+            <span class="category-count">${catPoints.length}</span>
           </div>
-        </div>
-        <p class="description">${point.content || point.description || 'Key differentiator for investor conversations.'}</p>
-      </div>
-    `).join('');
+          <div class="category-points">
+      `;
+      
+      if (catPoints.length === 0) {
+        html += '<div class="empty-category">No ${category} talking points yet</div>';
+      } else {
+        catPoints.forEach((point) => {
+          html += `
+            <div class="talking-point-full" style="animation-delay: ${0.45 + animIndex * 0.05}s" data-index="${point.originalIndex}">
+              <div class="talking-point-header">
+                <span class="title">${point.title}</span>
+                <div class="talking-point-actions">
+                  <button class="edit-btn" onclick="window.dashboard.editTalkingPoint(${point.originalIndex})" title="Edit">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                  </button>
+                  <button class="delete-btn" onclick="window.dashboard.deleteTalkingPoint(${point.originalIndex})" title="Delete">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <p class="description">${point.content || point.description || ''}</p>
+            </div>
+          `;
+          animIndex++;
+        });
+      }
+      
+      html += '</div></div>';
+    });
+
+    container.innerHTML = html;
 
     // Add staggered entrance animation
     this.animateListItems(container, '.talking-point-full');
@@ -2992,10 +3037,10 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
       this.savedItems.thoughts.push(item);
       this.showToast('Saved to Thoughts', 'success');
     } else if (action === 'talking_point') {
-      // Add to talking points
+      // Add to talking points under testimonials category
       const title = item.source || 'Customer Quote';
       const content = item.quote + (item.context ? ` (${item.context})` : '');
-      storage.addTalkingPoint(title, content);
+      storage.addTalkingPoint(title, content, 'testimonials');
       this.savedItems.talkingPoints.push(item);
       this.showToast('Added to Talking Points', 'success');
     }
@@ -3213,6 +3258,12 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
               <span class="thought-header-title" contenteditable="true" data-field="title" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(displayTitle)}</span>
               ${typeLabel ? `<span class="thought-type">${typeLabel}</span>` : ''}
               <span class="thought-date">${date}</span>
+              <button class="promote-btn" onclick="event.stopPropagation(); window.dashboard.promoteThought('${thought.id}')" title="Add to Talking Points">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="17 11 12 6 7 11"></polyline>
+                  <line x1="12" y1="18" x2="12" y2="6"></line>
+                </svg>
+              </button>
               <button class="delete-btn" onclick="event.stopPropagation(); window.dashboard.deleteThought('${thought.id}')" title="Delete">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -3257,6 +3308,169 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
       this.renderThoughts();
     }, 150);
     this.showToast('Thought deleted', 'success');
+  }
+
+  /**
+   * Promote a thought to talking points with AI category suggestion
+   */
+  async promoteThought(id) {
+    const thoughts = storage.getThoughts();
+    const thought = thoughts.find(t => t.id === id);
+    if (!thought) return;
+    
+    // Parse thought content
+    const content = thought.content || '';
+    const titleMatch = content.match(/^TITLE:\s*(.+?)(?:\n|$)/i);
+    const summaryMatch = content.match(/^SUMMARY:\s*(.+?)(?:\n|$)/im);
+    const title = titleMatch ? titleMatch[1].trim() : (thought.fileName || 'Untitled');
+    const summary = summaryMatch ? summaryMatch[1].trim() : content.substring(0, 200);
+    
+    // Store for later
+    this.promotingThought = { id, title, summary, content };
+    
+    // Show category selection modal
+    this.showPromoteCategoryModal(title, summary);
+    
+    // Get AI suggestion in background
+    if (aiProcessor.isConfigured()) {
+      this.suggestCategory(summary);
+    }
+  }
+
+  /**
+   * Show modal for selecting category when promoting thought
+   */
+  showPromoteCategoryModal(title, summary) {
+    const categories = storage.getTalkingPointCategories();
+    const categoryLabels = {
+      core: 'Core Value Prop',
+      traction: 'Traction & Proof',
+      market: 'Market & Timing',
+      testimonials: 'Customer Validation'
+    };
+    
+    const html = `
+      <div class="promote-modal-content">
+        <div class="promote-preview">
+          <h4>${this.escapeHtml(title)}</h4>
+          <p>${this.escapeHtml(summary.substring(0, 150))}${summary.length > 150 ? '...' : ''}</p>
+        </div>
+        
+        <div class="promote-categories">
+          <label class="category-select-label">Select Category:</label>
+          <div class="category-options" id="category-options">
+            ${categories.map(cat => `
+              <button class="category-option" data-category="${cat}" onclick="window.dashboard.selectPromoteCategory('${cat}')">
+                ${categoryLabels[cat] || cat}
+              </button>
+            `).join('')}
+          </div>
+          <div class="ai-suggestion" id="ai-category-suggestion">
+            <span class="suggestion-loading">AI analyzing...</span>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('content-analysis-result').innerHTML = html;
+    document.getElementById('content-action-buttons').style.display = 'none';
+    
+    // Update modal title
+    const modalTitle = document.querySelector('#content-action-modal h2');
+    if (modalTitle) modalTitle.textContent = 'Add to Talking Points';
+    
+    this.showModal('content-action-modal');
+  }
+
+  /**
+   * Get AI suggestion for category
+   */
+  async suggestCategory(content) {
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.settings.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 100,
+          messages: [{
+            role: 'user',
+            content: `Categorize this content for an investor pitch deck. Choose ONE category:
+- core: Core value proposition, product differentiation, technical approach
+- traction: Revenue, customers, pipeline, growth metrics, proof points
+- market: Market timing, trends, why now, industry shifts
+- testimonials: Customer quotes, validation, partner feedback
+
+Content: "${content.substring(0, 500)}"
+
+Respond with just the category name (core, traction, market, or testimonials) and a brief reason.`
+          }]
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        const suggestion = result.content[0].text.toLowerCase();
+        
+        // Parse category from response
+        let category = 'core';
+        if (suggestion.includes('testimonial')) category = 'testimonials';
+        else if (suggestion.includes('traction')) category = 'traction';
+        else if (suggestion.includes('market')) category = 'market';
+        
+        // Update UI with suggestion
+        const suggestionEl = document.getElementById('ai-category-suggestion');
+        if (suggestionEl) {
+          suggestionEl.innerHTML = `
+            <span class="suggestion-label">AI Suggests:</span>
+            <button class="category-option suggested" data-category="${category}" onclick="window.dashboard.selectPromoteCategory('${category}')">
+              ${category === 'testimonials' ? 'Customer Validation' : 
+                category === 'traction' ? 'Traction & Proof' : 
+                category === 'market' ? 'Market & Timing' : 'Core Value Prop'}
+            </button>
+          `;
+          
+          // Highlight the suggested category
+          document.querySelectorAll('.category-option').forEach(btn => {
+            if (btn.dataset.category === category && !btn.classList.contains('suggested')) {
+              btn.classList.add('ai-recommended');
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Failed to get category suggestion:', e);
+      const suggestionEl = document.getElementById('ai-category-suggestion');
+      if (suggestionEl) suggestionEl.innerHTML = '';
+    }
+  }
+
+  /**
+   * Select category and complete promotion
+   */
+  selectPromoteCategory(category) {
+    if (!this.promotingThought) return;
+    
+    const { id, title, summary, content } = this.promotingThought;
+    
+    // Add to talking points with category
+    storage.addTalkingPoint(title, summary || content.substring(0, 300), category);
+    this.data = storage.getData();
+    
+    // Optionally delete from thoughts
+    storage.deleteThought(id);
+    
+    this.hideModal('content-action-modal');
+    this.renderThoughts();
+    this.renderTalkingPoints();
+    this.showToast(`Added to ${category === 'testimonials' ? 'Customer Validation' : category} talking points`, 'success');
+    
+    this.promotingThought = null;
   }
 
   /**

@@ -61,25 +61,31 @@ const DEFAULT_DATA = {
   talkingPoints: [
     {
       title: 'The Problem is Real',
-      content: 'Current AI tools rebuild your product every time. Materials drift, proportions shift. It\'s not reliable enough for enterprise scale.'
+      content: 'Current AI tools rebuild your product every time. Materials drift, proportions shift. It\'s not reliable enough for enterprise scale.',
+      category: 'core'
     },
     {
       title: 'Our Approach is Different',
-      content: 'We use 3D as the source of truth. The product is composited in, never generated. Pixel-perfect every time.'
+      content: 'We use 3D as the source of truth. The product is composited in, never generated. Pixel-perfect every time.',
+      category: 'core'
     },
     {
       title: 'We Have Traction',
-      content: '$1.2M+ pipeline built in 3 months. Real conversations with real enterprise buyers who have real budgets.'
+      content: '$1.2M+ pipeline built in 3 months. Real conversations with real enterprise buyers who have real budgets.',
+      category: 'traction'
     },
     {
       title: 'The Moat is Deep',
-      content: '3D pipeline integration, enterprise relationships, and brand trust requirements create compounding defensibility.'
+      content: '3D pipeline integration, enterprise relationships, and brand trust requirements create compounding defensibility.',
+      category: 'core'
     },
     {
       title: 'Why Now',
-      content: 'We\'ve spent 2 years building with enterprise. Sales motion just started. This is the inflection point.'
+      content: 'We\'ve spent 2 years building with enterprise. Sales motion just started. This is the inflection point.',
+      category: 'market'
     }
   ],
+  talkingPointCategories: ['core', 'traction', 'market', 'testimonials'],
   quickLinks: [
     { id: 'website', name: 'Glossi.io', url: 'https://glossi.io', icon: 'globe', color: 'default', emailEnabled: true, emailLabel: 'Website' },
     { id: 'video', name: 'Pitch Video', url: 'https://www.youtube.com/watch?v=kXbQqM35iHA', icon: 'video', color: 'red', emailEnabled: true, emailLabel: 'Pitch Video' },
@@ -329,10 +335,10 @@ class Storage {
   }
 
   /**
-   * Add a new talking point
+   * Add a new talking point with optional category
    */
-  addTalkingPoint(title, content) {
-    this.data.talkingPoints.push({ title, content });
+  addTalkingPoint(title, content, category = 'core') {
+    this.data.talkingPoints.push({ title, content, category });
     this.data.lastUpdated = new Date().toISOString();
     this.scheduleSave();
     return this.data;
@@ -341,13 +347,24 @@ class Storage {
   /**
    * Update an existing talking point
    */
-  updateTalkingPoint(index, title, content) {
+  updateTalkingPoint(index, title, content, category) {
     if (index >= 0 && index < this.data.talkingPoints.length) {
-      this.data.talkingPoints[index] = { title, content };
+      this.data.talkingPoints[index] = { 
+        title, 
+        content, 
+        category: category || this.data.talkingPoints[index].category || 'core'
+      };
       this.data.lastUpdated = new Date().toISOString();
       this.scheduleSave();
     }
     return this.data;
+  }
+
+  /**
+   * Get talking point categories
+   */
+  getTalkingPointCategories() {
+    return this.data.talkingPointCategories || ['core', 'traction', 'market', 'testimonials'];
   }
 
   /**
