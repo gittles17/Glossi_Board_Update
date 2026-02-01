@@ -387,18 +387,16 @@ class Storage {
   }
 
   /**
-   * Add a new thought
+   * Add a new thought (preserves all properties including isGrouped, items, suggestedCategory)
    */
   addThought(thought) {
     if (!this.data.thoughts) {
       this.data.thoughts = [];
     }
     const newThought = {
+      ...thought,  // Keep all passed properties (isGrouped, items, suggestedCategory, etc.)
       id: 'thought_' + Date.now(),
       type: thought.type || 'text',
-      content: thought.content,
-      preview: thought.preview || null,
-      fileName: thought.fileName || null,
       createdAt: new Date().toISOString()
     };
     this.data.thoughts.unshift(newThought); // Add to beginning
