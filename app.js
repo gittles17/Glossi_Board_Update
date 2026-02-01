@@ -3027,11 +3027,12 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
     const item = this.pendingItems[this.currentItemIndex];
     
     if (action === 'thought') {
-      // Save to thoughts
+      // Save to thoughts with testimonials suggestion since it's from testimonials parsing
       const thought = {
         type: 'testimonial',
         content: `TITLE: ${item.source || 'Quote'}\nSUMMARY: ${item.quote}\n${item.context ? `- ${item.context}` : ''}`,
-        fileName: item.source
+        fileName: item.source,
+        suggestedCategory: 'testimonials'
       };
       storage.addThought(thought);
       this.savedItems.thoughts.push(item);
@@ -3159,9 +3160,9 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
   }
 
   /**
-   * Save analysis to Thoughts
+   * Save analysis to Thoughts with AI category suggestion
    */
-  saveAnalysisToThoughts() {
+  async saveAnalysisToThoughts() {
     if (!this.pendingAnalysis) return;
     
     const content = this.pendingDroppedContent;
@@ -3169,8 +3170,13 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
       type: content?.type || 'text',
       content: this.pendingAnalysis,
       preview: content?.type === 'image' ? content.content.dataUrl : null,
-      fileName: content?.fileName
+      fileName: content?.fileName,
+      suggestedCategory: null
     };
+    
+    // Get AI suggestion for category
+    const suggestion = await this.getCategorySuggestion(this.pendingAnalysis);
+    thought.suggestedCategory = suggestion;
     
     storage.addThought(thought);
     
@@ -3180,6 +3186,48 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
     
     this.pendingAnalysis = null;
     this.pendingDroppedContent = null;
+  }
+
+  /**
+   * Get AI category suggestion for content
+   */
+  async getCategorySuggestion(content) {
+    if (!aiProcessor.isConfigured()) return null;
+    
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.settings.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 50,
+          messages: [{
+            role: 'user',
+            content: `Categorize for investor pitch. Reply with ONLY one word: core, traction, market, or testimonials.
+
+Content: "${content.substring(0, 300)}"`
+          }]
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        const text = result.content[0].text.toLowerCase().trim();
+        
+        if (text.includes('testimonial')) return 'testimonials';
+        if (text.includes('traction')) return 'traction';
+        if (text.includes('market')) return 'market';
+        return 'core';
+      }
+    } catch (e) {
+      console.error('Failed to get category suggestion:', e);
+    }
+    return null;
   }
 
   /**
@@ -3215,6 +3263,19 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
       // Get display title for collapsed header
       const displayTitle = title || (thought.fileName ? thought.fileName : 'Untitled thought');
       const typeLabel = thought.type === 'image' ? 'image' : (thought.type === 'audio' ? 'audio' : '');
+      
+      // Category suggestion
+      const categoryLabels = {
+        core: 'Core',
+        traction: 'Traction',
+        market: 'Market',
+        testimonials: 'Testimonial'
+      };
+      const suggestedCat = thought.suggestedCategory;
+      const suggestionBadge = suggestedCat ? 
+        `<button class="suggestion-badge" onclick="event.stopPropagation(); window.dashboard.quickPromote('${thought.id}', '${suggestedCat}')" title="Add to ${categoryLabels[suggestedCat]} talking points">
+          ${categoryLabels[suggestedCat]}
+        </button>` : '';
       
       // Build expandable content
       let expandableContent = '';
@@ -3257,8 +3318,9 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
             <div class="thought-header-content">
               <span class="thought-header-title" contenteditable="true" data-field="title" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(displayTitle)}</span>
               ${typeLabel ? `<span class="thought-type">${typeLabel}</span>` : ''}
+              ${suggestionBadge}
               <span class="thought-date">${date}</span>
-              <button class="promote-btn" onclick="event.stopPropagation(); window.dashboard.promoteThought('${thought.id}')" title="Add to Talking Points">
+              <button class="promote-btn" onclick="event.stopPropagation(); window.dashboard.promoteThought('${thought.id}')" title="Choose category">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="17 11 12 6 7 11"></polyline>
                   <line x1="12" y1="18" x2="12" y2="6"></line>
@@ -3471,6 +3533,49 @@ Respond with just the category name (core, traction, market, or testimonials) an
     this.showToast(`Added to ${category === 'testimonials' ? 'Customer Validation' : category} talking points`, 'success');
     
     this.promotingThought = null;
+  }
+
+  /**
+   * Quick promote using suggested category (one-click)
+   */
+  quickPromote(thoughtId, category) {
+    const thoughts = storage.getThoughts();
+    const thought = thoughts.find(t => t.id === thoughtId);
+    if (!thought) return;
+    
+    // Parse thought content
+    const content = thought.content || '';
+    const titleMatch = content.match(/^TITLE:\s*(.+?)(?:\n|$)/i);
+    const summaryMatch = content.match(/^SUMMARY:\s*(.+?)(?:\n|$)/im);
+    const title = titleMatch ? titleMatch[1].trim() : (thought.fileName || 'Untitled');
+    const summary = summaryMatch ? summaryMatch[1].trim() : content.substring(0, 200);
+    
+    // Add to talking points with category
+    storage.addTalkingPoint(title, summary || content.substring(0, 300), category);
+    this.data = storage.getData();
+    
+    // Delete from thoughts
+    storage.deleteThought(thoughtId);
+    
+    // Animate removal
+    const el = document.querySelector(`[data-thought-id="${thoughtId}"]`);
+    if (el) {
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(20px)';
+    }
+    
+    setTimeout(() => {
+      this.renderThoughts();
+      this.renderTalkingPoints();
+    }, 200);
+    
+    const categoryLabels = {
+      core: 'Core Value Prop',
+      traction: 'Traction & Proof',
+      market: 'Market & Timing',
+      testimonials: 'Customer Validation'
+    };
+    this.showToast(`Added to ${categoryLabels[category]}`, 'success');
   }
 
   /**
