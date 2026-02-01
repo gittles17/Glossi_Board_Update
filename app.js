@@ -3501,19 +3501,46 @@ Respond with JSON:
     
     switch (itemType) {
       case 'thoughts':
+        // Always save and compress the source for thoughts
         const compressedText = this.compressText(droppedContent?.content?.text);
-        storage.addThought({
-          type: 'text',
-          content: `TITLE: ${title}\nSUMMARY: ${content}`,
-          fileName: droppedContent?.fileName,
-          suggestedCategory: null,
-          originalSource: {
-            text: compressedText.text,
-            fileName: droppedContent?.fileName,
+        const isImage = droppedContent?.type === 'image';
+        
+        if (isImage && droppedContent?.content?.dataUrl) {
+          // Handle image - compress async
+          this.compressImage(droppedContent.content.dataUrl).then(compressedImage => {
+            storage.addThought({
+              type: 'image',
+              content: `TITLE: ${title}\nSUMMARY: ${content}`,
+              fileName: droppedContent?.fileName,
+              preview: compressedImage,
+              suggestedCategory: null,
+              originalSource: {
+                text: null,
+                dataUrl: compressedImage,
+                fileName: droppedContent?.fileName,
+                type: 'image',
+                truncated: false
+              }
+            });
+            this.data = storage.getData();
+            this.renderThoughts();
+          });
+        } else {
+          // Handle text/audio - save immediately with compressed source
+          storage.addThought({
             type: droppedContent?.type || 'text',
-            truncated: compressedText.truncated
-          }
-        });
+            content: `TITLE: ${title}\nSUMMARY: ${content}`,
+            fileName: droppedContent?.fileName,
+            suggestedCategory: null,
+            originalSource: {
+              text: compressedText.text,
+              dataUrl: null,
+              fileName: droppedContent?.fileName,
+              type: droppedContent?.type || 'text',
+              truncated: compressedText.truncated
+            }
+          });
+        }
         return true;
         
       case 'quotes':
