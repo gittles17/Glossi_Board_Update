@@ -877,6 +877,7 @@ class GlossiDashboard {
     try { this.renderStats(); } catch (e) { console.error('renderStats error:', e); }
     try { this.renderPipeline(); } catch (e) { console.error('renderPipeline error:', e); }
     try { this.renderTalkingPoints(); } catch (e) { console.error('renderTalkingPoints error:', e); }
+    try { this.renderQuotes(); } catch (e) { console.error('renderQuotes error:', e); }
     try { this.renderThoughts(); } catch (e) { console.error('renderThoughts error:', e); }
     try { this.renderQuickLinks(); } catch (e) { console.error('renderQuickLinks error:', e); }
     try { this.renderSeedRaise(); } catch (e) { console.error('renderSeedRaise error:', e); }
@@ -2842,6 +2843,12 @@ Respond with JSON:
       // Store the extracted data
       this.pendingExtractedData = extractedData;
       
+      // Handle testimonials specially - show quotes preview
+      if (extractedData.isTestimonials) {
+        this.showTestimonialsPreview(extractedData, content.fileName);
+        return;
+      }
+      
       // Show the unified preview
       this.showUnifiedPreview(extractedData, content.fileName);
       
@@ -3017,6 +3024,127 @@ Respond with JSON:
     
     // Setup event listeners for section checkboxes
     this.setupUnifiedPreviewListeners();
+  }
+
+  /**
+   * Show testimonials preview with option to add all to quotes library
+   */
+  showTestimonialsPreview(data, fileName) {
+    document.getElementById('unified-modal-title').textContent = 'Testimonials Detected';
+    document.getElementById('content-analysis-result').innerHTML = `
+      <div class="unified-summary">
+        <p>Found <strong>${data.quotes.length} quotes</strong> from ${this.escapeHtml(data.summary || fileName)}</p>
+      </div>
+    `;
+    
+    const sectionsContainer = document.getElementById('unified-preview-sections');
+    
+    // Show all quotes with checkboxes
+    let html = `
+      <div class="unified-section">
+        <div class="unified-section-header">
+          <label class="unified-section-checkbox">
+            <input type="checkbox" checked data-section="quotes">
+            <span class="checkmark"></span>
+          </label>
+          <h4>Quotes to Import (${data.quotes.length})</h4>
+        </div>
+        <div class="unified-section-items">
+    `;
+    
+    data.quotes.forEach((q, i) => {
+      html += `
+        <div class="unified-item" data-item-type="quote" data-item-id="quote-${i}">
+          <label class="unified-item-checkbox">
+            <input type="checkbox" checked>
+            <span class="checkmark"></span>
+          </label>
+          <div class="unified-item-content">
+            <div class="unified-item-title">"${this.escapeHtml(q.quote.substring(0, 80))}${q.quote.length > 80 ? '...' : ''}"</div>
+            <div class="unified-item-detail">- ${this.escapeHtml(q.source)}</div>
+            ${q.context ? `<div class="unified-item-meta">${this.escapeHtml(q.context)}</div>` : ''}
+          </div>
+          <span class="unified-item-badge badge-quote">quote</span>
+        </div>
+      `;
+    });
+    
+    html += '</div></div>';
+    
+    sectionsContainer.innerHTML = html;
+    sectionsContainer.style.display = 'flex';
+    document.getElementById('unified-preview-footer').style.display = 'flex';
+    
+    // Store quotes data for apply
+    this.pendingExtractedData = data;
+    
+    // Setup listeners
+    this.setupTestimonialsListeners(data);
+  }
+
+  /**
+   * Setup event listeners for testimonials preview
+   */
+  setupTestimonialsListeners(data) {
+    const footer = document.getElementById('unified-preview-footer');
+    
+    // Section checkbox toggles all items
+    const sectionCheckbox = document.querySelector('[data-section="quotes"]');
+    if (sectionCheckbox) {
+      sectionCheckbox.addEventListener('change', (e) => {
+        const items = document.querySelectorAll('[data-item-type="quote"] input[type="checkbox"]');
+        items.forEach(cb => cb.checked = e.target.checked);
+      });
+    }
+    
+    // Apply button
+    const applyBtn = footer.querySelector('.btn-primary');
+    if (applyBtn) {
+      applyBtn.onclick = () => this.applySelectedQuotes(data);
+    }
+    
+    // Cancel button
+    const cancelBtn = footer.querySelector('.btn-secondary');
+    if (cancelBtn) {
+      cancelBtn.onclick = () => {
+        this.hideModal('content-action-modal');
+        this.pendingDroppedContent = null;
+        this.pendingExtractedData = null;
+      };
+    }
+  }
+
+  /**
+   * Apply selected quotes to the quotes library
+   */
+  applySelectedQuotes(data) {
+    const selectedItems = document.querySelectorAll('[data-item-type="quote"] input[type="checkbox"]:checked');
+    let addedCount = 0;
+    
+    selectedItems.forEach(cb => {
+      const item = cb.closest('.unified-item');
+      const id = item.dataset.itemId;
+      const index = parseInt(id.replace('quote-', ''));
+      const quote = data.quotes[index];
+      
+      if (quote) {
+        storage.addQuote({
+          quote: quote.quote,
+          source: quote.source,
+          context: quote.context || ''
+        });
+        addedCount++;
+      }
+    });
+    
+    this.data = storage.getData();
+    this.renderQuotes();
+    this.hideModal('content-action-modal');
+    
+    this.showToast(`Added ${addedCount} quotes to library`, 'success');
+    
+    this.pendingDroppedContent = null;
+    this.pendingExtractedData = null;
   }
 
   /**
@@ -3443,6 +3571,18 @@ KEY POINTS:
     const textContent = content?.text || '';
     const isImage = contentType === 'image';
     
+    // Detect testimonial/quotes files
+    const isTestimonialFile = 
+      fileName?.toLowerCase().includes('testimonial') ||
+      fileName?.toLowerCase().includes('quote') ||
+      fileName?.toLowerCase().includes('customer') ||
+      (textContent.match(/^>\s*.+/gm)?.length > 3); // Multiple blockquotes
+    
+    // Handle testimonial files with specialized extraction
+    if (isTestimonialFile && !isImage) {
+      return await this.extractTestimonials(textContent, fileName);
+    }
+    
     // Get current cheat sheet data for context
     const currentStats = this.data?.stats || [];
     const currentTalkingPoints = this.data?.talkingPoints || [];
@@ -3633,6 +3773,70 @@ Rules:
       console.error('JSON parse error:', e, jsonMatch[0]);
       throw new Error('Failed to parse AI response');
     }
+  }
+
+  /**
+   * Extract testimonials from a quotes/testimonials file and add to quotes library
+   */
+  async extractTestimonials(text, fileName) {
+    const prompt = `Extract ALL customer quotes/testimonials from this document.
+
+DOCUMENT:
+${text.substring(0, 15000)}
+
+For EACH quote, extract:
+1. The exact quote text (keep it punchy and investor-ready, 1-2 sentences max)
+2. Source (person name + company/title)
+3. Brief context if available
+
+IMPORTANT:
+- Extract EVERY quote, don't summarize or combine them
+- Keep quotes SHORT and impactful - trim if needed
+- These will be used in investor emails, so they need to be compelling
+- Include company/title with person's name for credibility
+
+Respond with JSON:
+{
+  "quotes": [
+    { "quote": "The exact quote text", "source": "Name, Company/Title", "context": "Brief context" }
+  ],
+  "summary": "One sentence describing the source of these quotes"
+}`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.settings.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Extraction failed');
+    }
+
+    const result = await response.json();
+    const responseText = result.content[0].text;
+    
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Failed to parse response');
+    
+    const data = JSON.parse(jsonMatch[0]);
+    
+    // Return special format to indicate this is testimonials
+    return {
+      isTestimonials: true,
+      quotes: data.quotes || [],
+      summary: data.summary || `Quotes from ${fileName}`
+    };
   }
 
   /**
@@ -4104,6 +4308,123 @@ Content: "${content.substring(0, 300)}"`
       console.error('Failed to get category suggestion:', e);
     }
     return null;
+  }
+
+  /**
+   * Render quotes library
+   */
+  renderQuotes() {
+    const quotes = storage.getQuotes();
+    const featuredContainer = document.getElementById('quotes-featured');
+    const listContainer = document.getElementById('quotes-list');
+    const countEl = document.getElementById('quotes-count');
+    
+    if (!listContainer) return;
+    
+    // Update count
+    if (countEl) {
+      countEl.textContent = quotes.length > 0 ? `(${quotes.length})` : '';
+    }
+    
+    // Render featured quotes
+    const featured = quotes.filter(q => q.featured);
+    if (featured.length > 0 && featuredContainer) {
+      featuredContainer.classList.add('has-featured');
+      featuredContainer.innerHTML = `
+        <div class="quotes-featured-label">Featured in Email (${featured.length}/3)</div>
+        ${featured.map(q => `
+          <div class="quote-item featured" data-quote-id="${q.id}">
+            <div class="quote-content">
+              <div class="quote-text">${this.escapeHtml(q.quote)}</div>
+              <div class="quote-source">- ${this.escapeHtml(q.source)}</div>
+            </div>
+          </div>
+        `).join('')}
+      `;
+    } else if (featuredContainer) {
+      featuredContainer.classList.remove('has-featured');
+      featuredContainer.innerHTML = '';
+    }
+    
+    // Render all quotes
+    if (quotes.length === 0) {
+      listContainer.innerHTML = '<div class="quotes-empty">No quotes yet. Drop a testimonials file to import.</div>';
+      return;
+    }
+    
+    listContainer.innerHTML = quotes.map(q => `
+      <div class="quote-item ${q.featured ? 'featured' : ''}" data-quote-id="${q.id}">
+        <div class="quote-content">
+          <div class="quote-text">${this.escapeHtml(q.quote)}</div>
+          <div class="quote-source">- ${this.escapeHtml(q.source)}</div>
+          ${q.context ? `<div class="quote-context">${this.escapeHtml(q.context)}</div>` : ''}
+        </div>
+        <div class="quote-actions">
+          <button class="quote-action-btn feature-btn ${q.featured ? 'active' : ''}" 
+                  onclick="dashboard.toggleQuoteFeatured('${q.id}')" 
+                  title="${q.featured ? 'Remove from email' : 'Feature in email'}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="${q.featured ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          </button>
+          <button class="quote-action-btn delete-btn" 
+                  onclick="dashboard.deleteQuote('${q.id}')" 
+                  title="Delete quote">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  /**
+   * Toggle featured status of a quote
+   */
+  toggleQuoteFeatured(id) {
+    const result = storage.toggleQuoteFeatured(id);
+    if (result?.error) {
+      this.showToast(result.error, 'error');
+      return;
+    }
+    
+    // Optimistic animation
+    const el = document.querySelector(`[data-quote-id="${id}"]`);
+    if (el) {
+      el.style.transition = 'all 0.2s ease';
+    }
+    
+    this.data = storage.getData();
+    this.renderQuotes();
+    
+    if (result?.featured) {
+      this.showToast('Quote will appear in email', 'success');
+    } else {
+      this.showToast('Quote removed from email', 'info');
+    }
+  }
+
+  /**
+   * Delete a quote
+   */
+  deleteQuote(id) {
+    // Optimistic animation
+    const el = document.querySelector(`[data-quote-id="${id}"]`);
+    if (el) {
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(-20px)';
+      el.style.transition = 'all 0.15s ease-out';
+    }
+    
+    setTimeout(() => {
+      storage.deleteQuote(id);
+      this.data = storage.getData();
+      this.renderQuotes();
+    }, 150);
+    
+    this.showToast('Quote deleted', 'success');
   }
 
   /**

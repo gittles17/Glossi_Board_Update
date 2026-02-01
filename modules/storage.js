@@ -108,6 +108,7 @@ const DEFAULT_DATA = {
     { id: 'article', name: 'a16z Article', url: 'https://a16z.com/ai-is-learning-to-build-reality/', icon: 'book', color: 'purple', emailEnabled: true, emailLabel: 'a16z - AI World Models' }
   ],
   thoughts: [],
+  quotes: [],
   milestones: [],
   seedRaise: {
     target: '$500K',
@@ -448,6 +449,78 @@ class Storage {
       this.scheduleSave();
     }
     return this.data;
+  }
+
+  /**
+   * Get all quotes
+   */
+  getQuotes() {
+    return this.data.quotes || [];
+  }
+
+  /**
+   * Add a new quote to the library
+   */
+  addQuote(quote) {
+    if (!this.data.quotes) {
+      this.data.quotes = [];
+    }
+    const newQuote = {
+      id: 'quote_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      quote: quote.quote,
+      source: quote.source,
+      context: quote.context || '',
+      featured: false,
+      addedAt: new Date().toISOString()
+    };
+    this.data.quotes.unshift(newQuote);
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return newQuote;
+  }
+
+  /**
+   * Toggle featured status of a quote (max 3 featured)
+   */
+  toggleQuoteFeatured(id) {
+    if (!this.data.quotes) return null;
+    const quote = this.data.quotes.find(q => q.id === id);
+    if (!quote) return null;
+    
+    // If trying to feature, check max limit
+    if (!quote.featured) {
+      const featuredCount = this.data.quotes.filter(q => q.featured).length;
+      if (featuredCount >= 3) {
+        return { error: 'Maximum 3 featured quotes allowed' };
+      }
+    }
+    
+    quote.featured = !quote.featured;
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return quote;
+  }
+
+  /**
+   * Delete a quote
+   */
+  deleteQuote(id) {
+    if (!this.data.quotes) return this.data;
+    const index = this.data.quotes.findIndex(q => q.id === id);
+    if (index !== -1) {
+      this.data.quotes.splice(index, 1);
+      this.data.lastUpdated = new Date().toISOString();
+      this.scheduleSave();
+    }
+    return this.data;
+  }
+
+  /**
+   * Get featured quotes (max 3)
+   */
+  getFeaturedQuotes() {
+    if (!this.data.quotes) return [];
+    return this.data.quotes.filter(q => q.featured).slice(0, 3);
   }
 
   /**

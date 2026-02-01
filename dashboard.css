@@ -1868,6 +1868,146 @@ body::after {
 }
 
 /* ============================================
+   QUOTES LIBRARY
+   ============================================ */
+.section-quotes {
+  background: var(--bg-card);
+}
+
+.quotes-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.quotes-featured {
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--border-color);
+  display: none;
+}
+
+.quotes-featured.has-featured {
+  display: block;
+}
+
+.quotes-featured-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-green);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--space-2);
+}
+
+.quotes-list {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.quotes-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: var(--space-4) 0;
+}
+
+.quote-item {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: all 0.15s ease-out;
+}
+
+.quote-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-color-light);
+}
+
+.quote-item.featured {
+  border-color: rgba(74, 222, 128, 0.3);
+  background: rgba(74, 222, 128, 0.05);
+}
+
+.quote-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.quote-text {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  margin-bottom: var(--space-2);
+  font-style: italic;
+}
+
+.quote-text::before {
+  content: '"';
+  color: var(--accent-green);
+}
+
+.quote-text::after {
+  content: '"';
+  color: var(--accent-green);
+}
+
+.quote-source {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.quote-context {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: var(--space-1);
+}
+
+.quote-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.quote-action-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quote-action-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-color-light);
+  color: var(--text-secondary);
+}
+
+.quote-action-btn.feature-btn.active {
+  background: rgba(74, 222, 128, 0.15);
+  border-color: rgba(74, 222, 128, 0.4);
+  color: #4ade80;
+}
+
+.quote-action-btn.delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+/* ============================================
    CONTENT ACTION MODAL
    ============================================ */
 .modal-small {
@@ -5073,6 +5213,11 @@ body::after {
 .unified-item-badge.badge-fix {
   background: rgba(239, 68, 68, 0.15);
   color: #ef4444;
+}
+
+.unified-item-badge.badge-quote {
+  background: rgba(168, 85, 247, 0.15);
+  color: #a855f7;
 }
 
 /* Header Actions */
