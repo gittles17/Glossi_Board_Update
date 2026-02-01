@@ -1203,30 +1203,28 @@ class GlossiDashboard {
   deleteLink() {
     if (!this.editingLinkId) return;
     
-    if (confirm('Are you sure you want to delete this link?')) {
-      const linkId = this.editingLinkId;
-      
-      // Close modal immediately
-      this.hideModal('link-modal');
-      
-      // Optimistic: Animate removal
-      const link = document.querySelector(`.quick-link[data-link-id="${linkId}"]`);
-      if (link) {
-        link.style.opacity = '0';
-        link.style.transform = 'scale(0.9)';
-        link.style.transition = 'all 0.15s ease-out';
-      }
-      
-      this.showToast('Link deleted', 'success');
-      
-      // Persist and re-render after animation
-      setTimeout(() => {
-        storage.deleteQuickLink(linkId);
-        this.data = storage.getData();
-        this.renderQuickLinks();
-        this.renderSettingsStatus();
-      }, 150);
+    const linkId = this.editingLinkId;
+    
+    // Close modal immediately
+    this.hideModal('link-modal');
+    
+    // Optimistic: Animate removal
+    const link = document.querySelector(`.quick-link[data-link-id="${linkId}"]`);
+    if (link) {
+      link.style.opacity = '0';
+      link.style.transform = 'scale(0.9)';
+      link.style.transition = 'all 0.15s ease-out';
     }
+    
+    this.showToast('Link deleted', 'success');
+    
+    // Persist and re-render after animation
+    setTimeout(() => {
+      storage.deleteQuickLink(linkId);
+      this.data = storage.getData();
+      this.renderQuickLinks();
+      this.renderSettingsStatus();
+    }, 150);
   }
 
   /**
@@ -1615,29 +1613,27 @@ class GlossiDashboard {
   deleteInvestor() {
     if (!this.editingInvestorId) return;
     
-    if (confirm('Are you sure you want to delete this investor?')) {
-      const investorId = this.editingInvestorId;
-      
-      // Close modal immediately
-      this.hideModal('investor-modal');
-      
-      // Optimistic: Animate card removal
-      const card = document.querySelector(`.investor-card[data-investor-id="${investorId}"]`);
-      if (card) {
-        card.style.opacity = '0';
-        card.style.transform = 'scale(0.9)';
-        card.style.transition = 'all 0.15s ease-out';
-      }
-      
-      this.showToast('Investor deleted', 'success');
-      
-      // Persist and re-render after animation
-      setTimeout(() => {
-        storage.deleteInvestor(investorId);
-        this.data = storage.getData();
-        this.renderSeedRaise();
-      }, 150);
+    const investorId = this.editingInvestorId;
+    
+    // Close modal immediately
+    this.hideModal('investor-modal');
+    
+    // Optimistic: Animate card removal
+    const card = document.querySelector(`.investor-card[data-investor-id="${investorId}"]`);
+    if (card) {
+      card.style.opacity = '0';
+      card.style.transform = 'scale(0.9)';
+      card.style.transition = 'all 0.15s ease-out';
     }
+    
+    this.showToast('Investor deleted', 'success');
+    
+    // Persist and re-render after animation
+    setTimeout(() => {
+      storage.deleteInvestor(investorId);
+      this.data = storage.getData();
+      this.renderSeedRaise();
+    }, 150);
   }
 
 
@@ -2333,25 +2329,23 @@ class GlossiDashboard {
    * Delete a talking point with optimistic UI update
    */
   deleteTalkingPoint(index) {
-    if (confirm('Delete this talking point?')) {
-      // Optimistic: Animate removal
-      const cards = document.querySelectorAll('#key-talking-points .talking-point-card');
-      const card = cards[index];
-      if (card) {
-        card.style.opacity = '0';
-        card.style.transform = 'scale(0.95)';
-        card.style.transition = 'all 0.15s ease-out';
-      }
-      
-      this.showToast('Talking point deleted', 'success');
-      
-      // Persist and re-render after animation
-      setTimeout(() => {
-        storage.deleteTalkingPoint(index);
-        this.data = storage.getData();
-        this.renderTalkingPoints();
-      }, 150);
+    // Optimistic: Animate removal
+    const cards = document.querySelectorAll('#key-talking-points .talking-point-card');
+    const card = cards[index];
+    if (card) {
+      card.style.opacity = '0';
+      card.style.transform = 'scale(0.95)';
+      card.style.transition = 'all 0.15s ease-out';
     }
+    
+    this.showToast('Talking point deleted', 'success');
+    
+    // Persist and re-render after animation
+    setTimeout(() => {
+      storage.deleteTalkingPoint(index);
+      this.data = storage.getData();
+      this.renderTalkingPoints();
+    }, 150);
   }
 
   /**
