@@ -3815,9 +3815,10 @@ Respond with just the category name (core, traction, market, or testimonials) an
       storage.deleteThought(thoughtId);
     } else {
       // Update the thought
-      thought.content = `TITLE: ${thought.fileName || 'Document'}\nSUMMARY: ${thought.items.length} quotes/insights remaining`;
-      storage.data.thoughts = thoughts;
-      storage.scheduleSave();
+      storage.updateThought(thoughtId, {
+        items: thought.items,
+        content: `TITLE: ${thought.fileName || 'Document'}\nSUMMARY: ${thought.items.length} quotes/insights remaining`
+      });
     }
     
     // Animate the sub-item
@@ -3859,10 +3860,11 @@ Respond with just the category name (core, traction, market, or testimonials) an
         storage.deleteThought(thoughtId);
         this.showToast('All items deleted', 'success');
       } else {
-        // Update the thought summary
-        thought.content = `TITLE: ${thought.fileName || 'Document'}\nSUMMARY: ${thought.items.length} quotes/insights remaining`;
-        storage.data.thoughts = thoughts;
-        storage.scheduleSave();
+        // Update the thought using proper method
+        storage.updateThought(thoughtId, {
+          items: thought.items,
+          content: `TITLE: ${thought.fileName || 'Document'}\nSUMMARY: ${thought.items.length} quotes/insights remaining`
+        });
         this.showToast('Item deleted', 'success');
       }
       
@@ -3922,10 +3924,8 @@ Respond with just the category name (core, traction, market, or testimonials) an
       }
     }
     
-    // Update storage
-    thought.content = content;
-    storage.data.thoughts = thoughts;
-    storage.scheduleSave();
+    // Update storage using proper method
+    storage.updateThought(thoughtId, { content });
   }
 
   /**

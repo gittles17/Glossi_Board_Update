@@ -406,6 +406,21 @@ class Storage {
   }
 
   /**
+   * Update an existing thought
+   */
+  updateThought(id, updates) {
+    if (!this.data.thoughts) return null;
+    const index = this.data.thoughts.findIndex(t => t.id === id);
+    if (index !== -1) {
+      this.data.thoughts[index] = { ...this.data.thoughts[index], ...updates };
+      this.data.lastUpdated = new Date().toISOString();
+      this.scheduleSave();
+      return this.data.thoughts[index];
+    }
+    return null;
+  }
+
+  /**
    * Delete a thought
    */
   deleteThought(id) {
