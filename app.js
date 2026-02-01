@@ -807,19 +807,11 @@ class GlossiDashboard {
       this.applyPendingChanges();
     });
 
-    // Content action modal
+    // Content action modal (unified intelligence)
     document.getElementById('content-action-close').addEventListener('click', () => {
       this.hideModal('content-action-modal');
       this.pendingDroppedContent = null;
-      this.pendingAnalysis = null;
-    });
-
-    document.getElementById('action-save-thought').addEventListener('click', () => {
-      this.saveAnalysisToThoughts();
-    });
-
-    document.getElementById('action-add-talking-point').addEventListener('click', () => {
-      this.addToTalkingPoints();
+      this.pendingExtractedData = null;
     });
 
     // Image preview modal
