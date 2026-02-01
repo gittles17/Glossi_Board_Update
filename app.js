@@ -3010,7 +3010,7 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
     const items = this.pendingGroupedItems;
     const source = this.pendingGroupedSource;
     
-    // Create thought with sub-items
+    // Create thought with sub-items and original source
     const thought = {
       type: source.type || 'document',
       fileName: source.fileName,
@@ -3024,7 +3024,14 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
       })),
       content: `TITLE: ${source.fileName || 'Document'}\nSUMMARY: ${items.length} quotes/insights extracted`,
       suggestedCategory: 'testimonials',
-      preview: source.type === 'image' ? source.content?.dataUrl : null
+      preview: source.type === 'image' ? source.content?.dataUrl : null,
+      // Save original source for reference
+      originalSource: {
+        text: source.content?.text || null,
+        dataUrl: source.content?.dataUrl || null,
+        fileName: source.fileName,
+        type: source.type
+      }
     };
     
     storage.addThought(thought);
@@ -3268,7 +3275,14 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
       content: this.pendingAnalysis,
       preview: content?.type === 'image' ? content.content.dataUrl : null,
       fileName: content?.fileName,
-      suggestedCategory: null
+      suggestedCategory: null,
+      // Save original source for reference
+      originalSource: {
+        text: content?.content?.text || null,
+        dataUrl: content?.content?.dataUrl || null,
+        fileName: content?.fileName,
+        type: content?.type
+      }
     };
     
     // Get AI suggestion for category
@@ -3438,6 +3452,14 @@ Content: "${content.substring(0, 300)}"`
               ${typeLabel ? `<span class="thought-type">${typeLabel}</span>` : ''}
               ${suggestionBadge}
               <span class="thought-date">${date}</span>
+              ${thought.originalSource ? `
+              <button class="source-btn" onclick="event.stopPropagation(); window.dashboard.viewSource('${thought.id}')" title="View original source">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+              </button>
+              ` : ''}
               <button class="promote-btn" onclick="event.stopPropagation(); window.dashboard.promoteThought('${thought.id}')" title="Choose category">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="17 11 12 6 7 11"></polyline>
@@ -3488,6 +3510,55 @@ Content: "${content.substring(0, 300)}"`
       this.renderThoughts();
     }, 150);
     this.showToast('Thought deleted', 'success');
+  }
+
+  /**
+   * View original source file
+   */
+  viewSource(thoughtId) {
+    const thoughts = storage.getThoughts();
+    const thought = thoughts.find(t => t.id === thoughtId);
+    if (!thought || !thought.originalSource) {
+      this.showToast('Source not available', 'info');
+      return;
+    }
+    
+    const source = thought.originalSource;
+    const fileName = source.fileName || 'Source';
+    const fileType = source.type || 'text';
+    
+    let contentHtml = '';
+    
+    if (source.dataUrl && (fileType === 'image')) {
+      // Image source
+      contentHtml = `<img src="${source.dataUrl}" alt="${fileName}" class="source-image">`;
+    } else if (source.text) {
+      // Text source
+      contentHtml = `<pre class="source-text">${this.escapeHtml(source.text)}</pre>`;
+    } else {
+      contentHtml = '<p class="source-unavailable">Original source content not available</p>';
+    }
+    
+    const html = `
+      <div class="source-viewer">
+        <div class="source-header">
+          <span class="source-icon">${fileType === 'audio' ? '🎙️' : fileType === 'image' ? '🖼️' : '📄'}</span>
+          <span class="source-filename">${this.escapeHtml(fileName)}</span>
+        </div>
+        <div class="source-content">
+          ${contentHtml}
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('content-analysis-result').innerHTML = html;
+    document.getElementById('content-action-buttons').style.display = 'none';
+    
+    // Update modal title
+    const modalTitle = document.querySelector('#content-action-modal h2');
+    if (modalTitle) modalTitle.textContent = 'Original Source';
+    
+    this.showModal('content-action-modal');
   }
 
   /**
