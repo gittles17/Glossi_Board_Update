@@ -3321,29 +3321,47 @@ Respond with JSON:
               const thoughtTitle = thoughtData.reason || thoughtData.content.substring(0, 50);
               const droppedContent = this.pendingDroppedContent;
               
-              // Compress text source (truncate to 2000 chars)
-              const sourceText = droppedContent?.content?.text;
-              const compressedText = sourceText ? {
-                text: sourceText.substring(0, 2000),
-                truncated: sourceText.length > 2000
-              } : { text: null, truncated: false };
-              
+              // Use proper compression methods
+              const compressedText = this.compressText(droppedContent?.content?.text);
               const isImage = droppedContent?.type === 'image';
               
-              storage.addThought({
-                type: droppedContent?.type || 'text',
-                content: `TITLE: ${thoughtTitle}\nSUMMARY: ${thoughtData.content}`,
-                fileName: droppedContent?.fileName,
-                preview: isImage ? droppedContent?.content?.dataUrl : null,
-                suggestedCategory: null,
-                originalSource: {
-                  text: compressedText.text,
-                  dataUrl: isImage ? droppedContent?.content?.dataUrl : null,
+              // For images, compress async and save
+              if (isImage && droppedContent?.content?.dataUrl) {
+                this.compressImage(droppedContent.content.dataUrl).then(compressedImage => {
+                  storage.addThought({
+                    type: 'image',
+                    content: `TITLE: ${thoughtTitle}\nSUMMARY: ${thoughtData.content}`,
+                    fileName: droppedContent?.fileName,
+                    preview: compressedImage,
+                    suggestedCategory: null,
+                    originalSource: {
+                      text: null,
+                      dataUrl: compressedImage,
+                      fileName: droppedContent?.fileName,
+                      type: 'image',
+                      truncated: false
+                    }
+                  });
+                  this.data = storage.getData();
+                  this.renderThoughts();
+                });
+              } else {
+                // Text content - save immediately
+                storage.addThought({
+                  type: droppedContent?.type || 'text',
+                  content: `TITLE: ${thoughtTitle}\nSUMMARY: ${thoughtData.content}`,
                   fileName: droppedContent?.fileName,
-                  type: droppedContent?.type,
-                  truncated: compressedText.truncated
-                }
-              });
+                  preview: null,
+                  suggestedCategory: null,
+                  originalSource: {
+                    text: compressedText.text,
+                    dataUrl: null,
+                    fileName: droppedContent?.fileName,
+                    type: droppedContent?.type || 'text',
+                    truncated: compressedText.truncated
+                  }
+                });
+              }
               appliedCount++;
             }
             break;
