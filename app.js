@@ -2752,12 +2752,12 @@ class GlossiDashboard {
                                    (textContent.match(/"[^"]{20,}"/g) || []).length >= 2;
         
         if (hasMultipleQuotes) {
-          // Parse into individual items for review
-          console.log('Detected multiple quotes, parsing individually...');
+          // Parse into individual items and save as grouped thought
+          console.log('Detected multiple quotes, parsing as grouped thought...');
           const items = await this.parseTestimonials(textContent);
           if (items && items.length > 1) {
-            this.hideModal('content-action-modal');
-            this.showItemReviewFlow(items);
+            // Save as one grouped thought with sub-items
+            this.showGroupedContentOptions(items, content);
             return;
           }
         }
@@ -2948,6 +2948,103 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
       console.error('Failed to parse JSON:', e);
       return null;
     }
+  }
+
+  /**
+   * Show options for grouped content (multiple quotes from one source)
+   */
+  showGroupedContentOptions(items, sourceContent) {
+    const fileName = sourceContent.fileName || 'Document';
+    const sourceType = sourceContent.type || 'text';
+    
+    // Build preview of items
+    const previewHtml = items.slice(0, 3).map(item => `
+      <div class="grouped-item-preview">
+        <span class="preview-quote">"${this.escapeHtml(item.quote.substring(0, 80))}${item.quote.length > 80 ? '...' : ''}"</span>
+        ${item.source ? `<span class="preview-source">- ${this.escapeHtml(item.source)}</span>` : ''}
+      </div>
+    `).join('');
+    
+    const html = `
+      <div class="grouped-content-options">
+        <div class="source-info">
+          <span class="source-icon">${sourceType === 'audio' ? '🎙️' : sourceType === 'image' ? '🖼️' : '📄'}</span>
+          <span class="source-name">${this.escapeHtml(fileName)}</span>
+          <span class="source-count">${items.length} items found</span>
+        </div>
+        
+        <div class="grouped-preview">
+          ${previewHtml}
+          ${items.length > 3 ? `<div class="more-items">+ ${items.length - 3} more...</div>` : ''}
+        </div>
+        
+        <div class="grouped-actions">
+          <button class="btn btn-secondary" onclick="window.dashboard.saveGroupedToThoughts()">
+            Save All to Thoughts
+          </button>
+          <button class="btn btn-primary" onclick="window.dashboard.reviewItemsIndividually()">
+            Review Each Item
+          </button>
+        </div>
+      </div>
+    `;
+    
+    // Store for later
+    this.pendingGroupedItems = items;
+    this.pendingGroupedSource = sourceContent;
+    
+    document.getElementById('content-analysis-result').innerHTML = html;
+    document.getElementById('content-action-buttons').style.display = 'none';
+    
+    // Update modal title
+    const modalTitle = document.querySelector('#content-action-modal h2');
+    if (modalTitle) modalTitle.textContent = 'Content Found';
+  }
+
+  /**
+   * Save all grouped items as one thought with sub-items
+   */
+  async saveGroupedToThoughts() {
+    if (!this.pendingGroupedItems || !this.pendingGroupedSource) return;
+    
+    const items = this.pendingGroupedItems;
+    const source = this.pendingGroupedSource;
+    
+    // Create thought with sub-items
+    const thought = {
+      type: source.type || 'document',
+      fileName: source.fileName,
+      sourceType: source.type,
+      isGrouped: true,
+      items: items.map(item => ({
+        quote: item.quote,
+        source: item.source,
+        context: item.context,
+        suggestion: item.suggestion
+      })),
+      content: `TITLE: ${source.fileName || 'Document'}\nSUMMARY: ${items.length} quotes/insights extracted`,
+      suggestedCategory: 'testimonials',
+      preview: source.type === 'image' ? source.content?.dataUrl : null
+    };
+    
+    storage.addThought(thought);
+    
+    this.hideModal('content-action-modal');
+    this.renderThoughts();
+    this.showToast(`Saved ${items.length} items from ${source.fileName || 'document'}`, 'success');
+    
+    this.pendingGroupedItems = null;
+    this.pendingGroupedSource = null;
+  }
+
+  /**
+   * Switch to item-by-item review
+   */
+  reviewItemsIndividually() {
+    if (!this.pendingGroupedItems) return;
+    this.showItemReviewFlow(this.pendingGroupedItems);
+    this.pendingGroupedItems = null;
+    this.pendingGroupedSource = null;
   }
 
   /**
@@ -3262,7 +3359,10 @@ Content: "${content.substring(0, 300)}"`
       
       // Get display title for collapsed header
       const displayTitle = title || (thought.fileName ? thought.fileName : 'Untitled thought');
-      const typeLabel = thought.type === 'image' ? 'image' : (thought.type === 'audio' ? 'audio' : '');
+      const itemCount = thought.isGrouped && thought.items ? thought.items.length : 0;
+      const typeLabel = thought.type === 'image' ? 'image' : 
+                        thought.type === 'audio' ? 'audio' : 
+                        thought.isGrouped ? `${itemCount} items` : '';
       
       // Category suggestion
       const categoryLabels = {
@@ -3280,7 +3380,25 @@ Content: "${content.substring(0, 300)}"`
       // Build expandable content
       let expandableContent = '';
       
-      if (thought.type === 'image' && thought.preview) {
+      // Grouped thought with multiple sub-items
+      if (thought.isGrouped && thought.items && thought.items.length > 0) {
+        expandableContent = `
+          <div class="thought-expand-content grouped-items">
+            ${thought.items.map((item, idx) => `
+              <div class="grouped-sub-item" data-item-index="${idx}">
+                <div class="sub-item-quote">"${this.escapeHtml(item.quote)}"</div>
+                ${item.source ? `<div class="sub-item-source">- ${this.escapeHtml(item.source)}</div>` : ''}
+                <button class="sub-item-promote" onclick="event.stopPropagation(); window.dashboard.promoteSubItem('${thought.id}', ${idx})" title="Add to Talking Points">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="17 11 12 6 7 11"></polyline>
+                    <line x1="12" y1="18" x2="12" y2="6"></line>
+                  </svg>
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else if (thought.type === 'image' && thought.preview) {
         expandableContent = `
           <div class="thought-expand-content">
             <img src="${thought.preview}" alt="${thought.fileName || 'Image'}" class="thought-image-thumb" onclick="event.stopPropagation(); window.dashboard.showImagePreview('${thought.id}')" style="width: 60px; height: 60px; margin-bottom: 8px;">
@@ -3576,6 +3694,51 @@ Respond with just the category name (core, traction, market, or testimonials) an
       testimonials: 'Customer Validation'
     };
     this.showToast(`Added to ${categoryLabels[category]}`, 'success');
+  }
+
+  /**
+   * Promote a sub-item from a grouped thought to talking points
+   */
+  promoteSubItem(thoughtId, itemIndex) {
+    const thoughts = storage.getThoughts();
+    const thought = thoughts.find(t => t.id === thoughtId);
+    if (!thought || !thought.isGrouped || !thought.items) return;
+    
+    const item = thought.items[itemIndex];
+    if (!item) return;
+    
+    // Add to talking points
+    const title = item.source || 'Quote';
+    const content = item.quote + (item.context ? ` (${item.context})` : '');
+    storage.addTalkingPoint(title, content, 'testimonials');
+    this.data = storage.getData();
+    
+    // Remove item from thought
+    thought.items.splice(itemIndex, 1);
+    
+    // If no items left, delete the thought
+    if (thought.items.length === 0) {
+      storage.deleteThought(thoughtId);
+    } else {
+      // Update the thought
+      thought.content = `TITLE: ${thought.fileName || 'Document'}\nSUMMARY: ${thought.items.length} quotes/insights remaining`;
+      storage.data.thoughts = thoughts;
+      storage.scheduleSave();
+    }
+    
+    // Animate the sub-item
+    const subItem = document.querySelector(`[data-thought-id="${thoughtId}"] [data-item-index="${itemIndex}"]`);
+    if (subItem) {
+      subItem.style.opacity = '0';
+      subItem.style.transform = 'translateX(20px)';
+    }
+    
+    setTimeout(() => {
+      this.renderThoughts();
+      this.renderTalkingPoints();
+    }, 200);
+    
+    this.showToast('Added to Customer Validation', 'success');
   }
 
   /**
