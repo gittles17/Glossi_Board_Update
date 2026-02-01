@@ -2701,6 +2701,23 @@ class GlossiDashboard {
         if (!textContent) {
           throw new Error('No text content to analyze');
         }
+        
+        // Check if content has multiple quotes/testimonials
+        const hasMultipleQuotes = (textContent.match(/>/g) || []).length >= 3 || 
+                                   (textContent.match(/"[^"]{20,}"/g) || []).length >= 2;
+        
+        if (hasMultipleQuotes) {
+          // Parse into individual items for review
+          console.log('Detected multiple quotes, parsing individually...');
+          const items = await this.parseTestimonials(textContent);
+          if (items && items.length > 1) {
+            this.hideModal('content-action-modal');
+            this.showItemReviewFlow(items);
+            return;
+          }
+        }
+        
+        // Single item analysis
         analysisResult = await this.analyzeTextContent(textContent);
       }
       
@@ -2821,6 +2838,212 @@ KEY POINTS:
     
     const result = await response.json();
     return result.content[0].text;
+  }
+
+  /**
+   * Parse testimonials/quotes into individual items with AI suggestions
+   */
+  async parseTestimonials(text) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.settings.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: `Parse this document into individual testimonials, quotes, or key insights. For each item, suggest whether it would be best as a "talking_point" (compelling for investors/sales) or "thought" (reference for later).
+
+Document:
+${text.substring(0, 8000)}
+
+Respond in JSON format:
+{
+  "items": [
+    {
+      "quote": "the exact quote or key insight",
+      "source": "who said it or where it's from",
+      "context": "brief context if available",
+      "suggestion": "talking_point" or "thought",
+      "reason": "why this suggestion"
+    }
+  ]
+}
+
+Focus on extracting the most valuable, quotable content. Include statistics, specific claims, and compelling statements. Aim for 5-15 items max.`
+        }]
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Failed to parse testimonials');
+    }
+    
+    const result = await response.json();
+    const responseText = result.content[0].text;
+    
+    // Extract JSON from response
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('No JSON found in response:', responseText);
+      return null;
+    }
+    
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      console.log('Parsed testimonials:', parsed.items?.length, 'items');
+      return parsed.items || [];
+    } catch (e) {
+      console.error('Failed to parse JSON:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Show item-by-item review flow for multiple quotes/testimonials
+   */
+  showItemReviewFlow(items) {
+    this.pendingItems = items;
+    this.currentItemIndex = 0;
+    this.savedItems = { thoughts: [], talkingPoints: [] };
+    
+    // Create modal content
+    const modal = document.getElementById('content-action-modal');
+    const modalContent = modal.querySelector('.modal-content') || modal.querySelector('.modal');
+    
+    // Update modal title
+    const titleEl = modal.querySelector('h2');
+    if (titleEl) titleEl.textContent = 'Review Testimonials';
+    
+    this.showModal('content-action-modal');
+    this.renderCurrentItem();
+  }
+
+  /**
+   * Render current item in review flow
+   */
+  renderCurrentItem() {
+    const item = this.pendingItems[this.currentItemIndex];
+    const total = this.pendingItems.length;
+    const current = this.currentItemIndex + 1;
+    
+    const suggestionClass = item.suggestion === 'talking_point' ? 'suggestion-talking' : 'suggestion-thought';
+    const suggestionText = item.suggestion === 'talking_point' ? 'Key Talking Point' : 'Save for Later';
+    
+    const html = `
+      <div class="item-review">
+        <div class="item-progress">
+          <span>${current} of ${total}</span>
+          <div class="item-progress-bar">
+            <div class="item-progress-fill" style="width: ${(current / total) * 100}%"></div>
+          </div>
+        </div>
+        
+        <div class="item-quote">
+          <blockquote>"${this.escapeHtml(item.quote)}"</blockquote>
+          ${item.source ? `<cite>- ${this.escapeHtml(item.source)}</cite>` : ''}
+          ${item.context ? `<p class="item-context">${this.escapeHtml(item.context)}</p>` : ''}
+        </div>
+        
+        <div class="item-suggestion ${suggestionClass}">
+          <span class="suggestion-label">Suggested:</span>
+          <span class="suggestion-value">${suggestionText}</span>
+          <p class="suggestion-reason">${this.escapeHtml(item.reason)}</p>
+        </div>
+        
+        <div class="item-actions">
+          <button class="btn btn-secondary" onclick="window.dashboard.reviewItemAction('skip')">
+            Skip
+          </button>
+          <button class="btn btn-secondary" onclick="window.dashboard.reviewItemAction('thought')">
+            Save to Thoughts
+          </button>
+          <button class="btn btn-primary" onclick="window.dashboard.reviewItemAction('talking_point')">
+            Add to Talking Points
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('content-analysis-result').innerHTML = html;
+    document.getElementById('content-action-buttons').style.display = 'none';
+  }
+
+  /**
+   * Handle action for current review item
+   */
+  reviewItemAction(action) {
+    const item = this.pendingItems[this.currentItemIndex];
+    
+    if (action === 'thought') {
+      // Save to thoughts
+      const thought = {
+        type: 'testimonial',
+        content: `TITLE: ${item.source || 'Quote'}\nSUMMARY: ${item.quote}\n${item.context ? `- ${item.context}` : ''}`,
+        fileName: item.source
+      };
+      storage.addThought(thought);
+      this.savedItems.thoughts.push(item);
+      this.showToast('Saved to Thoughts', 'success');
+    } else if (action === 'talking_point') {
+      // Add to talking points
+      const title = item.source || 'Customer Quote';
+      const content = item.quote + (item.context ? ` (${item.context})` : '');
+      storage.addTalkingPoint(title, content);
+      this.savedItems.talkingPoints.push(item);
+      this.showToast('Added to Talking Points', 'success');
+    }
+    
+    // Move to next item
+    this.currentItemIndex++;
+    
+    if (this.currentItemIndex < this.pendingItems.length) {
+      this.renderCurrentItem();
+    } else {
+      // Done reviewing all items
+      this.finishItemReview();
+    }
+  }
+
+  /**
+   * Finish item review flow
+   */
+  finishItemReview() {
+    const thoughtCount = this.savedItems.thoughts.length;
+    const talkingCount = this.savedItems.talkingPoints.length;
+    
+    const html = `
+      <div class="review-complete">
+        <div class="review-icon">✓</div>
+        <h3>Review Complete</h3>
+        <p>
+          ${talkingCount > 0 ? `<strong>${talkingCount}</strong> added to Talking Points<br>` : ''}
+          ${thoughtCount > 0 ? `<strong>${thoughtCount}</strong> saved to Thoughts` : ''}
+          ${talkingCount === 0 && thoughtCount === 0 ? 'No items saved' : ''}
+        </p>
+        <button class="btn btn-primary" onclick="window.dashboard.closeItemReview()">Done</button>
+      </div>
+    `;
+    
+    document.getElementById('content-analysis-result').innerHTML = html;
+  }
+
+  /**
+   * Close item review and refresh UI
+   */
+  closeItemReview() {
+    this.hideModal('content-action-modal');
+    this.renderThoughts();
+    this.renderTalkingPoints();
+    this.pendingItems = null;
+    this.currentItemIndex = 0;
+    this.savedItems = null;
   }
 
   /**

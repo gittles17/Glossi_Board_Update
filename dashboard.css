@@ -1819,6 +1819,142 @@ body::after {
   justify-content: flex-end;
 }
 
+/* Item Review Flow */
+.item-review {
+  text-align: left;
+}
+
+.item-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.item-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.item-progress-fill {
+  height: 100%;
+  background: var(--accent-green);
+  transition: width 0.3s ease;
+}
+
+.item-quote {
+  margin-bottom: var(--space-4);
+}
+
+.item-quote blockquote {
+  font-size: 16px;
+  font-style: italic;
+  color: var(--text-primary);
+  line-height: 1.6;
+  margin: 0 0 var(--space-2) 0;
+  padding-left: var(--space-4);
+  border-left: 3px solid var(--accent-green);
+}
+
+.item-quote cite {
+  font-size: 13px;
+  color: var(--accent-green);
+  font-style: normal;
+  font-weight: 500;
+}
+
+.item-context {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: var(--space-2);
+}
+
+.item-suggestion {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.item-suggestion.suggestion-talking {
+  border-color: var(--accent-green-dim);
+  background: rgba(74, 222, 128, 0.05);
+}
+
+.item-suggestion.suggestion-thought {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.suggestion-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-right: var(--space-2);
+}
+
+.suggestion-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-green);
+}
+
+.suggestion-reason {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: var(--space-2);
+  margin-bottom: 0;
+}
+
+.item-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.item-actions .btn {
+  flex: 1;
+}
+
+/* Review Complete */
+.review-complete {
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+}
+
+.review-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  margin: 0 auto var(--space-4);
+}
+
+.review-complete h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.review-complete p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+  line-height: 1.6;
+}
+
 .btn-action-secondary {
   display: flex;
   align-items: center;
