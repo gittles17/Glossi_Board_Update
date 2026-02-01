@@ -3319,11 +3319,30 @@ Respond with JSON:
             if (thoughtData) {
               // Use the reason as title if available, otherwise create from content
               const thoughtTitle = thoughtData.reason || thoughtData.content.substring(0, 50);
+              const droppedContent = this.pendingDroppedContent;
+              
+              // Compress text source (truncate to 2000 chars)
+              const sourceText = droppedContent?.content?.text;
+              const compressedText = sourceText ? {
+                text: sourceText.substring(0, 2000),
+                truncated: sourceText.length > 2000
+              } : { text: null, truncated: false };
+              
+              const isImage = droppedContent?.type === 'image';
+              
               storage.addThought({
-                type: 'text',
+                type: droppedContent?.type || 'text',
                 content: `TITLE: ${thoughtTitle}\nSUMMARY: ${thoughtData.content}`,
-                fileName: this.pendingDroppedContent?.fileName,
-                suggestedCategory: null
+                fileName: droppedContent?.fileName,
+                preview: isImage ? droppedContent?.content?.dataUrl : null,
+                suggestedCategory: null,
+                originalSource: {
+                  text: compressedText.text,
+                  dataUrl: isImage ? droppedContent?.content?.dataUrl : null,
+                  fileName: droppedContent?.fileName,
+                  type: droppedContent?.type,
+                  truncated: compressedText.truncated
+                }
               });
               appliedCount++;
             }
