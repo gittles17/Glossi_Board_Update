@@ -2704,55 +2704,33 @@ class GlossiDashboard {
     
     // Show loading modal
     this.showModal('content-action-modal');
+    document.getElementById('unified-modal-title').textContent = 'Analyzing Content...';
     document.getElementById('content-analysis-result').innerHTML = `
-      <div class="analysis-loading">
+      <div class="unified-loading">
         <div class="spinner"></div>
-        <p>Analyzing ${content.type}...</p>
+        <p>Opus is analyzing your content...</p>
       </div>
     `;
-    document.getElementById('content-action-buttons').style.display = 'none';
+    document.getElementById('unified-preview-sections').style.display = 'none';
+    document.getElementById('unified-preview-footer').style.display = 'none';
 
     try {
-      let analysisResult;
+      console.log('Starting unified content intelligence analysis...');
       
-      if (content.type === 'image' && content.content.dataUrl) {
-        // Use Claude Vision API for images
-        console.log('Analyzing image with vision...');
-        analysisResult = await this.analyzeImageWithVision(content.content.dataUrl, content.fileName);
-      } else {
-        // Use text analysis for text/PDF/audio transcript
-        const textContent = content.content.text || '';
-        console.log('Analyzing text content, length:', textContent.length);
-        if (!textContent) {
-          throw new Error('No text content to analyze');
-        }
-        
-        // Check if content has multiple quotes/testimonials
-        const hasMultipleQuotes = (textContent.match(/>/g) || []).length >= 3 || 
-                                   (textContent.match(/"[^"]{20,}"/g) || []).length >= 2;
-        
-        if (hasMultipleQuotes) {
-          // Parse into individual items and save as grouped thought
-          console.log('Detected multiple quotes, parsing as grouped thought...');
-          const items = await this.parseTestimonials(textContent);
-          if (items && items.length > 1) {
-            // Save as one grouped thought with sub-items
-            this.showGroupedContentOptions(items, content);
-            return;
-          }
-        }
-        
-        // Single item analysis
-        analysisResult = await this.analyzeTextContent(textContent);
-      }
+      // Use unified content intelligence for all content types
+      const extractedData = await this.analyzeContentIntelligently(
+        content.content,
+        content.type,
+        content.fileName
+      );
       
-      console.log('Analysis complete:', analysisResult?.substring(0, 100));
+      console.log('Extraction complete:', extractedData);
       
-      // Store the analysis result
-      this.pendingAnalysis = analysisResult;
+      // Store the extracted data
+      this.pendingExtractedData = extractedData;
       
-      // Show the result with destination options
-      this.showAnalysisWithOptions(analysisResult, content.type);
+      // Show the unified preview
+      this.showUnifiedPreview(extractedData, content.fileName);
       
     } catch (error) {
       console.error('Analysis error:', error);
@@ -2760,6 +2738,423 @@ class GlossiDashboard {
       this.showToast('Failed to analyze: ' + error.message, 'error');
       this.pendingDroppedContent = null;
     }
+  }
+
+  /**
+   * Show unified preview modal with all extracted data
+   */
+  showUnifiedPreview(data, fileName) {
+    document.getElementById('unified-modal-title').textContent = fileName || 'Content Analysis';
+    document.getElementById('content-analysis-result').innerHTML = `
+      <div class="unified-summary">
+        <p>${this.escapeHtml(data.contentSummary || 'Content analyzed')}</p>
+      </div>
+    `;
+    
+    const sectionsContainer = document.getElementById('unified-preview-sections');
+    let html = '';
+    
+    // Stats Updates
+    if (data.statsUpdates && data.statsUpdates.length > 0) {
+      html += this.renderUnifiedSection('stats', 'Stats Updates', data.statsUpdates.map(s => ({
+        id: `stat-${s.stat}`,
+        title: s.stat.charAt(0).toUpperCase() + s.stat.slice(1),
+        detail: `<span class="unified-stat-update"><span class="unified-stat-old">${this.getCurrentStatValue(s.stat)}</span> <span class="unified-stat-arrow">→</span> <span class="unified-stat-new">${s.newValue}</span></span>`,
+        meta: s.reason,
+        badge: 'stat',
+        data: s
+      })));
+    }
+    
+    // Pipeline Deals
+    if (data.pipelineDeals && data.pipelineDeals.length > 0) {
+      html += this.renderUnifiedSection('pipeline', 'Pipeline Highlights', data.pipelineDeals.map((d, i) => ({
+        id: `pipeline-${i}`,
+        title: `${d.name} ${d.value ? '(' + d.value + ')' : ''}`,
+        detail: d.signal,
+        meta: d.stage,
+        data: d
+      })));
+    }
+    
+    // Meeting Data
+    if (data.meeting && (data.meeting.summary?.length || data.meeting.todos?.length || data.meeting.decisions?.length)) {
+      const meetingItems = [];
+      
+      if (data.meeting.summary?.length) {
+        data.meeting.summary.forEach((s, i) => {
+          meetingItems.push({
+            id: `summary-${i}`,
+            title: 'Summary',
+            detail: s,
+            badge: 'meeting',
+            type: 'summary',
+            data: s
+          });
+        });
+      }
+      
+      if (data.meeting.todos?.length) {
+        data.meeting.todos.forEach((t, i) => {
+          meetingItems.push({
+            id: `todo-${i}`,
+            title: `<span class="unified-owner">${t.owner || 'Unassigned'}</span> ${this.escapeHtml(t.text)}`,
+            detail: '',
+            badge: 'meeting',
+            type: 'todo',
+            data: t
+          });
+        });
+      }
+      
+      if (data.meeting.decisions?.length) {
+        data.meeting.decisions.forEach((d, i) => {
+          meetingItems.push({
+            id: `decision-${i}`,
+            title: 'Decision',
+            detail: d,
+            badge: 'meeting',
+            type: 'decision',
+            data: d
+          });
+        });
+      }
+      
+      html += this.renderUnifiedSection('meeting', `Week at a Glance${data.meeting.title ? ' - ' + data.meeting.title : ''}`, meetingItems);
+    }
+    
+    // Talking Points
+    if (data.talkingPoints && data.talkingPoints.length > 0) {
+      html += this.renderUnifiedSection('talkingPoints', 'Talking Points', data.talkingPoints.map((t, i) => ({
+        id: `tp-${i}`,
+        title: t.title,
+        detail: t.content,
+        meta: t.category,
+        data: t
+      })));
+    }
+    
+    // Quotes/Testimonials
+    if (data.quotes && data.quotes.length > 0) {
+      html += this.renderUnifiedSection('quotes', 'Customer Validation', data.quotes.map((q, i) => ({
+        id: `quote-${i}`,
+        title: `"${q.quote}"`,
+        detail: `— ${q.source}`,
+        meta: q.context,
+        data: q
+      })));
+    }
+    
+    // Milestones
+    if (data.milestones && data.milestones.length > 0) {
+      html += this.renderUnifiedSection('milestones', 'Milestones', data.milestones.map((m, i) => ({
+        id: `milestone-${i}`,
+        title: m.title,
+        detail: `<span class="unified-stat-update"><span class="unified-stat-old">${m.before}</span> <span class="unified-stat-arrow">→</span> <span class="unified-stat-new">${m.after}</span></span>`,
+        data: m
+      })));
+    }
+    
+    // Fundraising
+    if (data.fundraising && (data.fundraising.target || data.fundraising.committed)) {
+      const fundItems = [];
+      if (data.fundraising.target) {
+        fundItems.push({ id: 'fund-target', title: 'Target', detail: data.fundraising.target, data: { field: 'target', value: data.fundraising.target } });
+      }
+      if (data.fundraising.committed) {
+        fundItems.push({ id: 'fund-committed', title: 'Committed', detail: data.fundraising.committed, data: { field: 'committed', value: data.fundraising.committed } });
+      }
+      if (data.fundraising.cap) {
+        fundItems.push({ id: 'fund-cap', title: 'Cap', detail: data.fundraising.cap, data: { field: 'cap', value: data.fundraising.cap } });
+      }
+      html += this.renderUnifiedSection('fundraising', 'Fundraising', fundItems);
+    }
+    
+    // Thoughts (reference material)
+    if (data.thoughts && data.thoughts.length > 0) {
+      html += this.renderUnifiedSection('thoughts', 'Thoughts (Reference)', data.thoughts.map((t, i) => ({
+        id: `thought-${i}`,
+        title: t.content.substring(0, 60) + (t.content.length > 60 ? '...' : ''),
+        detail: t.content,
+        meta: t.reason,
+        badge: 'thought',
+        data: t
+      })));
+    }
+    
+    if (!html) {
+      html = '<div class="empty-state">No actionable data found in this content.</div>';
+    }
+    
+    sectionsContainer.innerHTML = html;
+    sectionsContainer.style.display = 'flex';
+    document.getElementById('unified-preview-footer').style.display = 'flex';
+    
+    // Setup event listeners for section checkboxes
+    this.setupUnifiedPreviewListeners();
+  }
+
+  /**
+   * Render a section in the unified preview
+   */
+  renderUnifiedSection(sectionId, title, items) {
+    return `
+      <div class="unified-section" data-section="${sectionId}">
+        <div class="unified-section-header">
+          <input type="checkbox" id="section-${sectionId}" checked>
+          <span class="unified-section-title">${title}</span>
+          <span class="unified-section-count">${items.length}</span>
+        </div>
+        <div class="unified-section-items">
+          ${items.map(item => `
+            <div class="unified-item" data-item-id="${item.id}" data-item-type="${item.type || sectionId}">
+              <input type="checkbox" id="item-${item.id}" checked>
+              <div class="unified-item-content">
+                <div class="unified-item-title">${item.title}</div>
+                ${item.detail ? `<div class="unified-item-detail">${item.detail}</div>` : ''}
+                ${item.meta ? `<div class="unified-item-meta">${item.meta}</div>` : ''}
+              </div>
+              ${item.badge ? `<span class="unified-item-badge badge-${item.badge}">${item.badge}</span>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Get current stat value for comparison
+   */
+  getCurrentStatValue(statId) {
+    const stats = this.data?.stats || [];
+    const stat = stats.find(s => s.id === statId);
+    return stat?.value || '—';
+  }
+
+  /**
+   * Setup event listeners for unified preview
+   */
+  setupUnifiedPreviewListeners() {
+    // Section header checkboxes toggle all items
+    document.querySelectorAll('.unified-section-header input[type="checkbox"]').forEach(checkbox => {
+      checkbox.addEventListener('change', (e) => {
+        const section = e.target.closest('.unified-section');
+        section.querySelectorAll('.unified-item input[type="checkbox"]').forEach(itemCb => {
+          itemCb.checked = e.target.checked;
+        });
+      });
+    });
+    
+    // Item checkboxes update section header state
+    document.querySelectorAll('.unified-item input[type="checkbox"]').forEach(checkbox => {
+      checkbox.addEventListener('change', (e) => {
+        const section = e.target.closest('.unified-section');
+        const allItems = section.querySelectorAll('.unified-item input[type="checkbox"]');
+        const checkedItems = section.querySelectorAll('.unified-item input[type="checkbox"]:checked');
+        const sectionCb = section.querySelector('.unified-section-header input[type="checkbox"]');
+        sectionCb.checked = checkedItems.length > 0;
+        sectionCb.indeterminate = checkedItems.length > 0 && checkedItems.length < allItems.length;
+      });
+    });
+    
+    // Apply selected button
+    document.getElementById('unified-apply-selected').onclick = () => this.applySelectedUpdates();
+    document.getElementById('unified-cancel').onclick = () => {
+      this.hideModal('content-action-modal');
+      this.pendingDroppedContent = null;
+      this.pendingExtractedData = null;
+    };
+  }
+
+  /**
+   * Apply selected updates from unified preview
+   */
+  async applySelectedUpdates() {
+    const data = this.pendingExtractedData;
+    if (!data) return;
+    
+    let appliedCount = 0;
+    
+    // Process each selected item
+    document.querySelectorAll('.unified-item input[type="checkbox"]:checked').forEach(checkbox => {
+      const itemEl = checkbox.closest('.unified-item');
+      const itemType = itemEl.dataset.itemType;
+      const itemId = itemEl.dataset.itemId;
+      
+      try {
+        switch (itemType) {
+          case 'stats':
+            const statData = data.statsUpdates?.find(s => `stat-${s.stat}` === itemId);
+            if (statData) {
+              this.updateStat(statData.stat, statData.newValue);
+              appliedCount++;
+            }
+            break;
+            
+          case 'pipeline':
+            const pipelineIdx = parseInt(itemId.replace('pipeline-', ''));
+            const dealData = data.pipelineDeals?.[pipelineIdx];
+            if (dealData) {
+              storage.addDeal('closestToClose', {
+                name: dealData.name,
+                value: dealData.value || '$50K',
+                stage: dealData.stage || 'discovery',
+                timing: 'Q1',
+                note: dealData.signal
+              });
+              appliedCount++;
+            }
+            break;
+            
+          case 'summary':
+            const summaryIdx = parseInt(itemId.replace('summary-', ''));
+            const summaryData = data.meeting?.summary?.[summaryIdx];
+            if (summaryData) {
+              this.addMeetingSummary(summaryData);
+              appliedCount++;
+            }
+            break;
+            
+          case 'todo':
+            const todoIdx = parseInt(itemId.replace('todo-', ''));
+            const todoData = data.meeting?.todos?.[todoIdx];
+            if (todoData) {
+              this.addMeetingTodo(todoData.text, todoData.owner);
+              appliedCount++;
+            }
+            break;
+            
+          case 'decision':
+            const decisionIdx = parseInt(itemId.replace('decision-', ''));
+            const decisionData = data.meeting?.decisions?.[decisionIdx];
+            if (decisionData) {
+              this.addMeetingDecision(decisionData);
+              appliedCount++;
+            }
+            break;
+            
+          case 'talkingPoints':
+            const tpIdx = parseInt(itemId.replace('tp-', ''));
+            const tpData = data.talkingPoints?.[tpIdx];
+            if (tpData) {
+              storage.addTalkingPoint(tpData.title, tpData.content, tpData.category || 'core');
+              appliedCount++;
+            }
+            break;
+            
+          case 'quotes':
+            const quoteIdx = parseInt(itemId.replace('quote-', ''));
+            const quoteData = data.quotes?.[quoteIdx];
+            if (quoteData) {
+              storage.addTalkingPoint(quoteData.source, quoteData.quote, 'testimonials');
+              appliedCount++;
+            }
+            break;
+            
+          case 'milestones':
+            const milestoneIdx = parseInt(itemId.replace('milestone-', ''));
+            const milestoneData = data.milestones?.[milestoneIdx];
+            if (milestoneData) {
+              storage.addMilestone(milestoneData);
+              appliedCount++;
+            }
+            break;
+            
+          case 'thoughts':
+            const thoughtIdx = parseInt(itemId.replace('thought-', ''));
+            const thoughtData = data.thoughts?.[thoughtIdx];
+            if (thoughtData) {
+              storage.addThought({
+                type: 'text',
+                content: `TITLE: Reference Note\nSUMMARY: ${thoughtData.content}`,
+                suggestedCategory: null
+              });
+              appliedCount++;
+            }
+            break;
+        }
+      } catch (e) {
+        console.error('Error applying item:', itemType, itemId, e);
+      }
+    });
+    
+    // Refresh data and UI
+    this.data = storage.getData();
+    this.render();
+    
+    this.hideModal('content-action-modal');
+    this.showToast(`Applied ${appliedCount} updates`, 'success');
+    
+    this.pendingDroppedContent = null;
+    this.pendingExtractedData = null;
+  }
+
+  /**
+   * Update a stat value
+   */
+  updateStat(statId, newValue) {
+    const stats = this.data.stats;
+    const statIndex = stats.findIndex(s => s.id === statId);
+    if (statIndex !== -1) {
+      stats[statIndex].value = newValue;
+      storage.scheduleSave();
+    }
+  }
+
+  /**
+   * Add summary to current meeting
+   */
+  addMeetingSummary(text) {
+    let meeting = meetingsManager.getCurrentMeeting();
+    if (!meeting) {
+      meeting = meetingsManager.createMeeting('Imported Notes', new Date().toISOString().split('T')[0], '', {
+        summary: [],
+        todos: [],
+        decisions: []
+      });
+    }
+    if (!meeting.summary) meeting.summary = [];
+    meeting.summary.push(text);
+    meetingsManager.updateMeeting(meeting);
+  }
+
+  /**
+   * Add todo to current meeting
+   */
+  addMeetingTodo(text, owner) {
+    let meeting = meetingsManager.getCurrentMeeting();
+    if (!meeting) {
+      meeting = meetingsManager.createMeeting('Imported Notes', new Date().toISOString().split('T')[0], '', {
+        summary: [],
+        todos: [],
+        decisions: []
+      });
+    }
+    if (!meeting.todos) meeting.todos = [];
+    meeting.todos.push({
+      id: `todo-${Date.now()}`,
+      text: text,
+      owner: this.resolveOwnerName(owner),
+      completed: false
+    });
+    meetingsManager.updateMeeting(meeting);
+  }
+
+  /**
+   * Add decision to current meeting
+   */
+  addMeetingDecision(text) {
+    let meeting = meetingsManager.getCurrentMeeting();
+    if (!meeting) {
+      meeting = meetingsManager.createMeeting('Imported Notes', new Date().toISOString().split('T')[0], '', {
+        summary: [],
+        todos: [],
+        decisions: []
+      });
+    }
+    if (!meeting.decisions) meeting.decisions = [];
+    meeting.decisions.push(text);
+    meetingsManager.updateMeeting(meeting);
   }
 
   /**
@@ -2863,6 +3258,151 @@ KEY POINTS:
     
     const result = await response.json();
     return result.content[0].text;
+  }
+
+  /**
+   * Unified Content Intelligence - Analyze any content and extract all relevant data
+   */
+  async analyzeContentIntelligently(content, contentType, fileName) {
+    const textContent = content?.text || '';
+    const isImage = contentType === 'image';
+    
+    // Build the prompt for comprehensive extraction
+    const prompt = `You are analyzing content for a startup investor cheat sheet dashboard. Extract ALL relevant information and categorize it appropriately.
+
+The dashboard has these sections:
+- Stats: Pipeline value, deal count, partnerships, inbound rate
+- Pipeline Highlights: Company deals with value, stage, and why they matter
+- Talking Points: Compelling statements organized by category (core, traction, market, testimonials)
+- Week at a Glance: Meeting summaries, action items with owners (Jonathan, Ricky, Adam), key decisions
+- Milestones: Product/team achievements with before/after metrics
+- Thoughts: Reference material not for investor-facing content
+
+Content type: ${contentType}
+File name: ${fileName || 'Unknown'}
+
+${isImage ? 'This is an image - extract any visible text, numbers, or key information.' : `Content:
+${textContent.substring(0, 12000)}`}
+
+Analyze this content and respond with a JSON object containing ALL extractable data:
+
+{
+  "contentSummary": "Brief 1-sentence description of what this content is",
+  "contentType": "meeting_notes" | "investor_update" | "conversation" | "quotes" | "screenshot" | "general",
+  
+  "statsUpdates": [
+    { "stat": "pipeline|prospects|partnerships", "newValue": "value", "reason": "why update" }
+  ],
+  
+  "pipelineDeals": [
+    { "name": "Company", "value": "$X", "stage": "discovery|demo|validation|pilot", "signal": "why it matters" }
+  ],
+  
+  "talkingPoints": [
+    { "title": "Short title", "content": "Full talking point", "category": "core|traction|market|testimonials" }
+  ],
+  
+  "quotes": [
+    { "quote": "Exact quote", "source": "Who said it", "context": "Brief context" }
+  ],
+  
+  "meeting": {
+    "title": "Meeting title if applicable",
+    "date": "YYYY-MM-DD if mentioned",
+    "summary": ["Summary point 1", "Summary point 2"],
+    "todos": [
+      { "text": "Action item", "owner": "Jonathan|Ricky|Adam|Unassigned" }
+    ],
+    "decisions": ["Decision 1", "Decision 2"]
+  },
+  
+  "milestones": [
+    { "title": "Achievement", "before": "Old state", "after": "New state" }
+  ],
+  
+  "fundraising": {
+    "target": "$X",
+    "committed": "$X", 
+    "cap": "$X",
+    "investors": ["Name 1", "Name 2"]
+  },
+  
+  "thoughts": [
+    { "content": "Reference note", "reason": "Why it's reference material" }
+  ]
+}
+
+Rules:
+- Only include sections that have actual data to extract
+- For owner detection, look for patterns like "Jonathan to...", "Ricky will...", "Adam needs to..."
+- Quotes must be third-party validation (VCs, customers, experts) - not internal statements
+- Talking points should be compelling, investor-facing content
+- Thoughts are for internal reference only
+- Be specific with numbers and company names
+- If content mentions meetings, calls, syncs - extract meeting data
+- Empty arrays are fine for sections with no data`;
+
+    let messages;
+    
+    if (isImage && content?.dataUrl) {
+      // Vision request for images
+      const matches = content.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (!matches) throw new Error('Invalid image data');
+      
+      messages = [{
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: matches[1],
+              data: matches[2]
+            }
+          },
+          { type: 'text', text: prompt }
+        ]
+      }];
+    } else {
+      messages = [{ role: 'user', content: prompt }];
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.settings.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Analysis failed');
+    }
+
+    const result = await response.json();
+    const responseText = result.content[0].text;
+    
+    // Extract JSON from response
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('No JSON found in response:', responseText);
+      throw new Error('Failed to parse AI response');
+    }
+    
+    try {
+      return JSON.parse(jsonMatch[0]);
+    } catch (e) {
+      console.error('JSON parse error:', e, jsonMatch[0]);
+      throw new Error('Failed to parse AI response');
+    }
   }
 
   /**

@@ -807,11 +807,11 @@
     </div>
   </div>
 
-  <!-- Content Action Modal -->
+  <!-- Unified Content Intelligence Modal -->
   <div class="modal-overlay" id="content-action-modal">
-    <div class="modal modal-small">
+    <div class="modal modal-large">
       <div class="modal-header">
-        <h2>Content Analysis</h2>
+        <h2 id="unified-modal-title">Content Analysis</h2>
         <button class="btn-icon modal-close" id="content-action-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -819,26 +819,22 @@
           </svg>
         </button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body unified-preview-body">
         <div class="content-analysis-result" id="content-analysis-result">
-          <!-- Analysis result rendered here -->
+          <!-- Analysis result / loading state rendered here -->
         </div>
-        <div class="action-buttons-row" id="content-action-buttons" style="display: none;">
-          <button class="btn btn-action-secondary" id="action-save-thought">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-            Save to Thoughts
-          </button>
-          <button class="btn btn-action-primary" id="action-add-talking-point">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
-            Add to Talking Points
-          </button>
+        <div class="unified-preview-sections" id="unified-preview-sections" style="display: none;">
+          <!-- Dynamically populated with extracted data sections -->
         </div>
+      </div>
+      <div class="modal-footer unified-preview-footer" id="unified-preview-footer" style="display: none;">
+        <button class="btn btn-secondary" id="unified-cancel">Cancel</button>
+        <button class="btn btn-primary" id="unified-apply-selected">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Apply Selected
+        </button>
       </div>
     </div>
   </div>

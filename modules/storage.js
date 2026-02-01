@@ -108,6 +108,7 @@ const DEFAULT_DATA = {
     { id: 'article', name: 'a16z Article', url: 'https://a16z.com/ai-is-learning-to-build-reality/', icon: 'book', color: 'purple', emailEnabled: true, emailLabel: 'a16z - AI World Models' }
   ],
   thoughts: [],
+  milestones: [],
   seedRaise: {
     target: '$500K',
     investors: []
@@ -443,6 +444,47 @@ class Storage {
     const index = this.data.thoughts.findIndex(t => t.id === id);
     if (index !== -1) {
       this.data.thoughts.splice(index, 1);
+      this.data.lastUpdated = new Date().toISOString();
+      this.scheduleSave();
+    }
+    return this.data;
+  }
+
+  /**
+   * Get all milestones
+   */
+  getMilestones() {
+    return this.data.milestones || [];
+  }
+
+  /**
+   * Add a new milestone
+   */
+  addMilestone(milestone) {
+    if (!this.data.milestones) {
+      this.data.milestones = [];
+    }
+    const newMilestone = {
+      id: 'milestone_' + Date.now(),
+      title: milestone.title,
+      before: milestone.before,
+      after: milestone.after,
+      createdAt: new Date().toISOString()
+    };
+    this.data.milestones.unshift(newMilestone);
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return newMilestone;
+  }
+
+  /**
+   * Delete a milestone
+   */
+  deleteMilestone(id) {
+    if (!this.data.milestones) return this.data;
+    const index = this.data.milestones.findIndex(m => m.id === id);
+    if (index !== -1) {
+      this.data.milestones.splice(index, 1);
       this.data.lastUpdated = new Date().toISOString();
       this.scheduleSave();
     }
