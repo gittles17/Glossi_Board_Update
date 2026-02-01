@@ -169,6 +169,23 @@ class GlossiDashboard {
       this.renderSettingsStatus();
       this.showModal('settings-modal');
     });
+
+    document.getElementById('menu-reset').addEventListener('click', async () => {
+      dropdown.classList.remove('open');
+      this.showToast('Resetting data...', 'info');
+      try {
+        const response = await fetch('/api/reset', { method: 'POST' });
+        const result = await response.json();
+        if (result.success) {
+          this.showToast('Data reset. Refreshing...', 'success');
+          setTimeout(() => window.location.reload(), 500);
+        } else {
+          this.showToast('Reset failed: ' + result.error, 'error');
+        }
+      } catch (error) {
+        this.showToast('Reset failed: ' + error.message, 'error');
+      }
+    });
   }
 
   /**

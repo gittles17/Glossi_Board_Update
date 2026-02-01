@@ -397,6 +397,18 @@ body::after {
   color: var(--text-primary);
 }
 
+.dropdown-item.dropdown-danger {
+  color: #ef4444;
+}
+
+.dropdown-item.dropdown-danger svg {
+  color: #ef4444;
+}
+
+.dropdown-item.dropdown-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
 .menu-actions {
   display: flex;
   gap: var(--space-2);
