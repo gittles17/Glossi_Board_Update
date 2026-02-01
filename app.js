@@ -3322,11 +3322,15 @@ KEY POINTS:
     const currentPipeline = this.data?.pipeline || {};
     
     const currentContext = `
-CURRENT CHEAT SHEET DATA (check for inconsistencies):
-- Pipeline stat: ${currentStats.find(s => s.id === 'pipeline')?.value || 'unknown'}
-- Prospects stat: ${currentStats.find(s => s.id === 'prospects')?.value || 'unknown'}
-- Partnerships stat: ${currentStats.find(s => s.id === 'partnerships')?.value || 'unknown'}
-- Talking Points: ${currentTalkingPoints.map(tp => `"${tp.title}: ${tp.content.substring(0, 100)}..."`).join('\n  ')}
+CURRENT CHEAT SHEET DATA (scan for inconsistencies):
+
+STATS:
+- Pipeline: ${currentStats.find(s => s.id === 'pipeline')?.value || 'unknown'}
+- Prospects: ${currentStats.find(s => s.id === 'prospects')?.value || 'unknown'}
+- Partnerships: ${currentStats.find(s => s.id === 'partnerships')?.value || 'unknown'}
+
+EXISTING TALKING POINTS (check each for outdated numbers):
+${currentTalkingPoints.map(tp => `- "${tp.title}": "${tp.content}"`).join('\n')}
 `;
     
     // Build the prompt for comprehensive extraction
@@ -3335,10 +3339,17 @@ CURRENT CHEAT SHEET DATA (check for inconsistencies):
 CRITICAL: CONSISTENCY CHECK
 ${currentContext}
 
-When you extract new data, ALSO check if any existing content above is now OUTDATED or INCONSISTENT with the new information. For example:
-- If new content says pipeline is $1.5M+ but existing talking point says "$1.2M+ pipeline" - flag it for update
+IMPORTANT - NUMBER CONSISTENCY CHECK:
+1. Extract ALL dollar amounts from the NEW content you're analyzing (e.g., "$1.5M", "$2M", "$50K")
+2. Compare these numbers against the EXISTING talking points listed above
+3. If you find ANY numeric mismatch - FLAG IT AS AN INCONSISTENCY
+   Example: If new content says "$1.5M+ pipeline" but an existing talking point says "$1.2M+ pipeline" - that MUST be flagged
+4. Check pipeline values, deal sizes, revenue numbers, percentages - ALL numbers must match
+
+When you extract new data, ALSO check if any existing content above is now OUTDATED or INCONSISTENT with the new information:
+- Numbers and dollar amounts must match across all sections
 - If company stages changed, update references
-- Numbers, dates, and facts must be consistent across all sections
+- Dates and facts must be consistent
 
 CRITICAL TONE REQUIREMENTS:
 - Write for busy investors who want to glance and understand in seconds

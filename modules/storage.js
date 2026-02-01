@@ -12,7 +12,7 @@ const DEFAULT_DATA = {
     demoUrl: 'https://www.youtube.com/watch?v=kXbQqM35iHA'
   },
   pipeline: {
-    totalValue: '$1.2M+',
+    totalValue: '$1.5M+',
     closestToClose: [
       { name: 'MagnaFlow', value: '$36-50K', stage: 'pilot', timing: 'Q1' },
       { name: 'Peleman', value: '$50K', stage: 'demo', timing: 'Q1' },
@@ -36,7 +36,7 @@ const DEFAULT_DATA = {
     exploring: 'Building relationships with EY, PWC, KPMG, Deloitte, Accenture for enterprise distribution.'
   },
   stats: [
-    { id: 'pipeline', value: '$1.2M+', label: 'Pipeline Value', note: 'built in 3 months' },
+    { id: 'pipeline', value: '$1.5M+', label: 'Pipeline Value', note: 'built in 3 months' },
     { id: 'prospects', value: '10+', label: 'Active Prospects', note: 'in various stages' },
     { id: 'partnerships', value: '3', label: 'Partnerships', note: 'strategic integrations' },
     { id: 'closed', value: '0', label: 'Deals Closed', note: '$0 revenue' }
@@ -71,7 +71,7 @@ const DEFAULT_DATA = {
     },
     {
       title: 'We Have Traction',
-      content: '$1.2M+ pipeline built in 3 months. Real conversations with real enterprise buyers who have real budgets.',
+      content: '$1.5M+ pipeline built in 3 months. Real conversations with real enterprise buyers who have real budgets.',
       category: 'traction'
     },
     {
