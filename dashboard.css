@@ -5256,6 +5256,27 @@ body::after {
   color: var(--text-primary);
 }
 
+/* Promotion suggestion badges */
+.suggestion-badge.promote-suggestion {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(74, 222, 128, 0.15);
+  border-color: rgba(74, 222, 128, 0.4);
+  color: #4ade80;
+}
+
+.suggestion-badge.promote-suggestion:hover {
+  background: rgba(74, 222, 128, 0.25);
+}
+
+.suggestion-badge.keep-thought {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  cursor: default;
+  font-size: 10px;
+}
+
 /* Header Actions */
 .header-actions {
   display: flex;

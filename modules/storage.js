@@ -3,7 +3,7 @@
  * Handles file-based persistence for the Glossi Dashboard
  */
 
-// Default data structure (restored from backup Jan 29, 2026)
+// Default data structure - Clean slate with just links
 const DEFAULT_DATA = {
   company: {
     name: 'Glossi',
@@ -12,100 +12,28 @@ const DEFAULT_DATA = {
     demoUrl: 'https://www.youtube.com/watch?v=kXbQqM35iHA'
   },
   pipeline: {
-    totalValue: '$1.5M+',
-    closestToClose: [
-      { name: 'MagnaFlow', value: '$36-50K', stage: 'pilot', timing: 'Q1' },
-      { name: 'Peleman', value: '$50K', stage: 'demo', timing: 'Q1' },
-      { name: '3Day Blinds', value: '$50K', stage: 'validation', timing: 'Q1' },
-      { name: 'Centric Brands', stage: 'discovery', timing: 'Q1' }
-    ],
-    inProgress: [
-      { name: 'Sunday Dinner', value: '$500K', stage: 'discovery', timing: 'Q1' },
-      { name: 'Checkpoint', value: '$75K', stage: 'demo', timing: 'Q2' },
-      { name: 'Bob Mills Furniture', value: '$50K', stage: 'demo', timing: 'Q1-Q2' },
-      { name: 'Silverside', value: '$50K', stage: 'discovery', timing: 'Q1' },
-      { name: 'Filson', value: '$50K', stage: 'discovery', timing: 'Q1' },
-      { name: 'Fisher Footwear', value: '$50K', stage: 'discovery', timing: 'Q1' }
-    ],
-    partnerships: [
-      { name: 'VNTANA', value: '$50K', timing: 'Q2', note: 'Joint case study' },
-      { name: 'Vyking', value: '$50K', timing: 'Q2', note: 'Active in environment' },
-      { name: 'Sharpthink', value: '$50K', timing: 'Q3', note: 'Co-pilot case study' }
-    ],
+    totalValue: '$0',
+    closestToClose: [],
+    inProgress: [],
+    partnerships: [],
     closed: [],
-    exploring: 'Building relationships with EY, PWC, KPMG, Deloitte, Accenture for enterprise distribution.'
+    exploring: ''
   },
   stats: [
-    { id: 'pipeline', value: '$1.5M+', label: 'Pipeline Value', note: 'built in 3 months' },
-    { id: 'prospects', value: '10+', label: 'Active Prospects', note: 'in various stages' },
-    { id: 'partnerships', value: '3', label: 'Partnerships', note: 'strategic integrations' },
-    { id: 'closed', value: '0', label: 'Deals Closed', note: '$0 revenue' }
+    { id: 'pipeline', value: '$0', label: 'Pipeline', note: '' },
+    { id: 'prospects', value: '0', label: 'Prospects', note: '' },
+    { id: 'partnerships', value: '0', label: 'Partnerships', note: '' },
+    { id: 'closed', value: '0', label: 'Closed', note: '$0 revenue' }
   ],
-  moat: [
-    {
-      number: '01',
-      title: '3D Pipeline Integration',
-      description: 'We work with actual 3D product data, not images. Deep integration with existing brand workflows.'
-    },
-    {
-      number: '02',
-      title: 'Enterprise Relationships',
-      description: 'Active pilots with major brands. Each integration deepens switching costs.'
-    },
-    {
-      number: '03',
-      title: 'Brand Trust Requirements',
-      description: 'Enterprise brands need reliability that "good enough" AI can\'t deliver.'
-    }
-  ],
-  talkingPoints: [
-    {
-      title: 'The Problem is Real',
-      content: 'Current AI tools rebuild your product every time. Materials drift, proportions shift. It\'s not reliable enough for enterprise scale.',
-      category: 'core'
-    },
-    {
-      title: 'Our Approach is Different',
-      content: 'We use 3D as the source of truth. The product is composited in, never generated. Pixel-perfect every time.',
-      category: 'core'
-    },
-    {
-      title: 'We Have Traction',
-      content: '$1.5M+ pipeline built in 3 months. Real conversations with real enterprise buyers who have real budgets.',
-      category: 'traction'
-    },
-    {
-      title: 'The Moat is Deep',
-      content: '3D pipeline integration, enterprise relationships, and brand trust requirements create compounding defensibility.',
-      category: 'core'
-    },
-    {
-      title: 'Why Now',
-      content: 'We\'ve spent 2 years building with enterprise. Sales motion just started. This is the inflection point.',
-      category: 'market'
-    },
-    {
-      title: 'Technical Moat Development',
-      content: 'World models integration and Gaussian splatting implementation create unique prompt-to-3D capabilities within our platform, establishing a significant technical differentiation in the market',
-      category: 'core'
-    },
-    {
-      title: 'Enterprise Traction Momentum',
-      content: 'Centric Brands (Under Armour owner, 200+ brands) advancing discussions while completed multi-product studio unlocks outreach to Hoka and major furniture prospects',
-      category: 'traction'
-    },
-    {
-      title: 'Technical Differentiation',
-      content: 'World models integration and Gaussian splatting implementation enabling prompt-to-3D creation positions Glossi ahead of competition in AI-native workflows',
-      category: 'core'
-    }
-  ],
+  moat: [],
+  talkingPoints: [],
   talkingPointCategories: ['core', 'traction', 'market', 'testimonials'],
   quickLinks: [
     { id: 'website', name: 'Glossi.io', url: 'https://glossi.io', icon: 'globe', color: 'default', emailEnabled: true, emailLabel: 'Website' },
     { id: 'video', name: 'Pitch Video', url: 'https://www.youtube.com/watch?v=kXbQqM35iHA', icon: 'video', color: 'red', emailEnabled: true, emailLabel: 'Pitch Video' },
     { id: 'deck', name: 'Deck', url: 'https://docsend.com/view/sqmwqnjh9zk8pncu', icon: 'document', color: 'blue', emailEnabled: true, emailLabel: 'Deck' },
-    { id: 'article', name: 'a16z Article', url: 'https://a16z.com/ai-is-learning-to-build-reality/', icon: 'book', color: 'purple', emailEnabled: true, emailLabel: 'a16z - AI World Models' }
+    { id: 'article', name: 'a16z Article', url: 'https://a16z.com/ai-is-learning-to-build-reality/', icon: 'book', color: 'purple', emailEnabled: true, emailLabel: 'a16z - AI World Models' },
+    { id: 'link5', name: 'AI Won\'t Kill 3D', url: 'https://www.linkedin.com/pulse/why-ai-wont-kill-3d-jonathan-gitlin-krhyc/', icon: 'globe', color: 'default', emailEnabled: true, emailLabel: 'AI Won\'t Kill 3D' }
   ],
   thoughts: [],
   quotes: [],
@@ -114,7 +42,7 @@ const DEFAULT_DATA = {
     target: '$500K',
     investors: []
   },
-  lastUpdated: '2026-01-29T04:00:41.905Z'
+  lastUpdated: '2026-02-01T00:00:00.000Z'
 };
 
 const DEFAULT_SETTINGS = {

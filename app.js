@@ -2816,48 +2816,199 @@ Respond with JSON:
     
     const content = this.pendingDroppedContent;
     
-    // Show loading modal
-    this.showModal('content-action-modal');
-    document.getElementById('unified-modal-title').textContent = 'Analyzing Content...';
-    document.getElementById('content-analysis-result').innerHTML = `
-      <div class="unified-loading">
-        <div class="spinner"></div>
-        <p>Opus is analyzing your content...</p>
-      </div>
-    `;
-    document.getElementById('unified-preview-sections').style.display = 'none';
-    document.getElementById('unified-preview-footer').style.display = 'none';
+    // Show loading toast instead of modal
+    this.showToast('Analyzing...', 'info');
 
     try {
-      console.log('Starting unified content intelligence analysis...');
+      console.log('Starting content analysis...');
       
-      // Use unified content intelligence for all content types
-      const extractedData = await this.analyzeContentIntelligently(
+      // Analyze content with context of existing talking points
+      const analysis = await this.analyzeForThoughts(
         content.content,
         content.type,
         content.fileName
       );
       
-      console.log('Extraction complete:', extractedData);
+      console.log('Analysis complete:', analysis);
       
-      // Store the extracted data
-      this.pendingExtractedData = extractedData;
-      
-      // Handle testimonials specially - show quotes preview
-      if (extractedData.isTestimonials) {
-        this.showTestimonialsPreview(extractedData, content.fileName);
+      // Handle testimonials specially - extract quotes
+      if (analysis.isTestimonials) {
+        await this.saveQuotesToLibrary(analysis.quotes, content.fileName);
+        this.showToast(`Added ${analysis.quotes.length} quotes to library`, 'success');
+        this.pendingDroppedContent = null;
         return;
       }
       
-      // Show the unified preview
-      this.showUnifiedPreview(extractedData, content.fileName);
+      // Save to Thoughts with promotion suggestion
+      await this.saveToThoughtsWithSuggestion(analysis, content);
+      
+      this.data = storage.getData();
+      this.renderThoughts();
+      
+      // Show result toast with suggestion
+      if (analysis.promotionSuggestion?.shouldPromote) {
+        this.showToast(`Saved to Thoughts - "${analysis.promotionSuggestion.reason}"`, 'success');
+      } else {
+        this.showToast('Saved to Thoughts', 'success');
+      }
+      
+      this.pendingDroppedContent = null;
       
     } catch (error) {
       console.error('Analysis error:', error);
-      this.hideModal('content-action-modal');
       this.showToast('Failed to analyze: ' + error.message, 'error');
       this.pendingDroppedContent = null;
     }
+  }
+
+  /**
+   * Analyze content for Thoughts with promotion suggestion
+   */
+  async analyzeForThoughts(contentData, contentType, fileName) {
+    const textContent = contentData?.text || '';
+    const isImage = contentType === 'image';
+    
+    // Detect testimonial files
+    const isTestimonialFile = 
+      fileName?.toLowerCase().includes('testimonial') ||
+      fileName?.toLowerCase().includes('quote') ||
+      fileName?.toLowerCase().includes('customer') ||
+      (textContent.match(/^>\s*.+/gm)?.length > 3);
+    
+    if (isTestimonialFile && !isImage) {
+      return await this.extractTestimonials(textContent, fileName);
+    }
+    
+    // Get existing talking points for context
+    const existingTalkingPoints = this.data?.talkingPoints || [];
+    const talkingPointsContext = existingTalkingPoints.length > 0
+      ? existingTalkingPoints.map(tp => `- [${tp.category}] "${tp.title}": ${tp.content.substring(0, 100)}`).join('\n')
+      : 'No talking points yet.';
+    
+    const prompt = `Analyze this content for an investor cheat sheet clipboard.
+
+EXISTING TALKING POINTS (${existingTalkingPoints.length}/8 max):
+${talkingPointsContext}
+
+CONTENT TO ANALYZE:
+${isImage ? '[Image - extract visible text/information]' : textContent.substring(0, 8000)}
+
+Respond with JSON:
+{
+  "title": "Short punchy title (5-8 words)",
+  "summary": "1-2 sentence summary in casual, investor-friendly language",
+  "keyPoints": ["Key point 1", "Key point 2"],
+  "promotionSuggestion": {
+    "shouldPromote": true/false,
+    "reason": "Why this should/shouldn't become a talking point",
+    "suggestedCategory": "core|traction|market|testimonials",
+    "wouldStrengthen": "Which existing point it complements or could replace, or null"
+  }
+}
+
+RULES:
+- Title should be memorable and specific
+- Summary in casual language (no jargon)
+- shouldPromote = true only for strong investor-ready content
+- Consider: Does this add NEW value to existing talking points?`;
+
+    let messages;
+    
+    if (isImage && contentData?.dataUrl) {
+      const matches = contentData.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (!matches) throw new Error('Invalid image data');
+      
+      messages = [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: matches[1], data: matches[2] } },
+          { type: 'text', text: prompt }
+        ]
+      }];
+    } else {
+      messages = [{ role: 'user', content: prompt }];
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.settings.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Analysis failed');
+    }
+
+    const result = await response.json();
+    const responseText = result.content[0].text;
+    
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Failed to parse response');
+    
+    return JSON.parse(jsonMatch[0]);
+  }
+
+  /**
+   * Save content to Thoughts with AI promotion suggestion
+   */
+  async saveToThoughtsWithSuggestion(analysis, droppedContent) {
+    const content = droppedContent.content;
+    const isImage = droppedContent.type === 'image';
+    
+    // Compress source
+    const compressedText = this.compressText(content?.text);
+    let compressedImage = null;
+    
+    if (isImage && content?.dataUrl) {
+      compressedImage = await this.compressImage(content.dataUrl);
+    }
+    
+    // Build thought content
+    const thoughtContent = `TITLE: ${analysis.title}\nSUMMARY: ${analysis.summary}${
+      analysis.keyPoints?.length > 0 
+        ? '\nKEY POINTS:\n' + analysis.keyPoints.map(p => `- ${p}`).join('\n')
+        : ''
+    }`;
+    
+    storage.addThought({
+      type: droppedContent.type || 'text',
+      content: thoughtContent,
+      fileName: droppedContent.fileName,
+      preview: compressedImage,
+      promotionSuggestion: analysis.promotionSuggestion,
+      originalSource: {
+        text: compressedText.text,
+        dataUrl: compressedImage,
+        fileName: droppedContent.fileName,
+        type: droppedContent.type,
+        truncated: compressedText.truncated
+      }
+    });
+  }
+
+  /**
+   * Save quotes to library
+   */
+  async saveQuotesToLibrary(quotes, fileName) {
+    for (const quote of quotes) {
+      storage.addQuote({
+        quote: quote.quote,
+        source: quote.source,
+        context: quote.context || ''
+      });
+    }
+    this.data = storage.getData();
+    this.renderQuotes();
   }
 
   /**
@@ -4681,18 +4832,38 @@ Content: "${content.substring(0, 300)}"`
                         thought.type === 'audio' ? 'audio' : 
                         thought.isGrouped ? `${itemCount} items` : '';
       
-      // Category suggestion
+      // Promotion suggestion (new format) or category suggestion (legacy)
       const categoryLabels = {
-        core: 'Core',
+        core: 'Core Value',
         traction: 'Traction',
         market: 'Market',
         testimonials: 'Testimonial'
       };
-      const suggestedCat = thought.suggestedCategory;
-      const suggestionBadge = suggestedCat ? 
-        `<button class="suggestion-badge" onclick="event.stopPropagation(); window.dashboard.quickPromote('${thought.id}', '${suggestedCat}')" title="Add to ${categoryLabels[suggestedCat]} talking points">
-          ${categoryLabels[suggestedCat]}
-        </button>` : '';
+      
+      // Handle new promotionSuggestion format
+      const promo = thought.promotionSuggestion;
+      let suggestionBadge = '';
+      
+      if (promo?.shouldPromote) {
+        const cat = promo.suggestedCategory || 'core';
+        suggestionBadge = `
+          <button class="suggestion-badge promote-suggestion" onclick="event.stopPropagation(); window.dashboard.quickPromote('${thought.id}', '${cat}')" title="${this.escapeHtml(promo.reason || 'Promote to Talking Points')}">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="17 11 12 6 7 11"></polyline>
+              <line x1="12" y1="18" x2="12" y2="6"></line>
+            </svg>
+            Promote to ${categoryLabels[cat]}
+          </button>`;
+      } else if (promo && !promo.shouldPromote) {
+        suggestionBadge = `<span class="suggestion-badge keep-thought" title="${this.escapeHtml(promo.reason || 'Keep in Thoughts')}">Keep for reference</span>`;
+      } else if (thought.suggestedCategory) {
+        // Legacy format
+        const suggestedCat = thought.suggestedCategory;
+        suggestionBadge = `
+          <button class="suggestion-badge" onclick="event.stopPropagation(); window.dashboard.quickPromote('${thought.id}', '${suggestedCat}')" title="Add to ${categoryLabels[suggestedCat]} talking points">
+            ${categoryLabels[suggestedCat]}
+          </button>`;
+      }
       
       // Build expandable content
       let expandableContent = '';
