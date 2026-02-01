@@ -5075,6 +5075,56 @@ body::after {
   color: #ef4444;
 }
 
+/* Header Actions */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Curate Button */
+.curate-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: 6px;
+  color: #4ade80;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.curate-btn:hover {
+  background: rgba(74, 222, 128, 0.2);
+  border-color: rgba(74, 222, 128, 0.5);
+}
+
+.curate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.curate-btn svg {
+  flex-shrink: 0;
+}
+
+.curate-btn.curating {
+  pointer-events: none;
+}
+
+.curate-btn.curating svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Stat update display */
 .unified-stat-update {
   display: flex;

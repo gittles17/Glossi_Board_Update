@@ -321,12 +321,21 @@
         <div class="section-card">
           <div class="card-header">
             <h3>Key Talking Points</h3>
-            <button class="add-btn-small" id="add-talking-point-btn" title="Add talking point">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-            </button>
+            <div class="header-actions">
+              <button class="curate-btn" id="curate-talking-points-btn" title="Smart curate to 8 best">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                Curate
+              </button>
+              <button class="add-btn-small" id="add-talking-point-btn" title="Add talking point">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+            </div>
           </div>
           <div class="talking-points-expanded" id="talking-points">
             <!-- Populated by JS with full explanations -->

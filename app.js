@@ -729,6 +729,11 @@ class GlossiDashboard {
       this.openAddTalkingPoint();
     });
 
+    // Curate button
+    document.getElementById('curate-talking-points-btn').addEventListener('click', () => {
+      this.curateCheatSheet();
+    });
+
     document.getElementById('talking-point-modal-close').addEventListener('click', () => {
       this.hideModal('talking-point-modal');
     });
@@ -2346,6 +2351,128 @@ class GlossiDashboard {
       this.data = storage.getData();
       this.renderTalkingPoints();
     }, 150);
+  }
+
+  /**
+   * Smart curate talking points to keep cheat sheet lean
+   * Uses Claude to pick the 8 most impactful items for investor excitement
+   */
+  async curateCheatSheet() {
+    const points = this.data.talkingPoints || [];
+    
+    if (points.length <= 8) {
+      this.showToast('Already at 8 or fewer talking points', 'info');
+      return;
+    }
+    
+    if (!this.settings?.apiKey) {
+      this.showToast('Set Anthropic API key in settings', 'error');
+      return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('curate-talking-points-btn');
+    const originalText = btn.innerHTML;
+    btn.classList.add('curating');
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg> Curating...`;
+    
+    try {
+      const categoryLabels = {
+        core: 'Core Value Prop',
+        traction: 'Traction & Proof',
+        market: 'Market & Timing',
+        testimonials: 'Customer Validation'
+      };
+      
+      const pointsForPrompt = points.map((p, i) => 
+        `${i + 1}. [${categoryLabels[p.category] || 'Core'}] "${p.title}": "${p.content}"`
+      ).join('\n');
+      
+      const prompt = `You are curating a weekly investor cheat sheet for a SaaS startup. The goal is to keep it SHORT and IMPACTFUL - max 8 talking points total.
+
+CURRENT TALKING POINTS (${points.length} items):
+${pointsForPrompt}
+
+YOUR TASK:
+Pick the BEST 8 talking points that will drive the most investor excitement. Consider:
+1. TRACTION/NUMBERS - concrete metrics always win (pipeline $, speed improvements, customer counts)
+2. CUSTOMER VALIDATION - real quotes from real people carry weight
+3. UNIQUE DIFFERENTIATION - what makes this different from competitors
+4. TIMELINESS - recent wins and momentum
+
+DISTRIBUTION:
+- Core Value Prop: 2-3 items (what makes us special)
+- Traction & Proof: 2-3 items (numbers and wins)
+- Customer Validation: 2-3 items (best quotes)
+- Market & Timing: 1 item (why now)
+
+You may MERGE similar points into stronger combined statements.
+You should CUT generic or redundant statements.
+
+Respond with JSON:
+{
+  "curatedPoints": [
+    { "title": "Short punchy title", "content": "1-2 sentences max", "category": "core|traction|market|testimonials" }
+  ],
+  "removed": ["Brief reason for each cut"],
+  "merged": ["Brief note on any merges"]
+}`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.settings.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Curation failed');
+      }
+      
+      const result = await response.json();
+      const text = result.content[0].text;
+      
+      // Parse JSON from response
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Invalid response format');
+      
+      const data = JSON.parse(jsonMatch[0]);
+      
+      if (!data.curatedPoints || data.curatedPoints.length === 0) {
+        throw new Error('No curated points returned');
+      }
+      
+      // Replace talking points with curated selection
+      storage.updateSection('talkingPoints', data.curatedPoints);
+      this.data = storage.getData();
+      this.renderTalkingPoints();
+      
+      const removed = points.length - data.curatedPoints.length;
+      this.showToast(`Curated: ${points.length} → ${data.curatedPoints.length} talking points`, 'success');
+      
+      console.log('Curation results:', {
+        before: points.length,
+        after: data.curatedPoints.length,
+        removed: data.removed,
+        merged: data.merged
+      });
+      
+    } catch (error) {
+      console.error('Curation error:', error);
+      this.showToast('Curation failed: ' + error.message, 'error');
+    } finally {
+      btn.classList.remove('curating');
+      btn.innerHTML = originalText;
+    }
   }
 
   /**
