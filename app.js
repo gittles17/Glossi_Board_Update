@@ -3417,12 +3417,20 @@ Content: "${content.substring(0, 300)}"`
               <div class="grouped-sub-item" data-item-index="${idx}">
                 <div class="sub-item-quote">"${this.escapeHtml(item.quote)}"</div>
                 ${item.source ? `<div class="sub-item-source">- ${this.escapeHtml(item.source)}</div>` : ''}
-                <button class="sub-item-promote" onclick="event.stopPropagation(); window.dashboard.promoteSubItem('${thought.id}', ${idx})" title="Add to Talking Points">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="17 11 12 6 7 11"></polyline>
-                    <line x1="12" y1="18" x2="12" y2="6"></line>
-                  </svg>
-                </button>
+                <div class="sub-item-actions">
+                  <button class="sub-item-promote" onclick="event.stopPropagation(); window.dashboard.promoteSubItem('${thought.id}', ${idx})" title="Add to Talking Points">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="17 11 12 6 7 11"></polyline>
+                      <line x1="12" y1="18" x2="12" y2="6"></line>
+                    </svg>
+                  </button>
+                  <button class="sub-item-delete" onclick="event.stopPropagation(); window.dashboard.deleteSubItem('${thought.id}', ${idx})" title="Delete">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
               </div>
             `).join('')}
           </div>
@@ -3825,6 +3833,41 @@ Respond with just the category name (core, traction, market, or testimonials) an
     }, 200);
     
     this.showToast('Added to Customer Validation', 'success');
+  }
+
+  /**
+   * Delete a sub-item from a grouped thought
+   */
+  deleteSubItem(thoughtId, itemIndex) {
+    const thoughts = storage.getThoughts();
+    const thought = thoughts.find(t => t.id === thoughtId);
+    if (!thought || !thought.isGrouped || !thought.items) return;
+    
+    // Animate the sub-item
+    const subItem = document.querySelector(`[data-thought-id="${thoughtId}"] [data-item-index="${itemIndex}"]`);
+    if (subItem) {
+      subItem.style.opacity = '0';
+      subItem.style.transform = 'translateX(-20px)';
+    }
+    
+    setTimeout(() => {
+      // Remove item from thought
+      thought.items.splice(itemIndex, 1);
+      
+      // If no items left, delete the entire thought
+      if (thought.items.length === 0) {
+        storage.deleteThought(thoughtId);
+        this.showToast('All items deleted', 'success');
+      } else {
+        // Update the thought summary
+        thought.content = `TITLE: ${thought.fileName || 'Document'}\nSUMMARY: ${thought.items.length} quotes/insights remaining`;
+        storage.data.thoughts = thoughts;
+        storage.scheduleSave();
+        this.showToast('Item deleted', 'success');
+      }
+      
+      this.renderThoughts();
+    }, 150);
   }
 
   /**

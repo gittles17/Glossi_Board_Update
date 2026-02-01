@@ -2365,6 +2365,36 @@ body::after {
   background: var(--accent-green-dim);
 }
 
+.sub-item-actions {
+  display: flex;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.grouped-sub-item:hover .sub-item-actions {
+  opacity: 1;
+}
+
+.sub-item-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast);
+}
+
+.sub-item-delete:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
 /* Source Viewer */
 .source-viewer {
   text-align: left;
