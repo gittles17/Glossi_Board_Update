@@ -3151,6 +3151,15 @@ Respond with JSON:
    * Render a section in the unified preview
    */
   renderUnifiedSection(sectionId, title, items) {
+    const categoryOptions = [
+      { value: 'talkingPoints', label: 'Talking Point' },
+      { value: 'thoughts', label: 'Thought' },
+      { value: 'quotes', label: 'Quote' },
+      { value: 'meeting-summary', label: 'Meeting Note' },
+      { value: 'meeting-todo', label: 'Todo' },
+      { value: 'skip', label: 'Skip' }
+    ];
+    
     return `
       <div class="unified-section" data-section="${sectionId}">
         <div class="unified-section-header">
@@ -3160,14 +3169,18 @@ Respond with JSON:
         </div>
         <div class="unified-section-items">
           ${items.map(item => `
-            <div class="unified-item" data-item-id="${item.id}" data-item-type="${item.type || sectionId}">
+            <div class="unified-item" data-item-id="${item.id}" data-item-type="${item.type || sectionId}" data-original-type="${item.type || sectionId}">
               <input type="checkbox" id="item-${item.id}" checked>
               <div class="unified-item-content">
                 <div class="unified-item-title">${item.title}</div>
                 ${item.detail ? `<div class="unified-item-detail">${item.detail}</div>` : ''}
                 ${item.meta ? `<div class="unified-item-meta">${item.meta}</div>` : ''}
               </div>
-              ${item.badge ? `<span class="unified-item-badge badge-${item.badge}">${item.badge}</span>` : ''}
+              <select class="unified-item-category" onchange="this.closest('.unified-item').dataset.itemType = this.value">
+                ${categoryOptions.map(opt => `
+                  <option value="${opt.value}" ${(item.type || sectionId) === opt.value ? 'selected' : ''}>${opt.label}</option>
+                `).join('')}
+              </select>
             </div>
           `).join('')}
         </div>
@@ -3232,9 +3245,24 @@ Respond with JSON:
     document.querySelectorAll('.unified-item input[type="checkbox"]:checked').forEach(checkbox => {
       const itemEl = checkbox.closest('.unified-item');
       const itemType = itemEl.dataset.itemType;
+      const originalType = itemEl.dataset.originalType;
       const itemId = itemEl.dataset.itemId;
       
+      // Skip if user chose to skip
+      if (itemType === 'skip') return;
+      
+      // Get item content regardless of original type
+      const itemContent = this.getItemContent(data, originalType, itemId);
+      
       try {
+        // Check if item was re-categorized
+        if (itemType !== originalType && ['thoughts', 'quotes', 'talkingPoints', 'meeting-summary', 'meeting-todo'].includes(itemType)) {
+          if (this.saveToNewDestination(itemType, itemContent, this.pendingDroppedContent)) {
+            appliedCount++;
+          }
+          return; // Don't process with original logic
+        }
+        
         switch (itemType) {
           case 'stats':
             const statData = data.statsUpdates?.find(s => `stat-${s.stat}` === itemId);
@@ -3389,6 +3417,127 @@ Respond with JSON:
     
     this.pendingDroppedContent = null;
     this.pendingExtractedData = null;
+  }
+
+  /**
+   * Get item content from extracted data by original type and ID
+   */
+  getItemContent(data, originalType, itemId) {
+    let title = '';
+    let content = '';
+    let source = '';
+    
+    switch (originalType) {
+      case 'talkingPoints':
+        const tpIdx = parseInt(itemId.replace('tp-', ''));
+        const tp = data.talkingPoints?.[tpIdx];
+        if (tp) {
+          title = tp.title;
+          content = tp.content;
+        }
+        break;
+      case 'quotes':
+        const qIdx = parseInt(itemId.replace('quote-', ''));
+        const quote = data.quotes?.[qIdx];
+        if (quote) {
+          title = quote.source;
+          content = quote.quote;
+          source = quote.source;
+        }
+        break;
+      case 'thoughts':
+        const thIdx = parseInt(itemId.replace('thought-', ''));
+        const thought = data.thoughts?.[thIdx];
+        if (thought) {
+          title = thought.reason || 'Reference Note';
+          content = thought.content;
+        }
+        break;
+      case 'summary':
+        const sIdx = parseInt(itemId.replace('summary-', ''));
+        content = data.meeting?.summary?.[sIdx] || '';
+        title = 'Meeting Note';
+        break;
+      case 'todo':
+        const todoIdx = parseInt(itemId.replace('todo-', ''));
+        const todo = data.meeting?.todos?.[todoIdx];
+        if (todo) {
+          content = todo.text;
+          title = 'Action Item';
+        }
+        break;
+      case 'decision':
+        const decIdx = parseInt(itemId.replace('decision-', ''));
+        content = data.meeting?.decisions?.[decIdx] || '';
+        title = 'Decision';
+        break;
+      case 'pipeline':
+        const pIdx = parseInt(itemId.replace('pipeline-', ''));
+        const deal = data.pipelineDeals?.[pIdx];
+        if (deal) {
+          title = deal.name;
+          content = `${deal.value || ''} - ${deal.signal || deal.stage || ''}`;
+        }
+        break;
+      case 'milestones':
+        const mIdx = parseInt(itemId.replace('milestone-', ''));
+        const milestone = data.milestones?.[mIdx];
+        if (milestone) {
+          title = milestone.title;
+          content = `Before: ${milestone.before}, After: ${milestone.after}`;
+        }
+        break;
+    }
+    
+    return { title, content, source };
+  }
+
+  /**
+   * Save item to new destination based on re-categorization
+   */
+  saveToNewDestination(itemType, itemContent, droppedContent) {
+    const { title, content, source } = itemContent;
+    if (!content && !title) return false;
+    
+    switch (itemType) {
+      case 'thoughts':
+        const compressedText = this.compressText(droppedContent?.content?.text);
+        storage.addThought({
+          type: 'text',
+          content: `TITLE: ${title}\nSUMMARY: ${content}`,
+          fileName: droppedContent?.fileName,
+          suggestedCategory: null,
+          originalSource: {
+            text: compressedText.text,
+            fileName: droppedContent?.fileName,
+            type: droppedContent?.type || 'text',
+            truncated: compressedText.truncated
+          }
+        });
+        return true;
+        
+      case 'quotes':
+        storage.addQuote({
+          quote: content,
+          source: source || title,
+          context: ''
+        });
+        return true;
+        
+      case 'talkingPoints':
+        storage.addTalkingPoint(title || 'Key Point', content, 'core');
+        return true;
+        
+      case 'meeting-summary':
+        this.addMeetingSummary(content);
+        return true;
+        
+      case 'meeting-todo':
+        this.addMeetingTodo(content, 'Unassigned');
+        return true;
+    }
+    
+    return false;
   }
 
   /**

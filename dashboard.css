@@ -5228,6 +5228,34 @@ body::after {
   color: #a855f7;
 }
 
+/* Category dropdown in unified preview */
+.unified-item-category {
+  padding: 4px 8px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  min-width: 100px;
+}
+
+.unified-item-category:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-color-light);
+}
+
+.unified-item-category:focus {
+  outline: none;
+  border-color: var(--accent-green);
+}
+
+.unified-item-category option {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
 /* Header Actions */
 .header-actions {
   display: flex;
