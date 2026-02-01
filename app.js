@@ -2849,12 +2849,12 @@ Respond with JSON:
     const textContent = contentData?.text || '';
     const isImage = contentType === 'image';
     
-    // Detect testimonial files
+    // Detect testimonial files - only by explicit filename, not embedded quotes
+    // An investor update with a few quotes should NOT trigger testimonials extraction
+    const fileNameLower = fileName?.toLowerCase() || '';
     const isTestimonialFile = 
-      fileName?.toLowerCase().includes('testimonial') ||
-      fileName?.toLowerCase().includes('quote') ||
-      fileName?.toLowerCase().includes('customer') ||
-      (textContent.match(/^>\s*.+/gm)?.length > 3);
+      fileNameLower.includes('testimonial') ||
+      (fileNameLower.includes('quote') && !fileNameLower.includes('update'));
     
     if (isTestimonialFile && !isImage) {
       return await this.extractTestimonials(textContent, fileName);
