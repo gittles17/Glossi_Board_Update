@@ -4670,11 +4670,17 @@ Content: "${content.substring(0, 300)}"`
     `;
     
     document.getElementById('content-analysis-result').innerHTML = html;
-    document.getElementById('content-action-buttons').style.display = 'none';
+    
+    // Hide the footer buttons since this is just viewing source
+    const footer = document.getElementById('unified-preview-footer');
+    if (footer) footer.style.display = 'none';
+    
+    // Hide the preview sections
+    const sections = document.getElementById('unified-preview-sections');
+    if (sections) sections.style.display = 'none';
     
     // Update modal title
-    const modalTitle = document.querySelector('#content-action-modal h2');
-    if (modalTitle) modalTitle.textContent = 'Original Source';
+    document.getElementById('unified-modal-title').textContent = 'Original Source';
     
     this.showModal('content-action-modal');
   }
