@@ -3260,15 +3260,28 @@ KEY POINTS:
     const isImage = contentType === 'image';
     
     // Build the prompt for comprehensive extraction
-    const prompt = `You are analyzing content for a startup investor cheat sheet dashboard. Extract ALL relevant information and categorize it appropriately.
+    const prompt = `You are analyzing content for a startup investor cheat sheet. This is a QUICK REFERENCE tool for board members and investors - not a technical document.
 
-The dashboard has these sections:
-- Stats: Pipeline value, deal count, partnerships, inbound rate
-- Pipeline Highlights: Company deals with value, stage, and why they matter
-- Talking Points: Compelling statements organized by category (core, traction, market, testimonials)
-- Week at a Glance: Meeting summaries, action items with owners (Jonathan, Ricky, Adam), key decisions
-- Milestones: Product/team achievements with before/after metrics
-- Thoughts: Reference material not for investor-facing content
+CRITICAL TONE REQUIREMENTS:
+- Write for busy investors who want to glance and understand in seconds
+- Use CASUAL, conversational language (like texting a friend about your startup)
+- Keep everything SHORT and punchy - no corporate jargon or buzzwords
+- If something is technical, translate it to plain English
+- Think "coffee chat" not "board presentation"
+
+BAD: "Implementing Gaussian splatting for world model integration enables prompt-to-3D capabilities"
+GOOD: "New tech lets users create 3D scenes from text prompts - huge differentiator"
+
+BAD: "Enterprise validation through advanced paid proof-of-concept engagements"
+GOOD: "Big brands paying us to prove it works"
+
+The dashboard sections:
+- Stats: Pipeline value, deal count, partnerships
+- Pipeline Highlights: Deals + why they're exciting (1 sentence max)
+- Talking Points: Punchy statements an investor would remember
+- Week at a Glance: Meeting notes, action items, decisions
+- Milestones: Wins with clear before/after
+- Thoughts: Internal reference (can be more detailed)
 
 Content type: ${contentType}
 File name: ${fileName || 'Unknown'}
@@ -3276,63 +3289,62 @@ File name: ${fileName || 'Unknown'}
 ${isImage ? 'This is an image - extract any visible text, numbers, or key information.' : `Content:
 ${textContent.substring(0, 12000)}`}
 
-Analyze this content and respond with a JSON object containing ALL extractable data:
+Respond with JSON containing extractable data (casual, glanceable language):
 
 {
-  "contentSummary": "Brief 1-sentence description of what this content is",
+  "contentSummary": "One casual sentence about what this is",
   "contentType": "meeting_notes" | "investor_update" | "conversation" | "quotes" | "screenshot" | "general",
   
   "statsUpdates": [
-    { "stat": "pipeline|prospects|partnerships", "newValue": "value", "reason": "why update" }
+    { "stat": "pipeline|prospects|partnerships", "newValue": "value", "reason": "short reason" }
   ],
   
   "pipelineDeals": [
-    { "name": "Company", "value": "$X", "stage": "discovery|demo|validation|pilot", "signal": "why it matters" }
+    { "name": "Company", "value": "$X", "stage": "discovery|demo|validation|pilot", "signal": "1 sentence why exciting" }
   ],
   
   "talkingPoints": [
-    { "title": "Short title", "content": "Full talking point", "category": "core|traction|market|testimonials" }
+    { "title": "3-5 word title", "content": "1-2 casual sentences max", "category": "core|traction|market|testimonials" }
   ],
   
   "quotes": [
-    { "quote": "Exact quote", "source": "Who said it", "context": "Brief context" }
+    { "quote": "Keep it punchy", "source": "Name/title", "context": "Brief" }
   ],
   
   "meeting": {
-    "title": "Meeting title if applicable",
-    "date": "YYYY-MM-DD if mentioned",
-    "summary": ["Summary point 1", "Summary point 2"],
+    "title": "Meeting name",
+    "date": "YYYY-MM-DD",
+    "summary": ["Short bullet", "Another bullet"],
     "todos": [
-      { "text": "Action item", "owner": "Jonathan|Ricky|Adam|Unassigned" }
+      { "text": "Clear action", "owner": "Jonathan|Ricky|Adam|Unassigned" }
     ],
-    "decisions": ["Decision 1", "Decision 2"]
+    "decisions": ["Decision made"]
   },
   
   "milestones": [
-    { "title": "Achievement", "before": "Old state", "after": "New state" }
+    { "title": "What improved", "before": "Old", "after": "New" }
   ],
   
   "fundraising": {
     "target": "$X",
     "committed": "$X", 
     "cap": "$X",
-    "investors": ["Name 1", "Name 2"]
+    "investors": ["Name"]
   },
   
   "thoughts": [
-    { "content": "Reference note", "reason": "Why it's reference material" }
+    { "content": "Reference note (can be longer)", "reason": "Why save for later" }
   ]
 }
 
 Rules:
-- Only include sections that have actual data to extract
-- For owner detection, look for patterns like "Jonathan to...", "Ricky will...", "Adam needs to..."
-- Quotes must be third-party validation (VCs, customers, experts) - not internal statements
-- Talking points should be compelling, investor-facing content
-- Thoughts are for internal reference only
-- Be specific with numbers and company names
-- If content mentions meetings, calls, syncs - extract meeting data
-- Empty arrays are fine for sections with no data`;
+- BREVITY IS KEY - if you can say it in fewer words, do it
+- Translate technical content to investor-friendly language
+- For owner detection: "Jonathan to...", "Ricky will...", "Adam needs to..."
+- Quotes = third-party validation only (VCs, customers, experts)
+- Talking points should make an investor say "oh, interesting!"
+- Only include sections with actual data
+- Empty arrays are fine`;
 
     let messages;
     
