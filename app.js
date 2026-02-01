@@ -2874,6 +2874,18 @@ class GlossiDashboard {
       })));
     }
     
+    // Inconsistencies (fixes needed)
+    if (data.inconsistencies && data.inconsistencies.length > 0) {
+      html += this.renderUnifiedSection('inconsistencies', 'Fixes Needed (Outdated Info)', data.inconsistencies.map((inc, i) => ({
+        id: `fix-${i}`,
+        title: `${inc.section}: ${inc.issue}`,
+        detail: `<span class="unified-stat-update"><span class="unified-stat-old">"${this.escapeHtml(inc.currentText?.substring(0, 50) || '')}..."</span> <span class="unified-stat-arrow">→</span> <span class="unified-stat-new">"${this.escapeHtml(inc.suggestedFix?.substring(0, 50) || '')}..."</span></span>`,
+        meta: `Section: ${inc.section}`,
+        badge: 'fix',
+        data: inc
+      })));
+    }
+    
     if (!html) {
       html = '<div class="empty-state">No actionable data found in this content.</div>';
     }
@@ -3064,6 +3076,15 @@ class GlossiDashboard {
               appliedCount++;
             }
             break;
+            
+          case 'inconsistencies':
+            const fixIdx = parseInt(itemId.replace('fix-', ''));
+            const fixData = data.inconsistencies?.[fixIdx];
+            if (fixData) {
+              this.applyInconsistencyFix(fixData);
+              appliedCount++;
+            }
+            break;
         }
       } catch (e) {
         console.error('Error applying item:', itemType, itemId, e);
@@ -3147,6 +3168,48 @@ class GlossiDashboard {
     if (!meeting.decisions) meeting.decisions = [];
     meeting.decisions.push(text);
     meetingsManager.updateMeeting(meeting);
+  }
+
+  /**
+   * Apply an inconsistency fix (update existing content)
+   */
+  applyInconsistencyFix(fix) {
+    if (!fix.section || !fix.suggestedFix) return;
+    
+    switch (fix.section) {
+      case 'talkingPoints':
+        // Find and update the talking point with outdated info
+        const tps = this.data.talkingPoints || [];
+        const tpIndex = tps.findIndex(tp => 
+          tp.content.includes(fix.currentText?.substring(0, 30)) ||
+          tp.title.includes(fix.currentText?.substring(0, 20))
+        );
+        if (tpIndex !== -1) {
+          // Update the content with the fix
+          if (fix.currentText && fix.suggestedFix) {
+            tps[tpIndex].content = tps[tpIndex].content.replace(fix.currentText, fix.suggestedFix);
+          }
+          storage.updateTalkingPoint(tpIndex, tps[tpIndex].title, tps[tpIndex].content, tps[tpIndex].category);
+          console.log('Fixed talking point:', tpIndex);
+        }
+        break;
+        
+      case 'stats':
+        // Update stat value
+        if (fix.currentText && fix.suggestedFix) {
+          const statId = fix.issue?.toLowerCase().includes('pipeline') ? 'pipeline' :
+                        fix.issue?.toLowerCase().includes('prospect') ? 'prospects' :
+                        fix.issue?.toLowerCase().includes('partner') ? 'partnerships' : null;
+          if (statId) {
+            this.updateStat(statId, fix.suggestedFix);
+            console.log('Fixed stat:', statId);
+          }
+        }
+        break;
+        
+      default:
+        console.log('Unknown section for fix:', fix.section);
+    }
   }
 
   /**
@@ -3259,8 +3322,29 @@ KEY POINTS:
     const textContent = content?.text || '';
     const isImage = contentType === 'image';
     
+    // Get current cheat sheet data for context
+    const currentStats = this.data?.stats || [];
+    const currentTalkingPoints = this.data?.talkingPoints || [];
+    const currentPipeline = this.data?.pipeline || {};
+    
+    const currentContext = `
+CURRENT CHEAT SHEET DATA (check for inconsistencies):
+- Pipeline stat: ${currentStats.find(s => s.id === 'pipeline')?.value || 'unknown'}
+- Prospects stat: ${currentStats.find(s => s.id === 'prospects')?.value || 'unknown'}
+- Partnerships stat: ${currentStats.find(s => s.id === 'partnerships')?.value || 'unknown'}
+- Talking Points: ${currentTalkingPoints.map(tp => `"${tp.title}: ${tp.content.substring(0, 100)}..."`).join('\n  ')}
+`;
+    
     // Build the prompt for comprehensive extraction
     const prompt = `You are analyzing content for a startup investor cheat sheet. This is a QUICK REFERENCE tool for board members and investors - not a technical document.
+
+CRITICAL: CONSISTENCY CHECK
+${currentContext}
+
+When you extract new data, ALSO check if any existing content above is now OUTDATED or INCONSISTENT with the new information. For example:
+- If new content says pipeline is $1.5M+ but existing talking point says "$1.2M+ pipeline" - flag it for update
+- If company stages changed, update references
+- Numbers, dates, and facts must be consistent across all sections
 
 CRITICAL TONE REQUIREMENTS:
 - Write for busy investors who want to glance and understand in seconds
@@ -3334,6 +3418,15 @@ Respond with JSON containing extractable data (casual, glanceable language):
   
   "thoughts": [
     { "content": "Reference note (can be longer)", "reason": "Why save for later" }
+  ],
+  
+  "inconsistencies": [
+    { 
+      "section": "talkingPoints|stats|pipeline",
+      "issue": "What's wrong (e.g., 'Says $1.2M but should be $1.5M')",
+      "currentText": "The text that needs updating",
+      "suggestedFix": "Updated text with correct info"
+    }
   ]
 }
 
@@ -3344,7 +3437,8 @@ Rules:
 - Quotes = third-party validation only (VCs, customers, experts)
 - Talking points should make an investor say "oh, interesting!"
 - Only include sections with actual data
-- Empty arrays are fine`;
+- Empty arrays are fine
+- IMPORTANT: Always check existing data for inconsistencies with new info`;
 
     let messages;
     

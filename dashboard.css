@@ -5070,6 +5070,11 @@ body::after {
   color: var(--text-muted);
 }
 
+.unified-item-badge.badge-fix {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
 /* Stat update display */
 .unified-stat-update {
   display: flex;
