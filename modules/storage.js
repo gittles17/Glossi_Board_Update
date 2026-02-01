@@ -3,7 +3,7 @@
  * Handles file-based persistence for the Glossi Dashboard
  */
 
-// Default data structure
+// Default data structure (restored from backup Jan 29, 2026)
 const DEFAULT_DATA = {
   company: {
     name: 'Glossi',
@@ -17,7 +17,7 @@ const DEFAULT_DATA = {
       { name: 'MagnaFlow', value: '$36-50K', stage: 'pilot', timing: 'Q1' },
       { name: 'Peleman', value: '$50K', stage: 'demo', timing: 'Q1' },
       { name: '3Day Blinds', value: '$50K', stage: 'validation', timing: 'Q1' },
-      { name: 'Centric Brands', value: '$50K', stage: 'demo', timing: 'Q1' }
+      { name: 'Centric Brands', stage: 'discovery', timing: 'Q1' }
     ],
     inProgress: [
       { name: 'Sunday Dinner', value: '$500K', stage: 'discovery', timing: 'Q1' },
@@ -83,6 +83,21 @@ const DEFAULT_DATA = {
       title: 'Why Now',
       content: 'We\'ve spent 2 years building with enterprise. Sales motion just started. This is the inflection point.',
       category: 'market'
+    },
+    {
+      title: 'Technical Moat Development',
+      content: 'World models integration and Gaussian splatting implementation create unique prompt-to-3D capabilities within our platform, establishing a significant technical differentiation in the market',
+      category: 'core'
+    },
+    {
+      title: 'Enterprise Traction Momentum',
+      content: 'Centric Brands (Under Armour owner, 200+ brands) advancing discussions while completed multi-product studio unlocks outreach to Hoka and major furniture prospects',
+      category: 'traction'
+    },
+    {
+      title: 'Technical Differentiation',
+      content: 'World models integration and Gaussian splatting implementation enabling prompt-to-3D creation positions Glossi ahead of competition in AI-native workflows',
+      category: 'core'
     }
   ],
   talkingPointCategories: ['core', 'traction', 'market', 'testimonials'],
@@ -97,7 +112,7 @@ const DEFAULT_DATA = {
     target: '$500K',
     investors: []
   },
-  lastUpdated: new Date().toISOString()
+  lastUpdated: '2026-01-29T04:00:41.905Z'
 };
 
 const DEFAULT_SETTINGS = {
