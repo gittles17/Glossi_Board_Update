@@ -18,6 +18,17 @@
       <img src="Asset 3.svg" alt="Glossi" class="logo-img">
     </div>
     <div class="nav-right">
+      <!-- Drop Zone (always visible) -->
+      <div class="nav-drop-zone" id="menu-drop-zone">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <span>Drop file</span>
+        <input type="file" id="menu-file-input" accept=".png,.jpg,.jpeg,.pdf,.txt,.md,.mp3,.wav,.m4a" style="display: none;">
+      </div>
+      
       <!-- Hamburger Menu -->
       <div class="menu-container">
         <button class="btn-icon" id="menu-btn" title="Menu">
@@ -28,19 +39,6 @@
           </svg>
         </button>
         <div class="dropdown-menu" id="dropdown-menu">
-          <div class="menu-upload-section">
-            <div class="menu-drop-zone" id="menu-drop-zone">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-              <span>Drop files or click</span>
-              <input type="file" id="menu-file-input" accept=".png,.jpg,.jpeg,.pdf,.txt,.md,.mp3,.wav,.m4a" style="display: none;">
-            </div>
-            <input type="text" id="menu-paste-input" class="menu-paste-input" placeholder="Paste text and press Enter..." />
-          </div>
-          <div class="dropdown-divider"></div>
           <button class="dropdown-item" id="menu-share">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>

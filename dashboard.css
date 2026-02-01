@@ -586,6 +586,57 @@ body::after {
   gap: var(--space-2);
 }
 
+/* Nav Drop Zone - Always visible */
+.nav-drop-zone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  white-space: nowrap;
+}
+
+.nav-drop-zone:hover {
+  border-color: var(--accent-green);
+  background: rgba(74, 222, 128, 0.08);
+  color: var(--text-primary);
+}
+
+.nav-drop-zone.drag-over {
+  border-color: var(--accent-green);
+  background: rgba(74, 222, 128, 0.12);
+  color: var(--accent-green);
+  border-style: solid;
+}
+
+.nav-drop-zone svg {
+  color: var(--accent-green);
+  opacity: 0.6;
+  transition: all var(--duration-fast);
+}
+
+.nav-drop-zone:hover svg,
+.nav-drop-zone.drag-over svg {
+  opacity: 1;
+}
+
+.nav-drop-zone span {
+  display: none;
+}
+
+@media (min-width: 480px) {
+  .nav-drop-zone span {
+    display: inline;
+  }
+}
+
 /* ============================================
    BUTTONS - Premium Feel
    ============================================ */
