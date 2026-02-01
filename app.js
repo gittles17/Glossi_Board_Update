@@ -901,20 +901,22 @@ class GlossiDashboard {
    * Render all dashboard components
    */
   render() {
-    this.renderStats();
-    this.renderPipeline();
-    this.renderTalkingPoints();
-    this.renderThoughts();
-    this.renderQuickLinks();
-    this.renderSeedRaise();
-    this.renderMeetingSelector();
+    try { this.renderStats(); } catch (e) { console.error('renderStats error:', e); }
+    try { this.renderPipeline(); } catch (e) { console.error('renderPipeline error:', e); }
+    try { this.renderTalkingPoints(); } catch (e) { console.error('renderTalkingPoints error:', e); }
+    try { this.renderThoughts(); } catch (e) { console.error('renderThoughts error:', e); }
+    try { this.renderQuickLinks(); } catch (e) { console.error('renderQuickLinks error:', e); }
+    try { this.renderSeedRaise(); } catch (e) { console.error('renderSeedRaise error:', e); }
+    try { this.renderMeetingSelector(); } catch (e) { console.error('renderMeetingSelector error:', e); }
     
-    const currentMeeting = meetingsManager.getCurrentMeeting();
-    if (currentMeeting) {
-      this.renderMeeting(currentMeeting);
-    }
+    try {
+      const currentMeeting = meetingsManager.getCurrentMeeting();
+      if (currentMeeting) {
+        this.renderMeeting(currentMeeting);
+      }
+    } catch (e) { console.error('renderMeeting error:', e); }
 
-    this.renderSettingsStatus();
+    try { this.renderSettingsStatus(); } catch (e) { console.error('renderSettingsStatus error:', e); }
   }
 
   /**
@@ -997,8 +999,10 @@ class GlossiDashboard {
    */
   renderTalkingPoints() {
     const container = document.getElementById('talking-points');
+    if (!container || !this.data) return;
+    
     const points = this.data.talkingPoints || [];
-    const categories = storage.getTalkingPointCategories();
+    const categories = storage.getTalkingPointCategories() || ['core', 'traction', 'market', 'testimonials'];
     
     const categoryLabels = {
       core: 'Core Value Prop',
