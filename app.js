@@ -1668,157 +1668,121 @@ class GlossiDashboard {
   }
 
   /**
-   * Share weekly update via email
+   * Share weekly update via email - clean, scannable format
    */
   shareViaEmail() {
     const data = this.data;
-    const stats = data.stats;
-    const talkingPoints = data.talkingPoints;
+    const stats = data.stats || [];
+    const talkingPoints = data.talkingPoints || [];
     
-    // Get email settings with defaults
+    // Get email settings
     const emailSettings = this.settings.email || {};
-    const sectionOrder = emailSettings.sectionOrder || ['metrics', 'pipeline', 'talkingPoints', 'highlights', 'decisions', 'actionItems'];
-    const sections = emailSettings.sections || {
-      metrics: true, pipeline: true, talkingPoints: true,
-      highlights: true, decisions: true, actionItems: true
-    };
-    const counts = emailSettings.counts || { pipelineDeals: 5, talkingPoints: 4 };
     const signature = emailSettings.signature || 'JG';
     const greeting = emailSettings.greeting || '';
 
     // Get current week range
     const weekRange = this.getWeekRange(new Date());
 
-    // Get current meeting data
-    const meeting = meetingsManager.getCurrentMeeting();
+    // Get featured quotes
+    const featuredQuotes = storage.getFeaturedQuotes ? storage.getFeaturedQuotes() : [];
 
-    // Get top pipeline deals
+    // Get top pipeline deals (sorted by stage)
     const allClients = storage.getAllPipelineClients();
     const stagePriority = { pilot: 4, validation: 3, demo: 2, discovery: 1, partnership: 0 };
     const topDeals = allClients
       .filter(c => c.category !== 'partnerships')
       .sort((a, b) => (stagePriority[b.stage] || 0) - (stagePriority[a.stage] || 0))
-      .slice(0, counts.pipelineDeals);
+      .slice(0, 5);
 
-    // Section renderers
-    const sectionRenderers = {
-      metrics: () => {
-        let content = 'KEY METRICS\n';
-        stats.forEach(stat => {
-          content += `- ${stat.label}: ${stat.value}\n`;
-        });
-        return content + '\n---\n\n';
-      },
-      pipeline: () => {
-        const pipelineTotal = data.pipeline?.totalValue || '$1.2M+';
-        let content = `PIPELINE HOT (${pipelineTotal})\n`;
-        topDeals.forEach((deal, i) => {
-          content += `${i + 1}. ${deal.name} - ${deal.stage} - ${deal.value}\n`;
-        });
-        return content + '\n---\n\n';
-      },
-      talkingPoints: () => {
-        if (!talkingPoints || talkingPoints.length === 0) return '';
-        let content = 'KEY TALKING POINTS\n';
-        talkingPoints.slice(0, counts.talkingPoints).forEach((point, i) => {
-          content += `${i + 1}. ${point.title}\n`;
-          if (point.content) {
-            content += `   ${point.content}\n`;
-          }
-        });
-        return content + '\n---\n\n';
-      },
-      highlights: () => {
-        let content = "THIS WEEK'S HIGHLIGHTS\n";
-        if (meeting?.summary && meeting.summary.length > 0) {
-          meeting.summary.forEach(item => {
-            content += `- ${item}\n`;
-          });
-        } else {
-          content += '- No highlights recorded\n';
-        }
-        return content + '\n---\n\n';
-      },
-      decisions: () => {
-        let content = 'KEY DECISIONS\n';
-        if (meeting?.decisions && meeting.decisions.length > 0) {
-          meeting.decisions.forEach(decision => {
-            content += `- ${decision}\n`;
-          });
-        } else {
-          content += '- No decisions recorded\n';
-        }
-        return content + '\n---\n\n';
-      },
-      actionItems: () => {
-        let content = 'ACTION ITEMS\n';
-        if (meeting?.todos && meeting.todos.length > 0) {
-          const todosByOwner = {};
-          meeting.todos.forEach(todo => {
-            const owner = this.resolveOwnerName(todo.owner);
-            if (!todosByOwner[owner]) {
-              todosByOwner[owner] = [];
-            }
-            todosByOwner[owner].push(todo);
-          });
-          Object.entries(todosByOwner).forEach(([owner, todos]) => {
-            content += `\n${owner}:\n`;
-            todos.forEach(todo => {
-              const checkbox = todo.completed ? '[x]' : '[ ]';
-              content += `${checkbox} ${todo.text}\n`;
-            });
-          });
-        } else {
-          content += '- No action items\n';
-        }
-        return content + '\n---\n\n';
-      }
-    };
-
-    // Build email body
+    // Build email body - clean scannable format
     let body = '';
 
     // Header
-    body += 'GLOSSI\n';
-    body += `Weekly Update - ${weekRange}\n\n`;
+    body += `GLOSSI UPDATE | ${weekRange}\n`;
+    body += '================================\n\n';
     
-    // Custom greeting if provided
+    // Custom greeting
     if (greeting) {
       body += `${greeting}\n\n`;
     }
-    
-    body += '---\n\n';
 
-    // Render sections in configured order
-    sectionOrder.forEach(sectionKey => {
-      if (sections[sectionKey] && sectionRenderers[sectionKey]) {
-        body += sectionRenderers[sectionKey]();
-      }
-    });
+    // Quick Stats (one line)
+    const statsLine = stats
+      .filter(s => s.value && s.value !== '0' && s.value !== '$0')
+      .map(s => `${s.label}: ${s.value}`)
+      .join('  |  ');
+    if (statsLine) {
+      body += `${statsLine}\n\n`;
+    }
 
-    // Footer with signature
-    body += 'Best,\n';
+    // Featured Customer Quote (if any)
+    if (featuredQuotes.length > 0) {
+      const quote = featuredQuotes[0];
+      body += `"${quote.quote}"\n`;
+      body += `  - ${quote.source}\n\n`;
+    }
+
+    // Key Updates (talking points - max 4, short format)
+    if (talkingPoints.length > 0) {
+      body += 'KEY UPDATES\n';
+      body += '------------\n';
+      talkingPoints.slice(0, 4).forEach(point => {
+        body += `> ${point.title}\n`;
+        if (point.content) {
+          // Truncate content to ~80 chars for scannability
+          const short = point.content.length > 80 
+            ? point.content.substring(0, 77) + '...'
+            : point.content;
+          body += `  ${short}\n`;
+        }
+        body += '\n';
+      });
+    }
+
+    // Pipeline Snapshot (if deals exist)
+    if (topDeals.length > 0) {
+      const pipelineTotal = data.pipeline?.totalValue || '$0';
+      body += `PIPELINE: ${pipelineTotal}\n`;
+      body += '------------\n';
+      topDeals.slice(0, 3).forEach(deal => {
+        const value = deal.value || '';
+        body += `- ${deal.name} (${deal.stage})${value ? ' - ' + value : ''}\n`;
+      });
+      body += '\n';
+    }
+
+    // Additional featured quotes
+    if (featuredQuotes.length > 1) {
+      body += 'WHAT CUSTOMERS SAY\n';
+      body += '------------\n';
+      featuredQuotes.slice(1, 3).forEach(quote => {
+        body += `"${quote.quote.substring(0, 100)}${quote.quote.length > 100 ? '...' : ''}"\n`;
+        body += `  - ${quote.source}\n\n`;
+      });
+    }
+
+    // Footer
+    body += '================================\n';
     body += `${signature}\n\n`;
     
-    // Links - dynamically from quickLinks
+    // Links - clean format
     const quickLinks = storage.getQuickLinks();
     const enabledLinks = quickLinks.filter(link => link.emailEnabled !== false);
     
     if (enabledLinks.length > 0) {
-      body += '---\n';
-      enabledLinks.forEach((link, index) => {
+      body += 'LINKS\n';
+      enabledLinks.forEach(link => {
         const label = link.emailLabel || link.name;
-        body += `${label}: ${link.url}`;
-        if (index < enabledLinks.length - 1) body += '\n';
+        body += `${label}: ${link.url}\n`;
       });
     }
 
-    // Open default email app (Outlook)
-    const subject = `Glossi Weekly Update - ${weekRange}`;
+    // Open default email app
+    const subject = `Glossi Update | ${weekRange}`;
     const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     
     window.location.href = mailtoLink;
-    this.showToast('Opening Outlook...', 'success');
+    this.showToast('Opening email...', 'success');
   }
 
   /**
