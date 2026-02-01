@@ -170,22 +170,6 @@ class GlossiDashboard {
       this.showModal('settings-modal');
     });
 
-    document.getElementById('menu-reset').addEventListener('click', async () => {
-      dropdown.classList.remove('open');
-      this.showToast('Resetting data...', 'info');
-      try {
-        const response = await fetch('/api/reset', { method: 'POST' });
-        const result = await response.json();
-        if (result.success) {
-          this.showToast('Data reset. Refreshing...', 'success');
-          setTimeout(() => window.location.reload(), 500);
-        } else {
-          this.showToast('Reset failed: ' + result.error, 'error');
-        }
-      } catch (error) {
-        this.showToast('Reset failed: ' + error.message, 'error');
-      }
-    });
   }
 
   /**
@@ -746,11 +730,6 @@ class GlossiDashboard {
       this.openAddTalkingPoint();
     });
 
-    // Curate button
-    document.getElementById('curate-talking-points-btn').addEventListener('click', () => {
-      this.curateCheatSheet();
-    });
-
     document.getElementById('talking-point-modal-close').addEventListener('click', () => {
       this.hideModal('talking-point-modal');
     });
@@ -966,23 +945,53 @@ class GlossiDashboard {
     const topDeals = allClients
       .filter(c => c.category !== 'partnerships')
       .sort((a, b) => (stagePriority[b.stage] || 0) - (stagePriority[a.stage] || 0))
-      .slice(0, 4);
+      .slice(0, 6);
 
     container.innerHTML = topDeals.map((deal, index) => {
       const isHot = deal.stage === 'pilot' || deal.stage === 'validation';
       return `
-      <div class="pipeline-item ${isHot ? 'hot' : ''}" data-stage="${deal.stage}" style="animation-delay: ${0.4 + index * 0.05}s">
-        <div>
-          <span class="company">${deal.name}</span>
+      <div class="pipeline-item ${isHot ? 'hot' : ''}" data-deal-id="${deal.id || deal.name}" data-stage="${deal.stage}" style="animation-delay: ${0.4 + index * 0.05}s">
+        <div class="pipeline-info">
+          <span class="company">${this.escapeHtml(deal.name)}</span>
           <span class="stage">${deal.stage}</span>
         </div>
-        <span class="value">${deal.value}</span>
+        <div class="pipeline-right">
+          <span class="value">${deal.value || ''}</span>
+          <button class="pipeline-delete-btn" onclick="window.dashboard.deletePipelineDeal('${deal.name}', '${deal.category}')" title="Delete">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
       </div>
     `;
     }).join('');
 
     // Add staggered entrance animation
     this.animateListItems(container, '.pipeline-item');
+  }
+
+  /**
+   * Delete a pipeline deal
+   */
+  deletePipelineDeal(name, category) {
+    // Optimistic animation
+    const el = document.querySelector(`[data-deal-id="${name}"]`);
+    if (el) {
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(-20px)';
+      el.style.transition = 'all 0.15s ease-out';
+    }
+    
+    setTimeout(() => {
+      storage.deletePipelineDeal(name, category);
+      this.data = storage.getData();
+      this.renderPipeline();
+      this.renderStats();
+    }, 150);
+    
+    this.showToast('Deal removed', 'success');
   }
 
   /**
@@ -1700,6 +1709,9 @@ class GlossiDashboard {
     // Get current week range
     const weekRange = this.getWeekRange(new Date());
 
+    // Get meeting data
+    const meeting = meetingsManager.getCurrentMeeting();
+
     // Get featured quotes
     const featuredQuotes = storage.getFeaturedQuotes ? storage.getFeaturedQuotes() : [];
 
@@ -1711,7 +1723,7 @@ class GlossiDashboard {
       .sort((a, b) => (stagePriority[b.stage] || 0) - (stagePriority[a.stage] || 0))
       .slice(0, 5);
 
-    // Build email body - clean scannable format
+    // Build email body
     let body = '';
 
     // Header
@@ -1723,6 +1735,38 @@ class GlossiDashboard {
       body += `${greeting}\n\n`;
     }
 
+    // MEETING RECAP (if summary exists)
+    if (meeting?.summary && meeting.summary.length > 0) {
+      body += 'MEETING RECAP\n';
+      body += '------------\n';
+      meeting.summary.forEach(item => {
+        body += `- ${item}\n`;
+      });
+      body += '\n';
+    }
+
+    // ACTION ITEMS (if todos exist)
+    if (meeting?.todos && meeting.todos.length > 0) {
+      body += 'ACTION ITEMS\n';
+      body += '------------\n';
+      const todosByOwner = {};
+      meeting.todos.forEach(todo => {
+        const owner = this.resolveOwnerName(todo.owner);
+        if (!todosByOwner[owner]) todosByOwner[owner] = [];
+        todosByOwner[owner].push(todo);
+      });
+      Object.entries(todosByOwner).forEach(([owner, todos]) => {
+        body += `${owner}:\n`;
+        todos.forEach(todo => {
+          const checkbox = todo.completed ? '[x]' : '[ ]';
+          body += `  ${checkbox} ${todo.text}\n`;
+        });
+      });
+      body += '\n';
+    }
+
+    body += '--- CHEAT SHEET ---\n\n';
+
     // Quick Stats (one line)
     const statsLine = stats
       .filter(s => s.value && s.value !== '0' && s.value !== '$0')
@@ -1732,23 +1776,25 @@ class GlossiDashboard {
       body += `${statsLine}\n\n`;
     }
 
-    // Featured Customer Quote (if any)
-    if (featuredQuotes.length > 0) {
-      const quote = featuredQuotes[0];
-      body += `"${quote.quote}"\n`;
-      body += `  - ${quote.source}\n\n`;
+    // Pipeline Snapshot
+    if (topDeals.length > 0) {
+      const pipelineTotal = data.pipeline?.totalValue || '$0';
+      body += `PIPELINE: ${pipelineTotal}\n`;
+      topDeals.slice(0, 4).forEach(deal => {
+        const value = deal.value || '';
+        body += `- ${deal.name} (${deal.stage})${value ? ' - ' + value : ''}\n`;
+      });
+      body += '\n';
     }
 
-    // Key Updates (talking points - max 4, short format)
+    // Key Talking Points
     if (talkingPoints.length > 0) {
-      body += 'KEY UPDATES\n';
-      body += '------------\n';
-      talkingPoints.slice(0, 4).forEach(point => {
+      body += 'KEY TALKING POINTS\n';
+      talkingPoints.slice(0, 5).forEach(point => {
         body += `> ${point.title}\n`;
         if (point.content) {
-          // Truncate content to ~80 chars for scannability
-          const short = point.content.length > 80 
-            ? point.content.substring(0, 77) + '...'
+          const short = point.content.length > 100 
+            ? point.content.substring(0, 97) + '...'
             : point.content;
           body += `  ${short}\n`;
         }
@@ -1756,25 +1802,14 @@ class GlossiDashboard {
       });
     }
 
-    // Pipeline Snapshot (if deals exist)
-    if (topDeals.length > 0) {
-      const pipelineTotal = data.pipeline?.totalValue || '$0';
-      body += `PIPELINE: ${pipelineTotal}\n`;
-      body += '------------\n';
-      topDeals.slice(0, 3).forEach(deal => {
-        const value = deal.value || '';
-        body += `- ${deal.name} (${deal.stage})${value ? ' - ' + value : ''}\n`;
-      });
-      body += '\n';
-    }
-
-    // Additional featured quotes
-    if (featuredQuotes.length > 1) {
-      body += 'WHAT CUSTOMERS SAY\n';
-      body += '------------\n';
-      featuredQuotes.slice(1, 3).forEach(quote => {
-        body += `"${quote.quote.substring(0, 100)}${quote.quote.length > 100 ? '...' : ''}"\n`;
-        body += `  - ${quote.source}\n\n`;
+    // Customer Quotes
+    if (featuredQuotes.length > 0) {
+      body += 'CUSTOMER QUOTES\n';
+      featuredQuotes.slice(0, 3).forEach(quote => {
+        const shortQuote = quote.quote.length > 80 
+          ? quote.quote.substring(0, 77) + '...'
+          : quote.quote;
+        body += `"${shortQuote}"\n  - ${quote.source}\n\n`;
       });
     }
 
@@ -1782,7 +1817,7 @@ class GlossiDashboard {
     body += '================================\n';
     body += `${signature}\n\n`;
     
-    // Links - clean format
+    // Links
     const quickLinks = storage.getQuickLinks();
     const enabledLinks = quickLinks.filter(link => link.emailEnabled !== false);
     
@@ -2336,128 +2371,6 @@ class GlossiDashboard {
   }
 
   /**
-   * Smart curate talking points to keep cheat sheet lean
-   * Uses Claude to pick the 8 most impactful items for investor excitement
-   */
-  async curateCheatSheet() {
-    const points = this.data.talkingPoints || [];
-    
-    if (points.length <= 8) {
-      this.showToast('Already at 8 or fewer talking points', 'info');
-      return;
-    }
-    
-    if (!this.settings?.apiKey) {
-      this.showToast('Set Anthropic API key in settings', 'error');
-      return;
-    }
-    
-    // Show loading state
-    const btn = document.getElementById('curate-talking-points-btn');
-    const originalText = btn.innerHTML;
-    btn.classList.add('curating');
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg> Curating...`;
-    
-    try {
-      const categoryLabels = {
-        core: 'Core Value Prop',
-        traction: 'Traction & Proof',
-        market: 'Market & Timing',
-        testimonials: 'Customer Validation'
-      };
-      
-      const pointsForPrompt = points.map((p, i) => 
-        `${i + 1}. [${categoryLabels[p.category] || 'Core'}] "${p.title}": "${p.content}"`
-      ).join('\n');
-      
-      const prompt = `You are curating a weekly investor cheat sheet for a SaaS startup. The goal is to keep it SHORT and IMPACTFUL - max 8 talking points total.
-
-CURRENT TALKING POINTS (${points.length} items):
-${pointsForPrompt}
-
-YOUR TASK:
-Pick the BEST 8 talking points that will drive the most investor excitement. Consider:
-1. TRACTION/NUMBERS - concrete metrics always win (pipeline $, speed improvements, customer counts)
-2. CUSTOMER VALIDATION - real quotes from real people carry weight
-3. UNIQUE DIFFERENTIATION - what makes this different from competitors
-4. TIMELINESS - recent wins and momentum
-
-DISTRIBUTION:
-- Core Value Prop: 2-3 items (what makes us special)
-- Traction & Proof: 2-3 items (numbers and wins)
-- Customer Validation: 2-3 items (best quotes)
-- Market & Timing: 1 item (why now)
-
-You may MERGE similar points into stronger combined statements.
-You should CUT generic or redundant statements.
-
-Respond with JSON:
-{
-  "curatedPoints": [
-    { "title": "Short punchy title", "content": "1-2 sentences max", "category": "core|traction|market|testimonials" }
-  ],
-  "removed": ["Brief reason for each cut"],
-  "merged": ["Brief note on any merges"]
-}`;
-
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.settings.apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 2000,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'Curation failed');
-      }
-      
-      const result = await response.json();
-      const text = result.content[0].text;
-      
-      // Parse JSON from response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('Invalid response format');
-      
-      const data = JSON.parse(jsonMatch[0]);
-      
-      if (!data.curatedPoints || data.curatedPoints.length === 0) {
-        throw new Error('No curated points returned');
-      }
-      
-      // Replace talking points with curated selection
-      storage.updateSection('talkingPoints', data.curatedPoints);
-      this.data = storage.getData();
-      this.renderTalkingPoints();
-      
-      const removed = points.length - data.curatedPoints.length;
-      this.showToast(`Curated: ${points.length} → ${data.curatedPoints.length} talking points`, 'success');
-      
-      console.log('Curation results:', {
-        before: points.length,
-        after: data.curatedPoints.length,
-        removed: data.removed,
-        merged: data.merged
-      });
-      
-    } catch (error) {
-      console.error('Curation error:', error);
-      this.showToast('Curation failed: ' + error.message, 'error');
-    } finally {
-      btn.classList.remove('curating');
-      btn.innerHTML = originalText;
-    }
-  }
-
-  /**
    * Add a new summary item
    */
   addNewSummaryItem() {
@@ -2790,108 +2703,126 @@ Respond with JSON:
   }
 
   /**
-   * Analyze content with AI (including vision for images) and show destination options
+   * Analyze content comprehensively and show preview modal
    */
   async analyzeAndShowOptions() {
     if (!this.pendingDroppedContent) return;
     
     const content = this.pendingDroppedContent;
     
-    // Show loading toast instead of modal
-    this.showToast('Analyzing...', 'info');
+    // Show loading modal
+    this.showModal('content-action-modal');
+    document.getElementById('unified-modal-title').textContent = 'Analyzing...';
+    document.getElementById('content-analysis-result').innerHTML = `
+      <div class="unified-loading">
+        <div class="spinner"></div>
+        <p>Opus is analyzing your content...</p>
+      </div>
+    `;
+    document.getElementById('unified-preview-sections').innerHTML = '';
+    document.getElementById('unified-preview-footer').style.display = 'none';
 
     try {
-      console.log('Starting content analysis...');
+      // Get current site context for consistency checking
+      const siteContext = this.buildSiteContext();
       
-      // Analyze content with context of existing talking points
-      const analysis = await this.analyzeForThoughts(
+      // Comprehensive AI extraction
+      const extraction = await this.extractContentComprehensively(
         content.content,
         content.type,
-        content.fileName
+        content.fileName,
+        siteContext
       );
       
-      console.log('Analysis complete:', analysis);
+      console.log('Extraction complete:', extraction);
       
-      // Handle testimonials specially - extract quotes
-      if (analysis.isTestimonials) {
-        await this.saveQuotesToLibrary(analysis.quotes, content.fileName);
-        this.showToast(`Added ${analysis.quotes.length} quotes to library`, 'success');
-        this.pendingDroppedContent = null;
-        return;
-      }
+      // Store for applying later
+      this.pendingExtraction = extraction;
       
-      // Save to Thoughts with promotion suggestion
-      await this.saveToThoughtsWithSuggestion(analysis, content);
-      
-      this.data = storage.getData();
-      this.renderThoughts();
-      
-      // Show result toast with suggestion
-      if (analysis.promotionSuggestion?.shouldPromote) {
-        this.showToast(`Saved to Thoughts - "${analysis.promotionSuggestion.reason}"`, 'success');
-      } else {
-        this.showToast('Saved to Thoughts', 'success');
-      }
-      
-      this.pendingDroppedContent = null;
+      // Show preview modal
+      this.showExtractionPreview(extraction, content.fileName);
       
     } catch (error) {
       console.error('Analysis error:', error);
+      this.hideModal('content-action-modal');
       this.showToast('Failed to analyze: ' + error.message, 'error');
       this.pendingDroppedContent = null;
     }
   }
 
   /**
-   * Analyze content for Thoughts with promotion suggestion
+   * Build context of current site data for AI
    */
-  async analyzeForThoughts(contentData, contentType, fileName) {
+  buildSiteContext() {
+    const talkingPoints = this.data?.talkingPoints || [];
+    const quotes = storage.getQuotes() || [];
+    const pipeline = storage.getAllPipelineClients() || [];
+    const stats = this.data?.stats || [];
+    
+    return {
+      talkingPoints: talkingPoints.map(tp => ({
+        title: tp.title,
+        content: tp.content,
+        category: tp.category
+      })),
+      quotes: quotes.map(q => ({ quote: q.quote, source: q.source })),
+      pipeline: pipeline.map(p => ({ name: p.name, value: p.value, stage: p.stage })),
+      stats: stats.map(s => ({ id: s.id, value: s.value, label: s.label })),
+      pipelineTotal: this.data?.pipeline?.totalValue || '$0'
+    };
+  }
+
+  /**
+   * Comprehensive AI extraction
+   */
+  async extractContentComprehensively(contentData, contentType, fileName, siteContext) {
     const textContent = contentData?.text || '';
     const isImage = contentType === 'image';
     
-    // Detect testimonial files - only by explicit filename, not embedded quotes
-    // An investor update with a few quotes should NOT trigger testimonials extraction
-    const fileNameLower = fileName?.toLowerCase() || '';
-    const isTestimonialFile = 
-      fileNameLower.includes('testimonial') ||
-      (fileNameLower.includes('quote') && !fileNameLower.includes('update'));
-    
-    if (isTestimonialFile && !isImage) {
-      return await this.extractTestimonials(textContent, fileName);
-    }
-    
-    // Get existing talking points for context
-    const existingTalkingPoints = this.data?.talkingPoints || [];
-    const talkingPointsContext = existingTalkingPoints.length > 0
-      ? existingTalkingPoints.map(tp => `- [${tp.category}] "${tp.title}": ${tp.content.substring(0, 100)}`).join('\n')
-      : 'No talking points yet.';
-    
-    const prompt = `Analyze this content for an investor cheat sheet clipboard.
+    const prompt = `You are analyzing content for an investor cheat sheet dashboard. Extract ALL relevant information.
 
-EXISTING TALKING POINTS (${existingTalkingPoints.length}/8 max):
-${talkingPointsContext}
+CURRENT SITE DATA (check for inconsistencies):
+Pipeline Total: ${siteContext.pipelineTotal}
+Stats: ${siteContext.stats.map(s => `${s.label}: ${s.value}`).join(', ')}
+Talking Points (${siteContext.talkingPoints.length}): ${siteContext.talkingPoints.map(tp => `"${tp.title}"`).join(', ') || 'None'}
+Pipeline Deals: ${siteContext.pipeline.map(p => `${p.name} (${p.stage}) ${p.value}`).join(', ') || 'None'}
 
 CONTENT TO ANALYZE:
-${isImage ? '[Image - extract visible text/information]' : textContent.substring(0, 8000)}
+${isImage ? '[Image - extract all visible text and data]' : textContent.substring(0, 12000)}
 
-Respond with JSON:
+Extract and return JSON:
 {
-  "title": "Short punchy title (5-8 words)",
-  "summary": "1-2 sentence summary in casual, investor-friendly language",
-  "keyPoints": ["Key point 1", "Key point 2"],
-  "promotionSuggestion": {
-    "shouldPromote": true/false,
-    "reason": "Why this should/shouldn't become a talking point",
-    "suggestedCategory": "core|traction|market|testimonials",
-    "wouldStrengthen": "Which existing point it complements or could replace, or null"
-  }
+  "summary": "1-2 sentence summary of what this content contains",
+  
+  "pipelineDeals": [
+    { "name": "Company Name", "value": "$50K", "stage": "discovery|demo|validation|pilot|closed", "isNew": true/false }
+  ],
+  
+  "talkingPoints": [
+    { "title": "Short punchy title", "content": "1-2 sentences, casual investor-friendly", "category": "core|traction|market|testimonials" }
+  ],
+  
+  "quotes": [
+    { "quote": "The exact quote", "source": "Person Name, Title/Company", "context": "Brief context" }
+  ],
+  
+  "thoughts": [
+    { "title": "Reference title", "content": "Info worth saving for later reference" }
+  ],
+  
+  "inconsistencies": [
+    { "field": "pipeline|stat|talkingPoint", "current": "Current value on site", "new": "New value in content", "suggestion": "What to update" }
+  ]
 }
 
 RULES:
-- Title should be memorable and specific
-- Summary in casual language (no jargon)
-- shouldPromote = true only for strong investor-ready content
-- Consider: Does this add NEW value to existing talking points?`;
+1. Pipeline: Extract company names, deal values, and stages. Flag if different from current data.
+2. Talking Points: Only strong investor-ready statements. Keep short and punchy.
+3. Quotes: Exact quotes from customers, partners, VCs. Include attribution.
+4. Thoughts: Supporting info, context, research - not investor-facing but worth saving.
+5. Inconsistencies: Flag ANY number differences (e.g., "$1.2M" vs "$1.5M" pipeline).
+6. Use casual, glanceable language - no jargon. This is for board members.
+7. If empty for a category, use empty array [].`;
 
     let messages;
     
@@ -2920,7 +2851,7 @@ RULES:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
+        max_tokens: 4000,
         messages
       })
     });
@@ -2940,56 +2871,263 @@ RULES:
   }
 
   /**
-   * Save content to Thoughts with AI promotion suggestion
+   * Show extraction preview modal
    */
-  async saveToThoughtsWithSuggestion(analysis, droppedContent) {
-    const content = droppedContent.content;
-    const isImage = droppedContent.type === 'image';
+  showExtractionPreview(extraction, fileName) {
+    document.getElementById('unified-modal-title').textContent = fileName || 'Content Extraction';
+    document.getElementById('content-analysis-result').innerHTML = `
+      <div class="extraction-summary">${this.escapeHtml(extraction.summary || 'Content analyzed')}</div>
+    `;
     
-    // Compress source
-    const compressedText = this.compressText(content?.text);
-    let compressedImage = null;
+    const sectionsEl = document.getElementById('unified-preview-sections');
+    let html = '';
     
-    if (isImage && content?.dataUrl) {
-      compressedImage = await this.compressImage(content.dataUrl);
+    // Inconsistencies (show first if any)
+    if (extraction.inconsistencies?.length > 0) {
+      html += `<div class="extraction-section inconsistencies">
+        <div class="extraction-section-header">
+          <span class="section-icon">⚠️</span>
+          <span class="section-title">Inconsistencies Found</span>
+          <span class="section-count">${extraction.inconsistencies.length}</span>
+        </div>
+        <div class="extraction-items">
+          ${extraction.inconsistencies.map((inc, i) => `
+            <label class="extraction-item inconsistency" data-type="inconsistency" data-index="${i}">
+              <input type="checkbox" checked>
+              <div class="item-content">
+                <div class="item-main">${this.escapeHtml(inc.field)}: ${this.escapeHtml(inc.current)} → ${this.escapeHtml(inc.new)}</div>
+                <div class="item-meta">${this.escapeHtml(inc.suggestion)}</div>
+              </div>
+            </label>
+          `).join('')}
+        </div>
+      </div>`;
     }
     
-    // Build thought content
-    const thoughtContent = `TITLE: ${analysis.title}\nSUMMARY: ${analysis.summary}${
-      analysis.keyPoints?.length > 0 
-        ? '\nKEY POINTS:\n' + analysis.keyPoints.map(p => `- ${p}`).join('\n')
-        : ''
-    }`;
+    // Pipeline Deals
+    if (extraction.pipelineDeals?.length > 0) {
+      html += `<div class="extraction-section pipeline">
+        <div class="extraction-section-header">
+          <span class="section-title">Pipeline Deals</span>
+          <span class="section-count">${extraction.pipelineDeals.length}</span>
+        </div>
+        <div class="extraction-items">
+          ${extraction.pipelineDeals.map((deal, i) => `
+            <label class="extraction-item" data-type="pipeline" data-index="${i}">
+              <input type="checkbox" checked>
+              <div class="item-content">
+                <div class="item-main">${this.escapeHtml(deal.name)} - ${this.escapeHtml(deal.value || 'TBD')}</div>
+                <div class="item-meta">${deal.stage}${deal.isNew ? ' (new)' : ''}</div>
+              </div>
+              <select class="item-category" data-field="stage">
+                <option value="discovery" ${deal.stage === 'discovery' ? 'selected' : ''}>Discovery</option>
+                <option value="demo" ${deal.stage === 'demo' ? 'selected' : ''}>Demo</option>
+                <option value="validation" ${deal.stage === 'validation' ? 'selected' : ''}>Validation</option>
+                <option value="pilot" ${deal.stage === 'pilot' ? 'selected' : ''}>Pilot</option>
+                <option value="closed" ${deal.stage === 'closed' ? 'selected' : ''}>Closed</option>
+              </select>
+            </label>
+          `).join('')}
+        </div>
+      </div>`;
+    }
     
-    storage.addThought({
-      type: droppedContent.type || 'text',
-      content: thoughtContent,
-      fileName: droppedContent.fileName,
-      preview: compressedImage,
-      promotionSuggestion: analysis.promotionSuggestion,
-      originalSource: {
-        text: compressedText.text,
-        dataUrl: compressedImage,
-        fileName: droppedContent.fileName,
-        type: droppedContent.type,
-        truncated: compressedText.truncated
-      }
-    });
+    // Talking Points
+    if (extraction.talkingPoints?.length > 0) {
+      html += `<div class="extraction-section talking-points">
+        <div class="extraction-section-header">
+          <span class="section-title">Talking Points</span>
+          <span class="section-count">${extraction.talkingPoints.length}</span>
+        </div>
+        <div class="extraction-items">
+          ${extraction.talkingPoints.map((tp, i) => `
+            <label class="extraction-item" data-type="talkingPoint" data-index="${i}">
+              <input type="checkbox" checked>
+              <div class="item-content">
+                <div class="item-main">${this.escapeHtml(tp.title)}</div>
+                <div class="item-meta">${this.escapeHtml(tp.content?.substring(0, 80))}...</div>
+              </div>
+              <select class="item-category" data-field="category">
+                <option value="core" ${tp.category === 'core' ? 'selected' : ''}>Core</option>
+                <option value="traction" ${tp.category === 'traction' ? 'selected' : ''}>Traction</option>
+                <option value="market" ${tp.category === 'market' ? 'selected' : ''}>Market</option>
+                <option value="testimonials" ${tp.category === 'testimonials' ? 'selected' : ''}>Testimonials</option>
+              </select>
+            </label>
+          `).join('')}
+        </div>
+      </div>`;
+    }
+    
+    // Quotes
+    if (extraction.quotes?.length > 0) {
+      html += `<div class="extraction-section quotes">
+        <div class="extraction-section-header">
+          <span class="section-title">Quotes</span>
+          <span class="section-count">${extraction.quotes.length}</span>
+        </div>
+        <div class="extraction-items">
+          ${extraction.quotes.map((q, i) => `
+            <label class="extraction-item" data-type="quote" data-index="${i}">
+              <input type="checkbox" checked>
+              <div class="item-content">
+                <div class="item-main">"${this.escapeHtml(q.quote?.substring(0, 60))}..."</div>
+                <div class="item-meta">- ${this.escapeHtml(q.source)}</div>
+              </div>
+            </label>
+          `).join('')}
+        </div>
+      </div>`;
+    }
+    
+    // Thoughts
+    if (extraction.thoughts?.length > 0) {
+      html += `<div class="extraction-section thoughts">
+        <div class="extraction-section-header">
+          <span class="section-title">Reference Notes</span>
+          <span class="section-count">${extraction.thoughts.length}</span>
+        </div>
+        <div class="extraction-items">
+          ${extraction.thoughts.map((t, i) => `
+            <label class="extraction-item" data-type="thought" data-index="${i}">
+              <input type="checkbox" checked>
+              <div class="item-content">
+                <div class="item-main">${this.escapeHtml(t.title)}</div>
+                <div class="item-meta">${this.escapeHtml(t.content?.substring(0, 60))}...</div>
+              </div>
+            </label>
+          `).join('')}
+        </div>
+      </div>`;
+    }
+    
+    // Empty state
+    if (!html) {
+      html = '<div class="extraction-empty">No extractable content found.</div>';
+    }
+    
+    sectionsEl.innerHTML = html;
+    sectionsEl.style.display = 'block';
+    
+    // Show footer
+    const footerEl = document.getElementById('unified-preview-footer');
+    footerEl.innerHTML = `
+      <button class="btn-secondary" onclick="window.dashboard.cancelExtraction()">Cancel</button>
+      <button class="btn-primary" onclick="window.dashboard.applyExtraction()">Apply Selected</button>
+    `;
+    footerEl.style.display = 'flex';
   }
 
   /**
-   * Save quotes to library
+   * Cancel extraction
    */
-  async saveQuotesToLibrary(quotes, fileName) {
-    for (const quote of quotes) {
-      storage.addQuote({
-        quote: quote.quote,
-        source: quote.source,
-        context: quote.context || ''
-      });
-    }
+  cancelExtraction() {
+    this.hideModal('content-action-modal');
+    this.pendingDroppedContent = null;
+    this.pendingExtraction = null;
+  }
+
+  /**
+   * Apply selected extractions
+   */
+  async applyExtraction() {
+    if (!this.pendingExtraction) return;
+    
+    const extraction = this.pendingExtraction;
+    const content = this.pendingDroppedContent;
+    
+    // Compress source for linking
+    const compressedSource = {
+      fileName: content?.fileName,
+      type: content?.type,
+      text: content?.content?.text ? this.compressText(content.content.text).text : null,
+      dataUrl: content?.type === 'image' ? await this.compressImage(content.content.dataUrl) : null,
+      addedAt: new Date().toISOString()
+    };
+    
+    let addedCounts = { pipeline: 0, talkingPoints: 0, quotes: 0, thoughts: 0, fixes: 0 };
+    
+    // Get all checked items
+    const checkedItems = document.querySelectorAll('#unified-preview-sections .extraction-item input:checked');
+    
+    checkedItems.forEach(checkbox => {
+      const item = checkbox.closest('.extraction-item');
+      const type = item.dataset.type;
+      const index = parseInt(item.dataset.index);
+      
+      if (type === 'inconsistency') {
+        const inc = extraction.inconsistencies[index];
+        this.applyInconsistencyFix(inc);
+        addedCounts.fixes++;
+      }
+      else if (type === 'pipeline') {
+        const deal = extraction.pipelineDeals[index];
+        const stage = item.querySelector('select')?.value || deal.stage;
+        storage.addPipelineDeal({ ...deal, stage, sourceFile: compressedSource });
+        addedCounts.pipeline++;
+      }
+      else if (type === 'talkingPoint') {
+        const tp = extraction.talkingPoints[index];
+        const category = item.querySelector('select')?.value || tp.category;
+        storage.addTalkingPoint(tp.title, tp.content, category);
+        addedCounts.talkingPoints++;
+      }
+      else if (type === 'quote') {
+        const quote = extraction.quotes[index];
+        storage.addQuote({ ...quote, sourceFile: compressedSource });
+        addedCounts.quotes++;
+      }
+      else if (type === 'thought') {
+        const thought = extraction.thoughts[index];
+        storage.addThought({
+          content: `TITLE: ${thought.title}\n${thought.content}`,
+          fileName: content?.fileName,
+          originalSource: compressedSource
+        });
+        addedCounts.thoughts++;
+      }
+    });
+    
+    // Refresh UI
     this.data = storage.getData();
-    this.renderQuotes();
+    this.render();
+    
+    // Build summary message
+    const parts = [];
+    if (addedCounts.pipeline) parts.push(`${addedCounts.pipeline} deals`);
+    if (addedCounts.talkingPoints) parts.push(`${addedCounts.talkingPoints} talking points`);
+    if (addedCounts.quotes) parts.push(`${addedCounts.quotes} quotes`);
+    if (addedCounts.thoughts) parts.push(`${addedCounts.thoughts} notes`);
+    if (addedCounts.fixes) parts.push(`${addedCounts.fixes} fixes`);
+    
+    this.hideModal('content-action-modal');
+    this.showToast(`Added: ${parts.join(', ')}`, 'success');
+    
+    this.pendingDroppedContent = null;
+    this.pendingExtraction = null;
+  }
+
+  /**
+   * Apply an inconsistency fix
+   */
+  applyInconsistencyFix(inc) {
+    if (inc.field === 'pipeline' || inc.field === 'pipelineTotal') {
+      this.data.pipeline.totalValue = inc.new;
+      const stat = this.data.stats.find(s => s.id === 'pipeline');
+      if (stat) stat.value = inc.new;
+    } else if (inc.field === 'stat') {
+      const stat = this.data.stats.find(s => s.id === inc.statId || s.label.toLowerCase().includes(inc.field.toLowerCase()));
+      if (stat) stat.value = inc.new;
+    }
+    // Update talking points that mention old value
+    this.data.talkingPoints?.forEach(tp => {
+      if (tp.content?.includes(inc.current)) {
+        tp.content = tp.content.replace(inc.current, inc.new);
+      }
+    });
+    storage.updateSection('pipeline', this.data.pipeline);
+    storage.updateSection('stats', this.data.stats);
+    storage.updateSection('talkingPoints', this.data.talkingPoints);
   }
 
   /**

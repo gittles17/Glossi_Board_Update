@@ -1308,6 +1308,37 @@ body::after {
   margin-left: var(--space-3);
 }
 
+.pipeline-item .pipeline-info {
+  display: flex;
+  align-items: center;
+}
+
+.pipeline-item .pipeline-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.pipeline-delete-btn {
+  opacity: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.pipeline-item:hover .pipeline-delete-btn {
+  opacity: 1;
+}
+
+.pipeline-delete-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
 /* ============================================
    TALKING POINTS EXPANDED
    ============================================ */
@@ -5401,4 +5432,124 @@ body::after {
 .unified-loading p {
   color: var(--text-secondary);
   font-size: 14px;
+}
+
+/* ============================================
+   EXTRACTION PREVIEW STYLES
+   ============================================ */
+.extraction-summary {
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: var(--space-4);
+}
+
+.extraction-section {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.extraction-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.extraction-section-header .section-icon {
+  font-size: 14px;
+}
+
+.extraction-section-header .section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.extraction-section-header .section-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.extraction-items {
+  padding: var(--space-2);
+}
+
+.extraction-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.extraction-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.extraction-item input[type="checkbox"] {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.extraction-item .item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.extraction-item .item-main {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.extraction-item .item-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.extraction-item .item-category {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.extraction-item .item-category:hover {
+  border-color: var(--accent-green);
+}
+
+/* Inconsistency styling */
+.extraction-section.inconsistencies {
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.extraction-section.inconsistencies .extraction-section-header {
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.extraction-item.inconsistency .item-main {
+  color: #fbbf24;
+}
+
+.extraction-empty {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--text-muted);
 }

@@ -758,6 +758,106 @@ class Storage {
   }
 
   /**
+   * Add a pipeline deal
+   */
+  addPipelineDeal(deal) {
+    const category = deal.category || 'inProgress';
+    if (!this.data.pipeline[category]) {
+      this.data.pipeline[category] = [];
+    }
+    
+    const newDeal = {
+      name: deal.name,
+      value: deal.value || '',
+      stage: deal.stage || 'discovery',
+      timing: deal.timing || '',
+      note: deal.note || '',
+      sourceFile: deal.sourceFile || null
+    };
+    
+    // Check if deal already exists
+    const existing = this.data.pipeline[category].findIndex(d => d.name === deal.name);
+    if (existing >= 0) {
+      // Update existing
+      this.data.pipeline[category][existing] = { ...this.data.pipeline[category][existing], ...newDeal };
+    } else {
+      this.data.pipeline[category].push(newDeal);
+    }
+    
+    // Update total pipeline value
+    this.recalculatePipelineTotal();
+    
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return newDeal;
+  }
+
+  /**
+   * Delete a pipeline deal
+   */
+  deletePipelineDeal(name, category) {
+    if (!category) {
+      // Find which category it's in
+      for (const cat of ['closestToClose', 'inProgress', 'partnerships', 'closed']) {
+        if (this.data.pipeline[cat]) {
+          const idx = this.data.pipeline[cat].findIndex(d => d.name === name);
+          if (idx >= 0) {
+            category = cat;
+            break;
+          }
+        }
+      }
+    }
+    
+    if (category && this.data.pipeline[category]) {
+      const idx = this.data.pipeline[category].findIndex(d => d.name === name);
+      if (idx >= 0) {
+        this.data.pipeline[category].splice(idx, 1);
+        this.recalculatePipelineTotal();
+        this.data.lastUpdated = new Date().toISOString();
+        this.scheduleSave();
+      }
+    }
+    return this.data;
+  }
+
+  /**
+   * Recalculate pipeline total value
+   */
+  recalculatePipelineTotal() {
+    const clients = this.getAllPipelineClients();
+    let total = 0;
+    
+    clients.forEach(c => {
+      if (c.value) {
+        // Parse value like "$50K", "$1.2M", "$100K+"
+        const match = c.value.match(/\$?([\d.]+)\s*(K|M)?/i);
+        if (match) {
+          let num = parseFloat(match[1]);
+          if (match[2]?.toUpperCase() === 'M') num *= 1000000;
+          else if (match[2]?.toUpperCase() === 'K') num *= 1000;
+          total += num;
+        }
+      }
+    });
+    
+    // Format total
+    if (total >= 1000000) {
+      this.data.pipeline.totalValue = `$${(total / 1000000).toFixed(1)}M+`;
+    } else if (total >= 1000) {
+      this.data.pipeline.totalValue = `$${Math.round(total / 1000)}K+`;
+    } else {
+      this.data.pipeline.totalValue = `$${total}`;
+    }
+    
+    // Also update stats
+    const pipelineStat = this.data.stats.find(s => s.id === 'pipeline');
+    if (pipelineStat) {
+      pipelineStat.value = this.data.pipeline.totalValue;
+    }
+  }
+
+  /**
    * Get closed deals statistics
    */
   getClosedDealsStats() {
