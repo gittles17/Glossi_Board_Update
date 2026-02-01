@@ -129,7 +129,6 @@ class GlossiDashboard {
     // Menu drop zone - file selected
     menuFileInput.addEventListener('change', (e) => {
       if (e.target.files.length > 0) {
-        dropdown.classList.remove('open');
         this.processDroppedFile(e.target.files[0]);
         menuFileInput.value = '';
       }
@@ -152,34 +151,11 @@ class GlossiDashboard {
       e.preventDefault();
       e.stopPropagation();
       menuDropZone.classList.remove('drag-over');
-      dropdown.classList.remove('open');
 
       const files = e.dataTransfer.files;
       if (files.length > 0) {
         this.processDroppedFile(files[0]);
       }
-    });
-
-    // Paste text submission
-    const pasteInput = document.getElementById('menu-paste-input');
-
-    // Submit on Enter
-    pasteInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const text = pasteInput.value.trim();
-        if (text) {
-          dropdown.classList.remove('open');
-          this.handleDroppedContent({ content: { text }, type: 'text', fileName: 'Pasted text' });
-          pasteInput.value = '';
-        }
-      }
-      e.stopPropagation();
-    });
-
-    // Prevent menu close when clicking in input
-    pasteInput.addEventListener('click', (e) => {
-      e.stopPropagation();
     });
 
     // Menu items
