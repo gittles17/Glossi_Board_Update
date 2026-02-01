@@ -3010,7 +3010,13 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
     const items = this.pendingGroupedItems;
     const source = this.pendingGroupedSource;
     
-    // Create thought with sub-items and original source
+    // Compress source content for storage
+    const compressedText = this.compressText(source.content?.text);
+    const compressedImage = source.type === 'image' 
+      ? await this.compressImage(source.content?.dataUrl)
+      : null;
+    
+    // Create thought with sub-items and compressed original source
     const thought = {
       type: source.type || 'document',
       fileName: source.fileName,
@@ -3024,13 +3030,14 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
       })),
       content: `TITLE: ${source.fileName || 'Document'}\nSUMMARY: ${items.length} quotes/insights extracted`,
       suggestedCategory: 'testimonials',
-      preview: source.type === 'image' ? source.content?.dataUrl : null,
-      // Save original source for reference
+      preview: compressedImage,
+      // Save compressed original source for reference
       originalSource: {
-        text: source.content?.text || null,
-        dataUrl: source.content?.dataUrl || null,
+        text: compressedText.text,
+        dataUrl: compressedImage,
         fileName: source.fileName,
-        type: source.type
+        type: source.type,
+        truncated: compressedText.truncated
       }
     };
     
@@ -3270,18 +3277,26 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
     if (!this.pendingAnalysis) return;
     
     const content = this.pendingDroppedContent;
+    
+    // Compress source content for storage
+    const compressedText = this.compressText(content?.content?.text);
+    const compressedImage = content?.type === 'image' 
+      ? await this.compressImage(content.content.dataUrl)
+      : null;
+    
     const thought = {
       type: content?.type || 'text',
       content: this.pendingAnalysis,
-      preview: content?.type === 'image' ? content.content.dataUrl : null,
+      preview: compressedImage,
       fileName: content?.fileName,
       suggestedCategory: null,
-      // Save original source for reference
+      // Save compressed original source for reference
       originalSource: {
-        text: content?.content?.text || null,
-        dataUrl: content?.content?.dataUrl || null,
+        text: compressedText.text,
+        dataUrl: compressedImage,
         fileName: content?.fileName,
-        type: content?.type
+        type: content?.type,
+        truncated: compressedText.truncated
       }
     };
     
@@ -3903,6 +3918,58 @@ Respond with just the category name (core, traction, market, or testimonials) an
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  /**
+   * Compress text content (truncate if too long)
+   * @param {string} text - Original text
+   * @param {number} maxLength - Max characters (default 20KB)
+   * @returns {object} - { text, truncated }
+   */
+  compressText(text, maxLength = 20000) {
+    if (!text) return { text: null, truncated: false };
+    if (text.length <= maxLength) return { text, truncated: false };
+    return {
+      text: text.substring(0, maxLength) + '\n\n[... truncated for storage ...]',
+      truncated: true
+    };
+  }
+
+  /**
+   * Compress image to smaller size
+   * @param {string} dataUrl - Original image dataUrl
+   * @param {number} maxWidth - Max width (default 800px)
+   * @param {number} quality - JPEG quality 0-1 (default 0.6)
+   * @returns {Promise<string>} - Compressed dataUrl
+   */
+  async compressImage(dataUrl, maxWidth = 800, quality = 0.6) {
+    if (!dataUrl) return null;
+    
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        // Calculate new dimensions
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        
+        // Create canvas and compress
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert to JPEG for smaller size
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(dataUrl); // Fallback to original
+      img.src = dataUrl;
+    });
   }
 
   /**
