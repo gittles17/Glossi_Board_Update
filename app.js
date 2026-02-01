@@ -2807,7 +2807,7 @@ Extract and return JSON:
   ],
   
   "thoughts": [
-    { "title": "Reference title", "content": "Info worth saving for later reference" }
+    { "title": "Note title", "content": "Info worth saving but not investor-facing" }
   ],
   
   "inconsistencies": [
@@ -2819,7 +2819,7 @@ RULES:
 1. Pipeline: Extract company names, deal values, and stages. Flag if different from current data.
 2. Talking Points: Only strong investor-ready statements. Keep short and punchy.
 3. Quotes: Exact quotes from customers, partners, VCs. Include attribution.
-4. Thoughts: Supporting info, context, research - not investor-facing but worth saving.
+4. Notes: Supporting info, context, research - not investor-facing but worth saving.
 5. Inconsistencies: Flag ANY number differences (e.g., "$1.2M" vs "$1.5M" pipeline).
 6. Use casual, glanceable language - no jargon. This is for board members.
 7. If empty for a category, use empty array [].`;
@@ -2984,7 +2984,7 @@ RULES:
     if (extraction.thoughts?.length > 0) {
       html += `<div class="extraction-section thoughts">
         <div class="extraction-section-header">
-          <span class="section-title">Reference Notes</span>
+          <span class="section-title">Notes</span>
           <span class="section-count">${extraction.thoughts.length}</span>
         </div>
         <div class="extraction-items">

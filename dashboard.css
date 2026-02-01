@@ -5435,73 +5435,90 @@ body::after {
 }
 
 /* ============================================
-   EXTRACTION PREVIEW STYLES
+   EXTRACTION PREVIEW STYLES (Import Wizard)
    ============================================ */
 .extraction-summary {
-  padding: var(--space-3) var(--space-4);
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
+  padding: var(--space-4);
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.08), rgba(74, 222, 128, 0.02));
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
   font-size: 14px;
-  margin-bottom: var(--space-4);
+  line-height: 1.5;
+  margin-bottom: var(--space-5);
 }
 
 .extraction-section {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   overflow: hidden;
+  margin-bottom: var(--space-4);
+}
+
+.extraction-section:last-child {
+  margin-bottom: 0;
 }
 
 .extraction-section-header {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  background: rgba(255, 255, 255, 0.03);
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: rgba(255, 255, 255, 0.02);
   border-bottom: 1px solid var(--border-color);
 }
 
 .extraction-section-header .section-icon {
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .extraction-section-header .section-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   flex: 1;
+  letter-spacing: -0.01em;
 }
 
 .extraction-section-header .section-count {
-  font-size: 11px;
-  color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.08);
-  padding: 2px 8px;
-  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent-green);
+  background: rgba(74, 222, 128, 0.15);
+  padding: 4px 10px;
+  border-radius: 12px;
 }
 
 .extraction-items {
-  padding: var(--space-2);
+  padding: var(--space-3);
 }
 
 .extraction-item {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  border-radius: var(--radius-sm);
+  gap: var(--space-4);
+  padding: var(--space-4);
+  margin: var(--space-2);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .extraction-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-color);
 }
 
 .extraction-item input[type="checkbox"] {
-  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
   flex-shrink: 0;
+  accent-color: var(--accent-green);
+  cursor: pointer;
 }
 
 .extraction-item .item-content {
@@ -5510,38 +5527,92 @@ body::after {
 }
 
 .extraction-item .item-main {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-primary);
   font-weight: 500;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+  line-height: 1.4;
 }
 
 .extraction-item .item-meta {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
+  line-height: 1.4;
 }
 
 .extraction-item .item-category {
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: 4px;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
   cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .extraction-item .item-category:hover {
   border-color: var(--accent-green);
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.extraction-item .item-category:focus {
+  outline: none;
+  border-color: var(--accent-green);
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.2);
+}
+
+/* Section-specific colors */
+.extraction-section.pipeline .extraction-section-header {
+  border-left: 3px solid #3b82f6;
+}
+
+.extraction-section.pipeline .section-count {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.extraction-section.talking-points .extraction-section-header {
+  border-left: 3px solid var(--accent-green);
+}
+
+.extraction-section.quotes .extraction-section-header {
+  border-left: 3px solid #a855f7;
+}
+
+.extraction-section.quotes .section-count {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+}
+
+.extraction-section.thoughts .extraction-section-header {
+  border-left: 3px solid var(--text-muted);
+}
+
+.extraction-section.thoughts .section-count {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
 }
 
 /* Inconsistency styling */
 .extraction-section.inconsistencies {
-  border-color: rgba(251, 191, 36, 0.3);
+  border-color: rgba(251, 191, 36, 0.4);
 }
 
 .extraction-section.inconsistencies .extraction-section-header {
   background: rgba(251, 191, 36, 0.1);
+  border-left: 3px solid #fbbf24;
+}
+
+.extraction-section.inconsistencies .section-count {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.extraction-item.inconsistency {
+  background: rgba(251, 191, 36, 0.05);
+  border-color: rgba(251, 191, 36, 0.2);
 }
 
 .extraction-item.inconsistency .item-main {
@@ -5549,7 +5620,38 @@ body::after {
 }
 
 .extraction-empty {
-  padding: var(--space-6);
+  padding: var(--space-8);
   text-align: center;
   color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* Footer buttons */
+#unified-preview-footer {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-color);
+  margin-top: var(--space-4);
+}
+
+#unified-preview-footer .btn-primary {
+  background: var(--accent-green);
+  color: #000;
+  font-weight: 600;
+  padding: 10px 24px;
+}
+
+#unified-preview-footer .btn-primary:hover {
+  background: var(--accent-green-bright);
+}
+
+#unified-preview-footer .btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 10px 20px;
+}
+
+#unified-preview-footer .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
 }
