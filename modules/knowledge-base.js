@@ -926,6 +926,9 @@ Guidelines:
       
       this.saveData();
       this.render();
+      
+      // Show report in modal
+      this.showReportViewModal(report);
       this.showToast('Report generated successfully', 'success');
     } catch (error) {
       this.showToast('Failed to generate report: ' + error.message, 'error');
@@ -1198,7 +1201,10 @@ Guidelines:
     container.querySelectorAll('.kb-report-item').forEach(item => {
       item.addEventListener('click', () => {
         const reportId = item.dataset.id;
-        this.showReportInChat(reportId);
+        const report = this.reports.find(r => r.id === reportId);
+        if (report) {
+          this.showReportViewModal(report);
+        }
       });
     });
   }
@@ -1218,6 +1224,44 @@ Guidelines:
     });
     
     this.renderMessages();
+  }
+
+  /**
+   * Show report view modal
+   */
+  showReportViewModal(report) {
+    const modal = document.getElementById('kb-report-view-modal');
+    const titleEl = document.getElementById('kb-report-view-title');
+    const contentEl = document.getElementById('kb-report-view-content');
+    const copyBtn = document.getElementById('kb-report-copy');
+    const closeBtn = document.getElementById('kb-report-view-close');
+    
+    if (!modal || !contentEl) return;
+    
+    if (titleEl) {
+      titleEl.textContent = report.title;
+    }
+    
+    // Format content with markdown-like rendering
+    contentEl.innerHTML = this.formatMessageContent(report.content);
+    
+    // Setup copy handler
+    if (copyBtn) {
+      copyBtn.onclick = () => {
+        navigator.clipboard.writeText(report.content).then(() => {
+          this.showToast('Report copied to clipboard', 'success');
+        }).catch(() => {
+          this.showToast('Failed to copy', 'error');
+        });
+      };
+    }
+    
+    // Setup close handler
+    if (closeBtn) {
+      closeBtn.onclick = () => this.hideModal('kb-report-view-modal');
+    }
+    
+    this.showModal('kb-report-view-modal');
   }
 
   /**

@@ -7726,3 +7726,197 @@ body::after {
     min-height: 400px;
   }
 }
+
+/* ============================================
+   KNOWLEDGE BASE LINK CARD (for index.html)
+   ============================================ */
+.kb-link-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-4);
+  max-width: 400px;
+  margin: var(--space-6) auto;
+}
+
+.kb-link-icon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--accent-blue-rgb), 0.1);
+  border-radius: var(--radius-lg);
+  color: var(--accent-blue);
+}
+
+.kb-link-content h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 var(--space-2);
+  color: var(--text-primary);
+}
+
+.kb-link-content p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.kb-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--accent-blue);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kb-link-btn:hover {
+  background: var(--accent-blue-bright);
+  transform: translateY(-1px);
+}
+
+/* ============================================
+   KNOWLEDGE BASE FULLPAGE STYLES
+   ============================================ */
+.kb-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.kb-page .top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.nav-back:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.nav-page-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-left: var(--space-2);
+}
+
+.kb-main {
+  flex: 1;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+}
+
+.knowledge-base-fullpage {
+  flex: 1;
+  height: calc(100vh - 80px);
+  max-height: none;
+  min-height: 600px;
+}
+
+/* ============================================
+   REPORT VIEW MODAL
+   ============================================ */
+.modal-report-view {
+  max-width: 800px;
+  max-height: 85vh;
+}
+
+.modal-report-view .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-sm {
+  padding: var(--space-2) var(--space-3);
+  font-size: 12px;
+}
+
+.kb-report-view-content {
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-md);
+  max-height: calc(85vh - 150px);
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.kb-report-view-content h1,
+.kb-report-view-content h2,
+.kb-report-view-content h3 {
+  color: var(--text-primary);
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.kb-report-view-content h1 { font-size: 20px; }
+.kb-report-view-content h2 { font-size: 17px; }
+.kb-report-view-content h3 { font-size: 15px; }
+
+.kb-report-view-content p {
+  margin-bottom: var(--space-3);
+}
+
+.kb-report-view-content ul,
+.kb-report-view-content ol {
+  margin-bottom: var(--space-3);
+  padding-left: var(--space-5);
+}
+
+.kb-report-view-content li {
+  margin-bottom: var(--space-1);
+}
+
+.kb-report-view-content strong {
+  color: var(--text-primary);
+}
+
+/* Dropdown divider */
+.dropdown-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: var(--space-1) 0;
+}
+
+/* Dropdown item as link */
+a.dropdown-item {
+  text-decoration: none;
+  color: inherit;
+}

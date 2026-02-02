@@ -28,6 +28,14 @@
           </svg>
         </button>
         <div class="dropdown-menu" id="dropdown-menu">
+          <a href="knowledge-base.html" class="dropdown-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            Knowledge Base
+          </a>
+          <div class="dropdown-divider"></div>
           <button class="dropdown-item" id="menu-share">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
@@ -309,130 +317,25 @@
       </div>
       
       <div class="panel-content" id="cheatsheet-panel">
-        <!-- Knowledge Base -->
-        <div class="knowledge-base" id="knowledge-base">
-          <!-- Sources Sidebar (Collapsible) -->
-          <div class="kb-sources-sidebar" id="kb-sources-sidebar">
-            <div class="kb-sources-header">
-              <button class="kb-toggle-sidebar" id="kb-toggle-sidebar" title="Toggle Sources">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                </svg>
-              </button>
-              <span class="kb-sources-title">Sources</span>
-              <span class="kb-sources-count" id="kb-sources-count">0</span>
-            </div>
-            <div class="kb-sources-list kb-drop-zone" id="kb-sources-list">
-              <!-- Sources rendered dynamically -->
-              <div class="kb-empty-sources" id="kb-empty-sources">
-                <p>No sources yet</p>
-                <p class="kb-empty-hint">Add documents, URLs, or paste text</p>
-              </div>
-              <div class="kb-drop-indicator" id="kb-drop-indicator">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="17 8 12 3 7 8"></polyline>
-                  <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
-                <span>Drop files here</span>
-              </div>
-            </div>
-            <button class="kb-add-source-btn" id="kb-add-source-btn" title="Add Source">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              <span>Add Source</span>
-            </button>
+        <!-- Knowledge Base Link Card -->
+        <div class="kb-link-card">
+          <div class="kb-link-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
           </div>
-
-          <!-- Main Workspace -->
-          <div class="kb-workspace" id="kb-workspace">
-            <!-- Quick Actions Bar -->
-            <div class="kb-quick-actions" id="kb-quick-actions">
-              <button class="kb-action-btn" data-action="summarize" title="Summarize all sources">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="21" y1="10" x2="3" y2="10"></line>
-                  <line x1="21" y1="6" x2="3" y2="6"></line>
-                  <line x1="21" y1="14" x2="3" y2="14"></line>
-                  <line x1="21" y1="18" x2="3" y2="18"></line>
-                </svg>
-                <span>Summarize</span>
-              </button>
-              <button class="kb-action-btn" data-action="quotes" title="Extract key quotes">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z"></path>
-                  <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z"></path>
-                </svg>
-                <span>Key Quotes</span>
-              </button>
-              <button class="kb-action-btn" data-action="changes" title="What's changed recently">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                <span>Recent Changes</span>
-              </button>
-              <button class="kb-action-btn kb-action-generate" data-action="generate" title="Generate report">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                </svg>
-                <span>Generate Report</span>
-              </button>
-            </div>
-
-            <!-- Chat/Conversation Area -->
-            <div class="kb-chat-area" id="kb-chat-area">
-              <div class="kb-messages" id="kb-messages">
-                <!-- Welcome message -->
-                <div class="kb-message kb-message-system">
-                  <div class="kb-message-content">
-                    <p><strong>Welcome to your Knowledge Base</strong></p>
-                    <p>Add sources (documents, URLs, text) and I'll help you analyze them, answer questions, and generate reports.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Chat Input -->
-            <div class="kb-input-area" id="kb-input-area">
-              <div class="kb-input-wrapper">
-                <textarea id="kb-chat-input" class="kb-chat-input" placeholder="Ask a question about your sources..." rows="1"></textarea>
-                <button class="kb-clear-btn" id="kb-clear-btn" title="Clear chat">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                  </svg>
-                </button>
-                <button class="kb-send-btn" id="kb-send-btn" title="Send">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                  </svg>
-                </button>
-              </div>
-            </div>
+          <div class="kb-link-content">
+            <h3>Knowledge Base</h3>
+            <p>Manage sources, chat with AI, and generate reports</p>
           </div>
-
-          <!-- Reports Panel (Collapsible) -->
-          <div class="kb-reports-panel" id="kb-reports-panel">
-            <div class="kb-reports-header">
-              <button class="kb-toggle-reports" id="kb-toggle-reports" title="Toggle Reports">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                </svg>
-              </button>
-              <span class="kb-reports-title">Reports</span>
-              <span class="kb-reports-count" id="kb-reports-count">0</span>
-            </div>
-            <div class="kb-reports-list" id="kb-reports-list">
-              <!-- Reports rendered dynamically -->
-              <div class="kb-empty-reports">
-                <p>No reports yet</p>
-                <p class="kb-empty-hint">Generate reports from your sources</p>
-              </div>
-            </div>
-          </div>
+          <a href="knowledge-base.html" class="kb-link-btn">
+            Open Knowledge Base
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </a>
         </div>
       </div>
     </section>
@@ -1029,6 +932,35 @@
           </svg>
           Generate
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report View Modal -->
+  <div class="modal-overlay" id="kb-report-view-modal">
+    <div class="modal modal-large modal-report-view">
+      <div class="modal-header">
+        <h2 id="kb-report-view-title">Report</h2>
+        <div class="modal-header-actions">
+          <button class="btn btn-secondary btn-sm" id="kb-report-copy" title="Copy to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copy
+          </button>
+          <button class="btn-icon modal-close" id="kb-report-view-close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="kb-report-view-content" id="kb-report-view-content">
+          <!-- Report content rendered here -->
+        </div>
       </div>
     </div>
   </div>

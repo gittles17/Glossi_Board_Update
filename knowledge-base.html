@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Knowledge Base - Glossi</title>
+  <meta name="theme-color" content="#0a0d12">
+  <link rel="icon" type="image/svg+xml" href="Asset 3.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body class="kb-page">
+  <!-- Top Navigation -->
+  <header class="top-nav">
+    <div class="nav-left">
+      <a href="index.html" class="nav-back" title="Back to Dashboard">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+      </a>
+      <img src="Asset 3.svg" alt="Glossi" class="logo-img">
+      <span class="nav-page-title">Knowledge Base</span>
+    </div>
+    <div class="nav-right">
+      <button class="btn-icon" id="menu-btn" title="Menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Knowledge Base Content -->
+  <main class="kb-main">
+    <div class="knowledge-base knowledge-base-fullpage" id="knowledge-base">
+      <!-- Sources Sidebar (Collapsible) -->
+      <div class="kb-sources-sidebar" id="kb-sources-sidebar">
+        <div class="kb-sources-header">
+          <button class="kb-toggle-sidebar" id="kb-toggle-sidebar" title="Toggle Sources">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </button>
+          <span class="kb-sources-title">Sources</span>
+          <span class="kb-sources-count" id="kb-sources-count">0</span>
+        </div>
+        <div class="kb-sources-list kb-drop-zone" id="kb-sources-list">
+          <!-- Sources rendered dynamically -->
+          <div class="kb-empty-sources" id="kb-empty-sources">
+            <p>No sources yet</p>
+            <p class="kb-empty-hint">Add documents, URLs, or paste text</p>
+          </div>
+          <div class="kb-drop-indicator" id="kb-drop-indicator">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <span>Drop files here</span>
+          </div>
+        </div>
+        <button class="kb-add-source-btn" id="kb-add-source-btn" title="Add Source">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Add Source</span>
+        </button>
+      </div>
+
+      <!-- Main Workspace -->
+      <div class="kb-workspace" id="kb-workspace">
+        <!-- Quick Actions Bar -->
+        <div class="kb-quick-actions" id="kb-quick-actions">
+          <button class="kb-action-btn" data-action="summarize" title="Summarize all sources">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="21" y1="10" x2="3" y2="10"></line>
+              <line x1="21" y1="6" x2="3" y2="6"></line>
+              <line x1="21" y1="14" x2="3" y2="14"></line>
+              <line x1="21" y1="18" x2="3" y2="18"></line>
+            </svg>
+            <span>Summarize</span>
+          </button>
+          <button class="kb-action-btn" data-action="quotes" title="Extract key quotes">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z"></path>
+              <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z"></path>
+            </svg>
+            <span>Key Quotes</span>
+          </button>
+          <button class="kb-action-btn" data-action="changes" title="What's changed recently">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>Recent Changes</span>
+          </button>
+          <button class="kb-action-btn kb-action-generate" data-action="generate" title="Generate report">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            <span>Generate Report</span>
+          </button>
+        </div>
+
+        <!-- Chat/Conversation Area -->
+        <div class="kb-chat-area" id="kb-chat-area">
+          <div class="kb-messages" id="kb-messages">
+            <!-- Welcome message -->
+            <div class="kb-message kb-message-system">
+              <div class="kb-message-content">
+                <p><strong>Welcome to your Knowledge Base</strong></p>
+                <p>Add sources (documents, URLs, text) and I'll help you analyze them, answer questions, and generate reports.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="kb-input-area" id="kb-input-area">
+          <div class="kb-input-wrapper">
+            <textarea id="kb-chat-input" class="kb-chat-input" placeholder="Ask a question about your sources..." rows="1"></textarea>
+            <button class="kb-clear-btn" id="kb-clear-btn" title="Clear chat">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+              </svg>
+            </button>
+            <button class="kb-send-btn" id="kb-send-btn" title="Send">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reports Panel (Collapsible) -->
+      <div class="kb-reports-panel" id="kb-reports-panel">
+        <div class="kb-reports-header">
+          <button class="kb-toggle-reports" id="kb-toggle-reports" title="Toggle Reports">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+          </button>
+          <span class="kb-reports-title">Reports</span>
+          <span class="kb-reports-count" id="kb-reports-count">0</span>
+        </div>
+        <div class="kb-reports-list" id="kb-reports-list">
+          <!-- Reports rendered dynamically -->
+          <div class="kb-empty-reports">
+            <p>No reports yet</p>
+            <p class="kb-empty-hint">Generate reports from your sources</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add Source Modal -->
+  <div class="modal-overlay" id="kb-source-modal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2>Add Source</h2>
+        <button class="btn-icon modal-close" id="kb-source-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Source Type Tabs -->
+        <div class="kb-source-tabs">
+          <button class="kb-source-tab active" data-type="text">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            Paste Text
+          </button>
+          <button class="kb-source-tab" data-type="url">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+            URL
+          </button>
+        </div>
+
+        <!-- Text Input Panel -->
+        <div class="kb-source-panel active" id="kb-panel-text">
+          <div class="notes-input-section">
+            <label for="kb-source-title">Title (optional)</label>
+            <input type="text" id="kb-source-title" class="input" placeholder="e.g., Q4 Customer Feedback">
+          </div>
+          <div class="notes-input-section">
+            <label for="kb-source-text">Content</label>
+            <textarea id="kb-source-text" class="input textarea" rows="10" placeholder="Paste your text content here..."></textarea>
+          </div>
+        </div>
+
+        <!-- URL Input Panel -->
+        <div class="kb-source-panel" id="kb-panel-url">
+          <div class="notes-input-section">
+            <label for="kb-source-url">URL</label>
+            <input type="url" id="kb-source-url" class="input" placeholder="https://...">
+          </div>
+          <p class="kb-url-hint">The content will be fetched and analyzed automatically.</p>
+        </div>
+
+        <!-- Category Selection -->
+        <div class="kb-category-section">
+          <label>Category</label>
+          <div class="kb-category-options" id="kb-category-options">
+            <button class="kb-category-btn active" data-category="auto">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              Auto-detect
+            </button>
+            <button class="kb-category-btn" data-category="market">Market Research</button>
+            <button class="kb-category-btn" data-category="customer">Customer Feedback</button>
+            <button class="kb-category-btn" data-category="competitor">Competitor Intel</button>
+            <button class="kb-category-btn" data-category="product">Product Notes</button>
+            <button class="kb-category-btn" data-category="other">Other</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="kb-source-cancel">Cancel</button>
+        <button class="btn btn-primary" id="kb-source-save">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add Source
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate Report Modal -->
+  <div class="modal-overlay" id="kb-report-modal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2>Generate Report</h2>
+        <button class="btn-icon modal-close" id="kb-report-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Report Templates -->
+        <div class="kb-report-templates">
+          <label>Choose a template or describe what you need:</label>
+          <div class="kb-template-options">
+            <button class="kb-template-btn" data-template="investor_update">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+              </svg>
+              <span>Investor Update</span>
+              <small>Weekly/monthly progress summary</small>
+            </button>
+            <button class="kb-template-btn" data-template="talking_points">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+              <span>Talking Points</span>
+              <small>Key points for investor calls</small>
+            </button>
+            <button class="kb-template-btn" data-template="due_diligence">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+              <span>Due Diligence Brief</span>
+              <small>Comprehensive company overview</small>
+            </button>
+            <button class="kb-template-btn active" data-template="custom">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              <span>Custom Report</span>
+              <small>Describe what you need</small>
+            </button>
+          </div>
+        </div>
+
+        <!-- Custom Prompt -->
+        <div class="notes-input-section">
+          <label for="kb-report-prompt">What do you want to generate?</label>
+          <textarea id="kb-report-prompt" class="input textarea" rows="4" placeholder="e.g., Create a summary of our competitive advantages based on customer feedback and market research..."></textarea>
+        </div>
+
+        <!-- Source Selection -->
+        <div class="kb-source-selection">
+          <label>Include sources:</label>
+          <div class="kb-source-checkboxes" id="kb-report-sources">
+            <!-- Populated dynamically -->
+            <p class="kb-no-sources">Add sources first to generate reports</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="kb-report-cancel">Cancel</button>
+        <button class="btn btn-primary" id="kb-report-generate">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          Generate
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report View Modal -->
+  <div class="modal-overlay" id="kb-report-view-modal">
+    <div class="modal modal-large modal-report-view">
+      <div class="modal-header">
+        <h2 id="kb-report-view-title">Report</h2>
+        <div class="modal-header-actions">
+          <button class="btn btn-secondary btn-sm" id="kb-report-copy" title="Copy to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copy
+          </button>
+          <button class="btn-icon modal-close" id="kb-report-view-close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="kb-report-view-content" id="kb-report-view-content">
+          <!-- Report content rendered here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="btn-icon modal-close" id="settings-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-section">
+          <h3>AI Configuration</h3>
+          <div class="notes-input-section">
+            <label for="anthropic-key">Anthropic API Key</label>
+            <input type="password" id="anthropic-key" class="input" placeholder="sk-ant-...">
+            <p class="input-hint">Required for AI analysis and chat features</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="settings-cancel">Cancel</button>
+        <button class="btn btn-primary" id="settings-save">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="modules/storage.js"></script>
+  <script src="modules/ai-processor.js"></script>
+  <script src="modules/knowledge-base.js"></script>
+  <script>
+    // Initialize Knowledge Base page
+    document.addEventListener('DOMContentLoaded', async () => {
+      const storage = new Storage();
+      await storage.init();
+      
+      const aiProcessor = new AIProcessor();
+      aiProcessor.init(storage);
+      
+      const knowledgeBase = new KnowledgeBase();
+      knowledgeBase.init(storage, aiProcessor, () => {
+        storage.save();
+      });
+      
+      // Settings modal
+      const menuBtn = document.getElementById('menu-btn');
+      const settingsModal = document.getElementById('settings-modal');
+      const settingsClose = document.getElementById('settings-modal-close');
+      const settingsCancel = document.getElementById('settings-cancel');
+      const settingsSave = document.getElementById('settings-save');
+      const anthropicKeyInput = document.getElementById('anthropic-key');
+      
+      if (menuBtn) {
+        menuBtn.addEventListener('click', () => {
+          settingsModal.classList.add('active');
+          const settings = storage.getSettings();
+          if (anthropicKeyInput && settings.anthropicApiKey) {
+            anthropicKeyInput.value = settings.anthropicApiKey;
+          }
+        });
+      }
+      
+      if (settingsClose) {
+        settingsClose.addEventListener('click', () => settingsModal.classList.remove('active'));
+      }
+      if (settingsCancel) {
+        settingsCancel.addEventListener('click', () => settingsModal.classList.remove('active'));
+      }
+      
+      if (settingsSave) {
+        settingsSave.addEventListener('click', () => {
+          const key = anthropicKeyInput.value.trim();
+          storage.updateSettings({ anthropicApiKey: key });
+          aiProcessor.init(storage);
+          settingsModal.classList.remove('active');
+          knowledgeBase.showToast('Settings saved', 'success');
+        });
+      }
+      
+      // Close modal on overlay click
+      settingsModal?.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+          settingsModal.classList.remove('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
