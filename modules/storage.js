@@ -724,6 +724,30 @@ class Storage {
   }
 
   // =====================================================
+  // PIPELINE EMAIL FUNCTIONS
+  // =====================================================
+
+  /**
+   * Get pipeline email content
+   */
+  getPipelineEmail() {
+    return this.data.pipelineEmail || null;
+  }
+
+  /**
+   * Update pipeline email content
+   */
+  updatePipelineEmail(pipelineData) {
+    this.data.pipelineEmail = {
+      ...pipelineData,
+      updatedAt: pipelineData.updatedAt || new Date().toISOString()
+    };
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return this.data.pipelineEmail;
+  }
+
+  // =====================================================
   // KNOWLEDGE BASE FUNCTIONS
   // =====================================================
 

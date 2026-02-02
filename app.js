@@ -708,6 +708,23 @@ class GlossiDashboard {
       this.saveMeetingDirectly();
     });
 
+    // Pipeline edit modal
+    document.getElementById('edit-pipeline-btn')?.addEventListener('click', () => {
+      this.openPipelineEditModal();
+    });
+
+    document.getElementById('pipeline-edit-close')?.addEventListener('click', () => {
+      this.hideModal('pipeline-edit-modal');
+    });
+
+    document.getElementById('pipeline-edit-cancel')?.addEventListener('click', () => {
+      this.hideModal('pipeline-edit-modal');
+    });
+
+    document.getElementById('pipeline-edit-save')?.addEventListener('click', () => {
+      this.savePipelineEmail();
+    });
+
 
     // Link modal
     document.getElementById('add-link-btn').addEventListener('click', () => {
@@ -833,9 +850,8 @@ class GlossiDashboard {
    * Render all dashboard components
    */
   render() {
-    try { this.renderStats(); } catch (e) { console.error('renderStats error:', e); }
-    try { this.renderQuickLinks(); } catch (e) { console.error('renderQuickLinks error:', e); }
     try { this.renderSeedRaise(); } catch (e) { console.error('renderSeedRaise error:', e); }
+    try { this.renderPipelineSection(); } catch (e) { console.error('renderPipelineSection error:', e); }
     try { this.renderMeetingSelector(); } catch (e) { console.error('renderMeetingSelector error:', e); }
     
     try {
@@ -901,6 +917,102 @@ class GlossiDashboard {
    */
   deletePipelineDeal(name, category) {
     // Pipeline section was removed
+  }
+
+  /**
+   * Render the pipeline section from pasted email content
+   */
+  renderPipelineSection() {
+    const container = document.getElementById('pipeline-content');
+    const totalEl = document.getElementById('pipeline-total-value');
+    const countEl = document.getElementById('pipeline-deal-count');
+    
+    if (!container) return;
+    
+    const pipelineData = this.data?.pipelineEmail || storage.getPipelineEmail?.() || null;
+    
+    if (!pipelineData || !pipelineData.content) {
+      container.innerHTML = `
+        <div class="pipeline-empty">
+          <p>No pipeline data yet</p>
+          <p class="pipeline-hint">Click "Update" to paste your weekly pipeline email</p>
+        </div>
+      `;
+      if (totalEl) totalEl.textContent = '$0';
+      if (countEl) countEl.textContent = '0 deals';
+      return;
+    }
+    
+    // Display the pasted content
+    const updatedDate = pipelineData.updatedAt ? new Date(pipelineData.updatedAt).toLocaleDateString() : '';
+    
+    container.innerHTML = `
+      <div class="pipeline-email-display">${this.escapeHtml(pipelineData.content)}</div>
+      ${updatedDate ? `<div class="pipeline-updated">Last updated: ${updatedDate}</div>` : ''}
+    `;
+    
+    // Update stats if provided
+    if (totalEl && pipelineData.total) totalEl.textContent = pipelineData.total;
+    if (countEl && pipelineData.dealCount) countEl.textContent = pipelineData.dealCount;
+  }
+
+  /**
+   * Open the pipeline edit modal
+   */
+  openPipelineEditModal() {
+    const pipelineData = this.data?.pipelineEmail || storage.getPipelineEmail?.() || null;
+    const textarea = document.getElementById('pipeline-email-content');
+    
+    if (textarea && pipelineData?.content) {
+      textarea.value = pipelineData.content;
+    } else if (textarea) {
+      textarea.value = '';
+    }
+    
+    this.showModal('pipeline-edit-modal');
+    textarea?.focus();
+  }
+
+  /**
+   * Save the pipeline email content
+   */
+  savePipelineEmail() {
+    const textarea = document.getElementById('pipeline-email-content');
+    const content = textarea?.value?.trim() || '';
+    
+    // Extract some basic stats from the content (rough estimates)
+    let total = '$0';
+    let dealCount = '0 deals';
+    
+    // Try to extract total from common patterns
+    const totalMatch = content.match(/total[:\s]*\$?([\d,\.]+[KkMm]?)/i);
+    if (totalMatch) {
+      total = '$' + totalMatch[1].toUpperCase();
+    }
+    
+    // Count lines that look like deals (have dollar amounts)
+    const dealLines = content.split('\n').filter(line => /\$[\d,\.]+/.test(line));
+    if (dealLines.length > 0) {
+      dealCount = dealLines.length + ' deals';
+    }
+    
+    const pipelineData = {
+      content,
+      total,
+      dealCount,
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Save to storage
+    if (!this.data.pipelineEmail) {
+      this.data.pipelineEmail = {};
+    }
+    this.data.pipelineEmail = pipelineData;
+    storage.updatePipelineEmail(pipelineData);
+    
+    this.hideModal('pipeline-edit-modal');
+    this.renderPipelineSection();
+    this.showToast('Pipeline updated', 'success');
   }
 
   /**

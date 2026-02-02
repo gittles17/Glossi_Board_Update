@@ -132,6 +132,30 @@
     </div>
   </section>
 
+  <!-- Pipeline Section -->
+  <section class="pipeline-section">
+    <div class="pipeline-header">
+      <h2>Pipeline</h2>
+      <div class="pipeline-stats">
+        <span class="pipeline-total" id="pipeline-total-value">$0</span>
+        <span class="pipeline-count" id="pipeline-deal-count">0 deals</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="edit-pipeline-btn" title="Edit Pipeline">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+        <span>Update</span>
+      </button>
+    </div>
+    <div class="pipeline-content" id="pipeline-content">
+      <div class="pipeline-empty">
+        <p>No pipeline data yet</p>
+        <p class="pipeline-hint">Click "Update" to paste your weekly pipeline email</p>
+      </div>
+    </div>
+  </section>
+
   <!-- Main Dashboard Container -->
   <main class="dashboard-container">
     <!-- Left Panel: Meeting Minutes (Last Week at a Glance) -->
@@ -259,52 +283,6 @@
       </div>
       
       <div class="panel-content" id="cheatsheet-panel">
-        <!-- Important Links (compact) -->
-        <div class="quick-links">
-          <div id="quick-links-container">
-            <!-- Links rendered dynamically -->
-          </div>
-          <button class="quick-link add-link-btn" id="add-link-btn" title="Add Link">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Quick Stats with Trends -->
-        <div class="stats-row">
-          <div class="stat-mini">
-            <span class="stat-value" id="stat-pipeline">$1.5M+</span>
-            <span class="stat-label">Pipeline</span>
-            <span class="stat-trend" id="trend-pipeline" data-trend="neutral">
-              <span class="trend-icon"></span>
-              <span class="trend-change"></span>
-            </span>
-          </div>
-          <div class="stat-mini">
-            <span class="stat-value" id="stat-prospects">10+</span>
-            <span class="stat-label">Prospects</span>
-            <span class="stat-trend" id="trend-prospects" data-trend="neutral">
-              <span class="trend-icon"></span>
-              <span class="trend-change"></span>
-            </span>
-          </div>
-          <div class="stat-mini">
-            <span class="stat-value" id="stat-partnerships">3</span>
-            <span class="stat-label">Partnerships</span>
-            <span class="stat-trend" id="trend-partnerships" data-trend="neutral">
-              <span class="trend-icon"></span>
-              <span class="trend-change"></span>
-            </span>
-          </div>
-          <div class="stat-mini stat-closed">
-            <span class="stat-value" id="stat-closed">0</span>
-            <span class="stat-label">Closed</span>
-            <span class="stat-revenue" id="stat-closed-revenue">$0 revenue</span>
-          </div>
-        </div>
-
         <!-- Knowledge Base -->
         <div class="knowledge-base" id="knowledge-base">
           <!-- Sources Sidebar (Collapsible) -->
@@ -1045,6 +1023,37 @@
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
           </svg>
           Generate
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pipeline Edit Modal -->
+  <div class="modal-overlay" id="pipeline-edit-modal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2>Update Pipeline</h2>
+        <button class="btn-icon modal-close" id="pipeline-edit-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description">Paste your weekly pipeline email below. The content will be displayed as-is.</p>
+        <div class="notes-input-section">
+          <label for="pipeline-email-content">Pipeline Email Content</label>
+          <textarea id="pipeline-email-content" class="input textarea" rows="15" placeholder="Paste your weekly pipeline email here..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="pipeline-edit-cancel">Cancel</button>
+        <button class="btn btn-primary" id="pipeline-edit-save">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Save Pipeline
         </button>
       </div>
     </div>
