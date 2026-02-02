@@ -5980,6 +5980,65 @@ body::after {
   margin-left: 26px;
 }
 
+.checkbox-item-expandable {
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+
+.checkbox-item-expandable .checkbox-item-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  width: 100%;
+  cursor: pointer;
+}
+
+.checkbox-subitems {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: 0 var(--space-3) var(--space-3);
+  padding-left: calc(var(--space-3) + 26px);
+}
+
+.checkbox-subitems.has-items {
+  display: flex;
+}
+
+.checkbox-subitem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.checkbox-subitem:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.checkbox-subitem input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent-green);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.checkbox-subitem-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media (max-width: 768px) {
   .pipeline-section {
     padding: var(--space-4);

@@ -140,6 +140,21 @@ class GlossiDashboard {
     document.getElementById('share-email-generate')?.addEventListener('click', () => {
       this.generateAndSendEmail();
     });
+    
+    // Parent checkbox toggles all report children
+    document.getElementById('share-reports')?.addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      document.getElementById('share-reports-list')?.querySelectorAll('.share-report-item').forEach(cb => {
+        cb.checked = checked;
+      });
+    });
+    
+    // Delegated handler for individual report checkboxes
+    document.getElementById('share-reports-list')?.addEventListener('change', (e) => {
+      if (e.target.classList.contains('share-report-item')) {
+        this.syncReportParentCheckbox();
+      }
+    });
 
     document.getElementById('menu-settings').addEventListener('click', () => {
       dropdown.classList.remove('open');
@@ -2079,24 +2094,54 @@ RULES:
    * Open share email modal with section options
    */
   openShareEmailModal() {
-    // Update reports hint based on KB reports
     const kb = storage.getKnowledgeBase();
     const reports = kb?.reports || [];
     const reportsHint = document.getElementById('share-reports-hint');
+    const reportsCheckbox = document.getElementById('share-reports');
+    const reportsList = document.getElementById('share-reports-list');
+    
+    // Update hint text
     if (reportsHint) {
       reportsHint.textContent = reports.length > 0 
         ? `${reports.length} report${reports.length !== 1 ? 's' : ''} available`
         : 'No reports generated';
     }
     
-    // Enable/disable reports checkbox based on availability
-    const reportsCheckbox = document.getElementById('share-reports');
+    // Populate individual report checkboxes
+    if (reportsList) {
+      if (reports.length > 0) {
+        reportsList.innerHTML = reports.map(r => `
+          <label class="checkbox-subitem">
+            <input type="checkbox" class="share-report-item" data-report-id="${r.id}" checked>
+            <span class="checkbox-subitem-label">${r.title}</span>
+          </label>
+        `).join('');
+        reportsList.classList.add('has-items');
+      } else {
+        reportsList.innerHTML = '';
+        reportsList.classList.remove('has-items');
+      }
+    }
+    
+    // Enable/disable parent checkbox and sync state
     if (reportsCheckbox) {
       reportsCheckbox.disabled = reports.length === 0;
-      if (reports.length === 0) reportsCheckbox.checked = false;
+      reportsCheckbox.checked = reports.length > 0;
     }
     
     this.showModal('share-email-modal');
+  }
+  
+  syncReportParentCheckbox() {
+    const reportsList = document.getElementById('share-reports-list');
+    const reportsCheckbox = document.getElementById('share-reports');
+    if (!reportsList || !reportsCheckbox) return;
+    
+    const allCheckboxes = reportsList.querySelectorAll('.share-report-item');
+    const checkedCount = reportsList.querySelectorAll('.share-report-item:checked').length;
+    
+    reportsCheckbox.checked = checkedCount > 0;
+    reportsCheckbox.indeterminate = checkedCount > 0 && checkedCount < allCheckboxes.length;
   }
 
   /**
@@ -2212,19 +2257,30 @@ RULES:
       });
     }
     
-    // KB Reports
+    // KB Reports (only selected ones)
     if (sections.reports) {
       const kb = storage.getKnowledgeBase();
-      const reports = kb?.reports || [];
-      content.sections.push({
-        name: 'Reports',
-        data: {
-          reports: reports.map(r => ({
-            title: r.title,
-            content: r.content?.substring(0, 500) + (r.content?.length > 500 ? '...' : '')
-          }))
-        }
+      const allReports = kb?.reports || [];
+      const reportsList = document.getElementById('share-reports-list');
+      const selectedIds = new Set();
+      
+      reportsList?.querySelectorAll('.share-report-item:checked').forEach(cb => {
+        selectedIds.add(cb.dataset.reportId);
       });
+      
+      const selectedReports = allReports.filter(r => selectedIds.has(r.id));
+      
+      if (selectedReports.length > 0) {
+        content.sections.push({
+          name: 'Reports',
+          data: {
+            reports: selectedReports.map(r => ({
+              title: r.title,
+              content: r.content?.substring(0, 500) + (r.content?.length > 500 ? '...' : '')
+            }))
+          }
+        });
+      }
     }
     
     return content;
@@ -4199,9 +4255,7 @@ RULES:
       
       this.data = storage.getData();
       this.renderTalkingPoints();
-      
-      const parts = [];
-      if (deleted)     } catch (error) {
+    } catch (error) {
       console.error('Fix redundancies error:', error);
       this.showToast('Analysis failed: ' + error.message, 'error');
     }

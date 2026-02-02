@@ -1001,11 +1001,14 @@
             <span class="checkbox-hint">Summary, decisions, action items</span>
           </label>
           
-          <label class="checkbox-item">
-            <input type="checkbox" id="share-reports">
-            <span class="checkbox-label">Knowledge Base Reports</span>
-            <span class="checkbox-hint" id="share-reports-hint">No reports generated</span>
-          </label>
+          <div class="checkbox-item checkbox-item-expandable">
+            <label class="checkbox-item-header">
+              <input type="checkbox" id="share-reports">
+              <span class="checkbox-label">Knowledge Base Reports</span>
+              <span class="checkbox-hint" id="share-reports-hint">No reports generated</span>
+            </label>
+            <div class="checkbox-subitems" id="share-reports-list"></div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
