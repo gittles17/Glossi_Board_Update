@@ -168,11 +168,6 @@ class GlossiDashboard {
       this.shareViaEmail();
     });
 
-    document.getElementById('menu-curate').addEventListener('click', () => {
-      dropdown.classList.remove('open');
-      this.curateAllContent();
-    });
-
     document.getElementById('menu-settings').addEventListener('click', () => {
       dropdown.classList.remove('open');
       this.renderSettingsStatus();
