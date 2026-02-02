@@ -7245,11 +7245,25 @@ body::after {
 .kb-message-content ul {
   margin: var(--space-2) 0;
   padding-left: var(--space-5);
+  list-style-type: disc;
+}
+
+.kb-message-content ul ul {
+  margin: var(--space-1) 0;
+  list-style-type: circle;
+}
+
+.kb-message-content ul ul ul {
+  list-style-type: square;
 }
 
 .kb-message-content li {
   margin-bottom: var(--space-1);
-  line-height: 1.5;
+  line-height: 1.6;
+}
+
+.kb-message-content li > ul {
+  margin-top: var(--space-1);
 }
 
 /* Chat Input */

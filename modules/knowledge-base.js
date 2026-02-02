@@ -1178,45 +1178,61 @@ Guidelines:
     html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
     html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
     
-    // Bold
+    // Bold (do this before italic to handle ** correctly)
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     
-    // Italic
-    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    
-    // Process bullet points - group consecutive lines starting with -
+    // Process bullet points with nesting support
     const lines = html.split('\n');
     const processedLines = [];
-    let inList = false;
+    let listStack = []; // Track nested list depths
     
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      const isBullet = line.startsWith('- ') || line.startsWith('• ');
+      const line = lines[i];
+      const trimmedLine = line.trim();
       
-      if (isBullet) {
-        if (!inList) {
-          processedLines.push('<ul>');
-          inList = true;
-        }
-        processedLines.push('<li>' + line.substring(2) + '</li>');
-      } else {
-        if (inList) {
+      // Check for bullet point (-, *, •) with optional leading spaces for nesting
+      const bulletMatch = line.match(/^(\s*)([-*•])\s+(.+)$/);
+      
+      if (bulletMatch) {
+        const indent = bulletMatch[1].length;
+        const bulletContent = bulletMatch[3];
+        const depth = Math.floor(indent / 2); // 2 spaces = 1 level
+        
+        // Close lists if we're going back up
+        while (listStack.length > depth + 1) {
           processedLines.push('</ul>');
-          inList = false;
+          listStack.pop();
         }
-        if (line) {
+        
+        // Open new list if needed
+        if (listStack.length <= depth) {
+          processedLines.push('<ul>');
+          listStack.push(depth);
+        }
+        
+        processedLines.push('<li>' + bulletContent + '</li>');
+      } else {
+        // Close all open lists
+        while (listStack.length > 0) {
+          processedLines.push('</ul>');
+          listStack.pop();
+        }
+        
+        if (trimmedLine) {
           // Don't wrap headers in <p>
-          if (line.startsWith('<h')) {
-            processedLines.push(line);
+          if (trimmedLine.startsWith('<h')) {
+            processedLines.push(trimmedLine);
           } else {
-            processedLines.push('<p>' + line + '</p>');
+            processedLines.push('<p>' + trimmedLine + '</p>');
           }
         }
       }
     }
     
-    if (inList) {
+    // Close any remaining open lists
+    while (listStack.length > 0) {
       processedLines.push('</ul>');
+      listStack.pop();
     }
     
     html = processedLines.join('');
