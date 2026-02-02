@@ -457,7 +457,7 @@ class KnowledgeBase {
   async processAudio(file) {
     // Get OpenAI API key from settings
     const settings = this.storage.getSettings();
-    const apiKey = settings.openaiApiKey;
+    const apiKey = settings.apiKey;
     
     if (!apiKey) {
       return {
