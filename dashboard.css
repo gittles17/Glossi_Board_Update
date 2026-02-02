@@ -5677,12 +5677,13 @@ body::after {
   color: #ef4444;
 }
 
-/* Pipeline Cards (5 square cards) */
+/* Pipeline Cards (4 square cards, edge to edge) */
 .pipeline-cards {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: var(--space-3);
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
   margin-bottom: var(--space-4);
+  width: 100%;
 }
 
 .pipeline-card {
@@ -5974,7 +5975,7 @@ body::after {
 /* Responsive Pipeline */
 @media (max-width: 1200px) {
   .pipeline-cards {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
   
   .pipeline-highlights .highlights-content {

@@ -1171,12 +1171,21 @@ class GlossiDashboard {
       // Calculate changes
       const changes = this.calculatePipelineChanges(parsedData.deals, previousDeals);
       
+      // Use email date if extracted, otherwise current date
+      let emailDate = new Date().toISOString();
+      if (parsedData.emailDate) {
+        const parsed = new Date(parsedData.emailDate);
+        if (!isNaN(parsed.getTime())) {
+          emailDate = parsed.toISOString();
+        }
+      }
+      
       const pipelineData = {
         rawContent: content,
         deals: parsedData.deals || [],
         highlights: parsedData.highlights || {},
         changes: changes,
-        updatedAt: new Date().toISOString()
+        updatedAt: emailDate
       };
       
       // Save to storage with history
@@ -1236,8 +1245,9 @@ class GlossiDashboard {
     const systemPrompt = `You are a pipeline data parser for a sales/business development dashboard.
 
 Parse the provided email content and extract:
-1. Individual deals with their stage, value, timing, contact, and next steps
-2. Categorized highlights (hot deals, key updates, marketing)
+1. The EMAIL DATE from the email (look for "Date:", forwarded message dates, or dates in subject line like "1/19/26")
+2. Individual deals with their stage, value, timing, contact, and next steps
+3. Categorized highlights (hot deals, key updates, marketing)
 
 STAGES - Categorize each deal into one of these 4 stages:
 - discovery: Discovery calls, intro meetings, qualifying leads
@@ -1251,6 +1261,7 @@ DEAL MATCHING - Compare against previous deals:${previousContext}
 
 Return JSON:
 {
+  "emailDate": "2026-01-19",
   "deals": [
     {
       "name": "Company Name",
@@ -1270,6 +1281,7 @@ Return JSON:
 }
 
 RULES:
+- IMPORTANT: Extract the email date from subject lines (e.g. "Weekly Pipeline Report 1/19/26") or "Date:" headers and return as ISO format (YYYY-MM-DD)
 - Extract ALL deals from the email (they are usually numbered)
 - Use exact values from email ($50K, not $50,000)
 - For timing, normalize to Q1/Q2/Q3/TBD
