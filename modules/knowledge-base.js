@@ -836,7 +836,14 @@ RESPONSE GUIDELINES:
       return 'No sources available.';
     }
     
-    return this.sources.map(source => {
+    // Only include enabled sources
+    const enabledSources = this.sources.filter(s => s.enabled !== false);
+    
+    if (enabledSources.length === 0) {
+      return 'No enabled sources available.';
+    }
+    
+    return enabledSources.map(source => {
       const freshnessLabel = {
         current: 'Current',
         review: 'Needs Review',
@@ -848,7 +855,7 @@ Category: ${source.category}
 Added: ${new Date(source.addedAt).toLocaleDateString()}
 Status: ${freshnessLabel}
 Content:
-${source.content.substring(0, 2000)}${source.content.length > 2000 ? '...' : ''}
+${source.content}
 ---`;
     }).join('\n\n');
   }
