@@ -763,6 +763,19 @@ class GlossiDashboard {
       }
     });
 
+    // Pipeline week selector
+    document.getElementById('pipeline-week-select')?.addEventListener('change', (e) => {
+      const value = e.target.value;
+      if (value === 'current') {
+        this.selectedPipelineWeek = null;
+        this.renderPipelineSection();
+      } else {
+        const index = parseInt(value, 10);
+        this.selectedPipelineWeek = index;
+        this.renderPipelineSection();
+      }
+    });
+
     // Close modals on overlay click
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('click', (e) => {
@@ -834,13 +847,26 @@ class GlossiDashboard {
    * Render the pipeline section from parsed data
    */
   renderPipelineSection() {
-    const pipelineData = this.data?.pipelineEmail || storage.getPipelineEmail?.() || null;
+    const currentPipelineData = this.data?.pipelineEmail || storage.getPipelineEmail?.() || null;
+    const history = this.data?.pipelineHistory || storage.getPipelineHistory?.() || [];
+    
+    // Populate week selector
+    this.populatePipelineWeekSelector(currentPipelineData, history);
+    
+    // Determine which data to show based on selection
+    let pipelineData, previousData;
+    if (this.selectedPipelineWeek !== null && this.selectedPipelineWeek !== undefined) {
+      // Showing historical data
+      pipelineData = history[this.selectedPipelineWeek] || null;
+      previousData = history[this.selectedPipelineWeek + 1] || null;
+    } else {
+      // Showing current data
+      pipelineData = currentPipelineData;
+      previousData = history.length > 0 ? history[0] : null;
+    }
+    
     const deals = pipelineData?.deals || [];
     const highlights = pipelineData?.highlights || {};
-    
-    // Get previous week's data for comparison
-    const history = this.data?.pipelineHistory || storage.getPipelineHistory?.() || [];
-    const previousData = history.length > 0 ? history[0] : null;
     const previousDeals = previousData?.deals || [];
     
     // Map old stage names to new ones
@@ -934,21 +960,46 @@ class GlossiDashboard {
       }
     });
     
-    
-    // Render "as of" date
-    const updatedAtEl = document.getElementById('pipeline-updated-at');
-    if (updatedAtEl) {
-      if (pipelineData?.updatedAt) {
-        const date = new Date(pipelineData.updatedAt);
-        const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        updatedAtEl.textContent = `as of ${formatted}`;
-      } else {
-        updatedAtEl.textContent = '';
-      }
-    }
-    
     // Render highlights
     this.renderPipelineHighlights(highlights, pipelineData?.updatedAt);
+  }
+
+  /**
+   * Populate pipeline week selector dropdown
+   */
+  populatePipelineWeekSelector(currentData, history) {
+    const select = document.getElementById('pipeline-week-select');
+    if (!select) return;
+    
+    // Build options
+    let options = '';
+    
+    // Current week option
+    if (currentData?.updatedAt) {
+      const date = new Date(currentData.updatedAt);
+      const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      options += `<option value="current">Current (${formatted})</option>`;
+    } else {
+      options += '<option value="current">Current</option>';
+    }
+    
+    // Historical weeks
+    history.forEach((week, index) => {
+      if (week?.updatedAt) {
+        const date = new Date(week.updatedAt);
+        const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        options += `<option value="${index}">${formatted}</option>`;
+      }
+    });
+    
+    select.innerHTML = options;
+    
+    // Restore selection
+    if (this.selectedPipelineWeek !== null && this.selectedPipelineWeek !== undefined) {
+      select.value = this.selectedPipelineWeek.toString();
+    } else {
+      select.value = 'current';
+    }
   }
 
   /**

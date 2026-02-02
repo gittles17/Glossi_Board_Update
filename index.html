@@ -131,7 +131,10 @@
         <span class="pipeline-closed" id="pipeline-closed-value">$0</span>
         <span class="pipeline-closed-label">closed</span>
       </div>
-      <span class="pipeline-updated" id="pipeline-updated-at"></span>
+      <select id="pipeline-week-select" class="time-filter">
+        <option value="current">Current</option>
+        <!-- Populated by JS with past weeks -->
+      </select>
       <button class="add-btn-small" id="edit-pipeline-btn" title="Update Pipeline">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19"></line>
