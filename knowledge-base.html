@@ -392,7 +392,7 @@
       
       if (menuBtn) {
         menuBtn.addEventListener('click', () => {
-          settingsModal.classList.add('active');
+          settingsModal.classList.add('visible');
           const currentSettings = storage.getSettings();
           if (anthropicKeyInput && currentSettings.apiKey) {
             anthropicKeyInput.value = currentSettings.apiKey;
@@ -401,10 +401,10 @@
       }
       
       if (settingsClose) {
-        settingsClose.addEventListener('click', () => settingsModal.classList.remove('active'));
+        settingsClose.addEventListener('click', () => settingsModal.classList.remove('visible'));
       }
       if (settingsCancel) {
-        settingsCancel.addEventListener('click', () => settingsModal.classList.remove('active'));
+        settingsCancel.addEventListener('click', () => settingsModal.classList.remove('visible'));
       }
       
       if (settingsSave) {
@@ -412,7 +412,7 @@
           const key = anthropicKeyInput.value.trim();
           storage.updateSettings({ apiKey: key });
           aiProcessor.setApiKey(key);
-          settingsModal.classList.remove('active');
+          settingsModal.classList.remove('visible');
           knowledgeBase.showToast('Settings saved', 'success');
         });
       }
@@ -420,7 +420,7 @@
       // Close modal on overlay click
       settingsModal?.addEventListener('click', (e) => {
         if (e.target === settingsModal) {
-          settingsModal.classList.remove('active');
+          settingsModal.classList.remove('visible');
         }
       });
     });

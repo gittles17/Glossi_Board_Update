@@ -1622,7 +1622,7 @@ Guidelines:
   showModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
-      modal.classList.add('active');
+      modal.classList.add('visible');
     }
   }
 
@@ -1632,7 +1632,7 @@ Guidelines:
   hideModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
-      modal.classList.remove('active');
+      modal.classList.remove('visible');
     }
   }
 
