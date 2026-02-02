@@ -754,6 +754,7 @@ class GlossiDashboard {
     try { this.renderSeedRaise(); } catch (e) { console.error('renderSeedRaise error:', e); }
     try { this.renderPipelineSection(); } catch (e) { console.error('renderPipelineSection error:', e); }
     try { this.renderMeetingSelector(); } catch (e) { console.error('renderMeetingSelector error:', e); }
+    try { this.renderQuickLinks(); } catch (e) { console.error('renderQuickLinks error:', e); }
     
     try {
       const currentMeeting = meetingsManager.getCurrentMeeting();
