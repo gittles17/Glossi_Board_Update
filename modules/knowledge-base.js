@@ -79,6 +79,24 @@ class KnowledgeBase {
   }
 
   /**
+   * Clear the current chat
+   */
+  clearChat() {
+    if (!this.currentConversation || this.currentConversation.messages.length === 0) {
+      return;
+    }
+    
+    if (!confirm('Clear chat history? This cannot be undone.')) {
+      return;
+    }
+    
+    this.currentConversation.messages = [];
+    this.saveData();
+    this.renderMessages();
+    this.showToast('Chat cleared', 'info');
+  }
+
+  /**
    * Setup event listeners
    */
   setupEventListeners() {
@@ -216,6 +234,12 @@ class KnowledgeBase {
     const sendBtn = document.getElementById('kb-send-btn');
     if (sendBtn) {
       sendBtn.addEventListener('click', () => this.sendMessage());
+    }
+
+    // Clear chat button
+    const clearBtn = document.getElementById('kb-clear-btn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => this.clearChat());
     }
 
     // Modal overlay clicks
