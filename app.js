@@ -889,13 +889,11 @@ class GlossiDashboard {
       prevGrandTotal += stageTotal;
     });
     
-    // Get closed deals and partnerships from old pipeline data
+    // Get closed deals from old pipeline data
     const allClients = storage.getAllPipelineClients?.() || [];
     const closedDeals = allClients.filter(c => c.stage === 'closed' || c.category === 'closed');
     let closedTotal = 0;
     closedDeals.forEach(d => { closedTotal += this.parseMoneyValue(d.value); });
-    
-    const partnerships = allClients.filter(c => c.category === 'partnerships' || c.stage === 'partnership');
     
     // Render header totals (total pipeline / closed)
     const totalEl = document.getElementById('pipeline-total-value');
@@ -936,9 +934,6 @@ class GlossiDashboard {
       }
     });
     
-    // Render partnerships card
-    const partnershipsEl = document.getElementById('pipeline-total-partnerships');
-    if (partnershipsEl) partnershipsEl.textContent = partnerships.length;
     
     // Render "as of" date
     const updatedAtEl = document.getElementById('pipeline-updated-at');

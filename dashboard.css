@@ -5744,15 +5744,6 @@ body::after {
   color: var(--text-muted);
 }
 
-/* Partnerships card styling */
-.pipeline-card.pipeline-card-partnerships {
-  background: rgba(167, 139, 250, 0.08);
-  border-color: rgba(167, 139, 250, 0.2);
-}
-
-.pipeline-card.pipeline-card-partnerships .card-value {
-  color: #a78bfa;
-}
 
 /* Card deals dropdown */
 .pipeline-card .card-deals {
