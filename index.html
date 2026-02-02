@@ -307,6 +307,22 @@
           </div>
         </div>
 
+        <!-- Links Card -->
+        <div class="links-card" id="links-card">
+          <div class="links-header">
+            <h4>Quick Links</h4>
+            <button class="add-btn-small" id="add-link-btn" title="Add link">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="links-list" id="links-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -433,146 +449,6 @@
           <p class="settings-description">Your data is stored locally in JSON files.</p>
           <div class="storage-actions">
             <button class="btn btn-secondary" id="export-data">Export All Data</button>
-          </div>
-        </div>
-
-        <div class="settings-section email-settings">
-          <h3>Investor Email Format</h3>
-          <p class="settings-description">Customize which sections appear in your weekly investor update emails.</p>
-          
-          <p class="settings-sublabel">Drag to reorder sections</p>
-          <div class="email-sections-sortable" id="email-sections-sortable">
-            <div class="sortable-item" data-section="metrics" draggable="true">
-              <span class="drag-handle">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="9" cy="6" r="2"></circle>
-                  <circle cx="15" cy="6" r="2"></circle>
-                  <circle cx="9" cy="12" r="2"></circle>
-                  <circle cx="15" cy="12" r="2"></circle>
-                  <circle cx="9" cy="18" r="2"></circle>
-                  <circle cx="15" cy="18" r="2"></circle>
-                </svg>
-              </span>
-              <label class="toggle-row">
-                <input type="checkbox" id="email-metrics" checked>
-                <span class="toggle-switch"></span>
-                <span class="toggle-label">Key Metrics</span>
-              </label>
-            </div>
-            <div class="sortable-item" data-section="pipeline" draggable="true">
-              <span class="drag-handle">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="9" cy="6" r="2"></circle>
-                  <circle cx="15" cy="6" r="2"></circle>
-                  <circle cx="9" cy="12" r="2"></circle>
-                  <circle cx="15" cy="12" r="2"></circle>
-                  <circle cx="9" cy="18" r="2"></circle>
-                  <circle cx="15" cy="18" r="2"></circle>
-                </svg>
-              </span>
-              <label class="toggle-row">
-                <input type="checkbox" id="email-pipeline" checked>
-                <span class="toggle-switch"></span>
-                <span class="toggle-label">Pipeline Hot</span>
-              </label>
-            </div>
-            <div class="sortable-item" data-section="talkingPoints" draggable="true">
-              <span class="drag-handle">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="9" cy="6" r="2"></circle>
-                  <circle cx="15" cy="6" r="2"></circle>
-                  <circle cx="9" cy="12" r="2"></circle>
-                  <circle cx="15" cy="12" r="2"></circle>
-                  <circle cx="9" cy="18" r="2"></circle>
-                  <circle cx="15" cy="18" r="2"></circle>
-                </svg>
-              </span>
-              <label class="toggle-row">
-                <input type="checkbox" id="email-talking-points" checked>
-                <span class="toggle-switch"></span>
-                <span class="toggle-label">Key Talking Points</span>
-              </label>
-            </div>
-            <div class="sortable-item" data-section="highlights" draggable="true">
-              <span class="drag-handle">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="9" cy="6" r="2"></circle>
-                  <circle cx="15" cy="6" r="2"></circle>
-                  <circle cx="9" cy="12" r="2"></circle>
-                  <circle cx="15" cy="12" r="2"></circle>
-                  <circle cx="9" cy="18" r="2"></circle>
-                  <circle cx="15" cy="18" r="2"></circle>
-                </svg>
-              </span>
-              <label class="toggle-row">
-                <input type="checkbox" id="email-highlights" checked>
-                <span class="toggle-switch"></span>
-                <span class="toggle-label">This Week's Highlights</span>
-              </label>
-            </div>
-            <div class="sortable-item" data-section="decisions" draggable="true">
-              <span class="drag-handle">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="9" cy="6" r="2"></circle>
-                  <circle cx="15" cy="6" r="2"></circle>
-                  <circle cx="9" cy="12" r="2"></circle>
-                  <circle cx="15" cy="12" r="2"></circle>
-                  <circle cx="9" cy="18" r="2"></circle>
-                  <circle cx="15" cy="18" r="2"></circle>
-                </svg>
-              </span>
-              <label class="toggle-row">
-                <input type="checkbox" id="email-decisions" checked>
-                <span class="toggle-switch"></span>
-                <span class="toggle-label">Key Decisions</span>
-              </label>
-            </div>
-            <div class="sortable-item" data-section="actionItems" draggable="true">
-              <span class="drag-handle">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="9" cy="6" r="2"></circle>
-                  <circle cx="15" cy="6" r="2"></circle>
-                  <circle cx="9" cy="12" r="2"></circle>
-                  <circle cx="15" cy="12" r="2"></circle>
-                  <circle cx="9" cy="18" r="2"></circle>
-                  <circle cx="15" cy="18" r="2"></circle>
-                </svg>
-              </span>
-              <label class="toggle-row">
-                <input type="checkbox" id="email-action-items" checked>
-                <span class="toggle-switch"></span>
-                <span class="toggle-label">Action Items</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="email-counts">
-            <div class="input-group input-group-inline">
-              <label for="email-pipeline-count">Pipeline deals to show</label>
-              <input type="number" id="email-pipeline-count" class="input input-sm" min="1" max="10" value="5">
-            </div>
-            <div class="input-group input-group-inline">
-              <label for="email-talking-points-count">Talking points to show</label>
-              <input type="number" id="email-talking-points-count" class="input input-sm" min="1" max="10" value="4">
-            </div>
-          </div>
-
-          <div class="email-signature">
-            <div class="input-group">
-              <label for="email-signature">Signature</label>
-              <input type="text" id="email-signature" class="input" placeholder="JG" value="JG">
-            </div>
-            <div class="input-group">
-              <label for="email-greeting">Custom greeting (optional)</label>
-              <input type="text" id="email-greeting" class="input" placeholder="e.g., Hope you had a great week!">
-            </div>
-          </div>
-
-          <div class="email-links">
-            <p class="settings-sublabel">Footer Links</p>
-            <div id="email-links-toggles">
-              <!-- Link toggles rendered dynamically -->
-            </div>
           </div>
         </div>
       </div>

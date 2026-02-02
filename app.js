@@ -193,109 +193,6 @@ class GlossiDashboard {
   }
 
   /**
-   * Setup drag-and-drop for email section reordering
-   */
-  setupEmailSectionDragDrop() {
-    const container = document.getElementById('email-sections-sortable');
-    if (!container) return;
-
-    // Disable dragging on touch devices to allow scrolling
-    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    if (isTouchDevice) {
-      container.querySelectorAll('.sortable-item').forEach(item => {
-        item.removeAttribute('draggable');
-      });
-      return; // Skip drag setup on touch devices
-    }
-
-    let draggedItem = null;
-
-    container.addEventListener('dragstart', (e) => {
-      const item = e.target.closest('.sortable-item');
-      if (!item) return;
-      
-      draggedItem = item;
-      item.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', item.dataset.section);
-    });
-
-    container.addEventListener('dragend', (e) => {
-      const item = e.target.closest('.sortable-item');
-      if (item) {
-        item.classList.remove('dragging');
-      }
-      // Remove drag-over from all items
-      container.querySelectorAll('.sortable-item').forEach(el => {
-        el.classList.remove('drag-over');
-      });
-      draggedItem = null;
-    });
-
-    container.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      
-      const afterElement = this.getDragAfterElement(container, e.clientY);
-      const currentItem = e.target.closest('.sortable-item');
-      
-      // Remove drag-over from all items
-      container.querySelectorAll('.sortable-item').forEach(el => {
-        el.classList.remove('drag-over');
-      });
-      
-      // Add drag-over to the item we're over
-      if (currentItem && currentItem !== draggedItem) {
-        currentItem.classList.add('drag-over');
-      }
-    });
-
-    container.addEventListener('dragleave', (e) => {
-      const item = e.target.closest('.sortable-item');
-      if (item) {
-        item.classList.remove('drag-over');
-      }
-    });
-
-    container.addEventListener('drop', (e) => {
-      e.preventDefault();
-      
-      if (!draggedItem) return;
-      
-      const afterElement = this.getDragAfterElement(container, e.clientY);
-      
-      if (afterElement === null) {
-        container.appendChild(draggedItem);
-      } else {
-        container.insertBefore(draggedItem, afterElement);
-      }
-      
-      // Remove all drag states
-      container.querySelectorAll('.sortable-item').forEach(el => {
-        el.classList.remove('drag-over', 'dragging');
-      });
-    });
-  }
-
-  /**
-   * Get the element to insert after based on mouse position
-   */
-  getDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('.sortable-item:not(.dragging)')];
-    
-    return draggableElements.reduce((closest, child) => {
-      const box = child.getBoundingClientRect();
-      const offset = y - box.top - box.height / 2;
-      
-      if (offset < 0 && offset > closest.offset) {
-        return { offset: offset, element: child };
-      } else {
-        return closest;
-      }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
-  }
-
-  /**
    * Process a dropped or selected file
    */
   async processDroppedFile(file) {
@@ -627,9 +524,6 @@ class GlossiDashboard {
   setupEventListeners() {
     // Hamburger menu
     this.setupMenuDropdown();
-    
-    // Email section drag-drop reordering
-    this.setupEmailSectionDragDrop();
 
     // Settings modal
     document.getElementById('settings-modal-close').addEventListener('click', () => {
@@ -690,6 +584,10 @@ class GlossiDashboard {
         document.getElementById('decision-text').value = '';
         document.getElementById('decision-text').focus();
       }
+    });
+    
+    document.getElementById('add-link-btn')?.addEventListener('click', () => {
+      this.openAddLink();
     });
 
     document.getElementById('decision-modal-close').addEventListener('click', () => {
@@ -1513,6 +1411,7 @@ RULES:
    */
   renderQuickLinks() {
     const container = document.getElementById('quick-links-container');
+    const linksListContainer = document.getElementById('links-list');
     const links = storage.getQuickLinks();
 
     const iconMap = {
@@ -1550,24 +1449,92 @@ RULES:
       'orange': 'orange'
     };
 
-    container.innerHTML = links.map(link => {
-      const icon = iconMap[link.icon] || iconMap.link;
-      const colorClass = colorClassMap[link.color] || link.color || '';
-      return `
-        <div class="quick-link-wrapper" data-link-id="${link.id}">
-          <a href="${link.url}" target="_blank" class="quick-link ${colorClass}">
-            ${icon}
-            <span>${link.name}</span>
-          </a>
-          <button class="link-edit-btn" onclick="window.dashboard.editLink('${link.id}')" title="Edit">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-            </svg>
-          </button>
-        </div>
-      `;
-    }).join('');
+    // Render to header quick links container (if exists)
+    if (container) {
+      container.innerHTML = links.map(link => {
+        const icon = iconMap[link.icon] || iconMap.link;
+        const colorClass = colorClassMap[link.color] || link.color || '';
+        return `
+          <div class="quick-link-wrapper" data-link-id="${link.id}">
+            <a href="${link.url}" target="_blank" class="quick-link ${colorClass}">
+              ${icon}
+              <span>${link.name}</span>
+            </a>
+            <button class="link-edit-btn" onclick="window.dashboard.editLink('${link.id}')" title="Edit">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Render to links card on homepage
+    if (linksListContainer) {
+      if (links.length === 0) {
+        linksListContainer.innerHTML = '<div class="empty-state">No links added yet. Click + to add a link.</div>';
+        linksListContainer.classList.add('empty');
+      } else {
+        linksListContainer.classList.remove('empty');
+        linksListContainer.innerHTML = links.map(link => {
+          const icon = iconMap[link.icon] || iconMap.link;
+          return `
+            <div class="link-item" data-link-id="${link.id}">
+              <div class="link-item-icon ${link.color || 'default'}">${icon}</div>
+              <div class="link-item-content">
+                <div class="link-item-name">${link.name}</div>
+                <div class="link-item-url">${link.url}</div>
+              </div>
+              <div class="link-item-actions">
+                <button class="edit" onclick="event.stopPropagation(); window.dashboard.editLink('${link.id}')" title="Edit">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </button>
+                <button class="delete" onclick="event.stopPropagation(); window.dashboard.deleteLinkDirect('${link.id}')" title="Delete">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+        // Add click handlers to open links
+        linksListContainer.querySelectorAll('.link-item').forEach(item => {
+          item.addEventListener('click', (e) => {
+            if (!e.target.closest('.link-item-actions')) {
+              const linkId = item.dataset.linkId;
+              const link = links.find(l => l.id === linkId);
+              if (link) window.open(link.url, '_blank');
+            }
+          });
+        });
+      }
+    }
+  }
+  
+  /**
+   * Delete a link directly (from links card)
+   */
+  deleteLinkDirect(linkId) {
+    const linkEl = document.querySelector(`.link-item[data-link-id="${linkId}"]`);
+    if (linkEl) {
+      linkEl.style.opacity = '0';
+      linkEl.style.transform = 'scale(0.95)';
+      linkEl.style.transition = 'all 0.15s ease-out';
+    }
+    
+    setTimeout(() => {
+      storage.deleteQuickLink(linkId);
+      this.data = storage.getData();
+      this.renderQuickLinks();
+    }, 150);
   }
 
   /**
@@ -7347,37 +7314,6 @@ Respond with just the category name (core, traction, market, or testimonials) an
   async saveSettings() {
     const apiKey = document.getElementById('api-key').value.trim();
     const openaiApiKey = document.getElementById('openai-api-key').value.trim();
-    
-    // Get section order from DOM
-    const container = document.getElementById('email-sections-sortable');
-    const sectionOrder = [...container.querySelectorAll('.sortable-item')]
-      .map(item => item.dataset.section);
-    
-    // Collect email settings
-    const emailSettings = {
-      sectionOrder,
-      sections: {
-        metrics: document.getElementById('email-metrics').checked,
-        pipeline: document.getElementById('email-pipeline').checked,
-        talkingPoints: document.getElementById('email-talking-points').checked,
-        highlights: document.getElementById('email-highlights').checked,
-        decisions: document.getElementById('email-decisions').checked,
-        actionItems: document.getElementById('email-action-items').checked
-      },
-      counts: {
-        pipelineDeals: parseInt(document.getElementById('email-pipeline-count').value) || 5,
-        talkingPoints: parseInt(document.getElementById('email-talking-points-count').value) || 4
-      },
-      signature: document.getElementById('email-signature').value.trim() || 'JG',
-      greeting: document.getElementById('email-greeting').value.trim()
-    };
-
-    // Update link email settings
-    const linkToggles = document.querySelectorAll('#email-links-toggles input[data-link-id]');
-    linkToggles.forEach(toggle => {
-      const linkId = toggle.dataset.linkId;
-      storage.updateQuickLink(linkId, { emailEnabled: toggle.checked });
-    });
 
     // Update seed raise target
     const seedRaiseTarget = document.getElementById('seed-raise-target').value.trim();
@@ -7395,8 +7331,7 @@ Respond with just the category name (core, traction, market, or testimonials) an
     this.data = storage.getData();
     this.settings = storage.updateSettings({ 
       apiKey, 
-      openaiApiKey, 
-      email: emailSettings,
+      openaiApiKey,
       autoCurate,
       staleThresholdWeeks
     });
@@ -7457,51 +7392,6 @@ Respond with just the category name (core, traction, market, or testimonials) an
     if (staleThresholdEl) {
       staleThresholdEl.value = this.settings.staleThresholdWeeks || 4;
     }
-
-    // Populate email settings
-    const email = this.settings.email || {};
-    const sections = email.sections || {};
-    const counts = email.counts || {};
-    const links = email.links || {};
-    const sectionOrder = email.sectionOrder || ['metrics', 'pipeline', 'talkingPoints', 'highlights', 'decisions', 'actionItems'];
-
-    // Reorder DOM elements based on stored order
-    const container = document.getElementById('email-sections-sortable');
-    if (container) {
-      sectionOrder.forEach(sectionKey => {
-        const item = container.querySelector(`[data-section="${sectionKey}"]`);
-        if (item) {
-          container.appendChild(item);
-        }
-      });
-    }
-
-    // Section toggles
-    document.getElementById('email-metrics').checked = sections.metrics !== false;
-    document.getElementById('email-pipeline').checked = sections.pipeline !== false;
-    document.getElementById('email-talking-points').checked = sections.talkingPoints !== false;
-    document.getElementById('email-highlights').checked = sections.highlights !== false;
-    document.getElementById('email-decisions').checked = sections.decisions !== false;
-    document.getElementById('email-action-items').checked = sections.actionItems !== false;
-
-    // Counts
-    document.getElementById('email-pipeline-count').value = counts.pipelineDeals || 5;
-    document.getElementById('email-talking-points-count').value = counts.talkingPoints || 4;
-
-    // Signature and greeting
-    document.getElementById('email-signature').value = email.signature || 'JG';
-    document.getElementById('email-greeting').value = email.greeting || '';
-
-    // Render link toggles dynamically
-    const linksContainer = document.getElementById('email-links-toggles');
-    const quickLinks = storage.getQuickLinks();
-    linksContainer.innerHTML = quickLinks.map(link => `
-      <label class="toggle-row">
-        <input type="checkbox" data-link-id="${link.id}" ${link.emailEnabled !== false ? 'checked' : ''}>
-        <span class="toggle-switch"></span>
-        <span class="toggle-label">Include ${link.name}</span>
-      </label>
-    `).join('');
 
     // Seed raise target
     const seedRaise = storage.getSeedRaise();
