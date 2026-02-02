@@ -1052,6 +1052,60 @@
     </div>
   </div>
 
+  <!-- Share Email Modal -->
+  <div class="modal-overlay" id="share-email-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Generate Weekly Email</h2>
+        <button class="btn-icon modal-close" id="share-email-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description">Select sections to include in your weekly update email.</p>
+        
+        <div class="share-sections">
+          <label class="checkbox-item">
+            <input type="checkbox" id="share-pipeline" checked>
+            <span class="checkbox-label">Pipeline Summary</span>
+            <span class="checkbox-hint">Totals, stage breakdown, hot deals</span>
+          </label>
+          
+          <label class="checkbox-item">
+            <input type="checkbox" id="share-seedraise" checked>
+            <span class="checkbox-label">Seed Raise Progress</span>
+            <span class="checkbox-hint">Amount raised, recent commits</span>
+          </label>
+          
+          <label class="checkbox-item">
+            <input type="checkbox" id="share-meetings" checked>
+            <span class="checkbox-label">Week at a Glance</span>
+            <span class="checkbox-hint">Summary, decisions, action items</span>
+          </label>
+          
+          <label class="checkbox-item">
+            <input type="checkbox" id="share-reports">
+            <span class="checkbox-label">Knowledge Base Reports</span>
+            <span class="checkbox-hint" id="share-reports-hint">No reports generated</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="share-email-cancel">Cancel</button>
+        <button class="btn btn-primary" id="share-email-generate">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 2L11 13"></path>
+            <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+          </svg>
+          Generate Email
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Progress Overlay -->
   <div class="progress-overlay" id="progress-overlay">
     <div class="progress-card">

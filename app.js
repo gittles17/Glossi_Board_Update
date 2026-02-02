@@ -125,7 +125,20 @@ class GlossiDashboard {
     // Menu items
     document.getElementById('menu-share').addEventListener('click', () => {
       dropdown.classList.remove('open');
-      this.shareViaEmail();
+      this.openShareEmailModal();
+    });
+    
+    // Share email modal
+    document.getElementById('share-email-close')?.addEventListener('click', () => {
+      this.hideModal('share-email-modal');
+    });
+    
+    document.getElementById('share-email-cancel')?.addEventListener('click', () => {
+      this.hideModal('share-email-modal');
+    });
+    
+    document.getElementById('share-email-generate')?.addEventListener('click', () => {
+      this.generateAndSendEmail();
     });
 
     document.getElementById('menu-settings').addEventListener('click', () => {
@@ -1940,7 +1953,252 @@ RULES:
   }
 
   /**
-   * Share weekly update via email - clean, scannable format
+   * Open share email modal with section options
+   */
+  openShareEmailModal() {
+    // Update reports hint based on KB reports
+    const kb = storage.getKnowledgeBase();
+    const reports = kb?.reports || [];
+    const reportsHint = document.getElementById('share-reports-hint');
+    if (reportsHint) {
+      reportsHint.textContent = reports.length > 0 
+        ? `${reports.length} report${reports.length !== 1 ? 's' : ''} available`
+        : 'No reports generated';
+    }
+    
+    // Enable/disable reports checkbox based on availability
+    const reportsCheckbox = document.getElementById('share-reports');
+    if (reportsCheckbox) {
+      reportsCheckbox.disabled = reports.length === 0;
+      if (reports.length === 0) reportsCheckbox.checked = false;
+    }
+    
+    this.showModal('share-email-modal');
+  }
+
+  /**
+   * Generate and send email with selected sections
+   */
+  async generateAndSendEmail() {
+    const includePipeline = document.getElementById('share-pipeline')?.checked;
+    const includeSeedRaise = document.getElementById('share-seedraise')?.checked;
+    const includeMeetings = document.getElementById('share-meetings')?.checked;
+    const includeReports = document.getElementById('share-reports')?.checked;
+    
+    // Show processing state
+    const generateBtn = document.getElementById('share-email-generate');
+    const originalText = generateBtn?.innerHTML;
+    if (generateBtn) {
+      generateBtn.innerHTML = 'Generating...';
+      generateBtn.disabled = true;
+    }
+    
+    try {
+      // Collect content from selected sections
+      const content = this.collectEmailContent({
+        pipeline: includePipeline,
+        seedRaise: includeSeedRaise,
+        meetings: includeMeetings,
+        reports: includeReports
+      });
+      
+      // Polish with AI
+      const polishedEmail = await this.polishEmailWithAI(content);
+      
+      // Open mailto
+      this.openMailto(polishedEmail);
+      
+      this.hideModal('share-email-modal');
+      this.showToast('Email opened in your email client', 'success');
+    } catch (error) {
+      this.showToast('Failed to generate email: ' + error.message, 'error');
+    } finally {
+      if (generateBtn) {
+        generateBtn.innerHTML = originalText;
+        generateBtn.disabled = false;
+      }
+    }
+  }
+
+  /**
+   * Collect content from selected sections
+   */
+  collectEmailContent(sections) {
+    const weekRange = this.getWeekRange(new Date());
+    let content = { weekRange, sections: [] };
+    
+    // Pipeline
+    if (sections.pipeline) {
+      const pipelineData = this.data?.pipelineEmail || storage.getPipelineEmail?.() || null;
+      const deals = pipelineData?.deals || [];
+      const highlights = pipelineData?.highlights || {};
+      
+      // Calculate totals
+      let total = 0;
+      const stageTotals = { discovery: 0, demo: 0, pilot: 0, closing: 0 };
+      deals.forEach(d => {
+        const value = this.parseMoneyValue(d.value);
+        total += value;
+        const stage = d.stage === 'proposal' ? 'demo' : (d.stage === 'negotiation' ? 'pilot' : d.stage);
+        if (stageTotals[stage] !== undefined) stageTotals[stage] += value;
+      });
+      
+      content.sections.push({
+        name: 'Pipeline',
+        data: {
+          total: this.formatMoney(total),
+          dealCount: deals.length,
+          stages: Object.entries(stageTotals).map(([stage, val]) => `${stage}: ${this.formatMoney(val)}`).join(', '),
+          hotDeals: highlights.hotDeals || [],
+          keyUpdates: highlights.keyUpdates || []
+        }
+      });
+    }
+    
+    // Seed Raise
+    if (sections.seedRaise) {
+      const seedRaise = this.data?.seedRaise || {};
+      const investors = seedRaise.investors || [];
+      const committed = investors.filter(i => i.stage === 'committed' || i.stage === 'closed');
+      let raised = 0;
+      committed.forEach(i => { raised += this.parseMoneyValue(i.amount); });
+      
+      content.sections.push({
+        name: 'Seed Raise',
+        data: {
+          raised: this.formatMoney(raised),
+          target: seedRaise.target || '$500K',
+          committedCount: committed.length,
+          recentCommits: committed.slice(-3).map(i => `${i.name}: ${i.amount}`)
+        }
+      });
+    }
+    
+    // Meetings / Week at a Glance
+    if (sections.meetings) {
+      const meeting = meetingsManager.getCurrentMeeting();
+      content.sections.push({
+        name: 'Week at a Glance',
+        data: {
+          summary: meeting?.summary || [],
+          decisions: meeting?.decisions || [],
+          actionItems: meeting?.todos?.filter(t => !t.completed).map(t => ({
+            task: t.text,
+            owner: this.resolveOwnerName(t.owner)
+          })) || []
+        }
+      });
+    }
+    
+    // KB Reports
+    if (sections.reports) {
+      const kb = storage.getKnowledgeBase();
+      const reports = kb?.reports || [];
+      content.sections.push({
+        name: 'Reports',
+        data: {
+          reports: reports.map(r => ({
+            title: r.title,
+            content: r.content?.substring(0, 500) + (r.content?.length > 500 ? '...' : '')
+          }))
+        }
+      });
+    }
+    
+    return content;
+  }
+
+  /**
+   * Polish email content with AI
+   */
+  async polishEmailWithAI(content) {
+    const systemPrompt = `You are a professional email writer. Format the following weekly update data into a polished, professional email.
+
+RULES:
+- Keep it concise and scannable
+- Use clear section headers
+- Highlight key wins and action items
+- Professional but personable tone
+- Use bullet points for lists
+- Include all provided data, don't make up information
+- Format numbers consistently
+- End with a brief sign-off
+
+Return ONLY the email body text (no subject line, no greeting like "Dear X").`;
+
+    const userPrompt = `Create a weekly update email for: ${content.weekRange}
+
+DATA TO INCLUDE:
+${JSON.stringify(content.sections, null, 2)}
+
+Format this into a clean, professional weekly update email.`;
+
+    try {
+      const polished = await aiProcessor.chat(systemPrompt, userPrompt);
+      return {
+        subject: `Weekly Update | ${content.weekRange}`,
+        body: polished
+      };
+    } catch (error) {
+      // Fallback to raw formatting if AI fails
+      return {
+        subject: `Weekly Update | ${content.weekRange}`,
+        body: this.formatRawEmail(content)
+      };
+    }
+  }
+
+  /**
+   * Format email without AI (fallback)
+   */
+  formatRawEmail(content) {
+    let body = `WEEKLY UPDATE | ${content.weekRange}\n${'='.repeat(40)}\n\n`;
+    
+    content.sections.forEach(section => {
+      body += `${section.name.toUpperCase()}\n${'-'.repeat(20)}\n`;
+      
+      if (section.name === 'Pipeline') {
+        body += `Total: ${section.data.total} (${section.data.dealCount} deals)\n`;
+        body += `By Stage: ${section.data.stages}\n`;
+        if (section.data.hotDeals?.length) {
+          body += `Hot Deals:\n${section.data.hotDeals.map(d => `  - ${d}`).join('\n')}\n`;
+        }
+      } else if (section.name === 'Seed Raise') {
+        body += `Raised: ${section.data.raised} / ${section.data.target}\n`;
+        if (section.data.recentCommits?.length) {
+          body += `Recent: ${section.data.recentCommits.join(', ')}\n`;
+        }
+      } else if (section.name === 'Week at a Glance') {
+        if (section.data.summary?.length) {
+          body += `Summary:\n${section.data.summary.map(s => `  - ${s}`).join('\n')}\n`;
+        }
+        if (section.data.actionItems?.length) {
+          body += `Action Items:\n${section.data.actionItems.map(a => `  - ${a.task} (${a.owner})`).join('\n')}\n`;
+        }
+      } else if (section.name === 'Reports') {
+        section.data.reports?.forEach(r => {
+          body += `${r.title}:\n${r.content}\n\n`;
+        });
+      }
+      
+      body += '\n';
+    });
+    
+    return body;
+  }
+
+  /**
+   * Open mailto link with email content
+   */
+  openMailto(email) {
+    const subject = encodeURIComponent(email.subject);
+    const body = encodeURIComponent(email.body);
+    const mailto = `mailto:?subject=${subject}&body=${body}`;
+    window.open(mailto, '_blank');
+  }
+
+  /**
+   * Share weekly update via email - clean, scannable format (legacy)
    */
   shareViaEmail() {
     const data = this.data;
