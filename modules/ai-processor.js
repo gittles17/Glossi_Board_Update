@@ -42,7 +42,7 @@ class AIProcessor {
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-opus-4-20250514',
           max_tokens: 4096,
           system: systemPrompt,
           messages: [
@@ -372,7 +372,7 @@ Please analyze this update and identify all pipeline changes.`;
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-opus-4-20250514',
           max_tokens: 2048,
           messages: [
             {

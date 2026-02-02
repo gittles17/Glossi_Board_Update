@@ -766,12 +766,11 @@ body::after {
    DASHBOARD LAYOUT
    ============================================ */
 .dashboard-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: var(--panel-gap);
   padding: var(--space-6);
   padding-top: 0;
-  min-height: calc(100vh - 300px);
   position: relative;
   z-index: 1;
 }
