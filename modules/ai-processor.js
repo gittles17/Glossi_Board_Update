@@ -416,6 +416,7 @@ Be concise but comprehensive.`
   }
 }
 
-// Export singleton instance
+// Export class and singleton instance
+export { AIProcessor };
 export const aiProcessor = new AIProcessor();
 export default aiProcessor;

@@ -1352,6 +1352,7 @@ Guidelines:
   }
 }
 
-// Export singleton instance
+// Export class and singleton instance
+export { KnowledgeBase };
 export const knowledgeBase = new KnowledgeBase();
 export default knowledgeBase;

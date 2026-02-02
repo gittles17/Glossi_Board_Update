@@ -393,10 +393,11 @@
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="modules/storage.js"></script>
-  <script src="modules/ai-processor.js"></script>
-  <script src="modules/knowledge-base.js"></script>
-  <script>
+  <script type="module">
+    import { Storage } from './modules/storage.js';
+    import { AIProcessor } from './modules/ai-processor.js';
+    import { KnowledgeBase } from './modules/knowledge-base.js';
+
     // Initialize Knowledge Base page
     document.addEventListener('DOMContentLoaded', async () => {
       const storage = new Storage();
