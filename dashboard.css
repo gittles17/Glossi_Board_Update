@@ -1654,19 +1654,46 @@ body::after {
 .thought-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
+}
+
+.thought-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  padding: var(--space-1) 0;
+}
+
+.thought-toggle:hover .thought-expand-icon {
+  color: var(--text-primary);
 }
 
 .thought-expand-icon {
   width: 14px;
   height: 14px;
   color: var(--text-muted);
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, color 0.15s ease;
   flex-shrink: 0;
 }
 
 .thought-item.expanded .thought-expand-icon {
   transform: rotate(90deg);
+}
+
+.thought-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.thought-item:hover .thought-actions {
+  opacity: 1;
 }
 
 .thought-header-content {

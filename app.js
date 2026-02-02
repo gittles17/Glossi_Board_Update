@@ -5315,32 +5315,34 @@ Content: "${content.substring(0, 300)}"`
       }
       
       return `
-        <div class="thought-item" data-thought-id="${thought.id}" onclick="window.dashboard.toggleThought('${thought.id}')">
+        <div class="thought-item" data-thought-id="${thought.id}">
           <div class="thought-header">
-            <svg class="thought-expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-            <div class="thought-header-content">
-              <span class="thought-header-title" contenteditable="true" data-field="title" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(displayTitle)}</span>
+            <div class="thought-toggle" onclick="window.dashboard.toggleThought('${thought.id}')">
+              <svg class="thought-expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              <span class="thought-header-title">${this.escapeHtml(displayTitle)}</span>
               ${sourceFile && sourceFile !== displayTitle ? `<span class="thought-source">from ${this.escapeHtml(sourceFile)}</span>` : ''}
+              <span class="thought-date">${date}</span>
+            </div>
+            <div class="thought-actions">
               ${typeLabel ? `<span class="thought-type">${typeLabel}</span>` : ''}
               ${suggestionBadge}
-              <span class="thought-date">${date}</span>
               ${thought.originalSource ? `
-              <button class="source-btn" onclick="event.stopPropagation(); window.dashboard.viewSource('${thought.id}')" title="View original source">
+              <button class="source-btn" onclick="window.dashboard.viewSource('${thought.id}')" title="View original source">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                   <polyline points="14 2 14 8 20 8"></polyline>
                 </svg>
               </button>
               ` : ''}
-              <button class="promote-btn" onclick="event.stopPropagation(); window.dashboard.promoteThought('${thought.id}')" title="Choose category">
+              <button class="promote-btn" onclick="window.dashboard.promoteThought('${thought.id}')" title="Choose category">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="17 11 12 6 7 11"></polyline>
                   <line x1="12" y1="18" x2="12" y2="6"></line>
                 </svg>
               </button>
-              <button class="delete-btn" onclick="event.stopPropagation(); window.dashboard.deleteThought('${thought.id}')" title="Delete">
+              <button class="delete-btn" onclick="window.dashboard.deleteThought('${thought.id}')" title="Delete">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
