@@ -6764,8 +6764,9 @@ body::after {
 .knowledge-base {
   display: flex;
   gap: var(--space-3);
-  height: 450px;
-  max-height: 450px;
+  height: 70vh;
+  min-height: 500px;
+  max-height: 800px;
 }
 
 /* Sources Sidebar */

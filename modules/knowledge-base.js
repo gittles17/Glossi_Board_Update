@@ -338,17 +338,18 @@ class KnowledgeBase {
         category = await this.categorizeSource(content.substring(0, 1000));
       }
       
-      // Create source object
+      // Create source object - store full content (up to 500KB)
       const source = {
         id: 'src_' + Date.now(),
         type: 'file',
         title: file.name,
-        content: content.substring(0, 50000),
+        content: content.substring(0, 500000),
         category,
         metadata: {
           fileName: file.name,
           fileSize: file.size,
-          fileType: file.type
+          fileType: file.type,
+          contentLength: content.length
         },
         createdAt: new Date().toISOString()
       };
