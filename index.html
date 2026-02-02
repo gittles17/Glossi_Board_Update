@@ -338,7 +338,7 @@
     <!-- Right Panel: Cheat Sheet Summary -->
     <section class="panel panel-right">
       <div class="panel-header">
-        <h2>Investor Cheat Sheet</h2>
+        <h2>Knowledge Base</h2>
       </div>
       
       <div class="panel-content" id="cheatsheet-panel">
@@ -907,14 +907,6 @@
             </svg>
             Paste Text
           </button>
-          <button class="kb-source-tab" data-type="file">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-            Upload File
-          </button>
           <button class="kb-source-tab" data-type="url">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
@@ -933,32 +925,6 @@
           <div class="notes-input-section">
             <label for="kb-source-text">Content</label>
             <textarea id="kb-source-text" class="input textarea" rows="10" placeholder="Paste your text content here..."></textarea>
-          </div>
-        </div>
-
-        <!-- File Upload Panel -->
-        <div class="kb-source-panel" id="kb-panel-file">
-          <div class="kb-file-dropzone" id="kb-file-dropzone">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-            <p>Drop files here or click to browse</p>
-            <p class="kb-file-hint">Supports PDF, images, audio (MP3, WAV, M4A)</p>
-            <input type="file" id="kb-file-input" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.mp3,.wav,.m4a,.txt,.md" style="display: none;">
-          </div>
-          <div class="kb-file-preview" id="kb-file-preview" style="display: none;">
-            <div class="kb-file-info">
-              <span class="kb-file-icon"></span>
-              <span class="kb-file-name" id="kb-file-name"></span>
-              <button class="kb-file-remove" id="kb-file-remove" title="Remove">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
           </div>
         </div>
 

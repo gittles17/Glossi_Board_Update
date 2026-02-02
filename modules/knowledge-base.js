@@ -109,40 +109,6 @@ class KnowledgeBase {
       tab.addEventListener('click', (e) => this.switchSourceTab(e.target.closest('.kb-source-tab').dataset.type));
     });
 
-    // File dropzone
-    const dropzone = document.getElementById('kb-file-dropzone');
-    if (dropzone) {
-      dropzone.addEventListener('click', () => document.getElementById('kb-file-input').click());
-      dropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropzone.classList.add('drag-over');
-      });
-      dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
-      dropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('drag-over');
-        if (e.dataTransfer.files.length > 0) {
-          this.handleFileSelect(e.dataTransfer.files[0]);
-        }
-      });
-    }
-
-    // File input
-    const fileInput = document.getElementById('kb-file-input');
-    if (fileInput) {
-      fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-          this.handleFileSelect(e.target.files[0]);
-        }
-      });
-    }
-
-    // File remove
-    const fileRemove = document.getElementById('kb-file-remove');
-    if (fileRemove) {
-      fileRemove.addEventListener('click', () => this.clearSelectedFile());
-    }
-
     // Category buttons
     document.querySelectorAll('.kb-category-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -249,43 +215,6 @@ class KnowledgeBase {
   }
 
   /**
-   * Handle file selection
-   */
-  handleFileSelect(file) {
-    this.selectedFile = file;
-    
-    // Show preview
-    const preview = document.getElementById('kb-file-preview');
-    const dropzone = document.getElementById('kb-file-dropzone');
-    const fileName = document.getElementById('kb-file-name');
-    
-    if (preview && dropzone && fileName) {
-      dropzone.style.display = 'none';
-      preview.style.display = 'block';
-      fileName.textContent = file.name;
-    }
-  }
-
-  /**
-   * Clear selected file
-   */
-  clearSelectedFile() {
-    this.selectedFile = null;
-    
-    const preview = document.getElementById('kb-file-preview');
-    const dropzone = document.getElementById('kb-file-dropzone');
-    const fileInput = document.getElementById('kb-file-input');
-    
-    if (preview && dropzone) {
-      preview.style.display = 'none';
-      dropzone.style.display = 'block';
-    }
-    if (fileInput) {
-      fileInput.value = '';
-    }
-  }
-
-  /**
    * Show source modal
    */
   showSourceModal() {
@@ -368,24 +297,6 @@ class KnowledgeBase {
       if (!title) {
         // Generate title from first line or first 50 chars
         title = content.split('\n')[0].substring(0, 50) || 'Untitled';
-      }
-    } else if (type === 'file') {
-      if (!this.selectedFile) {
-        this.showToast('Please select a file', 'error');
-        return;
-      }
-      
-      title = this.selectedFile.name;
-      type = this.getFileType(this.selectedFile);
-      
-      // Process the file
-      try {
-        const result = await this.processFile(this.selectedFile);
-        content = result.content;
-        metadata = result.metadata || {};
-      } catch (error) {
-        this.showToast('Failed to process file: ' + error.message, 'error');
-        return;
       }
     } else if (type === 'url') {
       const url = document.getElementById('kb-source-url').value.trim();
@@ -636,7 +547,6 @@ Respond with ONLY the category name (lowercase).`;
     document.getElementById('kb-source-title').value = '';
     document.getElementById('kb-source-text').value = '';
     document.getElementById('kb-source-url').value = '';
-    this.clearSelectedFile();
     this.selectedCategory = 'auto';
     document.querySelectorAll('.kb-category-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.category === 'auto');
