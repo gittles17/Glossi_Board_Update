@@ -897,19 +897,6 @@ class GlossiDashboard {
     
     // Render highlights
     this.renderPipelineHighlights(highlights, pipelineData?.updatedAt);
-    
-    // Show empty state if no data
-    if (normalizedDeals.length === 0) {
-      const funnelEl = document.getElementById('pipeline-funnel');
-      if (funnelEl) {
-        funnelEl.innerHTML = `
-          <div class="pipeline-empty">
-            <p>No pipeline data yet</p>
-            <p class="pipeline-hint">Click + to paste your weekly pipeline email</p>
-          </div>
-        `;
-      }
-    }
   }
 
   /**
