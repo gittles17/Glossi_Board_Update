@@ -7334,6 +7334,35 @@ body::after {
   text-overflow: ellipsis;
 }
 
+/* Source processing progress bar */
+.kb-source-item.processing {
+  pointer-events: none;
+}
+
+.kb-source-item.processing .kb-source-item-icon {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.kb-source-progress {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.kb-source-progress-fill {
+  height: 100%;
+  background: var(--accent-blue);
+  border-radius: 2px;
+  transition: width 0.1s ease-out;
+}
+
 .kb-source-item.dragging {
   opacity: 0.5;
 }

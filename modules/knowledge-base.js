@@ -291,25 +291,42 @@ class KnowledgeBase {
       return;
     }
     
-    try {
-      let content = '';
-      let title = file.name.replace(/\.[^/.]+$/, '');
-      let type = 'file';
-      let metadata = {
+    // Create placeholder source immediately (optimistic UI)
+    const sourceId = 'src_' + Date.now();
+    const title = file.name.replace(/\.[^/.]+$/, '');
+    const placeholderSource = {
+      id: sourceId,
+      type: isAudio ? 'audio' : isPdf ? 'pdf' : 'file',
+      title,
+      content: '',
+      category: 'other',
+      metadata: {
         fileName: file.name,
         fileSize: file.size,
         fileType: file.type
-      };
+      },
+      createdAt: new Date().toISOString(),
+      processing: true,
+      progress: 0
+    };
+    
+    this.sources.push(placeholderSource);
+    this.renderSources();
+    
+    // Start progress animation
+    const progressInterval = this.startProgressAnimation(sourceId, isAudio ? 30000 : isPdf ? 10000 : 2000);
+    
+    try {
+      let content = '';
+      let metadata = { ...placeholderSource.metadata };
+      let type = 'file';
       
       if (isText) {
         // Read text files directly
         content = await file.text();
-        this.showToast(`Processing: ${file.name}`, 'info');
         
       } else if (isPdf) {
         // Send to server for PDF extraction
-        this.showToast(`Extracting PDF text: ${file.name}`, 'info');
-        
         const formData = new FormData();
         formData.append('file', file);
         
@@ -325,14 +342,11 @@ class KnowledgeBase {
         }
         
         content = result.content;
-        title = result.title || title;
         metadata.pageCount = result.pageCount;
         type = 'pdf';
         
       } else if (isAudio) {
         // Send to server for Whisper transcription
-        this.showToast(`Transcribing audio: ${file.name} (this may take a moment)`, 'info');
-        
         const formData = new FormData();
         formData.append('file', file);
         
@@ -348,10 +362,12 @@ class KnowledgeBase {
         }
         
         content = result.transcript;
-        title = result.title || title;
         metadata.duration = result.duration;
         type = 'audio';
       }
+      
+      // Stop progress animation
+      clearInterval(progressInterval);
       
       // Determine category using AI
       let category = 'other';
@@ -359,27 +375,56 @@ class KnowledgeBase {
         category = await this.categorizeSource(content.substring(0, 1000));
       }
       
-      // Create source object - store extracted text (up to 500KB)
-      const source = {
-        id: 'src_' + Date.now(),
-        type,
-        title,
-        content: content.substring(0, 500000),
-        category,
-        metadata: {
-          ...metadata,
-          contentLength: content.length
-        },
-        createdAt: new Date().toISOString()
-      };
+      // Update the source with actual content
+      const source = this.sources.find(s => s.id === sourceId);
+      if (source) {
+        source.type = type;
+        source.content = content.substring(0, 500000);
+        source.category = category;
+        source.metadata = { ...metadata, contentLength: content.length };
+        source.processing = false;
+        source.progress = 100;
+        delete source.processing;
+        delete source.progress;
+      }
       
-      this.sources.push(source);
       this.saveData();
       this.renderSources();
       
     } catch (error) {
+      // Stop progress animation
+      clearInterval(progressInterval);
+      
+      // Remove failed source
+      this.sources = this.sources.filter(s => s.id !== sourceId);
+      this.renderSources();
       this.showToast(`Failed to process file: ${error.message}`, 'error');
     }
+  }
+  
+  /**
+   * Start progress animation for a processing source
+   */
+  startProgressAnimation(sourceId, estimatedTime) {
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(95, (elapsed / estimatedTime) * 100);
+      
+      const source = this.sources.find(s => s.id === sourceId);
+      if (source && source.processing) {
+        source.progress = progress;
+        // Update just the progress bar element
+        const progressBar = document.querySelector(`.kb-source-progress-fill[data-id="${sourceId}"]`);
+        if (progressBar) {
+          progressBar.style.width = `${progress}%`;
+        }
+      } else {
+        clearInterval(interval);
+      }
+    }, 100);
+    
+    return interval;
   }
 
   /**
@@ -1294,10 +1339,13 @@ Guidelines:
    * Render a single source item
    */
   renderSourceItem(source) {
+    const isProcessing = source.processing === true;
+    const progress = source.progress || 0;
+    
     return `
-      <div class="kb-source-item ${source.enabled === false ? 'disabled' : ''}" data-id="${source.id}" draggable="true">
+      <div class="kb-source-item ${source.enabled === false ? 'disabled' : ''} ${isProcessing ? 'processing' : ''}" data-id="${source.id}" draggable="${!isProcessing}">
         <label class="kb-source-toggle-wrap" onclick="event.stopPropagation()">
-          <input type="checkbox" class="kb-source-toggle" ${source.enabled !== false ? 'checked' : ''}>
+          <input type="checkbox" class="kb-source-toggle" ${source.enabled !== false ? 'checked' : ''} ${isProcessing ? 'disabled' : ''}>
         </label>
         <div class="kb-source-item-icon">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1307,8 +1355,13 @@ Guidelines:
         </div>
         <div class="kb-source-item-content">
           <div class="kb-source-item-title">${this.escapeHtml(source.title)}</div>
+          ${isProcessing ? `
+            <div class="kb-source-progress">
+              <div class="kb-source-progress-fill" data-id="${source.id}" style="width: ${progress}%"></div>
+            </div>
+          ` : ''}
         </div>
-        <button class="kb-source-delete" onclick="event.stopPropagation()" title="Delete source">
+        <button class="kb-source-delete" onclick="event.stopPropagation()" title="Delete source" ${isProcessing ? 'disabled' : ''}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
         </button>
       </div>
