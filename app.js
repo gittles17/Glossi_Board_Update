@@ -1527,7 +1527,7 @@ RULES:
                 ` : sectionLinks.map(link => `
                   <div class="link-card" data-link-id="${link.id}" data-section-id="${section.id}" draggable="true">
                     <div class="link-card-info">
-                      <span class="link-card-name">${link.name}</span>
+                      <a href="${link.url}" target="_blank" class="link-card-name" onclick="event.stopPropagation()">${link.name}</a>
                       <span class="link-card-url">${link.url}</span>
                     </div>
                   </div>

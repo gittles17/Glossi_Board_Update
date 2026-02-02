@@ -4306,6 +4306,13 @@ body::after {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.link-card-name:hover {
+  color: var(--accent-blue);
+  text-decoration: underline;
 }
 
 .link-card-url {
