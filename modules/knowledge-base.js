@@ -793,17 +793,18 @@ Respond with ONLY the category name (lowercase).`;
       // Build context from sources
       const context = this.buildSourceContext();
       
-      const systemPrompt = `You are an AI assistant for the Glossi investor knowledge base. 
-You have access to the following sources:
+      const systemPrompt = `You are an AI assistant for Glossi's investor knowledge base.
 
+SOURCES:
 ${context}
 
-When answering questions:
-1. Base your answers on the provided sources
-2. Cite specific sources using [Source: title] format
-3. If information is not in the sources, say so
-4. Prioritize recent information over older data
-5. Be concise but comprehensive`;
+RESPONSE GUIDELINES:
+- Answer based ONLY on the provided sources
+- Use clear markdown formatting: ## for headers, **bold** for emphasis, - for bullet points
+- Cite sources inline using [Source: title] format
+- If information is not in sources, clearly state "This information is not in the available sources"
+- Be concise and well-structured
+- Prioritize the most recent and relevant information`;
 
       const response = await this.aiProcessor.chat(systemPrompt, message);
       
@@ -1165,20 +1166,61 @@ Guidelines:
     // Basic markdown parsing
     let html = this.escapeHtml(content);
     
+    // Headers
+    html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+    html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+    
     // Bold
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     
-    // Bullet points
-    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-    html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+    // Italic
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
     
-    // Line breaks
-    html = html.replace(/\n/g, '<br>');
+    // Process bullet points - group consecutive lines starting with -
+    const lines = html.split('\n');
+    const processedLines = [];
+    let inList = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      const isBullet = line.startsWith('- ') || line.startsWith('• ');
+      
+      if (isBullet) {
+        if (!inList) {
+          processedLines.push('<ul>');
+          inList = true;
+        }
+        processedLines.push('<li>' + line.substring(2) + '</li>');
+      } else {
+        if (inList) {
+          processedLines.push('</ul>');
+          inList = false;
+        }
+        if (line) {
+          // Don't wrap headers in <p>
+          if (line.startsWith('<h')) {
+            processedLines.push(line);
+          } else {
+            processedLines.push('<p>' + line + '</p>');
+          }
+        }
+      }
+    }
+    
+    if (inList) {
+      processedLines.push('</ul>');
+    }
+    
+    html = processedLines.join('');
     
     // Source citations
     html = html.replace(/\[Source: (.+?)\]/g, '<span class="kb-citation">$1</span>');
     
-    return '<p>' + html + '</p>';
+    // Inline citations (text in backticks)
+    html = html.replace(/`([^`]+)`/g, '<code class="kb-inline-citation">$1</code>');
+    
+    return html;
   }
 
   /**
