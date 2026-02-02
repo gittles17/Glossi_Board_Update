@@ -69,12 +69,12 @@
             <span>Drop files here</span>
           </div>
         </div>
-        <button class="kb-add-source-btn" id="kb-add-source-btn" title="Add Source">
+        <button class="kb-add-source-btn" id="kb-add-source-btn" title="Add text">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
-          <span>Add Source</span>
+          <span>text</span>
         </button>
       </div>
 
@@ -144,11 +144,11 @@
     </div>
   </main>
 
-  <!-- Add Source Modal -->
+  <!-- Add Text Modal -->
   <div class="modal-overlay" id="kb-source-modal">
-    <div class="modal modal-large">
+    <div class="modal">
       <div class="modal-header">
-        <h2>Add Source</h2>
+        <h2>Add Text</h2>
         <button class="btn-icon modal-close" id="kb-source-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -157,74 +157,14 @@
         </button>
       </div>
       <div class="modal-body">
-        <!-- Source Type Tabs -->
-        <div class="kb-source-tabs">
-          <button class="kb-source-tab active" data-type="text">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-            </svg>
-            Paste Text
-          </button>
-          <button class="kb-source-tab" data-type="url">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-            </svg>
-            URL
-          </button>
+        <div class="notes-input-section">
+          <textarea id="kb-source-text" class="input textarea" rows="8" placeholder="Paste or type your text here..."></textarea>
         </div>
-
-        <!-- Text Input Panel -->
-        <div class="kb-source-panel active" id="kb-panel-text">
-          <div class="notes-input-section">
-            <label for="kb-source-title">Title (optional)</label>
-            <input type="text" id="kb-source-title" class="input" placeholder="e.g., Q4 Customer Feedback">
-          </div>
-          <div class="notes-input-section">
-            <label for="kb-source-text">Content</label>
-            <textarea id="kb-source-text" class="input textarea" rows="10" placeholder="Paste your text content here..."></textarea>
-          </div>
-        </div>
-
-        <!-- URL Input Panel -->
-        <div class="kb-source-panel" id="kb-panel-url">
-          <div class="notes-input-section">
-            <label for="kb-source-url">URL</label>
-            <input type="url" id="kb-source-url" class="input" placeholder="https://...">
-          </div>
-          <p class="kb-url-hint">The content will be fetched and analyzed automatically.</p>
-        </div>
-
-        <!-- Category Selection -->
-        <div class="kb-category-section">
-          <label>Category</label>
-          <div class="kb-category-options" id="kb-category-options">
-            <button class="kb-category-btn active" data-category="auto">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-              </svg>
-              Auto-detect
-            </button>
-            <button class="kb-category-btn" data-category="market">Market Research</button>
-            <button class="kb-category-btn" data-category="customer">Customer Feedback</button>
-            <button class="kb-category-btn" data-category="competitor">Competitor Intel</button>
-            <button class="kb-category-btn" data-category="product">Product Notes</button>
-            <button class="kb-category-btn" data-category="other">Other</button>
-          </div>
-        </div>
+        <p class="kb-text-hint">A title will be auto-generated from the content.</p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="kb-source-cancel">Cancel</button>
-        <button class="btn btn-primary" id="kb-source-save">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          Add Source
-        </button>
+        <button class="btn btn-primary" id="kb-source-save">Add</button>
       </div>
     </div>
   </div>

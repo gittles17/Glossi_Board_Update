@@ -161,20 +161,6 @@ class KnowledgeBase {
       addSourceBtn.addEventListener('click', () => this.showSourceModal());
     }
 
-    // Source modal tabs
-    document.querySelectorAll('.kb-source-tab').forEach(tab => {
-      tab.addEventListener('click', (e) => this.switchSourceTab(e.target.closest('.kb-source-tab').dataset.type));
-    });
-
-    // Category buttons
-    document.querySelectorAll('.kb-category-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.kb-category-btn').forEach(b => b.classList.remove('active'));
-        e.target.closest('.kb-category-btn').classList.add('active');
-        this.selectedCategory = e.target.closest('.kb-category-btn').dataset.category;
-      });
-    });
-
     // Source modal close/cancel
     const sourceModalClose = document.getElementById('kb-source-modal-close');
     if (sourceModalClose) {
@@ -283,12 +269,9 @@ class KnowledgeBase {
    * Show source modal
    */
   showSourceModal() {
+    const textInput = document.getElementById('kb-source-text');
+    if (textInput) textInput.value = '';
     this.showModal('kb-source-modal');
-    this.switchSourceTab('text');
-    this.selectedCategory = 'auto';
-    document.querySelectorAll('.kb-category-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.category === 'auto');
-    });
   }
 
   /**
@@ -419,65 +402,46 @@ class KnowledgeBase {
   }
 
   /**
-   * Add a new source
+   * Add a new source from text
    */
   async addSource() {
-    let content = '';
-    let title = '';
-    let type = this.selectedSourceType;
-    let metadata = {};
+    const content = document.getElementById('kb-source-text').value.trim();
     
-    if (type === 'text') {
-      title = document.getElementById('kb-source-title').value.trim();
-      content = document.getElementById('kb-source-text').value.trim();
-      
-      if (!content) {
-        this.showToast('Please enter some content', 'error');
-        return;
-      }
-      
-      if (!title) {
-        // Generate title from first line or first 50 chars
-        title = content.split('\n')[0].substring(0, 50) || 'Untitled';
-      }
-    } else if (type === 'url') {
-      const url = document.getElementById('kb-source-url').value.trim();
-      
-      if (!url) {
-        this.showToast('Please enter a URL', 'error');
-        return;
-      }
-      
-      try {
-        const result = await this.fetchUrl(url);
-        title = result.title || url;
-        content = result.content;
-        metadata = { url };
-      } catch (error) {
-        this.showToast('Failed to fetch URL: ' + error.message, 'error');
-        return;
-      }
+    if (!content) {
+      this.showToast('Please enter some content', 'error');
+      return;
     }
     
-    // Determine category
-    let category = this.selectedCategory;
-    if (category === 'auto' && this.aiProcessor && this.aiProcessor.isConfigured()) {
-      category = await this.categorizeSource(content);
-    } else if (category === 'auto') {
-      category = 'other';
+    // Generate title from AI or fallback
+    let title = '';
+    if (this.aiProcessor && this.aiProcessor.isConfigured()) {
+      try {
+        const response = await this.aiProcessor.chat(
+          'Generate a brief, descriptive title (max 6 words) for this text. Return ONLY the title, no quotes or explanation.',
+          content.substring(0, 1000)
+        );
+        title = response.trim().replace(/^["']|["']$/g, '');
+        if (title.length > 60) {
+          title = title.substring(0, 57) + '...';
+        }
+      } catch (e) {
+        title = content.split('\n')[0].substring(0, 50) || 'Untitled';
+      }
+    } else {
+      title = content.split('\n')[0].substring(0, 50) || 'Untitled';
     }
     
     // Create source object
     const source = {
       id: 'src_' + Date.now(),
-      type,
+      type: 'text',
       title,
       content,
-      category,
+      category: 'other',
       tags: [],
       addedAt: new Date().toISOString(),
       freshness: 'current',
-      metadata
+      metadata: {}
     };
     
     this.sources.push(source);

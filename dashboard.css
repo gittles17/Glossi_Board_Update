@@ -7291,6 +7291,12 @@ body::after {
   color: var(--accent-blue);
 }
 
+.kb-text-hint {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: var(--space-2);
+}
+
 .kb-empty-chat {
   display: flex;
   align-items: center;
