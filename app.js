@@ -735,6 +735,10 @@ class GlossiDashboard {
       this.openAddTalkingPoint();
     });
 
+    document.getElementById('fix-talking-points-btn').addEventListener('click', () => {
+      this.fixTalkingPointRedundancies();
+    });
+
     document.getElementById('talking-point-modal-close').addEventListener('click', () => {
       this.hideModal('talking-point-modal');
     });
@@ -1084,8 +1088,9 @@ class GlossiDashboard {
       } else {
         catPoints.forEach((point) => {
           html += `
-            <div class="talking-point-full" style="animation-delay: ${0.45 + animIndex * 0.05}s" data-index="${point.originalIndex}">
+            <div class="talking-point-full" style="animation-delay: ${0.45 + animIndex * 0.05}s" data-index="${point.originalIndex}" draggable="true">
               <div class="talking-point-header">
+                <span class="drag-handle" title="Drag to move">⋮⋮</span>
                 <span class="title">${point.title}</span>
                 <div class="talking-point-actions">
                   <button class="edit-btn" onclick="window.dashboard.editTalkingPoint(${point.originalIndex})" title="Edit">
@@ -1116,6 +1121,87 @@ class GlossiDashboard {
 
     // Add staggered entrance animation
     this.animateListItems(container, '.talking-point-full');
+    
+    // Setup drag-drop for talking points
+    this.setupTalkingPointDragDrop();
+  }
+
+  /**
+   * Setup drag-drop for talking points between categories
+   */
+  setupTalkingPointDragDrop() {
+    const items = document.querySelectorAll('.talking-point-full[draggable="true"]');
+    const categories = document.querySelectorAll('.category-points');
+    
+    let draggedItem = null;
+    let draggedIndex = null;
+    
+    items.forEach(item => {
+      item.addEventListener('dragstart', (e) => {
+        draggedItem = item;
+        draggedIndex = parseInt(item.dataset.index);
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      
+      item.addEventListener('dragend', () => {
+        item.classList.remove('dragging');
+        draggedItem = null;
+        draggedIndex = null;
+        categories.forEach(c => c.classList.remove('drag-over'));
+      });
+    });
+    
+    categories.forEach(categoryEl => {
+      categoryEl.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        categoryEl.classList.add('drag-over');
+      });
+      
+      categoryEl.addEventListener('dragleave', () => {
+        categoryEl.classList.remove('drag-over');
+      });
+      
+      categoryEl.addEventListener('drop', (e) => {
+        e.preventDefault();
+        categoryEl.classList.remove('drag-over');
+        
+        if (draggedItem && draggedIndex !== null) {
+          const newCategory = categoryEl.closest('.talking-point-category')?.dataset.category;
+          if (newCategory) {
+            this.moveTalkingPointToCategory(draggedIndex, newCategory);
+          }
+        }
+      });
+    });
+  }
+
+  /**
+   * Move a talking point to a different category
+   */
+  moveTalkingPointToCategory(index, newCategory) {
+    const points = this.data?.talkingPoints || [];
+    if (index < 0 || index >= points.length) return;
+    
+    const point = points[index];
+    const oldCategory = point.category;
+    if (oldCategory === newCategory) return;
+    
+    // Update category (storage.updateTalkingPoint takes: index, title, content, category)
+    storage.updateTalkingPoint(index, point.title, point.content, newCategory);
+    
+    this.data = storage.getData();
+    this.renderTalkingPoints();
+    
+    const categoryLabels = {
+      core: 'Core Value Prop',
+      traction: 'Traction & Proof',
+      market: 'Market & Timing',
+      testimonials: 'Customer Validation'
+    };
+    
+    this.showToast(`Moved to ${categoryLabels[newCategory]}`, 'success');
   }
 
   /**
@@ -1164,10 +1250,18 @@ class GlossiDashboard {
       const icon = iconMap[link.icon] || iconMap.link;
       const colorClass = colorClassMap[link.color] || link.color || '';
       return `
-        <a href="${link.url}" target="_blank" class="quick-link ${colorClass}" data-link-id="${link.id}" onclick="event.preventDefault(); if(event.shiftKey) { window.dashboard.editLink('${link.id}'); } else { window.open('${link.url}', '_blank'); }">
-          ${icon}
-          <span>${link.name}</span>
-        </a>
+        <div class="quick-link-wrapper" data-link-id="${link.id}">
+          <a href="${link.url}" target="_blank" class="quick-link ${colorClass}">
+            ${icon}
+            <span>${link.name}</span>
+          </a>
+          <button class="link-edit-btn" onclick="window.dashboard.editLink('${link.id}')" title="Edit">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </button>
+        </div>
       `;
     }).join('');
   }
@@ -3377,6 +3471,128 @@ Return JSON:
     if (promotedCount) parts.push(`${promotedCount} promoted`);
     
     this.showToast(parts.length > 0 ? `Curated: ${parts.join(', ')}` : 'No changes made', 'success');
+  }
+
+  /**
+   * Fix redundancies and misplaced talking points
+   */
+  async fixTalkingPointRedundancies() {
+    const talkingPoints = this.data?.talkingPoints || [];
+    
+    if (talkingPoints.length === 0) {
+      this.showToast('No talking points to analyze', 'info');
+      return;
+    }
+    
+    this.showToast('Analyzing talking points...', 'info');
+    
+    try {
+      const prompt = `Analyze these talking points for an investor cheat sheet. Find and fix:
+1. DUPLICATES: Points saying the same thing
+2. WRONG CATEGORY: Points in the wrong section
+3. WEAK POINTS: Vague or unhelpful statements
+
+CURRENT TALKING POINTS:
+${talkingPoints.map((tp, i) => `${i}. [${tp.category}] "${tp.title}": ${tp.content}`).join('\n')}
+
+CATEGORY DEFINITIONS:
+- core: Core value proposition - what makes us unique, our approach
+- traction: Proof points - revenue, pipeline, customers, growth metrics
+- market: Market opportunity, timing, why now
+- testimonials: Customer quotes, validation from users/partners
+
+Return JSON with fixes:
+{
+  "analysis": "Brief summary of issues found",
+  "fixes": [
+    {
+      "index": 0,
+      "action": "delete|move|rewrite",
+      "reason": "Why this fix",
+      "newCategory": "core|traction|market|testimonials" (if move),
+      "newTitle": "..." (if rewrite),
+      "newContent": "..." (if rewrite),
+      "duplicateOf": 2 (if delete due to duplicate)
+    }
+  ]
+}
+
+RULES:
+- Only suggest changes that clearly improve the cheat sheet
+- Prefer moving over deleting when possible
+- Rewrite only if the point is good but poorly worded
+- Keep investor-friendly, casual tone when rewriting`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.settings.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 3000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Analysis failed');
+      }
+
+      const result = await response.json();
+      const responseText = result.content[0].text;
+      
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Failed to parse response');
+      
+      const analysis = JSON.parse(jsonMatch[0]);
+      
+      if (!analysis.fixes || analysis.fixes.length === 0) {
+        this.showToast('No issues found - talking points look good!', 'success');
+        return;
+      }
+      
+      // Apply fixes (in reverse order to preserve indices)
+      const sortedFixes = analysis.fixes.sort((a, b) => b.index - a.index);
+      let deleted = 0, moved = 0, rewritten = 0;
+      
+      sortedFixes.forEach(fix => {
+        const point = talkingPoints[fix.index];
+        if (!point) return;
+        
+        if (fix.action === 'delete') {
+          storage.deleteTalkingPoint(fix.index);
+          deleted++;
+        } else if (fix.action === 'move' && fix.newCategory) {
+          storage.updateTalkingPoint(fix.index, point.title, point.content, fix.newCategory);
+          moved++;
+        } else if (fix.action === 'rewrite') {
+          const newTitle = fix.newTitle || point.title;
+          const newContent = fix.newContent || point.content;
+          const newCategory = fix.newCategory || point.category;
+          storage.updateTalkingPoint(fix.index, newTitle, newContent, newCategory);
+          rewritten++;
+        }
+      });
+      
+      this.data = storage.getData();
+      this.renderTalkingPoints();
+      
+      const parts = [];
+      if (deleted) parts.push(`${deleted} removed`);
+      if (moved) parts.push(`${moved} moved`);
+      if (rewritten) parts.push(`${rewritten} improved`);
+      
+      this.showToast(`Fixed: ${parts.join(', ')}`, 'success');
+      
+    } catch (error) {
+      console.error('Fix redundancies error:', error);
+      this.showToast('Analysis failed: ' + error.message, 'error');
+    }
   }
 
   /**

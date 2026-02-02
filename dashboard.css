@@ -906,6 +906,41 @@ body::after {
   margin-bottom: var(--space-4);
 }
 
+.quick-link-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.quick-link-wrapper:hover .link-edit-btn {
+  opacity: 1;
+}
+
+.link-edit-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s ease;
+  z-index: 1;
+}
+
+.link-edit-btn:hover {
+  background: var(--accent-green);
+  color: white;
+  border-color: var(--accent-green);
+}
+
 .quick-link {
   display: inline-flex;
   align-items: center;
@@ -1607,6 +1642,13 @@ body::after {
 .category-points {
   display: flex;
   flex-direction: column;
+  min-height: 40px;
+  transition: background 0.15s ease;
+}
+
+.category-points.drag-over {
+  background: rgba(74, 222, 128, 0.1);
+  border-radius: var(--radius-md);
 }
 
 .empty-category {
@@ -1620,6 +1662,16 @@ body::after {
   padding: var(--space-3) 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   transition: all 0.15s ease-out;
+  cursor: grab;
+}
+
+.talking-point-full:active {
+  cursor: grabbing;
+}
+
+.talking-point-full.dragging {
+  opacity: 0.5;
+  transform: scale(0.98);
 }
 
 .talking-point-full:last-child {
@@ -1628,6 +1680,46 @@ body::after {
 
 .talking-point-full:hover {
   padding-left: var(--space-2);
+}
+
+.drag-handle {
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: -2px;
+  margin-right: var(--space-2);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  cursor: grab;
+}
+
+.talking-point-full:hover .drag-handle {
+  opacity: 0.5;
+}
+
+.talking-point-full:hover .drag-handle:hover {
+  opacity: 1;
+}
+
+/* Fix Button */
+.fix-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fix-btn:hover {
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+  background: rgba(74, 222, 128, 0.1);
 }
 
 .talking-point-header {
