@@ -7570,24 +7570,33 @@ body::after {
 }
 
 .kb-clear-btn {
-  width: 36px;
-  height: 36px;
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
-  flex-shrink: 0;
+  z-index: 10;
+  opacity: 0.6;
 }
 
 .kb-clear-btn:hover {
   background: rgba(239, 68, 68, 0.1);
   border-color: rgba(239, 68, 68, 0.3);
   color: #ef4444;
+  opacity: 1;
+}
+
+.kb-chat-area {
+  position: relative;
 }
 
 .kb-send-btn {
@@ -8196,6 +8205,25 @@ body::after {
   justify-content: space-between;
 }
 
+.kb-report-title-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
+  padding: var(--space-1) 0;
+  margin-right: var(--space-3);
+  transition: border-color 0.15s ease;
+}
+
+.kb-report-title-input:hover,
+.kb-report-title-input:focus {
+  border-bottom-color: var(--border-color);
+  outline: none;
+}
+
 .modal-header-actions {
   display: flex;
   align-items: center;
@@ -8205,6 +8233,25 @@ body::after {
 .btn-sm {
   padding: var(--space-2) var(--space-3);
   font-size: 12px;
+}
+
+.kb-report-content-edit {
+  width: 100%;
+  min-height: 400px;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.kb-report-content-edit:focus {
+  outline: none;
+  border-color: var(--accent-blue);
 }
 
 .kb-report-view-content {

@@ -1724,7 +1724,95 @@ Guidelines:
           this.showReportViewModal(report);
         }
       });
+      
+      // Right-click context menu
+      item.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        this.showReportContextMenu(e, item.dataset.id);
+      });
     });
+  }
+
+  /**
+   * Show context menu for report
+   */
+  showReportContextMenu(e, reportId) {
+    // Remove existing menu
+    const existingMenu = document.querySelector('.kb-context-menu');
+    if (existingMenu) existingMenu.remove();
+    
+    const report = this.reports.find(r => r.id === reportId);
+    if (!report) return;
+    
+    const menu = document.createElement('div');
+    menu.className = 'kb-context-menu';
+    menu.style.left = e.pageX + 'px';
+    menu.style.top = e.pageY + 'px';
+    
+    menu.innerHTML = `
+      <button class="kb-context-item" data-action="rename">Rename</button>
+      <button class="kb-context-item" data-action="edit">Edit</button>
+      <div class="kb-context-divider"></div>
+      <button class="kb-context-item kb-context-danger" data-action="delete">Delete</button>
+    `;
+    
+    document.body.appendChild(menu);
+    
+    // Handle menu clicks
+    menu.querySelectorAll('.kb-context-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const action = item.dataset.action;
+        if (action === 'rename') {
+          this.renameReport(reportId);
+        } else if (action === 'edit') {
+          this.showReportViewModal(report);
+        } else if (action === 'delete') {
+          this.deleteReport(reportId);
+        }
+        menu.remove();
+      });
+    });
+    
+    // Close menu on click outside
+    setTimeout(() => {
+      document.addEventListener('click', function closeMenu() {
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
+      });
+    }, 10);
+  }
+
+  /**
+   * Rename a report
+   */
+  renameReport(reportId) {
+    const report = this.reports.find(r => r.id === reportId);
+    if (!report) return;
+    
+    const newName = prompt('Rename report:', report.title);
+    if (newName && newName.trim() && newName.trim() !== report.title) {
+      report.title = newName.trim();
+      this.saveData();
+      this.renderReports();
+      this.showToast('Report renamed', 'success');
+    }
+  }
+
+  /**
+   * Delete a report
+   */
+  deleteReport(reportId) {
+    const report = this.reports.find(r => r.id === reportId);
+    if (!report) return;
+    
+    if (!confirm(`Delete "${report.title}"? This cannot be undone.`)) {
+      return;
+    }
+    
+    this.reports = this.reports.filter(r => r.id !== reportId);
+    this.saveData();
+    this.renderReports();
+    this.showToast('Report deleted', 'success');
   }
 
   /**
@@ -1745,7 +1833,7 @@ Guidelines:
   }
 
   /**
-   * Show report view modal
+   * Show report view modal with editing capability
    */
   showReportViewModal(report) {
     const modal = document.getElementById('kb-report-view-modal');
@@ -1753,24 +1841,35 @@ Guidelines:
     const contentEl = document.getElementById('kb-report-view-content');
     const copyBtn = document.getElementById('kb-report-copy');
     const closeBtn = document.getElementById('kb-report-view-close');
+    const saveBtn = document.getElementById('kb-report-save');
     
     if (!modal || !contentEl) return;
     
+    // Store current report ID for saving
+    this.currentEditingReportId = report.id;
+    
     if (titleEl) {
-      titleEl.textContent = report.title;
+      titleEl.value = report.title;
     }
     
-    // Format content with markdown-like rendering
-    contentEl.innerHTML = this.formatMessageContent(report.content);
+    // Set raw content for editing
+    contentEl.value = report.content;
     
     // Setup copy handler
     if (copyBtn) {
       copyBtn.onclick = () => {
-        navigator.clipboard.writeText(report.content).then(() => {
+        navigator.clipboard.writeText(contentEl.value).then(() => {
           this.showToast('Report copied to clipboard', 'success');
         }).catch(() => {
           this.showToast('Failed to copy', 'error');
         });
+      };
+    }
+    
+    // Setup save handler
+    if (saveBtn) {
+      saveBtn.onclick = () => {
+        this.saveReportChanges();
       };
     }
     
@@ -1780,6 +1879,31 @@ Guidelines:
     }
     
     this.showModal('kb-report-view-modal');
+  }
+
+  /**
+   * Save changes to current report
+   */
+  saveReportChanges() {
+    if (!this.currentEditingReportId) return;
+    
+    const report = this.reports.find(r => r.id === this.currentEditingReportId);
+    if (!report) return;
+    
+    const titleEl = document.getElementById('kb-report-view-title');
+    const contentEl = document.getElementById('kb-report-view-content');
+    
+    if (titleEl) {
+      report.title = titleEl.value.trim() || 'Untitled Report';
+    }
+    if (contentEl) {
+      report.content = contentEl.value;
+    }
+    
+    this.saveData();
+    this.renderReports();
+    this.hideModal('kb-report-view-modal');
+    this.showToast('Report saved', 'success');
   }
 
   /**

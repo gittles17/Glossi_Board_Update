@@ -83,6 +83,11 @@
 
         <!-- Chat/Conversation Area -->
         <div class="kb-chat-area" id="kb-chat-area">
+          <button class="kb-clear-btn" id="kb-clear-btn" title="Clear chat">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+            </svg>
+          </button>
           <div class="kb-messages" id="kb-messages">
             <!-- Messages rendered dynamically -->
           </div>
@@ -100,11 +105,6 @@
         <div class="kb-input-area" id="kb-input-area">
           <div class="kb-input-wrapper">
             <textarea id="kb-chat-input" class="kb-chat-input" placeholder="Ask a question about your sources..." rows="1"></textarea>
-            <button class="kb-clear-btn" id="kb-clear-btn" title="Clear chat">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-              </svg>
-            </button>
             <button class="kb-send-btn" id="kb-send-btn" title="Send">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -241,7 +241,7 @@
   <div class="modal-overlay" id="kb-report-view-modal">
     <div class="modal modal-large modal-report-view">
       <div class="modal-header">
-        <h2 id="kb-report-view-title">Report</h2>
+        <input type="text" class="kb-report-title-input" id="kb-report-view-title" value="Report" placeholder="Report title">
         <div class="modal-header-actions">
           <button class="btn btn-secondary btn-sm" id="kb-report-copy" title="Copy to clipboard">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -259,9 +259,10 @@
         </div>
       </div>
       <div class="modal-body">
-        <div class="kb-report-view-content" id="kb-report-view-content">
-          <!-- Report content rendered here -->
-        </div>
+        <textarea class="kb-report-content-edit" id="kb-report-view-content" placeholder="Report content..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="kb-report-save">Save Changes</button>
       </div>
     </div>
   </div>
