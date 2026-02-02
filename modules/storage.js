@@ -735,13 +735,41 @@ class Storage {
   }
 
   /**
-   * Update pipeline email content
+   * Get pipeline history
    */
-  updatePipelineEmail(pipelineData) {
+  getPipelineHistory() {
+    return this.data.pipelineHistory || [];
+  }
+
+  /**
+   * Update pipeline email content with history tracking
+   */
+  updatePipelineEmail(pipelineData, previousData = null) {
+    // Initialize history array if needed
+    if (!this.data.pipelineHistory) {
+      this.data.pipelineHistory = [];
+    }
+    
+    // Save previous data to history (if it exists and has deals)
+    if (previousData && previousData.deals && previousData.deals.length > 0) {
+      this.data.pipelineHistory.unshift({
+        deals: previousData.deals,
+        highlights: previousData.highlights,
+        updatedAt: previousData.updatedAt
+      });
+      
+      // Keep only last 52 weeks of history
+      if (this.data.pipelineHistory.length > 52) {
+        this.data.pipelineHistory = this.data.pipelineHistory.slice(0, 52);
+      }
+    }
+    
+    // Update current data
     this.data.pipelineEmail = {
       ...pipelineData,
       updatedAt: pipelineData.updatedAt || new Date().toISOString()
     };
+    
     this.data.lastUpdated = new Date().toISOString();
     this.scheduleSave();
     return this.data.pipelineEmail;

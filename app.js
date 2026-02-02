@@ -862,81 +862,226 @@ class GlossiDashboard {
    * Render the pipeline section from parsed data
    */
   renderPipelineSection() {
-    const totalEl = document.getElementById('pipeline-total-value');
-    const countEl = document.getElementById('pipeline-deal-count');
-    const highlightsContainer = document.getElementById('highlights-content');
-    
     const pipelineData = this.data?.pipelineEmail || storage.getPipelineEmail?.() || null;
+    const deals = pipelineData?.deals || [];
+    const highlights = pipelineData?.highlights || {};
     
-    // Render each stage column
-    const stages = ['discovery', 'proposal', 'negotiation', 'closing'];
+    // Calculate totals
+    const totals = this.calculatePipelineTotals(deals);
+    
+    // Render metrics bar
+    this.renderPipelineMetrics(totals, pipelineData);
+    
+    // Render deal groups by stage
+    const stages = ['discovery', 'demo', 'pilot', 'closing'];
     stages.forEach(stage => {
-      const stageContainer = document.getElementById(`pipeline-stage-${stage}`);
-      const countSpan = document.getElementById(`pipeline-count-${stage}`);
-      const totalSpan = document.getElementById(`pipeline-total-${stage}`);
-      
-      if (!stageContainer) return;
-      
-      const deals = pipelineData?.deals?.filter(d => d.stage === stage) || [];
-      
-      if (countSpan) countSpan.textContent = `(${deals.length})`;
-      
-      // Calculate stage total
-      let stageTotal = 0;
-      deals.forEach(deal => {
-        const value = this.parseMoneyValue(deal.value);
-        stageTotal += value;
-      });
-      if (totalSpan) totalSpan.textContent = stageTotal > 0 ? this.formatMoney(stageTotal) : '';
-      
-      if (deals.length === 0) {
-        stageContainer.innerHTML = '<div class="empty-state">No deals</div>';
-      } else {
-        stageContainer.innerHTML = deals.map(deal => `
-          <div class="pipeline-deal-card">
-            <div class="deal-name">${this.escapeHtml(deal.name)}</div>
-            ${deal.value ? `<div class="deal-value">${this.escapeHtml(deal.value)}</div>` : ''}
-            ${deal.notes ? `<div class="deal-notes">${this.escapeHtml(deal.notes)}</div>` : ''}
-          </div>
-        `).join('');
-      }
+      const stageDeals = deals.filter(d => d.stage === stage);
+      this.renderDealGroup(stage, stageDeals, totals.byStage[stage] || 0);
     });
     
-    // Update totals
-    const allDeals = pipelineData?.deals || [];
-    let grandTotal = 0;
-    allDeals.forEach(deal => {
-      grandTotal += this.parseMoneyValue(deal.value);
-    });
-    
-    if (totalEl) totalEl.textContent = grandTotal > 0 ? this.formatMoney(grandTotal) : '$0';
-    if (countEl) countEl.textContent = `${allDeals.length} deal${allDeals.length !== 1 ? 's' : ''}`;
+    // Render needs attention section
+    const stalledDeals = deals.filter(d => d.status === 'stalled');
+    this.renderNeedsAttention(stalledDeals);
     
     // Render highlights
-    if (highlightsContainer) {
-      const highlights = pipelineData?.highlights || [];
-      const updatedDate = pipelineData?.updatedAt ? new Date(pipelineData.updatedAt).toLocaleDateString() : '';
-      
-      if (highlights.length === 0 && allDeals.length === 0) {
-        highlightsContainer.innerHTML = `
+    this.renderPipelineHighlights(highlights, pipelineData?.updatedAt);
+    
+    // Show empty state if no data
+    if (deals.length === 0) {
+      const dealsContainer = document.getElementById('pipeline-deals');
+      if (dealsContainer) {
+        dealsContainer.innerHTML = `
           <div class="pipeline-empty">
             <p>No pipeline data yet</p>
             <p class="pipeline-hint">Click "Update" to paste your weekly pipeline email</p>
           </div>
         `;
-      } else if (highlights.length === 0) {
-        highlightsContainer.innerHTML = `
-          <p>No highlights extracted.</p>
-          ${updatedDate ? `<div class="pipeline-updated">Last updated: ${updatedDate}</div>` : ''}
-        `;
-      } else {
-        highlightsContainer.innerHTML = `
-          <ul>
-            ${highlights.map(h => `<li>${this.escapeHtml(h)}</li>`).join('')}
-          </ul>
-          ${updatedDate ? `<div class="pipeline-updated">Last updated: ${updatedDate}</div>` : ''}
-        `;
       }
+    }
+  }
+
+  /**
+   * Calculate pipeline totals
+   */
+  calculatePipelineTotals(deals) {
+    const totals = {
+      total: 0,
+      byStage: { discovery: 0, demo: 0, pilot: 0, closing: 0 },
+      byTiming: { q1: 0, q2: 0, q3: 0, tbd: 0 },
+      dealCount: deals.length
+    };
+    
+    deals.forEach(deal => {
+      const value = this.parseMoneyValue(deal.value);
+      totals.total += value;
+      
+      if (totals.byStage[deal.stage] !== undefined) {
+        totals.byStage[deal.stage] += value;
+      }
+      
+      const timing = (deal.timing || '').toLowerCase();
+      if (timing.includes('q1')) totals.byTiming.q1 += value;
+      else if (timing.includes('q2')) totals.byTiming.q2 += value;
+      else if (timing.includes('q3') || timing.includes('q4')) totals.byTiming.q3 += value;
+      else totals.byTiming.tbd += value;
+    });
+    
+    return totals;
+  }
+
+  /**
+   * Render pipeline metrics bar
+   */
+  renderPipelineMetrics(totals, pipelineData) {
+    // Total value
+    const totalEl = document.getElementById('pipeline-total-value');
+    if (totalEl) totalEl.textContent = this.formatMoney(totals.total);
+    
+    // By stage breakdown
+    const stageEl = document.getElementById('pipeline-by-stage');
+    if (stageEl) {
+      stageEl.innerHTML = `
+        <span class="breakdown-item"><span class="stage-dot discovery"></span>Discovery: ${this.formatMoney(totals.byStage.discovery)}</span>
+        <span class="breakdown-item"><span class="stage-dot demo"></span>Demo: ${this.formatMoney(totals.byStage.demo)}</span>
+        <span class="breakdown-item"><span class="stage-dot pilot"></span>Pilot: ${this.formatMoney(totals.byStage.pilot)}</span>
+        <span class="breakdown-item"><span class="stage-dot closing"></span>Closing: ${this.formatMoney(totals.byStage.closing)}</span>
+      `;
+    }
+    
+    // By timing breakdown
+    const timingEl = document.getElementById('pipeline-by-timing');
+    if (timingEl) {
+      timingEl.innerHTML = `
+        <span class="breakdown-item">Q1: ${this.formatMoney(totals.byTiming.q1)}</span>
+        <span class="breakdown-item">Q2: ${this.formatMoney(totals.byTiming.q2)}</span>
+        <span class="breakdown-item">Q3+: ${this.formatMoney(totals.byTiming.q3 + totals.byTiming.tbd)}</span>
+      `;
+    }
+    
+    // Changes summary
+    const changesEl = document.getElementById('pipeline-changes');
+    if (changesEl && pipelineData?.changes) {
+      const c = pipelineData.changes;
+      const parts = [];
+      if (c.newDeals > 0) parts.push(`<span class="change-positive">+${c.newDeals} new</span>`);
+      if (c.stageChanges > 0) parts.push(`${c.stageChanges} moved`);
+      if (c.stalled > 0) parts.push(`${c.stalled} stalled`);
+      changesEl.innerHTML = `<span class="change-summary">${parts.length > 0 ? parts.join(', ') : 'No changes'}</span>`;
+    }
+  }
+
+  /**
+   * Render a deal group
+   */
+  renderDealGroup(stage, deals, total) {
+    const countEl = document.getElementById(`group-count-${stage}`);
+    const totalEl = document.getElementById(`group-total-${stage}`);
+    const dealsEl = document.getElementById(`group-deals-${stage}`);
+    
+    if (countEl) countEl.textContent = `${deals.length} deal${deals.length !== 1 ? 's' : ''}`;
+    if (totalEl) totalEl.textContent = this.formatMoney(total);
+    
+    if (!dealsEl) return;
+    
+    if (deals.length === 0) {
+      dealsEl.innerHTML = '<div class="deal-row"><span class="deal-status" style="grid-column: span 5; text-align: center; color: var(--text-muted);">No deals in this stage</span></div>';
+      return;
+    }
+    
+    dealsEl.innerHTML = deals.map(deal => `
+      <div class="deal-row" data-deal-id="${deal.id || deal.name}">
+        <span class="deal-name">${this.escapeHtml(deal.name)}</span>
+        <span class="deal-value">${this.escapeHtml(deal.value || 'TBD')}</span>
+        <span class="deal-timing">${this.escapeHtml(deal.timing || '-')}</span>
+        <span class="deal-status">${this.escapeHtml(deal.nextSteps || deal.notes || '')}</span>
+        <span class="deal-badges">${this.renderDealBadges(deal)}</span>
+      </div>
+    `).join('');
+  }
+
+  /**
+   * Render deal status badges
+   */
+  renderDealBadges(deal) {
+    const badges = [];
+    if (deal.status === 'new') badges.push('<span class="deal-badge badge-new">NEW</span>');
+    if (deal.status === 'stage-changed') badges.push('<span class="deal-badge badge-stage-changed">MOVED</span>');
+    if (deal.status === 'value-changed') badges.push('<span class="deal-badge badge-value-changed">VALUE</span>');
+    if (deal.status === 'timing-changed') badges.push('<span class="deal-badge badge-timing-changed">TIMING</span>');
+    if (deal.status === 'updated') badges.push('<span class="deal-badge badge-updated">UPDATED</span>');
+    if (deal.status === 'stalled') badges.push('<span class="deal-badge badge-stalled">STALLED</span>');
+    if (deal.status === 'closed') badges.push('<span class="deal-badge badge-closed">CLOSED</span>');
+    return badges.join('');
+  }
+
+  /**
+   * Toggle deal group expand/collapse
+   */
+  toggleDealGroup(stage) {
+    const group = document.querySelector(`.deal-group[data-stage="${stage}"]`);
+    if (group) group.classList.toggle('collapsed');
+  }
+
+  /**
+   * Render needs attention section
+   */
+  renderNeedsAttention(stalledDeals) {
+    const container = document.getElementById('pipeline-attention');
+    const countEl = document.getElementById('attention-count');
+    const dealsEl = document.getElementById('attention-deals');
+    
+    if (!container) return;
+    
+    if (stalledDeals.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+    
+    container.style.display = 'block';
+    if (countEl) countEl.textContent = stalledDeals.length;
+    
+    if (dealsEl) {
+      dealsEl.innerHTML = stalledDeals.map(deal => `
+        <div class="attention-deal">
+          <span class="attention-deal-name">${this.escapeHtml(deal.name)}</span>
+          <span class="attention-deal-info">${this.escapeHtml(deal.value || '')} - Last seen: ${deal.lastSeen || 'Unknown'}</span>
+        </div>
+      `).join('');
+    }
+  }
+
+  /**
+   * Render pipeline highlights
+   */
+  renderPipelineHighlights(highlights, updatedAt) {
+    const hotEl = document.querySelector('#highlight-hot .highlight-content');
+    const updatesEl = document.querySelector('#highlight-updates .highlight-content');
+    const marketingEl = document.querySelector('#highlight-marketing .highlight-content');
+    const updatedEl = document.getElementById('pipeline-updated');
+    
+    if (hotEl) {
+      const hotDeals = highlights.hotDeals || [];
+      hotEl.innerHTML = hotDeals.length > 0 
+        ? `<ul>${hotDeals.map(h => `<li>${this.escapeHtml(h)}</li>`).join('')}</ul>`
+        : '<span class="highlight-empty">No hot deals</span>';
+    }
+    
+    if (updatesEl) {
+      const updates = highlights.keyUpdates || [];
+      updatesEl.innerHTML = updates.length > 0
+        ? `<ul>${updates.map(u => `<li>${this.escapeHtml(u)}</li>`).join('')}</ul>`
+        : '<span class="highlight-empty">No key updates</span>';
+    }
+    
+    if (marketingEl) {
+      const marketing = highlights.marketing || [];
+      marketingEl.innerHTML = marketing.length > 0
+        ? `<ul>${marketing.map(m => `<li>${this.escapeHtml(m)}</li>`).join('')}</ul>`
+        : '<span class="highlight-empty">No marketing updates</span>';
+    }
+    
+    if (updatedEl && updatedAt) {
+      updatedEl.textContent = `Last updated: ${new Date(updatedAt).toLocaleDateString()}`;
     }
   }
 
@@ -1002,26 +1147,37 @@ class GlossiDashboard {
     }
     
     try {
-      // Use AI to parse the email content
-      const parsedData = await this.parsePipelineWithAI(content);
+      // Get previous data for comparison
+      const previousData = storage.getPipelineEmail();
+      const previousDeals = previousData?.deals || [];
+      
+      // Use AI to parse the email content and match against existing deals
+      const parsedData = await this.parsePipelineWithAI(content, previousDeals);
+      
+      // Calculate changes
+      const changes = this.calculatePipelineChanges(parsedData.deals, previousDeals);
       
       const pipelineData = {
         rawContent: content,
         deals: parsedData.deals || [],
-        highlights: parsedData.highlights || [],
+        highlights: parsedData.highlights || {},
+        changes: changes,
         updatedAt: new Date().toISOString()
       };
       
-      // Save to storage
-      if (!this.data.pipelineEmail) {
-        this.data.pipelineEmail = {};
-      }
+      // Save to storage with history
+      storage.updatePipelineEmail(pipelineData, previousData);
       this.data.pipelineEmail = pipelineData;
-      storage.updatePipelineEmail(pipelineData);
       
       this.hideModal('pipeline-edit-modal');
       this.renderPipelineSection();
-      this.showToast('Pipeline updated successfully', 'success');
+      
+      // Show summary toast
+      const parts = [];
+      if (changes.newDeals > 0) parts.push(`${changes.newDeals} new`);
+      if (changes.stageChanges > 0) parts.push(`${changes.stageChanges} moved`);
+      if (changes.stalled > 0) parts.push(`${changes.stalled} stalled`);
+      this.showToast(parts.length > 0 ? `Pipeline updated: ${parts.join(', ')}` : 'Pipeline updated', 'success');
     } catch (error) {
       this.showToast('Failed to parse pipeline: ' + error.message, 'error');
     } finally {
@@ -1033,52 +1189,113 @@ class GlossiDashboard {
   }
 
   /**
+   * Calculate changes between new and previous pipeline data
+   */
+  calculatePipelineChanges(newDeals, previousDeals) {
+    const changes = { newDeals: 0, stageChanges: 0, valueChanges: 0, stalled: 0 };
+    
+    newDeals.forEach(deal => {
+      if (deal.status === 'new') changes.newDeals++;
+      if (deal.status === 'stage-changed') changes.stageChanges++;
+      if (deal.status === 'value-changed') changes.valueChanges++;
+    });
+    
+    // Count stalled deals (in previous but not in new)
+    const newNames = new Set(newDeals.map(d => d.name.toLowerCase()));
+    previousDeals.forEach(prev => {
+      if (!newNames.has(prev.name.toLowerCase())) {
+        changes.stalled++;
+      }
+    });
+    
+    return changes;
+  }
+
+  /**
    * Parse pipeline email content using Claude AI
    */
-  async parsePipelineWithAI(content) {
-    const systemPrompt = `You are a pipeline data parser for a sales/business development dashboard. 
+  async parsePipelineWithAI(content, previousDeals = []) {
+    const previousContext = previousDeals.length > 0 
+      ? `\n\nPREVIOUS DEALS (for matching and detecting changes):\n${previousDeals.map(d => `- ${d.name}: ${d.value}, Stage: ${d.stage}, Timing: ${d.timing}`).join('\n')}`
+      : '';
+
+    const systemPrompt = `You are a pipeline data parser for a sales/business development dashboard.
+
 Parse the provided email content and extract:
-1. Individual deals/opportunities with their stage, value, and any notes
-2. Key highlights or important updates
+1. Individual deals with their stage, value, timing, contact, and next steps
+2. Categorized highlights (hot deals, key updates, marketing)
 
-For stages, categorize each deal into one of these 4 stages based on context:
-- discovery: Early stage, initial contact, qualifying leads
-- proposal: Sent proposal, demo scheduled, pricing discussed
-- negotiation: Active negotiations, contract review, terms discussion
-- closing: Final stages, verbal commitment, paperwork in progress
+STAGES - Categorize each deal into one of these 4 stages:
+- discovery: Discovery calls, intro meetings, qualifying leads
+- demo: Demo scheduled or completed, showing product
+- pilot: Pilot evaluation, technical validation, proof of concept
+- closing: Final negotiations, contracts, verbal commitments
 
-Return a JSON object with this exact structure:
+DEAL MATCHING - Compare against previous deals:${previousContext}
+- If a deal name matches (fuzzy match OK, e.g. "Bob Mills" = "Bob Mills Furniture"), detect what changed
+- Set status to: "new" (not in previous), "stage-changed", "value-changed", "timing-changed", "updated" (only next steps changed), or null (unchanged)
+
+Return JSON:
 {
   "deals": [
     {
-      "name": "Company or deal name",
-      "value": "$50K" or "TBD",
-      "stage": "discovery|proposal|negotiation|closing",
-      "notes": "Brief context or status"
+      "name": "Company Name",
+      "value": "$50K",
+      "stage": "discovery|demo|pilot|closing",
+      "timing": "Q1|Q2|Q3|TBD",
+      "contact": "Contact Name",
+      "nextSteps": "Brief next step",
+      "status": "new|stage-changed|value-changed|timing-changed|updated|null"
     }
   ],
-  "highlights": [
-    "Key highlight or update 1",
-    "Key highlight or update 2"
-  ]
+  "highlights": {
+    "hotDeals": ["Deal with Q1 timing and active momentum", ...],
+    "keyUpdates": ["Important next step this week", ...],
+    "marketing": ["Marketing activity or plan", ...]
+  }
 }
 
-Extract real data from the email. If a deal value is not specified, use "TBD".
-For highlights, extract the most important updates, wins, or action items mentioned.
-Return ONLY valid JSON, no other text.`;
+RULES:
+- Extract ALL deals from the email (they are usually numbered)
+- Use exact values from email ($50K, not $50,000)
+- For timing, normalize to Q1/Q2/Q3/TBD
+- Hot deals = Q1 timing with recent activity
+- Marketing section is usually at the end of the email
+- Return ONLY valid JSON, no other text.`;
 
     const result = await aiProcessor.chat(systemPrompt, content);
     
     try {
-      // Try to parse the JSON response
       const jsonMatch = result.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        // Add stalled deals from previous that aren't in new
+        if (previousDeals.length > 0) {
+          const newNames = new Set(parsed.deals.map(d => d.name.toLowerCase()));
+          previousDeals.forEach(prev => {
+            if (!newNames.has(prev.name.toLowerCase())) {
+              parsed.deals.push({
+                ...prev,
+                status: 'stalled',
+                lastSeen: prev.updatedAt || 'Previous update'
+              });
+            }
+          });
+        }
+        
+        return parsed;
       }
       throw new Error('Invalid response format');
     } catch (e) {
-      // Return empty structure if parsing fails
-      return { deals: [], highlights: ['Failed to parse email content. Please try again.'] };
+      return { 
+        deals: [], 
+        highlights: { 
+          hotDeals: [], 
+          keyUpdates: ['Failed to parse email content. Please try again.'], 
+          marketing: [] 
+        } 
+      };
     }
   }
 

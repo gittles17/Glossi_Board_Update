@@ -125,10 +125,6 @@
   <section class="pipeline-section">
     <div class="pipeline-header">
       <h2>Pipeline</h2>
-      <div class="pipeline-stats">
-        <span class="pipeline-total" id="pipeline-total-value">$0</span>
-        <span class="pipeline-count" id="pipeline-deal-count">0 deals</span>
-      </div>
       <button class="btn btn-secondary btn-sm" id="edit-pipeline-btn" title="Update Pipeline">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -138,69 +134,111 @@
       </button>
     </div>
     
-    <!-- Pipeline Kanban -->
-    <div class="pipeline-kanban" id="pipeline-kanban">
-      <div class="pipeline-column" data-stage="discovery">
-        <div class="column-header">
-          <div class="column-header-left">
-            <span class="column-title">Discovery</span>
-            <span class="column-count" id="pipeline-count-discovery">(0)</span>
-          </div>
-          <span class="column-total" id="pipeline-total-discovery"></span>
-        </div>
-        <div class="column-items" id="pipeline-stage-discovery">
-          <!-- Deal cards rendered here -->
+    <!-- Metrics Summary Bar -->
+    <div class="pipeline-metrics" id="pipeline-metrics">
+      <div class="metric-card metric-total">
+        <span class="metric-value" id="pipeline-total-value">$0</span>
+        <span class="metric-label">Total Pipeline</span>
+      </div>
+      <div class="metric-card metric-stages">
+        <div class="metric-breakdown" id="pipeline-by-stage">
+          <span class="breakdown-item"><span class="stage-dot discovery"></span>Discovery: $0</span>
+          <span class="breakdown-item"><span class="stage-dot demo"></span>Demo: $0</span>
+          <span class="breakdown-item"><span class="stage-dot pilot"></span>Pilot: $0</span>
+          <span class="breakdown-item"><span class="stage-dot closing"></span>Closing: $0</span>
         </div>
       </div>
-      <div class="pipeline-column" data-stage="proposal">
-        <div class="column-header">
-          <div class="column-header-left">
-            <span class="column-title">Proposal</span>
-            <span class="column-count" id="pipeline-count-proposal">(0)</span>
-          </div>
-          <span class="column-total" id="pipeline-total-proposal"></span>
-        </div>
-        <div class="column-items" id="pipeline-stage-proposal">
-          <!-- Deal cards rendered here -->
+      <div class="metric-card metric-timing">
+        <div class="metric-breakdown" id="pipeline-by-timing">
+          <span class="breakdown-item">Q1: $0</span>
+          <span class="breakdown-item">Q2: $0</span>
+          <span class="breakdown-item">Q3+: $0</span>
         </div>
       </div>
-      <div class="pipeline-column" data-stage="negotiation">
-        <div class="column-header">
-          <div class="column-header-left">
-            <span class="column-title">Negotiation</span>
-            <span class="column-count" id="pipeline-count-negotiation">(0)</span>
-          </div>
-          <span class="column-total" id="pipeline-total-negotiation"></span>
-        </div>
-        <div class="column-items" id="pipeline-stage-negotiation">
-          <!-- Deal cards rendered here -->
-        </div>
-      </div>
-      <div class="pipeline-column" data-stage="closing">
-        <div class="column-header">
-          <div class="column-header-left">
-            <span class="column-title">Closing</span>
-            <span class="column-count" id="pipeline-count-closing">(0)</span>
-          </div>
-          <span class="column-total" id="pipeline-total-closing"></span>
-        </div>
-        <div class="column-items" id="pipeline-stage-closing">
-          <!-- Deal cards rendered here -->
-        </div>
+      <div class="metric-card metric-changes" id="pipeline-changes">
+        <span class="change-summary">No updates yet</span>
       </div>
     </div>
 
-    <!-- Pipeline Highlights -->
-    <div class="pipeline-highlights" id="pipeline-highlights">
-      <div class="highlights-header">
-        <h3>Highlights</h3>
+    <!-- Deal List (Grouped by Stage) -->
+    <div class="pipeline-deals" id="pipeline-deals">
+      <div class="deal-group" data-stage="discovery">
+        <div class="group-header" onclick="window.dashboard.toggleDealGroup('discovery')">
+          <svg class="group-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+          <span class="group-title">Discovery</span>
+          <span class="group-count" id="group-count-discovery">0 deals</span>
+          <span class="group-total" id="group-total-discovery">$0</span>
+        </div>
+        <div class="group-deals" id="group-deals-discovery"></div>
       </div>
-      <div class="highlights-content" id="highlights-content">
-        <div class="pipeline-empty">
-          <p>No pipeline data yet</p>
-          <p class="pipeline-hint">Click "Update" to paste your weekly pipeline email</p>
+      <div class="deal-group" data-stage="demo">
+        <div class="group-header" onclick="window.dashboard.toggleDealGroup('demo')">
+          <svg class="group-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+          <span class="group-title">Demo</span>
+          <span class="group-count" id="group-count-demo">0 deals</span>
+          <span class="group-total" id="group-total-demo">$0</span>
+        </div>
+        <div class="group-deals" id="group-deals-demo"></div>
+      </div>
+      <div class="deal-group" data-stage="pilot">
+        <div class="group-header" onclick="window.dashboard.toggleDealGroup('pilot')">
+          <svg class="group-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+          <span class="group-title">Pilot / Validation</span>
+          <span class="group-count" id="group-count-pilot">0 deals</span>
+          <span class="group-total" id="group-total-pilot">$0</span>
+        </div>
+        <div class="group-deals" id="group-deals-pilot"></div>
+      </div>
+      <div class="deal-group" data-stage="closing">
+        <div class="group-header" onclick="window.dashboard.toggleDealGroup('closing')">
+          <svg class="group-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+          <span class="group-title">Closing</span>
+          <span class="group-count" id="group-count-closing">0 deals</span>
+          <span class="group-total" id="group-total-closing">$0</span>
+        </div>
+        <div class="group-deals" id="group-deals-closing"></div>
+      </div>
+    </div>
+
+    <!-- Needs Attention Section -->
+    <div class="pipeline-attention" id="pipeline-attention" style="display: none;">
+      <div class="attention-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <h3>Needs Attention</h3>
+        <span class="attention-count" id="attention-count">0</span>
+      </div>
+      <div class="attention-deals" id="attention-deals"></div>
+    </div>
+
+    <!-- Highlights Section -->
+    <div class="pipeline-highlights" id="pipeline-highlights">
+      <div class="highlights-grid">
+        <div class="highlight-section" id="highlight-hot">
+          <h4>Hot Deals</h4>
+          <div class="highlight-content"></div>
+        </div>
+        <div class="highlight-section" id="highlight-updates">
+          <h4>Key Updates</h4>
+          <div class="highlight-content"></div>
+        </div>
+        <div class="highlight-section" id="highlight-marketing">
+          <h4>Marketing</h4>
+          <div class="highlight-content"></div>
         </div>
       </div>
+      <div class="pipeline-updated" id="pipeline-updated"></div>
     </div>
   </section>
 
