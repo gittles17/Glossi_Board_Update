@@ -157,6 +157,46 @@ app.post('/api/data', async (req, res) => {
   }
 });
 
+// Clear quotes from database
+app.post('/api/clear-quotes', async (req, res) => {
+  try {
+    if (useDatabase) {
+      // Get current dashboard data
+      const result = await pool.query("SELECT data FROM app_data WHERE key = 'dashboard_data'");
+      if (result.rows.length > 0) {
+        const data = result.rows[0].data;
+        data.quotes = []; // Clear quotes
+        
+        // Save back
+        await pool.query(`
+          UPDATE app_data SET data = $1, updated_at = NOW()
+          WHERE key = 'dashboard_data'
+        `, [JSON.stringify(data)]);
+        
+        console.log('Quotes cleared from database');
+        res.json({ success: true, message: 'Quotes cleared from PostgreSQL' });
+      } else {
+        res.json({ success: true, message: 'No dashboard data found' });
+      }
+    } else {
+      // Clear from local file
+      const filePath = path.join(DATA_DIR, 'dashboard-data.json');
+      if (fs.existsSync(filePath)) {
+        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        data.quotes = [];
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+        console.log('Quotes cleared from local file');
+        res.json({ success: true, message: 'Quotes cleared from local storage' });
+      } else {
+        res.json({ success: true, message: 'No dashboard data file found' });
+      }
+    }
+  } catch (error) {
+    console.error('Error clearing quotes:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Reset all data to defaults
 app.post('/api/reset', async (req, res) => {
   try {
