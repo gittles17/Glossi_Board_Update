@@ -1491,8 +1491,18 @@ Guidelines:
     html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
     html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
     
-    // Move source citations to end of line, smaller
-    html = html.replace(/\[Source: (.+?)\]/g, '<span class="kb-inline-citation">$1</span>');
+    // Move source citations to small numbered icons with tooltips
+    let citationNum = 0;
+    const citationMap = {};
+    html = html.replace(/\[Source: (.+?)\]/g, (match, sourceName) => {
+      // Assign number to unique sources
+      if (!citationMap[sourceName]) {
+        citationNum++;
+        citationMap[sourceName] = citationNum;
+      }
+      const num = citationMap[sourceName];
+      return `<span class="kb-inline-citation" data-source-num="${num}" data-tooltip="${sourceName}"></span>`;
+    });
     
     // Process bullet points with nesting support
     const lines = html.split('\n');

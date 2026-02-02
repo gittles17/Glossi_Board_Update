@@ -7736,15 +7736,6 @@ body::after {
   background: rgba(var(--accent-blue-rgb), 0.25);
 }
 
-.kb-inline-citation {
-  padding: 2px 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
 /* Message formatting */
 .kb-message-content h2 {
   font-size: 15px;
@@ -7818,16 +7809,57 @@ body::after {
   margin-top: var(--space-1);
 }
 
-/* Source citations inline */
+/* Source citations inline - small icon with tooltip */
 .kb-inline-citation {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: rgba(var(--accent-blue-rgb), 0.2);
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 600;
   color: var(--accent-blue);
-  background: var(--accent-blue-dim);
-  padding: 1px 6px;
-  border-radius: 3px;
-  font-family: var(--font-sans);
+  cursor: default;
+  position: relative;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.kb-inline-citation:hover {
+  background: rgba(var(--accent-blue-rgb), 0.35);
+}
+
+.kb-inline-citation::before {
+  content: attr(data-source-num);
+}
+
+.kb-inline-citation::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 10px;
   font-weight: 500;
+  color: var(--text-primary);
   white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: var(--shadow-md);
+}
+
+.kb-inline-citation:hover::after {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* Report Modal Steps */
