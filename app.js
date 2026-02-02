@@ -804,58 +804,17 @@ class GlossiDashboard {
   }
 
   /**
-   * Render stats row with trend indicators
+   * Render stats (deprecated - stats section removed)
    */
   renderStats() {
-    const stats = this.data.stats;
-    const trends = storage.getStatTrends();
-    
-    // Update stat values
-    document.getElementById('stat-pipeline').textContent = 
-      stats.find(s => s.id === 'pipeline')?.value || '$1.2M+';
-    document.getElementById('stat-prospects').textContent = 
-      stats.find(s => s.id === 'prospects')?.value || '10+';
-    document.getElementById('stat-partnerships').textContent = 
-      stats.find(s => s.id === 'partnerships')?.value || '3';
-
-    // Update closed deals (calculated from pipeline data)
-    const closedStats = storage.getClosedDealsStats();
-    document.getElementById('stat-closed').textContent = closedStats.count;
-    document.getElementById('stat-closed-revenue').textContent = `${closedStats.revenueStr} revenue`;
-
-    // Update trend indicators
-    this.updateTrendIndicator('pipeline', trends.pipeline);
-    this.updateTrendIndicator('prospects', trends.prospects);
-    this.updateTrendIndicator('partnerships', trends.partnerships);
+    // Stats section was removed
   }
 
   /**
-   * Update a single trend indicator
-   */
-  updateTrendIndicator(statId, trendData) {
-    const trendEl = document.getElementById(`trend-${statId}`);
-    if (!trendEl || !trendData) return;
-
-    trendEl.setAttribute('data-trend', trendData.trend);
-    
-    const changeEl = trendEl.querySelector('.trend-change');
-    if (changeEl) {
-      changeEl.textContent = trendData.changeDisplay || '';
-    }
-  }
-
-  /**
-   * Render pipeline (deprecated - section removed, using Knowledge Base instead)
+   * Render pipeline (deprecated - using renderPipelineSection instead)
    */
   renderPipeline() {
-    // Pipeline section was removed
-  }
-
-  /**
-   * Delete a pipeline deal (deprecated)
-   */
-  deletePipelineDeal(name, category) {
-    // Pipeline section was removed
+    // Use renderPipelineSection() instead
   }
 
   /**
@@ -2530,8 +2489,8 @@ RULES:
     });
 
     this.data = storage.getData();
-    this.hideModal('pipeline-modal');
-    this.renderPipeline();
+    this.hideModal('pipeline-edit-modal');
+    this.renderPipelineSection();
     this.showToast('Pipeline deal added', 'success');
   }
 
@@ -6784,9 +6743,7 @@ Respond with just the category name (core, traction, market, or testimonials) an
 
       this.renderMeetingSelector();
       this.renderMeeting(meeting);
-      this.renderTalkingPoints();
-      this.renderPipeline();
-      this.renderStats(); // Refresh stats to update trends
+      this.renderPipelineSection();
       this.showToast('Meeting saved successfully', 'success');
     } else if (this.pendingReview.type === 'content') {
       // Apply content updates
