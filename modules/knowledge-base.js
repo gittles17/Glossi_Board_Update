@@ -111,7 +111,7 @@ class KnowledgeBase {
     const toggleSidebar = document.getElementById('kb-toggle-sidebar');
     if (toggleSidebar) {
       toggleSidebar.addEventListener('click', () => {
-        document.getElementById('kb-sources-sidebar').classList.toggle('collapsed');
+        document.getElementById('kb-sources-sidebar')?.classList.toggle('collapsed');
       });
     }
 
@@ -150,7 +150,7 @@ class KnowledgeBase {
     const toggleReports = document.getElementById('kb-toggle-reports');
     if (toggleReports) {
       toggleReports.addEventListener('click', () => {
-        document.getElementById('kb-reports-panel').classList.toggle('collapsed');
+        document.getElementById('kb-reports-panel')?.classList.toggle('collapsed');
       });
     }
 
@@ -274,23 +274,6 @@ class KnowledgeBase {
   }
 
   /**
-   * Update report prompt based on template (legacy, no longer used)
-   */
-  updateReportPrompt() {
-    const promptInput = document.getElementById('kb-report-prompt');
-    if (!promptInput) return;
-    
-    const prompts = {
-      investor_update: 'Create a weekly investor update email summarizing key progress, metrics, and highlights from the sources.',
-      talking_points: 'Generate a list of compelling talking points for investor conversations based on the sources.',
-      due_diligence: 'Create a comprehensive due diligence brief covering company overview, market opportunity, traction, and competitive advantages.',
-      custom: ''
-    };
-    
-    promptInput.value = prompts[this.selectedTemplate] || '';
-  }
-
-  /**
    * Handle a dropped file
    */
   async handleDroppedFile(file) {
@@ -403,7 +386,7 @@ class KnowledgeBase {
    * Add a new source from text
    */
   async addSource() {
-    const content = document.getElementById('kb-source-text').value.trim();
+    const content = document.getElementById('kb-source-text')?.value?.trim() || '';
     
     if (!content) {
       this.showToast('Please enter some content', 'error');
@@ -449,154 +432,6 @@ class KnowledgeBase {
     this.clearSourceModal();
     
     if (this.onUpdate) this.onUpdate();
-  }
-
-  /**
-   * Get file type from file
-   */
-  getFileType(file) {
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (['pdf'].includes(ext)) return 'pdf';
-    if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) return 'image';
-    if (['mp3', 'wav', 'm4a'].includes(ext)) return 'audio';
-    return 'text';
-  }
-
-  /**
-   * Process uploaded file
-   */
-  async processFile(file) {
-    const type = this.getFileType(file);
-    
-    if (type === 'pdf') {
-      return await this.processPdf(file);
-    } else if (type === 'image') {
-      return await this.processImage(file);
-    } else if (type === 'audio') {
-      return await this.processAudio(file);
-    } else {
-      // Text file
-      const content = await file.text();
-      return { content };
-    }
-  }
-
-  /**
-   * Process PDF file
-   */
-  async processPdf(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const typedArray = new Uint8Array(e.target.result);
-          const pdf = await pdfjsLib.getDocument(typedArray).promise;
-          let content = '';
-          
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join(' ');
-            content += pageText + '\n\n';
-          }
-          
-          resolve({ content: content.trim(), metadata: { pages: pdf.numPages } });
-        } catch (error) {
-          reject(error);
-        }
-      };
-      reader.onerror = reject;
-      reader.readAsArrayBuffer(file);
-    });
-  }
-
-  /**
-   * Process image file
-   */
-  async processImage(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const dataUrl = e.target.result;
-        
-        // If AI is configured, analyze the image
-        if (this.aiProcessor && this.aiProcessor.isConfigured()) {
-          try {
-            const analysis = await this.aiProcessor.analyzeImage(dataUrl, file.name);
-            resolve({ 
-              content: analysis, 
-              metadata: { 
-                preview: dataUrl,
-                fileName: file.name 
-              } 
-            });
-          } catch (error) {
-            resolve({ 
-              content: '[Image: ' + file.name + ']', 
-              metadata: { 
-                preview: dataUrl,
-                fileName: file.name 
-              } 
-            });
-          }
-        } else {
-          resolve({ 
-            content: '[Image: ' + file.name + ']', 
-            metadata: { 
-              preview: dataUrl,
-              fileName: file.name 
-            } 
-          });
-        }
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  /**
-   * Process audio file using OpenAI Whisper
-   */
-  async processAudio(file) {
-    // Get OpenAI API key from settings
-    const settings = this.storage.getSettings();
-    const apiKey = settings.apiKey;
-    
-    if (!apiKey) {
-      return {
-        content: '[Audio file: ' + file.name + ' - Configure OpenAI API key in Settings to transcribe]',
-        metadata: { fileName: file.name, needsTranscription: true }
-      };
-    }
-    
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('model', 'whisper-1');
-      
-      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error('Transcription failed');
-      }
-      
-      const result = await response.json();
-      return {
-        content: result.text,
-        metadata: { fileName: file.name, transcribed: true }
-      };
-    } catch (error) {
-      return {
-        content: '[Audio file: ' + file.name + ' - Transcription failed: ' + error.message + ']',
-        metadata: { fileName: file.name, error: error.message }
-      };
-    }
   }
 
   /**
@@ -662,9 +497,12 @@ Respond with ONLY the category name (lowercase).`;
    * Clear source modal
    */
   clearSourceModal() {
-    document.getElementById('kb-source-title').value = '';
-    document.getElementById('kb-source-text').value = '';
-    document.getElementById('kb-source-url').value = '';
+    const titleEl = document.getElementById('kb-source-title');
+    const textEl = document.getElementById('kb-source-text');
+    const urlEl = document.getElementById('kb-source-url');
+    if (titleEl) titleEl.value = '';
+    if (textEl) textEl.value = '';
+    if (urlEl) urlEl.value = '';
     this.selectedCategory = 'auto';
     document.querySelectorAll('.kb-category-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.category === 'auto');
@@ -700,7 +538,7 @@ Respond with ONLY the category name (lowercase).`;
    */
   async sendMessage(overrideMessage = null) {
     const input = document.getElementById('kb-chat-input');
-    const message = overrideMessage || input.value.trim();
+    const message = overrideMessage || input?.value?.trim() || '';
     
     if (!message) return;
     
@@ -846,7 +684,7 @@ ${source.content}
    */
   async evaluateReportPrompt() {
     const promptInput = document.getElementById('kb-report-prompt');
-    const prompt = promptInput.value.trim();
+    const prompt = promptInput?.value?.trim() || '';
     
     if (!prompt) {
       this.showToast('Please describe what report you need', 'error');
@@ -1003,6 +841,7 @@ Only ask questions that would meaningfully improve the report. If the prompt is 
   collectAnswersAndProceed() {
     const container = document.getElementById('kb-report-questions');
     this.reportAnswers = {};
+    if (!container) return;
     
     container.querySelectorAll('.kb-report-question').forEach(q => {
       const id = q.dataset.id;
@@ -1064,8 +903,9 @@ Only ask questions that would meaningfully improve the report. If the prompt is 
     
     if (Object.keys(this.reportAnswers).length > 0) {
       fullPrompt += '\n\nAdditional details:';
+      const questionMap = new Map(this.reportQuestions.map(q => [q.id, q]));
       for (const [key, value] of Object.entries(this.reportAnswers)) {
-        const question = this.reportQuestions.find(q => q.id === key);
+        const question = questionMap.get(key);
         if (question) {
           fullPrompt += `\n- ${question.question}: ${value}`;
         }
@@ -1146,13 +986,6 @@ Guidelines:
       // Go back to step 1
       this.resetReportModal();
     }
-  }
-
-  /**
-   * Get report title from prompt (legacy, kept for compatibility)
-   */
-  getReportTitle(prompt) {
-    return prompt.substring(0, 50) + (prompt.length > 50 ? '...' : '');
   }
 
   /**
