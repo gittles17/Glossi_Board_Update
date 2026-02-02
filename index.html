@@ -143,47 +143,73 @@
       </button>
     </div>
     
-    <!-- 5 Square Cards: 4 Stages + Partnerships -->
-    <div class="pipeline-cards" id="pipeline-funnel">
-      <div class="pipeline-card" data-stage="discovery" onclick="window.dashboard.togglePipelineCard('discovery')">
-        <span class="card-title">Discovery</span>
-        <span class="card-value" id="pipeline-total-discovery">$0</span>
-        <span class="card-change" id="pipeline-change-discovery"></span>
-        <div class="card-deals collapsed" id="pipeline-deals-discovery"></div>
-      </div>
-      <div class="pipeline-card" data-stage="demo" onclick="window.dashboard.togglePipelineCard('demo')">
-        <span class="card-title">Demo</span>
-        <span class="card-value" id="pipeline-total-demo">$0</span>
-        <span class="card-change" id="pipeline-change-demo"></span>
-        <div class="card-deals collapsed" id="pipeline-deals-demo"></div>
-      </div>
-      <div class="pipeline-card" data-stage="pilot" onclick="window.dashboard.togglePipelineCard('pilot')">
-        <span class="card-title">Pilot</span>
-        <span class="card-value" id="pipeline-total-pilot">$0</span>
-        <span class="card-change" id="pipeline-change-pilot"></span>
-        <div class="card-deals collapsed" id="pipeline-deals-pilot"></div>
-      </div>
-      <div class="pipeline-card pipeline-card-hot" data-stage="hot" onclick="window.dashboard.togglePipelineCard('hot')">
-        <span class="card-title">Hot Deals</span>
-        <span class="card-value" id="pipeline-total-hot">0</span>
-        <span class="card-change" id="pipeline-change-hot"></span>
-        <div class="card-deals collapsed" id="pipeline-deals-hot"></div>
-      </div>
-    </div>
+    <!-- Pipeline Content Card (Week at a Glance style) -->
+    <div class="pipeline-content-card">
+      <div class="pipeline-columns">
+        <!-- Left Column: Revenue by Stage & Key Updates -->
+        <div class="pipeline-column-left">
+          <!-- Revenue by Stage -->
+          <div class="meeting-section" id="revenue-section">
+            <div class="section-header-row">
+              <div class="section-header-left">
+                <h4>Revenue by Stage</h4>
+              </div>
+            </div>
+            <div class="section-content">
+              <div class="stage-list" id="pipeline-stage-list">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
 
-    <!-- Highlights Section (collapsed by default) -->
-    <div class="pipeline-highlights collapsed" id="pipeline-highlights">
-      <div class="highlights-toggle" onclick="window.dashboard.toggleHighlights()">
-        <svg class="toggle-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
-        <span>Highlights</span>
-        <span class="highlights-updated" id="pipeline-updated"></span>
-      </div>
-      <div class="highlights-content" id="highlights-content">
-        <div class="highlight-item" id="highlight-hot"></div>
-        <div class="highlight-item" id="highlight-updates"></div>
-        <div class="highlight-item" id="highlight-marketing"></div>
+          <!-- Key Updates -->
+          <div class="meeting-section" id="updates-section">
+            <div class="section-header-row">
+              <div class="section-header-left">
+                <h4>Key Updates</h4>
+                <span class="item-count" id="updates-count"></span>
+              </div>
+            </div>
+            <div class="section-content">
+              <ul class="updates-list" id="pipeline-updates-list">
+                <li class="empty-state">No updates yet.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Closest to Close & Marketing -->
+        <div class="pipeline-column-right">
+          <!-- Closest to Close -->
+          <div class="meeting-section" id="close-section">
+            <div class="section-header-row">
+              <div class="section-header-left">
+                <h4>Closest to Close</h4>
+                <span class="item-count" id="close-count"></span>
+              </div>
+            </div>
+            <div class="section-content">
+              <ul class="close-list" id="pipeline-close-list">
+                <li class="empty-state">No deals in late stages.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Marketing -->
+          <div class="meeting-section" id="marketing-section">
+            <div class="section-header-row">
+              <div class="section-header-left">
+                <h4>Marketing</h4>
+                <span class="item-count" id="marketing-count"></span>
+              </div>
+            </div>
+            <div class="section-content">
+              <ul class="marketing-list" id="pipeline-marketing-list">
+                <li class="empty-state">No marketing updates.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>

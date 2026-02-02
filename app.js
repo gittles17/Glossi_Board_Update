@@ -927,62 +927,129 @@ class GlossiDashboard {
     if (totalEl) totalEl.textContent = this.formatMoney(grandTotal);
     if (closedEl) closedEl.textContent = this.formatMoney(closedTotal);
     
-    // Render each stage card
-    stages.forEach(stage => {
-      const data = stageTotals[stage];
-      const prevData = prevStageTotals[stage];
-      const stageValueEl = document.getElementById(`pipeline-total-${stage}`);
-      const changeEl = document.getElementById(`pipeline-change-${stage}`);
-      const dealsEl = document.getElementById(`pipeline-deals-${stage}`);
+    // Render Revenue by Stage
+    const stageListEl = document.getElementById('pipeline-stage-list');
+    if (stageListEl) {
+      const stageLabels = { discovery: 'Discovery', demo: 'Demo', pilot: 'Pilot' };
+      let stageHtml = '';
       
-      if (stageValueEl) stageValueEl.textContent = this.formatMoney(data.total);
+      stages.forEach(stage => {
+        const data = stageTotals[stage];
+        const prevData = prevStageTotals[stage];
+        const diff = data.total - prevData.total;
+        let trendClass = 'trend-neutral';
+        let trendText = '';
+        
+        if (previousData) {
+          if (diff > 0) {
+            trendClass = 'trend-positive';
+            trendText = `+${this.formatMoney(diff)}`;
+          } else if (diff < 0) {
+            trendClass = 'trend-negative';
+            trendText = this.formatMoney(diff);
+          } else {
+            trendText = 'No change';
+          }
+        }
+        
+        stageHtml += `
+          <div class="stage-row">
+            <span class="stage-name">${stageLabels[stage]}</span>
+            <span class="stage-value">
+              <span class="stage-amount">${this.formatMoney(data.total)}</span>
+              <span class="stage-trend ${trendClass}">${trendText}</span>
+            </span>
+          </div>
+        `;
+      });
       
-      // Render change indicator
-      if (changeEl) {
-        const valueDiff = data.total - prevData.total;
-        this.renderChangeIndicator(changeEl, valueDiff, previousData);
-      }
-      
-      if (dealsEl) {
-        if (data.deals.length === 0) {
-          dealsEl.innerHTML = '<div class="empty-stage">No deals</div>';
+      // Add total row
+      const totalDiff = grandTotal - prevGrandTotal;
+      let totalTrendClass = 'trend-neutral';
+      let totalTrendText = '';
+      if (previousData) {
+        if (totalDiff > 0) {
+          totalTrendClass = 'trend-positive';
+          totalTrendText = `+${this.formatMoney(totalDiff)}`;
+        } else if (totalDiff < 0) {
+          totalTrendClass = 'trend-negative';
+          totalTrendText = this.formatMoney(totalDiff);
         } else {
-          dealsEl.innerHTML = data.deals.map(deal => `
-            <div class="deal-item">
-              <span class="deal-name">${this.escapeHtml(deal.name)}${this.renderDealBadge(deal)}</span>
-              <span class="deal-meta">
-                <span class="deal-value">${this.escapeHtml(deal.value || 'TBD')}</span>
-                ${deal.timing ? `<span class="deal-timing">${this.escapeHtml(deal.timing)}</span>` : ''}
-              </span>
-            </div>
-          `).join('');
+          totalTrendText = 'No change';
         }
       }
-    });
+      
+      stageHtml += `
+        <div class="stage-row stage-total">
+          <span class="stage-name">Total Pipeline</span>
+          <span class="stage-value">
+            <span class="stage-amount">${this.formatMoney(grandTotal)}</span>
+            <span class="stage-trend ${totalTrendClass}">${totalTrendText}</span>
+          </span>
+        </div>
+      `;
+      
+      stageListEl.innerHTML = stageHtml;
+    }
     
-    // Render hot deals card
-    const hotDeals = highlights?.hotDeals || [];
-    const hotDealsEl = document.getElementById('pipeline-total-hot');
-    const hotChangeEl = document.getElementById('pipeline-change-hot');
-    const hotDealsListEl = document.getElementById('pipeline-deals-hot');
+    // Render Closest to Close (Pilot stage deals)
+    const closeListEl = document.getElementById('pipeline-close-list');
+    const closeCountEl = document.getElementById('close-count');
+    const pilotDeals = stageTotals['pilot']?.deals || [];
     
-    if (hotDealsEl) hotDealsEl.textContent = hotDeals.length;
-    if (hotChangeEl) hotChangeEl.textContent = hotDeals.length > 0 ? 'Active' : '';
+    if (closeCountEl) closeCountEl.textContent = pilotDeals.length > 0 ? pilotDeals.length : '';
     
-    if (hotDealsListEl) {
-      if (hotDeals.length === 0) {
-        hotDealsListEl.innerHTML = '<div class="empty-stage">No hot deals</div>';
+    if (closeListEl) {
+      if (pilotDeals.length === 0) {
+        closeListEl.innerHTML = '<li class="empty-state">No deals in late stages.</li>';
       } else {
-        hotDealsListEl.innerHTML = hotDeals.map(deal => `
-          <div class="deal-item">
-            <span class="deal-name">${this.escapeHtml(deal)}</span>
-          </div>
+        closeListEl.innerHTML = pilotDeals.map(deal => `
+          <li>
+            <div class="close-deal">
+              <div class="close-deal-header">
+                <span class="close-deal-name">${this.escapeHtml(deal.name)}</span>
+                <span class="close-deal-value">${this.escapeHtml(deal.value || 'TBD')}</span>
+              </div>
+              ${deal.nextSteps ? `<div class="close-deal-blocker">${this.escapeHtml(deal.nextSteps)}</div>` : ''}
+            </div>
+          </li>
         `).join('');
       }
     }
     
-    // Render highlights
-    this.renderPipelineHighlights(highlights, pipelineData?.updatedAt);
+    // Render Key Updates
+    const updatesListEl = document.getElementById('pipeline-updates-list');
+    const updatesCountEl = document.getElementById('updates-count');
+    const keyUpdates = highlights?.keyUpdates || [];
+    
+    if (updatesCountEl) updatesCountEl.textContent = keyUpdates.length > 0 ? keyUpdates.length : '';
+    
+    if (updatesListEl) {
+      if (keyUpdates.length === 0) {
+        updatesListEl.innerHTML = '<li class="empty-state">No updates yet.</li>';
+      } else {
+        updatesListEl.innerHTML = keyUpdates.map(update => `
+          <li>${this.escapeHtml(update)}</li>
+        `).join('');
+      }
+    }
+    
+    // Render Marketing
+    const marketingListEl = document.getElementById('pipeline-marketing-list');
+    const marketingCountEl = document.getElementById('marketing-count');
+    const marketing = highlights?.marketing || [];
+    
+    if (marketingCountEl) marketingCountEl.textContent = marketing.length > 0 ? marketing.length : '';
+    
+    if (marketingListEl) {
+      if (marketing.length === 0) {
+        marketingListEl.innerHTML = '<li class="empty-state">No marketing updates.</li>';
+      } else {
+        marketingListEl.innerHTML = marketing.map(item => `
+          <li>${this.escapeHtml(item)}</li>
+        `).join('');
+      }
+    }
   }
 
   /**
@@ -1067,54 +1134,24 @@ class GlossiDashboard {
   }
 
   /**
-   * Toggle pipeline card expand/collapse
+   * Toggle pipeline card expand/collapse (deprecated)
    */
   togglePipelineCard(stage) {
-    const dealsEl = document.getElementById(`pipeline-deals-${stage}`);
-    if (dealsEl) dealsEl.classList.toggle('collapsed');
+    // No longer used with new layout
   }
 
   /**
-   * Toggle highlights section
+   * Toggle highlights section (deprecated)
    */
   toggleHighlights() {
-    const highlightsEl = document.getElementById('pipeline-highlights');
-    if (highlightsEl) highlightsEl.classList.toggle('collapsed');
+    // No longer used with new layout
   }
 
   /**
-   * Render pipeline highlights
+   * Render pipeline highlights (deprecated - now rendered inline)
    */
   renderPipelineHighlights(highlights, updatedAt) {
-    const hotEl = document.getElementById('highlight-hot');
-    const updatesEl = document.getElementById('highlight-updates');
-    const marketingEl = document.getElementById('highlight-marketing');
-    const updatedEl = document.getElementById('pipeline-updated');
-    
-    if (hotEl) {
-      const hotDeals = highlights.hotDeals || [];
-      hotEl.innerHTML = hotDeals.length > 0 
-        ? `<h4>Hot Deals</h4><ul>${hotDeals.map(h => `<li>${this.escapeHtml(h)}</li>`).join('')}</ul>`
-        : '';
-    }
-    
-    if (updatesEl) {
-      const updates = highlights.keyUpdates || [];
-      updatesEl.innerHTML = updates.length > 0
-        ? `<h4>Key Updates</h4><ul>${updates.map(u => `<li>${this.escapeHtml(u)}</li>`).join('')}</ul>`
-        : '';
-    }
-    
-    if (marketingEl) {
-      const marketing = highlights.marketing || [];
-      marketingEl.innerHTML = marketing.length > 0
-        ? `<h4>Marketing</h4><ul>${marketing.map(m => `<li>${this.escapeHtml(m)}</li>`).join('')}</ul>`
-        : '';
-    }
-    
-    if (updatedEl && updatedAt) {
-      updatedEl.textContent = new Date(updatedAt).toLocaleDateString();
-    }
+    // No longer used - highlights now rendered in main section
   }
 
   /**
