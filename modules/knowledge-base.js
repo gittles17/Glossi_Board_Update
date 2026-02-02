@@ -280,13 +280,15 @@ class KnowledgeBase {
     const textExtensions = ['.txt', '.md', '.csv', '.json'];
     const pdfExtensions = ['.pdf'];
     const audioExtensions = ['.mp3', '.wav', '.m4a', '.webm', '.ogg'];
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
     
     const ext = '.' + file.name.split('.').pop().toLowerCase();
     const isText = textExtensions.includes(ext);
     const isPdf = pdfExtensions.includes(ext);
     const isAudio = audioExtensions.includes(ext);
+    const isImage = imageExtensions.includes(ext);
     
-    if (!isText && !isPdf && !isAudio) {
+    if (!isText && !isPdf && !isAudio && !isImage) {
       this.showToast(`Unsupported file type: ${file.name}`, 'error');
       return;
     }
@@ -296,7 +298,7 @@ class KnowledgeBase {
     const title = file.name.replace(/\.[^/.]+$/, '');
     const placeholderSource = {
       id: sourceId,
-      type: isAudio ? 'audio' : isPdf ? 'pdf' : 'file',
+      type: isAudio ? 'audio' : isPdf ? 'pdf' : isImage ? 'image' : 'file',
       title,
       content: '',
       category: 'other',
@@ -314,7 +316,7 @@ class KnowledgeBase {
     this.renderSources();
     
     // Start progress animation
-    const progressInterval = this.startProgressAnimation(sourceId, isAudio ? 30000 : isPdf ? 10000 : 2000);
+    const progressInterval = this.startProgressAnimation(sourceId, isAudio ? 30000 : isPdf ? 10000 : isImage ? 15000 : 2000);
     
     try {
       let content = '';
@@ -364,6 +366,38 @@ class KnowledgeBase {
         content = result.transcript;
         metadata.duration = result.duration;
         type = 'audio';
+        
+      } else if (isImage) {
+        // Convert image to base64 and analyze with Claude vision
+        const base64 = await this.fileToBase64(file);
+        const mediaType = file.type || 'image/png';
+        
+        if (!this.aiProcessor || !this.aiProcessor.isConfigured()) {
+          throw new Error('AI not configured. Please add your API key in settings.');
+        }
+        
+        // Use Claude vision to extract text and describe the image
+        const visionPrompt = `Analyze this image thoroughly. Extract ALL text visible in the image (OCR). Then provide a detailed description of what the image contains. Format your response as:
+
+TEXT CONTENT:
+[All text found in the image, preserving structure]
+
+DESCRIPTION:
+[Detailed description of the image contents, charts, diagrams, etc.]
+
+KEY INFORMATION:
+[Bullet points of key facts, data, or insights from the image]`;
+
+        const visionResponse = await this.aiProcessor.analyzeImageWithVision(base64, mediaType, visionPrompt);
+        
+        if (visionResponse) {
+          content = visionResponse;
+          metadata.imageWidth = null;
+          metadata.imageHeight = null;
+          type = 'image';
+        } else {
+          throw new Error('Failed to analyze image');
+        }
       }
       
       // Stop progress animation
@@ -1798,6 +1832,21 @@ Guidelines:
       toast.classList.remove('show');
       setTimeout(() => toast.remove(), 300);
     }, 3000);
+  }
+
+  /**
+   * Convert file to base64 string
+   */
+  fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 
   /**

@@ -414,6 +414,61 @@ Be concise but comprehensive.`
       throw error;
     }
   }
+
+  /**
+   * Analyze an image with a custom prompt using Claude's vision capabilities
+   */
+  async analyzeImageWithVision(base64Data, mediaType, prompt) {
+    if (!this.isConfigured()) {
+      throw new Error('API key not configured');
+    }
+
+    try {
+      const response = await fetch(ANTHROPIC_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-opus-4-20250514',
+          max_tokens: 4096,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'image',
+                  source: {
+                    type: 'base64',
+                    media_type: mediaType,
+                    data: base64Data
+                  }
+                },
+                {
+                  type: 'text',
+                  text: prompt
+                }
+              ]
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'API request failed');
+      }
+
+      const data = await response.json();
+      return data.content[0].text;
+    } catch (error) {
+      console.error('Image vision analysis error:', error);
+      throw error;
+    }
+  }
 }
 
 // Export class and singleton instance
