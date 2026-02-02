@@ -16,6 +16,11 @@ class KnowledgeBase {
     this.aiProcessor = null;
     this.storage = null;
     this.onUpdate = null;
+    // Report generation state
+    this.reportStep = 1;
+    this.reportPrompt = '';
+    this.reportAnswers = {};
+    this.reportQuestions = [];
   }
 
   /**
@@ -205,15 +210,17 @@ class KnowledgeBase {
       reportGenerate.addEventListener('click', () => this.generateReport());
     }
 
-    // Template buttons
-    document.querySelectorAll('.kb-template-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.kb-template-btn').forEach(b => b.classList.remove('active'));
-        e.target.closest('.kb-template-btn').classList.add('active');
-        this.selectedTemplate = e.target.closest('.kb-template-btn').dataset.template;
-        this.updateReportPrompt();
-      });
-    });
+    // Report continue button (step 1 -> evaluate)
+    const reportContinue = document.getElementById('kb-report-continue');
+    if (reportContinue) {
+      reportContinue.addEventListener('click', () => this.evaluateReportPrompt());
+    }
+
+    // Report back button
+    const reportBack = document.getElementById('kb-report-back');
+    if (reportBack) {
+      reportBack.addEventListener('click', () => this.goBackReportStep());
+    }
 
     // Chat input
     const chatInput = document.getElementById('kb-chat-input');
@@ -282,40 +289,7 @@ class KnowledgeBase {
   }
 
   /**
-   * Show report modal
-   */
-  showReportModal() {
-    this.showModal('kb-report-modal');
-    this.selectedTemplate = 'custom';
-    document.querySelectorAll('.kb-template-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.template === 'custom');
-    });
-    this.populateReportSources();
-    this.updateReportPrompt();
-  }
-
-  /**
-   * Populate report sources checkboxes
-   */
-  populateReportSources() {
-    const container = document.getElementById('kb-report-sources');
-    if (!container) return;
-    
-    if (this.sources.length === 0) {
-      container.innerHTML = '<p class="kb-no-sources">Add sources first to generate reports</p>';
-      return;
-    }
-    
-    container.innerHTML = this.sources.map(source => `
-      <label class="kb-source-checkbox">
-        <input type="checkbox" value="${source.id}" checked>
-        <span>${this.escapeHtml(source.title)}</span>
-      </label>
-    `).join('');
-  }
-
-  /**
-   * Update report prompt based on template
+   * Update report prompt based on template (legacy, no longer used)
    */
   updateReportPrompt() {
     const promptInput = document.getElementById('kb-report-prompt');
@@ -861,14 +835,49 @@ ${source.content}
   }
 
   /**
-   * Generate report
+   * Reset report modal to initial state
    */
-  async generateReport() {
+  resetReportModal() {
+    this.reportStep = 1;
+    this.reportPrompt = '';
+    this.reportAnswers = {};
+    this.reportQuestions = [];
+    
+    // Show step 1, hide others
+    document.getElementById('kb-report-step-1').style.display = 'block';
+    document.getElementById('kb-report-step-2').style.display = 'none';
+    document.getElementById('kb-report-step-3').style.display = 'none';
+    document.getElementById('kb-report-loading').style.display = 'none';
+    
+    // Reset buttons
+    document.getElementById('kb-report-continue').style.display = 'inline-flex';
+    document.getElementById('kb-report-generate').style.display = 'none';
+    document.getElementById('kb-report-back').style.display = 'none';
+    
+    // Clear inputs
+    const promptInput = document.getElementById('kb-report-prompt');
+    if (promptInput) promptInput.value = '';
+    const contextInput = document.getElementById('kb-report-context');
+    if (contextInput) contextInput.value = '';
+  }
+
+  /**
+   * Show report modal (override to reset state)
+   */
+  showReportModal() {
+    this.resetReportModal();
+    this.showModal('kb-report-modal');
+  }
+
+  /**
+   * Evaluate report prompt and decide if clarification needed
+   */
+  async evaluateReportPrompt() {
     const promptInput = document.getElementById('kb-report-prompt');
     const prompt = promptInput.value.trim();
     
     if (!prompt) {
-      this.showToast('Please describe what you want to generate', 'error');
+      this.showToast('Please describe what report you need', 'error');
       return;
     }
     
@@ -877,24 +886,239 @@ ${source.content}
       return;
     }
     
-    // Get selected sources
-    const selectedSourceIds = [];
-    document.querySelectorAll('#kb-report-sources input:checked').forEach(checkbox => {
-      selectedSourceIds.push(checkbox.value);
-    });
-    
-    if (selectedSourceIds.length === 0 && this.sources.length > 0) {
-      this.showToast('Please select at least one source', 'error');
+    // Get enabled sources
+    const enabledSources = this.sources.filter(s => s.enabled !== false);
+    if (enabledSources.length === 0) {
+      this.showToast('Please add at least one source first', 'error');
       return;
     }
     
-    const selectedSources = this.sources.filter(s => selectedSourceIds.includes(s.id));
+    this.reportPrompt = prompt;
     
-    this.hideModal('kb-report-modal');
-    this.showTypingIndicator();
+    // Show loading
+    document.getElementById('kb-report-step-1').style.display = 'none';
+    document.getElementById('kb-report-loading').style.display = 'block';
+    document.getElementById('kb-report-loading-text').textContent = 'Analyzing your request...';
+    document.getElementById('kb-report-continue').style.display = 'none';
     
     try {
-      const context = selectedSources.map(s => 
+      const sourceList = enabledSources.map(s => `- ${s.title} (${s.category})`).join('\n');
+      
+      const evaluationPrompt = `You are helping a user generate a report. Evaluate if their request is clear enough to proceed or if you need clarification.
+
+User's request: "${prompt}"
+
+Available sources:
+${sourceList}
+
+If the request is clear and specific enough to generate a good report, respond with exactly:
+{"ready": true}
+
+If you need clarification, respond with a JSON object containing 1-3 questions. Each question should have:
+- "id": unique identifier
+- "question": the question text
+- "type": either "text" (for open answer) or "choice" (for multiple choice)
+- "options": array of options (only if type is "choice")
+
+Example response if clarification needed:
+{"ready": false, "questions": [
+  {"id": "timeframe", "question": "What time period should the report cover?", "type": "choice", "options": ["Last week", "Last month", "Last quarter", "All time"]},
+  {"id": "audience", "question": "Who is the primary audience for this report?", "type": "text"}
+]}
+
+Only ask questions that would meaningfully improve the report. If the prompt is reasonably clear, just proceed.`;
+
+      const response = await this.aiProcessor.chat(evaluationPrompt, 'Evaluate this report request.');
+      
+      // Parse AI response
+      let evaluation;
+      try {
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        evaluation = jsonMatch ? JSON.parse(jsonMatch[0]) : { ready: true };
+      } catch (e) {
+        evaluation = { ready: true };
+      }
+      
+      if (evaluation.ready) {
+        // Skip to step 3 (ready to generate)
+        this.showReportStep3();
+      } else if (evaluation.questions && evaluation.questions.length > 0) {
+        // Show clarifying questions
+        this.reportQuestions = evaluation.questions;
+        this.showReportStep2(evaluation.questions);
+      } else {
+        this.showReportStep3();
+      }
+    } catch (error) {
+      this.showToast('Failed to evaluate request: ' + error.message, 'error');
+      // Fall back to step 1
+      document.getElementById('kb-report-step-1').style.display = 'block';
+      document.getElementById('kb-report-loading').style.display = 'none';
+      document.getElementById('kb-report-continue').style.display = 'inline-flex';
+    }
+  }
+
+  /**
+   * Show step 2 with clarifying questions
+   */
+  showReportStep2(questions) {
+    this.reportStep = 2;
+    
+    document.getElementById('kb-report-loading').style.display = 'none';
+    document.getElementById('kb-report-step-2').style.display = 'block';
+    document.getElementById('kb-report-back').style.display = 'inline-flex';
+    document.getElementById('kb-report-continue').style.display = 'inline-flex';
+    document.getElementById('kb-report-continue').textContent = 'Continue';
+    
+    const container = document.getElementById('kb-report-questions');
+    container.innerHTML = questions.map(q => {
+      if (q.type === 'choice' && q.options) {
+        return `
+          <div class="kb-report-question" data-id="${q.id}">
+            <label>${this.escapeHtml(q.question)}</label>
+            <div class="kb-report-options">
+              ${q.options.map((opt, i) => `
+                <button class="kb-report-option" data-value="${this.escapeHtml(opt)}">${this.escapeHtml(opt)}</button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } else {
+        return `
+          <div class="kb-report-question" data-id="${q.id}">
+            <label>${this.escapeHtml(q.question)}</label>
+            <input type="text" class="input kb-report-answer" placeholder="Your answer...">
+          </div>
+        `;
+      }
+    }).join('');
+    
+    // Add click handlers for choice buttons
+    container.querySelectorAll('.kb-report-option').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const parent = e.target.closest('.kb-report-options');
+        parent.querySelectorAll('.kb-report-option').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+      });
+    });
+    
+    // Update continue button to go to step 3
+    const continueBtn = document.getElementById('kb-report-continue');
+    continueBtn.onclick = () => this.collectAnswersAndProceed();
+  }
+
+  /**
+   * Collect answers from step 2 and proceed to step 3
+   */
+  collectAnswersAndProceed() {
+    const container = document.getElementById('kb-report-questions');
+    this.reportAnswers = {};
+    
+    container.querySelectorAll('.kb-report-question').forEach(q => {
+      const id = q.dataset.id;
+      const activeOption = q.querySelector('.kb-report-option.active');
+      const textInput = q.querySelector('.kb-report-answer');
+      
+      if (activeOption) {
+        this.reportAnswers[id] = activeOption.dataset.value;
+      } else if (textInput && textInput.value.trim()) {
+        this.reportAnswers[id] = textInput.value.trim();
+      }
+    });
+    
+    this.showReportStep3();
+  }
+
+  /**
+   * Show step 3 (ready to generate)
+   */
+  showReportStep3() {
+    this.reportStep = 3;
+    
+    document.getElementById('kb-report-loading').style.display = 'none';
+    document.getElementById('kb-report-step-2').style.display = 'none';
+    document.getElementById('kb-report-step-3').style.display = 'block';
+    document.getElementById('kb-report-back').style.display = 'inline-flex';
+    document.getElementById('kb-report-continue').style.display = 'none';
+    document.getElementById('kb-report-generate').style.display = 'inline-flex';
+  }
+
+  /**
+   * Go back to previous report step
+   */
+  goBackReportStep() {
+    if (this.reportStep === 2) {
+      // Back to step 1
+      this.reportStep = 1;
+      document.getElementById('kb-report-step-2').style.display = 'none';
+      document.getElementById('kb-report-step-1').style.display = 'block';
+      document.getElementById('kb-report-back').style.display = 'none';
+      document.getElementById('kb-report-continue').style.display = 'inline-flex';
+      document.getElementById('kb-report-continue').textContent = 'Continue';
+      document.getElementById('kb-report-continue').onclick = () => this.evaluateReportPrompt();
+    } else if (this.reportStep === 3) {
+      if (this.reportQuestions.length > 0) {
+        // Back to step 2
+        this.showReportStep2(this.reportQuestions);
+      } else {
+        // Back to step 1
+        this.reportStep = 1;
+        document.getElementById('kb-report-step-3').style.display = 'none';
+        document.getElementById('kb-report-step-1').style.display = 'block';
+        document.getElementById('kb-report-back').style.display = 'none';
+        document.getElementById('kb-report-continue').style.display = 'inline-flex';
+        document.getElementById('kb-report-generate').style.display = 'none';
+        document.getElementById('kb-report-continue').onclick = () => this.evaluateReportPrompt();
+      }
+    }
+  }
+
+  /**
+   * Generate report using all enabled sources
+   */
+  async generateReport() {
+    if (!this.aiProcessor || !this.aiProcessor.isConfigured()) {
+      this.showToast('Please configure your API key in settings', 'error');
+      return;
+    }
+    
+    // Get all enabled sources
+    const enabledSources = this.sources.filter(s => s.enabled !== false);
+    if (enabledSources.length === 0) {
+      this.showToast('Please add at least one source first', 'error');
+      return;
+    }
+    
+    // Get additional context if provided
+    const contextInput = document.getElementById('kb-report-context');
+    const additionalContext = contextInput ? contextInput.value.trim() : '';
+    
+    // Build full prompt from original request + answers + context
+    let fullPrompt = this.reportPrompt;
+    
+    if (Object.keys(this.reportAnswers).length > 0) {
+      fullPrompt += '\n\nAdditional details:';
+      for (const [key, value] of Object.entries(this.reportAnswers)) {
+        const question = this.reportQuestions.find(q => q.id === key);
+        if (question) {
+          fullPrompt += `\n- ${question.question}: ${value}`;
+        }
+      }
+    }
+    
+    if (additionalContext) {
+      fullPrompt += '\n\nAdditional context: ' + additionalContext;
+    }
+    
+    // Show loading in modal
+    document.getElementById('kb-report-step-3').style.display = 'none';
+    document.getElementById('kb-report-loading').style.display = 'block';
+    document.getElementById('kb-report-loading-text').textContent = 'Generating your report...';
+    document.getElementById('kb-report-generate').style.display = 'none';
+    document.getElementById('kb-report-back').style.display = 'none';
+    
+    try {
+      const context = enabledSources.map(s => 
         `--- ${s.title} (${s.category}) ---\n${s.content}\n---`
       ).join('\n\n');
       
@@ -906,33 +1130,31 @@ ${context}
 
 Guidelines:
 - Use clear headings and bullet points
+- Use markdown formatting (headers, bold, lists)
 - Prioritize recent and relevant information
 - Be specific with data and quotes
-- Keep it concise but comprehensive`;
+- Keep it concise but comprehensive
+- Cite sources when referencing specific information`;
 
-      const response = await this.aiProcessor.chat(systemPrompt, prompt);
+      const response = await this.aiProcessor.chat(systemPrompt, fullPrompt);
+      
+      // Generate title from prompt
+      const title = this.reportPrompt.substring(0, 50) + (this.reportPrompt.length > 50 ? '...' : '');
       
       // Save report
       const report = {
         id: 'rpt_' + Date.now(),
-        type: this.selectedTemplate,
-        title: this.getReportTitle(prompt),
+        type: 'custom',
+        title: title,
         content: response,
-        sourcesUsed: selectedSourceIds,
+        sourcesUsed: enabledSources.map(s => s.id),
         createdAt: new Date().toISOString()
       };
       
       this.reports.push(report);
       this.saveData();
       
-      // Add to chat as assistant message
-      this.currentConversation.messages.push({
-        role: 'assistant',
-        content: `**Generated Report: ${report.title}**\n\n${response}`,
-        timestamp: new Date().toISOString()
-      });
-      
-      this.saveData();
+      this.hideModal('kb-report-modal');
       this.render();
       
       // Show report in modal
@@ -940,23 +1162,19 @@ Guidelines:
       this.showToast('Report generated successfully', 'success');
     } catch (error) {
       this.showToast('Failed to generate report: ' + error.message, 'error');
+      // Show step 3 again
+      document.getElementById('kb-report-loading').style.display = 'none';
+      document.getElementById('kb-report-step-3').style.display = 'block';
+      document.getElementById('kb-report-generate').style.display = 'inline-flex';
+      document.getElementById('kb-report-back').style.display = 'inline-flex';
     }
-    
-    this.hideTypingIndicator();
-    this.renderMessages();
   }
 
   /**
-   * Get report title from prompt
+   * Get report title from prompt (legacy, kept for compatibility)
    */
   getReportTitle(prompt) {
-    const titles = {
-      investor_update: 'Investor Update',
-      talking_points: 'Talking Points',
-      due_diligence: 'Due Diligence Brief',
-      custom: prompt.substring(0, 50) + (prompt.length > 50 ? '...' : '')
-    };
-    return titles[this.selectedTemplate] || 'Custom Report';
+    return prompt.substring(0, 50) + (prompt.length > 50 ? '...' : '');
   }
 
   /**

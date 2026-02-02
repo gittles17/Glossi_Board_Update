@@ -7266,6 +7266,99 @@ body::after {
   margin-top: var(--space-1);
 }
 
+/* Report Modal Steps */
+.kb-report-step {
+  min-height: 120px;
+}
+
+.kb-report-hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: var(--space-2);
+}
+
+.kb-report-questions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.kb-report-question label {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.kb-report-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.kb-report-option {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kb-report-option:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.kb-report-option.active {
+  background: var(--accent-green-dim);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.kb-report-answer {
+  width: 100%;
+}
+
+.kb-report-ready {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--accent-green-dim);
+  border-radius: var(--radius-md);
+  color: var(--accent-green);
+  margin-bottom: var(--space-4);
+}
+
+.kb-report-ready svg {
+  flex-shrink: 0;
+}
+
+.kb-report-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6) 0;
+  color: var(--text-secondary);
+}
+
+.kb-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent-green);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Chat Input */
 .kb-input-area {
   padding: var(--space-3);
