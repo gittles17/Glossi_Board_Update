@@ -404,7 +404,10 @@
       await storage.init();
       
       const aiProcessor = new AIProcessor();
-      aiProcessor.init(storage);
+      const settings = storage.getSettings();
+      if (settings.anthropicApiKey) {
+        aiProcessor.setApiKey(settings.anthropicApiKey);
+      }
       
       const knowledgeBase = new KnowledgeBase();
       knowledgeBase.init(storage, aiProcessor, () => {
@@ -422,9 +425,9 @@
       if (menuBtn) {
         menuBtn.addEventListener('click', () => {
           settingsModal.classList.add('active');
-          const settings = storage.getSettings();
-          if (anthropicKeyInput && settings.anthropicApiKey) {
-            anthropicKeyInput.value = settings.anthropicApiKey;
+          const currentSettings = storage.getSettings();
+          if (anthropicKeyInput && currentSettings.anthropicApiKey) {
+            anthropicKeyInput.value = currentSettings.anthropicApiKey;
           }
         });
       }
@@ -440,7 +443,7 @@
         settingsSave.addEventListener('click', () => {
           const key = anthropicKeyInput.value.trim();
           storage.updateSettings({ anthropicApiKey: key });
-          aiProcessor.init(storage);
+          aiProcessor.setApiKey(key);
           settingsModal.classList.remove('active');
           knowledgeBase.showToast('Settings saved', 'success');
         });
