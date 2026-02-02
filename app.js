@@ -834,10 +834,6 @@ class GlossiDashboard {
    */
   render() {
     try { this.renderStats(); } catch (e) { console.error('renderStats error:', e); }
-    try { this.renderPipeline(); } catch (e) { console.error('renderPipeline error:', e); }
-    try { this.renderTalkingPoints(); } catch (e) { console.error('renderTalkingPoints error:', e); }
-    try { this.renderQuotes(); } catch (e) { console.error('renderQuotes error:', e); }
-    try { this.renderScratchpad(); } catch (e) { console.error('renderScratchpad error:', e); }
     try { this.renderQuickLinks(); } catch (e) { console.error('renderQuickLinks error:', e); }
     try { this.renderSeedRaise(); } catch (e) { console.error('renderSeedRaise error:', e); }
     try { this.renderMeetingSelector(); } catch (e) { console.error('renderMeetingSelector error:', e); }
@@ -894,73 +890,27 @@ class GlossiDashboard {
   }
 
   /**
-   * Render pipeline highlights with staggered animations
-   * Shows top deals from both closestToClose and inProgress
+   * Render pipeline (deprecated - section removed, using Knowledge Base instead)
    */
   renderPipeline() {
-    const container = document.getElementById('pipeline-hot');
-    
-    // Get all clients from storage (this is the same source as pipeline report)
-    const allClients = storage.getAllPipelineClients();
-    
-    // Sort by stage priority (pilot > validation > demo > discovery) and take top 4
-    const stagePriority = { pilot: 4, validation: 3, demo: 2, discovery: 1, partnership: 0 };
-    const topDeals = allClients
-      .filter(c => c.category !== 'partnerships')
-      .sort((a, b) => (stagePriority[b.stage] || 0) - (stagePriority[a.stage] || 0))
-      .slice(0, 6);
-
-    container.innerHTML = topDeals.map((deal, index) => {
-      const isHot = deal.stage === 'pilot' || deal.stage === 'validation';
-      return `
-      <div class="pipeline-item ${isHot ? 'hot' : ''}" data-deal-id="${deal.id || deal.name}" data-stage="${deal.stage}" style="animation-delay: ${0.4 + index * 0.05}s">
-        <div class="pipeline-info">
-          <span class="company">${this.escapeHtml(deal.name)}</span>
-          <span class="stage">${deal.stage}</span>
-        </div>
-        <div class="pipeline-right">
-          <span class="value">${deal.value || ''}</span>
-          <button class="pipeline-delete-btn" onclick="window.dashboard.deletePipelineDeal('${deal.name}', '${deal.category}')" title="Delete">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-      </div>
-    `;
-    }).join('');
-
-    // Add staggered entrance animation
-    this.animateListItems(container, '.pipeline-item');
+    // Pipeline section was removed
   }
 
   /**
-   * Delete a pipeline deal
+   * Delete a pipeline deal (deprecated)
    */
   deletePipelineDeal(name, category) {
-    // Optimistic animation
-    const el = document.querySelector(`[data-deal-id="${name}"]`);
-    if (el) {
-      el.style.opacity = '0';
-      el.style.transform = 'translateX(-20px)';
-      el.style.transition = 'all 0.15s ease-out';
-    }
-    
-    setTimeout(() => {
-      storage.deletePipelineDeal(name, category);
-      this.data = storage.getData();
-      this.renderPipeline();
-      this.renderStats();
-    }, 150);
-    
-    this.showToast('Deal removed', 'success');
+    // Pipeline section was removed
   }
 
   /**
-   * Render talking points grouped by category with staggered animations
+   * Render talking points (deprecated - section removed, using Knowledge Base instead)
    */
   renderTalkingPoints() {
+    // Talking points section was removed - using Knowledge Base instead
+    return;
+    
+    // Legacy code below (kept for reference)
     const container = document.getElementById('talking-points');
     if (!container || !this.data) return;
     
@@ -1740,10 +1690,10 @@ class GlossiDashboard {
   }
 
   /**
-   * Refresh pipeline view
+   * Refresh pipeline view (deprecated - pipeline section removed)
    */
   refreshPipelineViews() {
-    this.renderPipeline();
+    // Pipeline section was removed
   }
 
   /**
@@ -5718,9 +5668,13 @@ Content: "${content.substring(0, 300)}"`
   }
 
   /**
-   * Render quotes library
+   * Render quotes library (deprecated - section removed)
    */
   renderQuotes() {
+    // Quotes section was removed - using Knowledge Base instead
+    return;
+    
+    // Legacy code below
     const quotes = storage.getQuotes();
     const featuredContainer = document.getElementById('quotes-featured');
     const listContainer = document.getElementById('quotes-list');
@@ -5835,9 +5789,13 @@ Content: "${content.substring(0, 300)}"`
   }
 
   /**
-   * Render scratchpad list (formerly thoughts)
+   * Render scratchpad list (deprecated - section removed)
    */
   renderScratchpad() {
+    // Scratchpad section was removed - using Knowledge Base instead
+    return;
+    
+    // Legacy code below
     const items = storage.getScratchpad();
     const container = document.getElementById('scratchpad-list');
     const countEl = document.getElementById('scratchpad-count');
