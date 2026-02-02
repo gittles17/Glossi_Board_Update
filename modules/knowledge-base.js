@@ -24,6 +24,14 @@ class KnowledgeBase {
     // Folder state
     this.expandedFolders = {};
     this.folders = [];
+    // Dashboard data sources (live data from main app)
+    this.dashboardSources = {
+      weekAtGlance: { enabled: true, title: 'Week at a Glance', icon: 'calendar' },
+      seedRaise: { enabled: true, title: 'Seed Raise', icon: 'trending-up' },
+      pipeline: { enabled: true, title: 'Pipeline', icon: 'bar-chart' },
+      meetings: { enabled: true, title: 'Meetings', icon: 'users' },
+      quickLinks: { enabled: false, title: 'Quick Links', icon: 'link' }
+    };
   }
 
   /**
@@ -53,6 +61,15 @@ class KnowledgeBase {
     this.conversations = kbData.conversations || [];
     this.reports = kbData.reports || [];
     
+    // Load dashboard source preferences
+    if (kbData.dashboardSources) {
+      Object.keys(kbData.dashboardSources).forEach(key => {
+        if (this.dashboardSources[key]) {
+          this.dashboardSources[key].enabled = kbData.dashboardSources[key].enabled;
+        }
+      });
+    }
+    
     // Create a new conversation if none exists
     if (this.conversations.length === 0) {
       this.currentConversation = this.createConversation();
@@ -65,10 +82,17 @@ class KnowledgeBase {
    * Save data to storage
    */
   saveData() {
+    // Save dashboard source preferences (just enabled state)
+    const dashboardSourcePrefs = {};
+    Object.keys(this.dashboardSources).forEach(key => {
+      dashboardSourcePrefs[key] = { enabled: this.dashboardSources[key].enabled };
+    });
+    
     this.storage.updateKnowledgeBase({
       sources: this.sources,
       conversations: this.conversations,
-      reports: this.reports
+      reports: this.reports,
+      dashboardSources: dashboardSourcePrefs
     });
   }
 
@@ -692,32 +716,302 @@ CONTENT RULES:
    * Build context from sources
    */
   buildSourceContext() {
-    if (this.sources.length === 0) {
-      return 'No sources available.';
+    const contextParts = [];
+    
+    // Add enabled dashboard sources (live data)
+    const dashboardContext = this.buildDashboardContext();
+    if (dashboardContext) {
+      contextParts.push(dashboardContext);
     }
     
-    // Only include enabled sources
+    // Add enabled file sources
     const enabledSources = this.sources.filter(s => s.enabled !== false);
     
-    if (enabledSources.length === 0) {
-      return 'No enabled sources available.';
-    }
-    
-    return enabledSources.map(source => {
-      const freshnessLabel = {
-        current: 'Current',
-        review: 'Needs Review',
-        outdated: 'Outdated'
-      }[source.freshness] || 'Unknown';
-      
-      return `--- Source: ${source.title} ---
+    if (enabledSources.length > 0) {
+      const fileContext = enabledSources.map(source => {
+        const freshnessLabel = {
+          current: 'Current',
+          review: 'Needs Review',
+          outdated: 'Outdated'
+        }[source.freshness] || 'Unknown';
+        
+        return `--- Source: ${source.title} ---
 Category: ${source.category}
-Added: ${new Date(source.addedAt).toLocaleDateString()}
+Added: ${new Date(source.addedAt || source.createdAt).toLocaleDateString()}
 Status: ${freshnessLabel}
 Content:
 ${source.content}
 ---`;
-    }).join('\n\n');
+      }).join('\n\n');
+      
+      contextParts.push(fileContext);
+    }
+    
+    if (contextParts.length === 0) {
+      return 'No sources available.';
+    }
+    
+    return contextParts.join('\n\n');
+  }
+  
+  /**
+   * Build context from dashboard data (live)
+   */
+  buildDashboardContext() {
+    const parts = [];
+    
+    // Week at a Glance
+    if (this.dashboardSources.weekAtGlance.enabled) {
+      const weekData = this.getWeekAtGlanceData();
+      if (weekData) {
+        parts.push(`--- Dashboard Source: Week at a Glance (Live) ---
+${weekData}
+---`);
+      }
+    }
+    
+    // Seed Raise
+    if (this.dashboardSources.seedRaise.enabled) {
+      const seedData = this.getSeedRaiseData();
+      if (seedData) {
+        parts.push(`--- Dashboard Source: Seed Raise (Live) ---
+${seedData}
+---`);
+      }
+    }
+    
+    // Pipeline
+    if (this.dashboardSources.pipeline.enabled) {
+      const pipelineData = this.getPipelineData();
+      if (pipelineData) {
+        parts.push(`--- Dashboard Source: Pipeline (Live) ---
+${pipelineData}
+---`);
+      }
+    }
+    
+    // Meetings
+    if (this.dashboardSources.meetings.enabled) {
+      const meetingsData = this.getMeetingsData();
+      if (meetingsData) {
+        parts.push(`--- Dashboard Source: Meetings (Live) ---
+${meetingsData}
+---`);
+      }
+    }
+    
+    // Quick Links
+    if (this.dashboardSources.quickLinks.enabled) {
+      const linksData = this.getQuickLinksData();
+      if (linksData) {
+        parts.push(`--- Dashboard Source: Quick Links (Live) ---
+${linksData}
+---`);
+      }
+    }
+    
+    return parts.join('\n\n');
+  }
+  
+  /**
+   * Get Week at a Glance data from storage
+   */
+  getWeekAtGlanceData() {
+    const data = this.storage.getData();
+    if (!data) return null;
+    
+    const lines = [];
+    
+    // Company info
+    if (data.company) {
+      lines.push(`Company: ${data.company.name}`);
+      lines.push(`Tagline: ${data.company.tagline}`);
+    }
+    
+    // Stats
+    if (data.stats && data.stats.length > 0) {
+      lines.push('\nKey Metrics:');
+      data.stats.forEach(stat => {
+        lines.push(`- ${stat.label}: ${stat.value}${stat.note ? ' (' + stat.note + ')' : ''}`);
+      });
+    }
+    
+    // Week summary (if exists in meetings or elsewhere)
+    const meetings = this.storage.getMeetings();
+    if (meetings && meetings.length > 0) {
+      const latestMeeting = meetings[meetings.length - 1];
+      if (latestMeeting.summary) {
+        lines.push('\nLatest Summary:');
+        lines.push(latestMeeting.summary);
+      }
+      if (latestMeeting.keyDecisions && latestMeeting.keyDecisions.length > 0) {
+        lines.push('\nKey Decisions:');
+        latestMeeting.keyDecisions.forEach(d => lines.push(`- ${d}`));
+      }
+      if (latestMeeting.actionItems && latestMeeting.actionItems.length > 0) {
+        lines.push('\nAction Items:');
+        latestMeeting.actionItems.forEach(a => lines.push(`- ${a.text || a}`));
+      }
+    }
+    
+    return lines.length > 0 ? lines.join('\n') : null;
+  }
+  
+  /**
+   * Get Seed Raise data from storage
+   */
+  getSeedRaiseData() {
+    const data = this.storage.getData();
+    if (!data || !data.seedRaise) return null;
+    
+    const lines = [];
+    const seedRaise = data.seedRaise;
+    
+    lines.push(`Target: ${seedRaise.target || 'TBD'}`);
+    
+    // Calculate totals by stage
+    const investors = seedRaise.investors || [];
+    const stages = { interested: [], inTalks: [], committed: [], closed: [] };
+    let totalCommitted = 0;
+    
+    investors.forEach(inv => {
+      if (stages[inv.stage]) {
+        stages[inv.stage].push(inv);
+      }
+      if (inv.stage === 'committed' || inv.stage === 'closed') {
+        const amount = parseFloat(inv.amount?.replace(/[^0-9.]/g, '') || 0);
+        if (!isNaN(amount)) {
+          totalCommitted += amount * (inv.amount?.toLowerCase().includes('k') ? 1000 : 1);
+        }
+      }
+    });
+    
+    lines.push(`Total Committed: $${(totalCommitted / 1000).toFixed(0)}K`);
+    lines.push('');
+    
+    // List by stage
+    Object.entries(stages).forEach(([stage, invs]) => {
+      if (invs.length > 0) {
+        lines.push(`${stage.charAt(0).toUpperCase() + stage.slice(1)} (${invs.length}):`);
+        invs.forEach(inv => {
+          lines.push(`  - ${inv.name}: ${inv.amount || 'TBD'}${inv.notes ? ' - ' + inv.notes : ''}`);
+        });
+      }
+    });
+    
+    return lines.join('\n');
+  }
+  
+  /**
+   * Get Pipeline data from storage
+   */
+  getPipelineData() {
+    const history = this.storage.getPipelineHistory();
+    if (!history || history.length === 0) return null;
+    
+    const latest = history[history.length - 1];
+    const lines = [];
+    
+    lines.push(`As of: ${new Date(latest.date).toLocaleDateString()}`);
+    lines.push(`Total Pipeline: ${latest.pipelineTotal || 'N/A'}`);
+    lines.push('');
+    
+    // Stage breakdown
+    if (latest.stages) {
+      lines.push('Pipeline by Stage:');
+      Object.entries(latest.stages).forEach(([stage, data]) => {
+        if (data && data.revenue) {
+          lines.push(`- ${stage}: ${data.revenue} (${data.count || 0} deals)`);
+        }
+      });
+    }
+    
+    // Deals
+    if (latest.deals && latest.deals.length > 0) {
+      lines.push('\nActive Deals:');
+      latest.deals.forEach(deal => {
+        lines.push(`- ${deal.company}: ${deal.amount} (${deal.stage})${deal.nextSteps ? ' - ' + deal.nextSteps : ''}`);
+      });
+    }
+    
+    // Hot deals
+    if (latest.hotDeals && latest.hotDeals.length > 0) {
+      lines.push('\nHot Deals (Closest to Close):');
+      latest.hotDeals.forEach(deal => {
+        lines.push(`- ${deal.company}: ${deal.amount}${deal.blockers ? ' - Blockers: ' + deal.blockers : ''}`);
+      });
+    }
+    
+    // Highlights
+    if (latest.highlights && latest.highlights.length > 0) {
+      lines.push('\nHighlights:');
+      latest.highlights.forEach(h => lines.push(`- ${h}`));
+    }
+    
+    return lines.join('\n');
+  }
+  
+  /**
+   * Get Meetings data from storage
+   */
+  getMeetingsData() {
+    const meetings = this.storage.getMeetings();
+    if (!meetings || meetings.length === 0) return null;
+    
+    const lines = [];
+    
+    // Get recent meetings (last 5)
+    const recentMeetings = meetings.slice(-5).reverse();
+    
+    recentMeetings.forEach(meeting => {
+      lines.push(`Meeting: ${meeting.title || 'Untitled'} (${new Date(meeting.date).toLocaleDateString()})`);
+      if (meeting.summary) {
+        lines.push(`Summary: ${meeting.summary}`);
+      }
+      if (meeting.keyDecisions && meeting.keyDecisions.length > 0) {
+        lines.push('Key Decisions:');
+        meeting.keyDecisions.forEach(d => lines.push(`  - ${d}`));
+      }
+      if (meeting.actionItems && meeting.actionItems.length > 0) {
+        lines.push('Action Items:');
+        meeting.actionItems.forEach(a => lines.push(`  - ${a.text || a}`));
+      }
+      lines.push('');
+    });
+    
+    return lines.join('\n');
+  }
+  
+  /**
+   * Get Quick Links data from storage
+   */
+  getQuickLinksData() {
+    const data = this.storage.getData();
+    if (!data || !data.quickLinks) return null;
+    
+    const lines = ['Available Resources:'];
+    
+    // Group by section
+    const sections = data.linkSections || [];
+    const linksBySection = {};
+    
+    (data.quickLinks || []).forEach(link => {
+      const section = link.section || 'other';
+      if (!linksBySection[section]) linksBySection[section] = [];
+      linksBySection[section].push(link);
+    });
+    
+    sections.forEach(section => {
+      const links = linksBySection[section.id] || [];
+      if (links.length > 0) {
+        lines.push(`\n${section.name}:`);
+        links.forEach(link => {
+          lines.push(`- ${link.name}: ${link.url}`);
+        });
+      }
+    });
+    
+    return lines.join('\n');
   }
 
   /**
@@ -1118,8 +1412,10 @@ Guidelines:
     
     if (!container) return;
     
+    // Count includes both dashboard sources and file sources
+    const enabledDashboardCount = Object.values(this.dashboardSources).filter(s => s.enabled).length;
     if (countEl) {
-      countEl.textContent = this.sources.length;
+      countEl.textContent = this.sources.length + enabledDashboardCount;
     }
     
     const dropIndicator = `
@@ -1133,14 +1429,55 @@ Guidelines:
       </div>
     `;
     
+    // Dashboard source icons
+    const dashboardIcons = {
+      weekAtGlance: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
+      seedRaise: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>',
+      pipeline: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>',
+      meetings: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
+      quickLinks: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>'
+    };
+    
+    // Render dashboard sources section
+    let dashboardHtml = `
+      <div class="kb-dashboard-sources">
+        <div class="kb-dashboard-sources-header">
+          <span class="kb-dashboard-sources-title">Dashboard Data</span>
+          <span class="kb-dashboard-sources-badge">Live</span>
+        </div>
+        <div class="kb-dashboard-sources-list">
+    `;
+    
+    Object.entries(this.dashboardSources).forEach(([key, source]) => {
+      dashboardHtml += `
+        <div class="kb-dashboard-source ${source.enabled ? '' : 'disabled'}" data-source-key="${key}">
+          <label class="kb-source-toggle-wrap" onclick="event.stopPropagation()">
+            <input type="checkbox" class="kb-dashboard-toggle" data-key="${key}" ${source.enabled ? 'checked' : ''}>
+          </label>
+          <div class="kb-dashboard-source-icon">${dashboardIcons[key]}</div>
+          <span class="kb-dashboard-source-title">${source.title}</span>
+        </div>
+      `;
+    });
+    
+    dashboardHtml += `
+        </div>
+      </div>
+    `;
+    
+    // Show empty state only if no file sources
     if (this.sources.length === 0) {
-      container.innerHTML = `
+      container.innerHTML = dashboardHtml + `
+        <div class="kb-file-sources-header">
+          <span>Files</span>
+        </div>
         <div class="kb-empty-sources">
-          <p>No sources yet</p>
-          <p class="kb-empty-hint">Drop files or click Add Source</p>
+          <p>No files yet</p>
+          <p class="kb-empty-hint">Drop files or click + Text</p>
         </div>
         ${dropIndicator}
       `;
+      this.setupDashboardToggleHandlers(container);
       return;
     }
     
@@ -1167,9 +1504,15 @@ Guidelines:
       }
     });
     
-    // Render folders
-    let sourcesHtml = '';
+    // Render file sources header
+    let sourcesHtml = dashboardHtml + `
+      <div class="kb-file-sources-header">
+        <span>Files</span>
+        <span class="kb-file-sources-count">${this.sources.length}</span>
+      </div>
+    `;
     
+    // Render folders
     Object.keys(folders).sort().forEach(folderName => {
       const folderSources = folders[folderName];
       const isExpanded = this.expandedFolders && this.expandedFolders[folderName];
@@ -1196,6 +1539,9 @@ Guidelines:
     sourcesHtml += ungrouped.map(source => this.renderSourceItem(source)).join('');
     
     container.innerHTML = sourcesHtml + dropIndicator;
+    
+    // Setup dashboard toggle handlers
+    this.setupDashboardToggleHandlers(container);
     
     // Add folder click handlers
     container.querySelectorAll('.kb-folder-header').forEach(header => {
@@ -1264,6 +1610,32 @@ Guidelines:
       btn.addEventListener('click', (e) => {
         const sourceId = e.target.closest('.kb-source-item').dataset.id;
         this.deleteSource(sourceId);
+      });
+    });
+  }
+  
+  /**
+   * Setup toggle handlers for dashboard sources
+   */
+  setupDashboardToggleHandlers(container) {
+    container.querySelectorAll('.kb-dashboard-toggle').forEach(toggle => {
+      toggle.addEventListener('change', (e) => {
+        const key = e.target.dataset.key;
+        if (this.dashboardSources[key]) {
+          this.dashboardSources[key].enabled = e.target.checked;
+          this.saveData();
+          // Update visual state without full re-render
+          const sourceEl = e.target.closest('.kb-dashboard-source');
+          if (sourceEl) {
+            sourceEl.classList.toggle('disabled', !e.target.checked);
+          }
+          // Update count
+          const countEl = document.getElementById('kb-sources-count');
+          if (countEl) {
+            const enabledDashboardCount = Object.values(this.dashboardSources).filter(s => s.enabled).length;
+            countEl.textContent = this.sources.length + enabledDashboardCount;
+          }
+        }
       });
     });
   }

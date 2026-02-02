@@ -7192,6 +7192,102 @@ body::after {
   padding: var(--space-2);
 }
 
+/* Dashboard Data Sources */
+.kb-dashboard-sources {
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.kb-dashboard-sources-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  padding: 0 var(--space-1);
+}
+
+.kb-dashboard-sources-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kb-dashboard-sources-badge {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--accent-green);
+  background: rgba(91, 176, 154, 0.15);
+  padding: 2px 6px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kb-dashboard-sources-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kb-dashboard-source {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.kb-dashboard-source:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.kb-dashboard-source.disabled {
+  opacity: 0.4;
+}
+
+.kb-dashboard-source-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(var(--accent-blue-rgb), 0.15);
+  border-radius: var(--radius-sm);
+  color: var(--accent-blue);
+  flex-shrink: 0;
+}
+
+.kb-dashboard-source-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* File Sources Header */
+.kb-file-sources-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-2);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kb-file-sources-count {
+  font-size: 10px;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 5px;
+  border-radius: 8px;
+}
+
 .kb-empty-sources {
   text-align: center;
   padding: var(--space-4);
