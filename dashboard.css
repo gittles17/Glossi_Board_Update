@@ -5980,6 +5980,61 @@ body::after {
   margin-left: 26px;
 }
 
+/* Email Preview Modal */
+.modal-wide {
+  max-width: 640px;
+  width: 90%;
+}
+
+.email-preview-field {
+  margin-bottom: var(--space-4);
+}
+
+.email-preview-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.email-preview-input {
+  width: 100%;
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.email-preview-input:focus {
+  outline: none;
+  border-color: var(--accent-green);
+}
+
+.email-preview-textarea {
+  width: 100%;
+  min-height: 320px;
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.email-preview-textarea:focus {
+  outline: none;
+  border-color: var(--accent-green);
+}
+
 .checkbox-item-expandable {
   flex-direction: column;
   gap: 0;

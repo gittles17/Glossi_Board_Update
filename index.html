@@ -1024,6 +1024,41 @@
     </div>
   </div>
 
+  <!-- Email Preview Modal -->
+  <div class="modal-overlay" id="email-preview-modal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h2>Your Weekly Email</h2>
+        <button class="btn-icon modal-close" id="email-preview-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="email-preview-field">
+          <label for="email-preview-subject">Subject</label>
+          <input type="text" id="email-preview-subject" class="email-preview-input" placeholder="Email subject">
+        </div>
+        <div class="email-preview-field">
+          <label for="email-preview-body">Body</label>
+          <textarea id="email-preview-body" class="email-preview-textarea" placeholder="Email body"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="email-preview-cancel">Close</button>
+        <button class="btn btn-primary" id="email-preview-copy">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copy to Clipboard
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Progress Overlay -->
   <div class="progress-overlay" id="progress-overlay">
     <div class="progress-card">

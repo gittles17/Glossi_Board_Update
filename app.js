@@ -155,6 +155,19 @@ class GlossiDashboard {
         this.syncReportParentCheckbox();
       }
     });
+    
+    // Email preview modal
+    document.getElementById('email-preview-close')?.addEventListener('click', () => {
+      this.hideModal('email-preview-modal');
+    });
+    
+    document.getElementById('email-preview-cancel')?.addEventListener('click', () => {
+      this.hideModal('email-preview-modal');
+    });
+    
+    document.getElementById('email-preview-copy')?.addEventListener('click', () => {
+      this.copyEmailToClipboard();
+    });
 
     document.getElementById('menu-settings').addEventListener('click', () => {
       dropdown.classList.remove('open');
@@ -2173,8 +2186,8 @@ RULES:
       // Polish with AI
       const polishedEmail = await this.polishEmailWithAI(content);
       
-      // Open mailto
-      this.openMailto(polishedEmail);
+      // Show preview modal
+      this.showEmailPreview(polishedEmail);
       
       this.hideModal('share-email-modal');
     } catch (error) {
@@ -2302,27 +2315,74 @@ RULES:
 - Format numbers consistently
 - End with a brief sign-off
 
-Return ONLY the email body text (no subject line, no greeting like "Dear X").`;
+IMPORTANT: Your response must be valid JSON with this exact format:
+{
+  "highlights": "brief 5-8 word summary of key wins/updates",
+  "body": "the full email body text"
+}
+
+The highlights should capture the most important 1-2 things (e.g., "3 New Deals, $500K Pipeline Growth").
+The body should NOT include a subject line or greeting like "Dear X".`;
 
     const userPrompt = `Create a weekly update email for: ${content.weekRange}
 
 DATA TO INCLUDE:
 ${JSON.stringify(content.sections, null, 2)}
 
-Format this into a clean, professional weekly update email.`;
+Format this into a clean, professional weekly update email. Return as JSON with "highlights" and "body" fields.`;
+
+    const today = new Date();
+    const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
 
     try {
-      const polished = await aiProcessor.chat(systemPrompt, userPrompt);
+      const response = await aiProcessor.chat(systemPrompt, userPrompt);
+      const parsed = JSON.parse(response);
       return {
-        subject: `Weekly Update | ${content.weekRange}`,
-        body: polished
+        subject: `Glossi Weekly Update ${dateStr}: ${parsed.highlights}`,
+        body: parsed.body
       };
     } catch (error) {
       // Fallback to raw formatting if AI fails
       return {
-        subject: `Weekly Update | ${content.weekRange}`,
+        subject: `Glossi Weekly Update ${dateStr}`,
         body: this.formatRawEmail(content)
       };
+    }
+  }
+  
+  /**
+   * Show email preview modal
+   */
+  showEmailPreview(email) {
+    const subjectInput = document.getElementById('email-preview-subject');
+    const bodyTextarea = document.getElementById('email-preview-body');
+    
+    if (subjectInput) subjectInput.value = email.subject;
+    if (bodyTextarea) bodyTextarea.value = email.body;
+    
+    this.showModal('email-preview-modal');
+  }
+  
+  /**
+   * Copy email to clipboard
+   */
+  async copyEmailToClipboard() {
+    const subject = document.getElementById('email-preview-subject')?.value || '';
+    const body = document.getElementById('email-preview-body')?.value || '';
+    
+    const fullEmail = `Subject: ${subject}\n\n${body}`;
+    
+    try {
+      await navigator.clipboard.writeText(fullEmail);
+      // Update button to show success
+      const copyBtn = document.getElementById('email-preview-copy');
+      if (copyBtn) {
+        const original = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!';
+        setTimeout(() => { copyBtn.innerHTML = original; }, 2000);
+      }
+    } catch (error) {
+      this.showToast('Failed to copy', 'error');
     }
   }
 
