@@ -7262,6 +7262,7 @@ body::after {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  padding-top: 36px;
 }
 
 /* Suggested Questions (bottom of chat) */
