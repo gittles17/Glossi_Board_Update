@@ -891,7 +891,7 @@ class GlossiDashboard {
     }));
     
     // Calculate totals by stage (current)
-    const stages = ['discovery', 'demo', 'pilot', 'closing'];
+    const stages = ['discovery', 'demo', 'pilot'];
     const stageTotals = {};
     let grandTotal = 0;
     
@@ -959,6 +959,27 @@ class GlossiDashboard {
         }
       }
     });
+    
+    // Render hot deals card
+    const hotDeals = highlights?.hotDeals || [];
+    const hotDealsEl = document.getElementById('pipeline-total-hot');
+    const hotChangeEl = document.getElementById('pipeline-change-hot');
+    const hotDealsListEl = document.getElementById('pipeline-deals-hot');
+    
+    if (hotDealsEl) hotDealsEl.textContent = hotDeals.length;
+    if (hotChangeEl) hotChangeEl.textContent = hotDeals.length > 0 ? 'Active' : '';
+    
+    if (hotDealsListEl) {
+      if (hotDeals.length === 0) {
+        hotDealsListEl.innerHTML = '<div class="empty-stage">No hot deals</div>';
+      } else {
+        hotDealsListEl.innerHTML = hotDeals.map(deal => `
+          <div class="deal-item">
+            <span class="deal-name">${this.escapeHtml(deal)}</span>
+          </div>
+        `).join('');
+      }
+    }
     
     // Render highlights
     this.renderPipelineHighlights(highlights, pipelineData?.updatedAt);

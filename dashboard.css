@@ -5655,6 +5655,16 @@ body::after {
   margin-left: auto;
 }
 
+/* Hot Deals card styling */
+.pipeline-card.pipeline-card-hot {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.pipeline-card.pipeline-card-hot .card-value {
+  color: #ef4444;
+}
+
 .pipeline-summary {
   display: flex;
   align-items: center;
