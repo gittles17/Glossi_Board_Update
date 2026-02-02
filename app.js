@@ -866,34 +866,71 @@ class GlossiDashboard {
     const deals = pipelineData?.deals || [];
     const highlights = pipelineData?.highlights || {};
     
-    // Calculate totals
-    const totals = this.calculatePipelineTotals(deals);
-    
-    // Render metrics bar
-    this.renderPipelineMetrics(totals, pipelineData);
-    
-    // Render deal groups by stage
+    // Calculate totals by stage
     const stages = ['discovery', 'demo', 'pilot', 'closing'];
+    const stageTotals = {};
+    let grandTotal = 0;
+    
     stages.forEach(stage => {
       const stageDeals = deals.filter(d => d.stage === stage);
-      this.renderDealGroup(stage, stageDeals, totals.byStage[stage] || 0);
+      let stageTotal = 0;
+      stageDeals.forEach(d => { stageTotal += this.parseMoneyValue(d.value); });
+      stageTotals[stage] = { deals: stageDeals, total: stageTotal, count: stageDeals.length };
+      grandTotal += stageTotal;
     });
     
-    // Render needs attention section
-    const stalledDeals = deals.filter(d => d.status === 'stalled');
-    this.renderNeedsAttention(stalledDeals);
+    // Render total
+    const totalEl = document.getElementById('pipeline-total-value');
+    if (totalEl) totalEl.textContent = this.formatMoney(grandTotal);
+    
+    // Render changes summary
+    const changesEl = document.getElementById('pipeline-changes');
+    if (changesEl && pipelineData?.changes) {
+      const c = pipelineData.changes;
+      const parts = [];
+      if (c.newDeals > 0) parts.push(`<span class="change-new">+${c.newDeals} new</span>`);
+      if (c.stalled > 0) parts.push(`<span class="change-stalled">${c.stalled} stalled</span>`);
+      changesEl.innerHTML = parts.join(' ');
+    }
+    
+    // Render each stage card
+    stages.forEach(stage => {
+      const data = stageTotals[stage];
+      const countEl = document.getElementById(`pipeline-count-${stage}`);
+      const totalEl = document.getElementById(`pipeline-total-${stage}`);
+      const dealsEl = document.getElementById(`pipeline-deals-${stage}`);
+      
+      if (countEl) countEl.textContent = data.count;
+      if (totalEl) totalEl.textContent = this.formatMoney(data.total);
+      
+      if (dealsEl) {
+        if (data.deals.length === 0) {
+          dealsEl.innerHTML = '<div class="empty-stage">No deals</div>';
+        } else {
+          dealsEl.innerHTML = data.deals.map(deal => `
+            <div class="deal-item">
+              <span class="deal-name">${this.escapeHtml(deal.name)}${this.renderDealBadge(deal)}</span>
+              <span class="deal-meta">
+                <span class="deal-value">${this.escapeHtml(deal.value || 'TBD')}</span>
+                ${deal.timing ? `<span class="deal-timing">${this.escapeHtml(deal.timing)}</span>` : ''}
+              </span>
+            </div>
+          `).join('');
+        }
+      }
+    });
     
     // Render highlights
     this.renderPipelineHighlights(highlights, pipelineData?.updatedAt);
     
     // Show empty state if no data
     if (deals.length === 0) {
-      const dealsContainer = document.getElementById('pipeline-deals');
-      if (dealsContainer) {
-        dealsContainer.innerHTML = `
+      const funnelEl = document.getElementById('pipeline-funnel');
+      if (funnelEl) {
+        funnelEl.innerHTML = `
           <div class="pipeline-empty">
             <p>No pipeline data yet</p>
-            <p class="pipeline-hint">Click "Update" to paste your weekly pipeline email</p>
+            <p class="pipeline-hint">Click + to paste your weekly pipeline email</p>
           </div>
         `;
       }
@@ -901,199 +938,89 @@ class GlossiDashboard {
   }
 
   /**
-   * Calculate pipeline totals
+   * Render a single deal badge
    */
-  calculatePipelineTotals(deals) {
-    const totals = {
-      total: 0,
-      byStage: { discovery: 0, demo: 0, pilot: 0, closing: 0 },
-      byTiming: { q1: 0, q2: 0, q3: 0, tbd: 0 },
-      dealCount: deals.length
-    };
-    
-    deals.forEach(deal => {
-      const value = this.parseMoneyValue(deal.value);
-      totals.total += value;
-      
-      if (totals.byStage[deal.stage] !== undefined) {
-        totals.byStage[deal.stage] += value;
-      }
-      
-      const timing = (deal.timing || '').toLowerCase();
-      if (timing.includes('q1')) totals.byTiming.q1 += value;
-      else if (timing.includes('q2')) totals.byTiming.q2 += value;
-      else if (timing.includes('q3') || timing.includes('q4')) totals.byTiming.q3 += value;
-      else totals.byTiming.tbd += value;
-    });
-    
-    return totals;
+  renderDealBadge(deal) {
+    if (deal.status === 'new') return ' <span class="deal-badge badge-new">NEW</span>';
+    if (deal.status === 'stage-changed') return ' <span class="deal-badge badge-moved">MOVED</span>';
+    if (deal.status === 'stalled') return ' <span class="deal-badge badge-stalled">STALLED</span>';
+    return '';
   }
 
   /**
-   * Render pipeline metrics bar
+   * Toggle pipeline card expand/collapse
    */
-  renderPipelineMetrics(totals, pipelineData) {
-    // Total value
-    const totalEl = document.getElementById('pipeline-total-value');
-    if (totalEl) totalEl.textContent = this.formatMoney(totals.total);
-    
-    // By stage breakdown
-    const stageEl = document.getElementById('pipeline-by-stage');
-    if (stageEl) {
-      stageEl.innerHTML = `
-        <span class="breakdown-item"><span class="stage-dot discovery"></span>Discovery: ${this.formatMoney(totals.byStage.discovery)}</span>
-        <span class="breakdown-item"><span class="stage-dot demo"></span>Demo: ${this.formatMoney(totals.byStage.demo)}</span>
-        <span class="breakdown-item"><span class="stage-dot pilot"></span>Pilot: ${this.formatMoney(totals.byStage.pilot)}</span>
-        <span class="breakdown-item"><span class="stage-dot closing"></span>Closing: ${this.formatMoney(totals.byStage.closing)}</span>
-      `;
-    }
-    
-    // By timing breakdown
-    const timingEl = document.getElementById('pipeline-by-timing');
-    if (timingEl) {
-      timingEl.innerHTML = `
-        <span class="breakdown-item">Q1: ${this.formatMoney(totals.byTiming.q1)}</span>
-        <span class="breakdown-item">Q2: ${this.formatMoney(totals.byTiming.q2)}</span>
-        <span class="breakdown-item">Q3+: ${this.formatMoney(totals.byTiming.q3 + totals.byTiming.tbd)}</span>
-      `;
-    }
-    
-    // Changes summary
-    const changesEl = document.getElementById('pipeline-changes');
-    if (changesEl && pipelineData?.changes) {
-      const c = pipelineData.changes;
-      const parts = [];
-      if (c.newDeals > 0) parts.push(`<span class="change-positive">+${c.newDeals} new</span>`);
-      if (c.stageChanges > 0) parts.push(`${c.stageChanges} moved`);
-      if (c.stalled > 0) parts.push(`${c.stalled} stalled`);
-      changesEl.innerHTML = `<span class="change-summary">${parts.length > 0 ? parts.join(', ') : 'No changes'}</span>`;
-    }
+  togglePipelineCard(stage) {
+    const dealsEl = document.getElementById(`pipeline-deals-${stage}`);
+    if (dealsEl) dealsEl.classList.toggle('collapsed');
   }
 
   /**
-   * Render a deal group
+   * Toggle highlights section
    */
-  renderDealGroup(stage, deals, total) {
-    const countEl = document.getElementById(`group-count-${stage}`);
-    const totalEl = document.getElementById(`group-total-${stage}`);
-    const dealsEl = document.getElementById(`group-deals-${stage}`);
-    
-    if (countEl) countEl.textContent = `${deals.length} deal${deals.length !== 1 ? 's' : ''}`;
-    if (totalEl) totalEl.textContent = this.formatMoney(total);
-    
-    if (!dealsEl) return;
-    
-    if (deals.length === 0) {
-      dealsEl.innerHTML = '<div class="deal-row"><span class="deal-status" style="grid-column: span 5; text-align: center; color: var(--text-muted);">No deals in this stage</span></div>';
-      return;
-    }
-    
-    dealsEl.innerHTML = deals.map(deal => `
-      <div class="deal-row" data-deal-id="${deal.id || deal.name}">
-        <span class="deal-name">${this.escapeHtml(deal.name)}</span>
-        <span class="deal-value">${this.escapeHtml(deal.value || 'TBD')}</span>
-        <span class="deal-timing">${this.escapeHtml(deal.timing || '-')}</span>
-        <span class="deal-status">${this.escapeHtml(deal.nextSteps || deal.notes || '')}</span>
-        <span class="deal-badges">${this.renderDealBadges(deal)}</span>
-      </div>
-    `).join('');
-  }
-
-  /**
-   * Render deal status badges
-   */
-  renderDealBadges(deal) {
-    const badges = [];
-    if (deal.status === 'new') badges.push('<span class="deal-badge badge-new">NEW</span>');
-    if (deal.status === 'stage-changed') badges.push('<span class="deal-badge badge-stage-changed">MOVED</span>');
-    if (deal.status === 'value-changed') badges.push('<span class="deal-badge badge-value-changed">VALUE</span>');
-    if (deal.status === 'timing-changed') badges.push('<span class="deal-badge badge-timing-changed">TIMING</span>');
-    if (deal.status === 'updated') badges.push('<span class="deal-badge badge-updated">UPDATED</span>');
-    if (deal.status === 'stalled') badges.push('<span class="deal-badge badge-stalled">STALLED</span>');
-    if (deal.status === 'closed') badges.push('<span class="deal-badge badge-closed">CLOSED</span>');
-    return badges.join('');
-  }
-
-  /**
-   * Toggle deal group expand/collapse
-   */
-  toggleDealGroup(stage) {
-    const group = document.querySelector(`.deal-group[data-stage="${stage}"]`);
-    if (group) group.classList.toggle('collapsed');
-  }
-
-  /**
-   * Render needs attention section
-   */
-  renderNeedsAttention(stalledDeals) {
-    const container = document.getElementById('pipeline-attention');
-    const countEl = document.getElementById('attention-count');
-    const dealsEl = document.getElementById('attention-deals');
-    
-    if (!container) return;
-    
-    if (stalledDeals.length === 0) {
-      container.style.display = 'none';
-      return;
-    }
-    
-    container.style.display = 'block';
-    if (countEl) countEl.textContent = stalledDeals.length;
-    
-    if (dealsEl) {
-      dealsEl.innerHTML = stalledDeals.map(deal => `
-        <div class="attention-deal">
-          <span class="attention-deal-name">${this.escapeHtml(deal.name)}</span>
-          <span class="attention-deal-info">${this.escapeHtml(deal.value || '')} - Last seen: ${deal.lastSeen || 'Unknown'}</span>
-        </div>
-      `).join('');
-    }
+  toggleHighlights() {
+    const highlightsEl = document.getElementById('pipeline-highlights');
+    if (highlightsEl) highlightsEl.classList.toggle('collapsed');
   }
 
   /**
    * Render pipeline highlights
    */
   renderPipelineHighlights(highlights, updatedAt) {
-    const hotEl = document.querySelector('#highlight-hot .highlight-content');
-    const updatesEl = document.querySelector('#highlight-updates .highlight-content');
-    const marketingEl = document.querySelector('#highlight-marketing .highlight-content');
+    const hotEl = document.getElementById('highlight-hot');
+    const updatesEl = document.getElementById('highlight-updates');
+    const marketingEl = document.getElementById('highlight-marketing');
     const updatedEl = document.getElementById('pipeline-updated');
     
     if (hotEl) {
       const hotDeals = highlights.hotDeals || [];
       hotEl.innerHTML = hotDeals.length > 0 
-        ? `<ul>${hotDeals.map(h => `<li>${this.escapeHtml(h)}</li>`).join('')}</ul>`
-        : '<span class="highlight-empty">No hot deals</span>';
+        ? `<h4>Hot Deals</h4><ul>${hotDeals.map(h => `<li>${this.escapeHtml(h)}</li>`).join('')}</ul>`
+        : '';
     }
     
     if (updatesEl) {
       const updates = highlights.keyUpdates || [];
       updatesEl.innerHTML = updates.length > 0
-        ? `<ul>${updates.map(u => `<li>${this.escapeHtml(u)}</li>`).join('')}</ul>`
-        : '<span class="highlight-empty">No key updates</span>';
+        ? `<h4>Key Updates</h4><ul>${updates.map(u => `<li>${this.escapeHtml(u)}</li>`).join('')}</ul>`
+        : '';
     }
     
     if (marketingEl) {
       const marketing = highlights.marketing || [];
       marketingEl.innerHTML = marketing.length > 0
-        ? `<ul>${marketing.map(m => `<li>${this.escapeHtml(m)}</li>`).join('')}</ul>`
-        : '<span class="highlight-empty">No marketing updates</span>';
+        ? `<h4>Marketing</h4><ul>${marketing.map(m => `<li>${this.escapeHtml(m)}</li>`).join('')}</ul>`
+        : '';
     }
     
     if (updatedEl && updatedAt) {
-      updatedEl.textContent = `Last updated: ${new Date(updatedAt).toLocaleDateString()}`;
+      updatedEl.textContent = new Date(updatedAt).toLocaleDateString();
     }
   }
 
   /**
    * Parse money value string to number
+   * Handles ranges like "$36-$50K" by taking the first value
    */
   parseMoneyValue(value) {
     if (!value) return 0;
-    const cleaned = value.replace(/[^0-9.KkMm]/g, '');
-    let num = parseFloat(cleaned) || 0;
+    
+    // Handle ranges like "$36-$50K" - take the first number
+    let numStr = value;
+    if (value.includes('-') && /\d+-\d/.test(value)) {
+      numStr = value.split('-')[0];
+    }
+    
+    // Extract the number and multiplier
+    const numMatch = numStr.match(/[\d.]+/);
+    if (!numMatch) return 0;
+    
+    let num = parseFloat(numMatch[0]) || 0;
+    
+    // Check for K/M multiplier in the original value (for ranges like "$36-$50K")
     if (/[Kk]/.test(value)) num *= 1000;
-    if (/[Mm]/.test(value)) num *= 1000000;
+    else if (/[Mm]/.test(value)) num *= 1000000;
+    
     return num;
   }
 
