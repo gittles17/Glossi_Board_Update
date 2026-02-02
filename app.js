@@ -5930,7 +5930,10 @@ Content: "${content.substring(0, 300)}"`
       return;
     }
     
-    container.innerHTML = items.map(thought => {
+    container.innerHTML = items.map((thought, index) => {
+      // Ensure each item has a unique ID (fallback to index-based ID if missing)
+      const itemId = thought.id || `scratchpad_fallback_${index}`;
+      
       const date = new Date(thought.createdAt).toLocaleDateString('en-US', { 
         month: 'short', 
         day: 'numeric' 
@@ -5968,7 +5971,7 @@ Content: "${content.substring(0, 300)}"`
       if (promo?.shouldPromote) {
         const cat = promo.suggestedCategory || 'core';
         suggestionBadge = `
-          <button class="suggestion-badge promote-suggestion" onclick="event.stopPropagation(); window.dashboard.quickPromote('${thought.id}', '${cat}')" title="${this.escapeHtml(promo.reason || 'Promote to Talking Points')}">
+          <button class="suggestion-badge promote-suggestion" onclick="event.stopPropagation(); window.dashboard.quickPromote('${itemId}', '${cat}')" title="${this.escapeHtml(promo.reason || 'Promote to Talking Points')}">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="17 11 12 6 7 11"></polyline>
               <line x1="12" y1="18" x2="12" y2="6"></line>
@@ -5976,12 +5979,12 @@ Content: "${content.substring(0, 300)}"`
             Promote to ${categoryLabels[cat]}
           </button>`;
       } else if (promo && !promo.shouldPromote) {
-        suggestionBadge = `<span class="suggestion-badge keep-thought" title="${this.escapeHtml(promo.reason || 'Keep in Thoughts')}">Keep for reference</span>`;
+        suggestionBadge = `<span class="suggestion-badge keep-thought" title="${this.escapeHtml(promo.reason || 'Keep in Scratchpad')}">Keep for reference</span>`;
       } else if (thought.suggestedCategory) {
         // Legacy format
         const suggestedCat = thought.suggestedCategory;
         suggestionBadge = `
-          <button class="suggestion-badge" onclick="event.stopPropagation(); window.dashboard.quickPromote('${thought.id}', '${suggestedCat}')" title="Add to ${categoryLabels[suggestedCat]} talking points">
+          <button class="suggestion-badge" onclick="event.stopPropagation(); window.dashboard.quickPromote('${itemId}', '${suggestedCat}')" title="Add to ${categoryLabels[suggestedCat]} talking points">
             ${categoryLabels[suggestedCat]}
           </button>`;
       }
@@ -5998,13 +6001,13 @@ Content: "${content.substring(0, 300)}"`
                 <div class="sub-item-quote">"${this.escapeHtml(item.quote)}"</div>
                 ${item.source ? `<div class="sub-item-source">- ${this.escapeHtml(item.source)}</div>` : ''}
                 <div class="sub-item-actions">
-                  <button class="sub-item-promote" onclick="event.stopPropagation(); window.dashboard.promoteSubItem('${thought.id}', ${idx})" title="Add to Talking Points">
+                  <button class="sub-item-promote" onclick="event.stopPropagation(); window.dashboard.promoteSubItem('${itemId}', ${idx})" title="Add to Talking Points">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <polyline points="17 11 12 6 7 11"></polyline>
                       <line x1="12" y1="18" x2="12" y2="6"></line>
                     </svg>
                   </button>
-                  <button class="sub-item-delete" onclick="event.stopPropagation(); window.dashboard.deleteSubItem('${thought.id}', ${idx})" title="Delete">
+                  <button class="sub-item-delete" onclick="event.stopPropagation(); window.dashboard.deleteSubItem('${itemId}', ${idx})" title="Delete">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="18" y1="6" x2="6" y2="18"></line>
                       <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -6018,11 +6021,11 @@ Content: "${content.substring(0, 300)}"`
       } else if (thought.type === 'image' && thought.preview) {
         expandableContent = `
           <div class="thought-expand-content">
-            <img src="${thought.preview}" alt="${thought.fileName || 'Image'}" class="thought-image-thumb" onclick="event.stopPropagation(); window.dashboard.showImagePreview('${thought.id}')" style="width: 60px; height: 60px; margin-bottom: 8px;">
-            ${summary ? `<div class="thought-summary" contenteditable="true" data-field="summary" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(summary)}</div>` : ''}
+            <img src="${thought.preview}" alt="${thought.fileName || 'Image'}" class="thought-image-thumb" onclick="event.stopPropagation(); window.dashboard.showImagePreview('${itemId}')" style="width: 60px; height: 60px; margin-bottom: 8px;">
+            ${summary ? `<div class="thought-summary" contenteditable="true" data-field="summary" data-thought-id="${itemId}" onclick="event.stopPropagation()">${this.escapeHtml(summary)}</div>` : ''}
             ${bullets.length > 0 ? `
               <ul class="thought-bullets">
-                ${bullets.map((b, i) => `<li contenteditable="true" data-field="bullet-${i}" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
+                ${bullets.map((b, i) => `<li contenteditable="true" data-field="bullet-${i}" data-thought-id="${itemId}" onclick="event.stopPropagation()">${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
               </ul>
             ` : ''}
           </div>
@@ -6052,9 +6055,9 @@ Content: "${content.substring(0, 300)}"`
       }
       
       return `
-        <div class="thought-item" data-thought-id="${thought.id}">
+        <div class="thought-item" data-thought-id="${itemId}">
           <div class="thought-header">
-            <div class="thought-toggle" onclick="window.dashboard.toggleThought('${thought.id}')">
+            <div class="thought-toggle" onclick="window.dashboard.toggleThought('${itemId}')">
               <svg class="thought-expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
@@ -6066,20 +6069,20 @@ Content: "${content.substring(0, 300)}"`
               ${typeLabel ? `<span class="thought-type">${typeLabel}</span>` : ''}
               ${suggestionBadge}
               ${thought.originalSource ? `
-              <button class="source-btn" onclick="window.dashboard.viewSource('${thought.id}')" title="View original source">
+              <button class="source-btn" onclick="window.dashboard.viewSource('${itemId}')" title="View original source">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                   <polyline points="14 2 14 8 20 8"></polyline>
                 </svg>
               </button>
               ` : ''}
-              <button class="promote-btn" onclick="window.dashboard.promoteThought('${thought.id}')" title="Choose category">
+              <button class="promote-btn" onclick="window.dashboard.promoteThought('${itemId}')" title="Choose category">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="17 11 12 6 7 11"></polyline>
                   <line x1="12" y1="18" x2="12" y2="6"></line>
                 </svg>
               </button>
-              <button class="delete-btn" onclick="window.dashboard.deleteThought('${thought.id}')" title="Delete">
+              <button class="delete-btn" onclick="window.dashboard.deleteThought('${itemId}')" title="Delete">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -6180,9 +6183,55 @@ Content: "${content.substring(0, 300)}"`
    * Archive a scratchpad item
    */
   archiveScratchpadItem(id) {
-    storage.archiveScratchpadItem(id);
+    const result = this.findScratchpadItem(id);
+    if (!result) {
+      this.showToast('Item not found', 'error');
+      return;
+    }
+    
+    // Use actual ID for archiving (if available)
+    const actualId = result.item.id;
+    if (actualId) {
+      storage.archiveScratchpadItem(actualId);
+    } else {
+      // For items without IDs, manually archive by moving to archived array
+      const archived = storage.getArchivedScratchpad();
+      archived.unshift({
+        ...result.item,
+        id: 'archived_' + Date.now(),
+        archivedAt: new Date().toISOString()
+      });
+      const thoughts = storage.getThoughts();
+      thoughts.splice(result.index, 1);
+      storage.scheduleSave();
+    }
+    
     this.renderScratchpad();
     this.showToast('Item archived', 'success');
+  }
+
+  /**
+   * Find a scratchpad item by ID (handles both actual IDs and fallback IDs)
+   * Fallback IDs are in format: scratchpad_fallback_INDEX
+   */
+  findScratchpadItem(id) {
+    const thoughts = storage.getThoughts();
+    
+    // Check for fallback ID format
+    if (id && id.startsWith('scratchpad_fallback_')) {
+      const index = parseInt(id.replace('scratchpad_fallback_', ''), 10);
+      if (!isNaN(index) && index >= 0 && index < thoughts.length) {
+        return { item: thoughts[index], index };
+      }
+      return null;
+    }
+    
+    // Regular ID lookup
+    const index = thoughts.findIndex(t => t.id === id);
+    if (index !== -1) {
+      return { item: thoughts[index], index };
+    }
+    return null;
   }
 
   /**
@@ -6199,6 +6248,12 @@ Content: "${content.substring(0, 300)}"`
    * Delete a scratchpad item
    */
   deleteThought(id) {
+    const result = this.findScratchpadItem(id);
+    if (!result) {
+      this.showToast('Item not found', 'error');
+      return;
+    }
+    
     const el = document.querySelector(`[data-thought-id="${id}"]`);
     if (el) {
       el.style.opacity = '0';
@@ -6206,7 +6261,16 @@ Content: "${content.substring(0, 300)}"`
     }
     
     setTimeout(() => {
-      storage.deleteScratchpadItem(id);
+      // Use the actual item ID for deletion
+      const actualId = result.item.id;
+      if (actualId) {
+        storage.deleteScratchpadItem(actualId);
+      } else {
+        // If no ID, delete by index
+        const thoughts = storage.getThoughts();
+        thoughts.splice(result.index, 1);
+        storage.scheduleSave();
+      }
       this.renderScratchpad();
     }, 150);
     this.showToast('Item deleted', 'success');
@@ -6216,12 +6280,12 @@ Content: "${content.substring(0, 300)}"`
    * View original source file
    */
   viewSource(thoughtId) {
-    const thoughts = storage.getThoughts();
-    const thought = thoughts.find(t => t.id === thoughtId);
-    if (!thought || !thought.originalSource) {
+    const result = this.findScratchpadItem(thoughtId);
+    if (!result || !result.item.originalSource) {
       this.showToast('Source not available', 'info');
       return;
     }
+    const thought = result.item;
     
     const source = thought.originalSource;
     const fileName = source.fileName || 'Source';
@@ -6271,9 +6335,9 @@ Content: "${content.substring(0, 300)}"`
    * Promote a thought to talking points with AI category suggestion
    */
   async promoteThought(id) {
-    const thoughts = storage.getThoughts();
-    const thought = thoughts.find(t => t.id === id);
-    if (!thought) return;
+    const result = this.findScratchpadItem(id);
+    if (!result) return;
+    const thought = result.item;
     
     // Parse thought content
     const content = thought.content || '';
@@ -6282,8 +6346,15 @@ Content: "${content.substring(0, 300)}"`
     const title = titleMatch ? titleMatch[1].trim() : (thought.fileName || 'Untitled');
     const summary = summaryMatch ? summaryMatch[1].trim() : content.substring(0, 200);
     
-    // Store for later
-    this.promotingThought = { id, title, summary, content };
+    // Store for later (use actual ID if available, otherwise store the DOM ID and index)
+    this.promotingThought = { 
+      id: thought.id || id, 
+      domId: id,
+      index: result.index,
+      title, 
+      summary, 
+      content 
+    };
     
     // Show category selection modal
     this.showPromoteCategoryModal(title, summary);
@@ -6434,9 +6505,9 @@ Respond with just the category name (core, traction, market, or testimonials) an
    * Quick promote using suggested category (one-click)
    */
   quickPromote(thoughtId, category) {
-    const thoughts = storage.getThoughts();
-    const thought = thoughts.find(t => t.id === thoughtId);
-    if (!thought) return;
+    const result = this.findScratchpadItem(thoughtId);
+    if (!result) return;
+    const thought = result.item;
     
     // Parse thought content
     const content = thought.content || '';
@@ -6449,8 +6520,15 @@ Respond with just the category name (core, traction, market, or testimonials) an
     storage.addTalkingPoint(title, summary || content.substring(0, 300), category);
     this.data = storage.getData();
     
-    // Delete from thoughts
-    storage.deleteThought(thoughtId);
+    // Delete from scratchpad (use actual ID if available, otherwise delete by index)
+    const actualId = thought.id;
+    if (actualId) {
+      storage.deleteThought(actualId);
+    } else {
+      const thoughts = storage.getThoughts();
+      thoughts.splice(result.index, 1);
+      storage.scheduleSave();
+    }
     
     // Animate removal
     const el = document.querySelector(`[data-thought-id="${thoughtId}"]`);
@@ -6477,9 +6555,10 @@ Respond with just the category name (core, traction, market, or testimonials) an
    * Promote a sub-item from a grouped thought to talking points
    */
   promoteSubItem(thoughtId, itemIndex) {
-    const thoughts = storage.getThoughts();
-    const thought = thoughts.find(t => t.id === thoughtId);
-    if (!thought || !thought.isGrouped || !thought.items) return;
+    const result = this.findScratchpadItem(thoughtId);
+    if (!result) return;
+    const thought = result.item;
+    if (!thought.isGrouped || !thought.items) return;
     
     const item = thought.items[itemIndex];
     if (!item) return;
@@ -6493,15 +6572,28 @@ Respond with just the category name (core, traction, market, or testimonials) an
     // Remove item from thought
     thought.items.splice(itemIndex, 1);
     
+    // Get actual ID for storage operations
+    const actualId = thought.id;
+    
     // If no items left, delete the thought
     if (thought.items.length === 0) {
-      storage.deleteThought(thoughtId);
+      if (actualId) {
+        storage.deleteThought(actualId);
+      } else {
+        const thoughts = storage.getThoughts();
+        thoughts.splice(result.index, 1);
+        storage.scheduleSave();
+      }
     } else {
       // Update the thought
-      storage.updateThought(thoughtId, {
-        items: thought.items,
-        content: `TITLE: ${thought.fileName || 'Document'}\nSUMMARY: ${thought.items.length} quotes/insights remaining`
-      });
+      if (actualId) {
+        storage.updateThought(actualId, {
+          items: thought.items,
+          content: `TITLE: ${thought.fileName || 'Document'}\nSUMMARY: ${thought.items.length} quotes/insights remaining`
+        });
+      } else {
+        storage.scheduleSave();
+      }
     }
     
     // Animate the sub-item
@@ -6523,9 +6615,10 @@ Respond with just the category name (core, traction, market, or testimonials) an
    * Delete a sub-item from a grouped thought
    */
   deleteSubItem(thoughtId, itemIndex) {
-    const thoughts = storage.getThoughts();
-    const thought = thoughts.find(t => t.id === thoughtId);
-    if (!thought || !thought.isGrouped || !thought.items) return;
+    const result = this.findScratchpadItem(thoughtId);
+    if (!result) return;
+    const thought = result.item;
+    if (!thought.isGrouped || !thought.items) return;
     
     // Animate the sub-item
     const subItem = document.querySelector(`[data-thought-id="${thoughtId}"] [data-item-index="${itemIndex}"]`);
@@ -6534,20 +6627,33 @@ Respond with just the category name (core, traction, market, or testimonials) an
       subItem.style.transform = 'translateX(-20px)';
     }
     
+    // Get actual ID for storage operations
+    const actualId = thought.id;
+    
     setTimeout(() => {
       // Remove item from thought
       thought.items.splice(itemIndex, 1);
       
       // If no items left, delete the entire thought
       if (thought.items.length === 0) {
-        storage.deleteThought(thoughtId);
+        if (actualId) {
+          storage.deleteThought(actualId);
+        } else {
+          const thoughts = storage.getThoughts();
+          thoughts.splice(result.index, 1);
+          storage.scheduleSave();
+        }
         this.showToast('All items deleted', 'success');
       } else {
         // Update the thought using proper method
-        storage.updateThought(thoughtId, {
-          items: thought.items,
-          content: `TITLE: ${thought.fileName || 'Document'}\nSUMMARY: ${thought.items.length} quotes/insights remaining`
-        });
+        if (actualId) {
+          storage.updateThought(actualId, {
+            items: thought.items,
+            content: `TITLE: ${thought.fileName || 'Document'}\nSUMMARY: ${thought.items.length} quotes/insights remaining`
+          });
+        } else {
+          storage.scheduleSave();
+        }
         this.showToast('Item deleted', 'success');
       }
       
@@ -6559,11 +6665,10 @@ Respond with just the category name (core, traction, market, or testimonials) an
    * Show image preview modal
    */
   showImagePreview(thoughtId) {
-    const thoughts = storage.getThoughts();
-    const thought = thoughts.find(t => t.id === thoughtId);
-    if (!thought || !thought.preview) return;
+    const result = this.findScratchpadItem(thoughtId);
+    if (!result || !result.item.preview) return;
     
-    document.getElementById('image-preview-img').src = thought.preview;
+    document.getElementById('image-preview-img').src = result.item.preview;
     this.showModal('image-preview-modal');
   }
 
@@ -6571,9 +6676,9 @@ Respond with just the category name (core, traction, market, or testimonials) an
    * Update thought content when edited
    */
   updateThoughtContent(thoughtId, field, newValue) {
-    const thoughts = storage.getThoughts();
-    const thought = thoughts.find(t => t.id === thoughtId);
-    if (!thought) return;
+    const result = this.findScratchpadItem(thoughtId);
+    if (!result) return;
+    const thought = result.item;
     
     // Parse current content
     let content = thought.content || '';
@@ -6607,8 +6712,15 @@ Respond with just the category name (core, traction, market, or testimonials) an
       }
     }
     
-    // Update storage using proper method
-    storage.updateThought(thoughtId, { content });
+    // Update storage using proper method (use actual ID if available)
+    const actualId = thought.id;
+    if (actualId) {
+      storage.updateThought(actualId, { content });
+    } else {
+      // Update directly and schedule save
+      thought.content = content;
+      storage.scheduleSave();
+    }
   }
 
   /**
