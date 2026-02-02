@@ -327,6 +327,93 @@ Please analyze this update and identify all pipeline changes.`;
       return false;
     }
   }
+
+  /**
+   * General chat method for Knowledge Base
+   */
+  async chat(systemPrompt, userMessage) {
+    return await this.callClaude(systemPrompt, userMessage);
+  }
+
+  /**
+   * Send a simple message (alias for backward compatibility)
+   */
+  async sendMessage(message) {
+    return await this.callClaude(
+      'You are a helpful assistant for Glossi, a startup building AI-powered product visualization tools.',
+      message
+    );
+  }
+
+  /**
+   * Analyze an image using Claude's vision capabilities
+   */
+  async analyzeImage(imageDataUrl, fileName) {
+    if (!this.isConfigured()) {
+      throw new Error('API key not configured');
+    }
+
+    // Extract base64 data and media type from data URL
+    const matches = imageDataUrl.match(/^data:(.+);base64,(.+)$/);
+    if (!matches) {
+      throw new Error('Invalid image data URL');
+    }
+
+    const mediaType = matches[1];
+    const base64Data = matches[2];
+
+    try {
+      const response = await fetch(ANTHROPIC_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2048,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'image',
+                  source: {
+                    type: 'base64',
+                    media_type: mediaType,
+                    data: base64Data
+                  }
+                },
+                {
+                  type: 'text',
+                  text: `Analyze this image (${fileName}). Provide:
+1. A brief description of what the image shows
+2. Any text visible in the image
+3. Key insights or data points
+4. How this might be relevant for investor communications
+
+Be concise but comprehensive.`
+                }
+              ]
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'API request failed');
+      }
+
+      const data = await response.json();
+      return data.content[0].text;
+    } catch (error) {
+      console.error('Image analysis error:', error);
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance

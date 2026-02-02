@@ -6,6 +6,7 @@
 import { storage } from './modules/storage.js';
 import { aiProcessor } from './modules/ai-processor.js';
 import { meetingsManager } from './modules/meetings.js';
+import { knowledgeBase } from './modules/knowledge-base.js';
 
 // OpenAI API key for Whisper transcription (set in settings)
 let OPENAI_API_KEY = null;
@@ -60,6 +61,9 @@ class GlossiDashboard {
 
     // Initialize meetings manager
     meetingsManager.init(storage, (meeting) => this.renderMeeting(meeting));
+
+    // Initialize Knowledge Base
+    knowledgeBase.init(storage, aiProcessor, () => this.render());
 
     // Setup UI event listeners
     this.setupEventListeners();

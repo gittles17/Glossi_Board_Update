@@ -714,6 +714,120 @@ class Storage {
     return SEED_RAISE_STAGES;
   }
 
+  // =====================================================
+  // KNOWLEDGE BASE FUNCTIONS
+  // =====================================================
+
+  /**
+   * Get Knowledge Base data
+   */
+  getKnowledgeBase() {
+    if (!this.data.knowledgeBase) {
+      this.data.knowledgeBase = {
+        sources: [],
+        conversations: [],
+        reports: []
+      };
+    }
+    return this.data.knowledgeBase;
+  }
+
+  /**
+   * Update Knowledge Base data
+   */
+  updateKnowledgeBase(updates) {
+    if (!this.data.knowledgeBase) {
+      this.data.knowledgeBase = {
+        sources: [],
+        conversations: [],
+        reports: []
+      };
+    }
+    this.data.knowledgeBase = {
+      ...this.data.knowledgeBase,
+      ...updates
+    };
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return this.data.knowledgeBase;
+  }
+
+  /**
+   * Add a source to Knowledge Base
+   */
+  addKBSource(source) {
+    const kb = this.getKnowledgeBase();
+    const newSource = {
+      ...source,
+      id: source.id || 'src_' + Date.now(),
+      addedAt: source.addedAt || new Date().toISOString(),
+      freshness: source.freshness || 'current'
+    };
+    kb.sources.push(newSource);
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return newSource;
+  }
+
+  /**
+   * Update a Knowledge Base source
+   */
+  updateKBSource(sourceId, updates) {
+    const kb = this.getKnowledgeBase();
+    const index = kb.sources.findIndex(s => s.id === sourceId);
+    if (index !== -1) {
+      kb.sources[index] = { ...kb.sources[index], ...updates };
+      this.data.lastUpdated = new Date().toISOString();
+      this.scheduleSave();
+      return kb.sources[index];
+    }
+    return null;
+  }
+
+  /**
+   * Delete a Knowledge Base source
+   */
+  deleteKBSource(sourceId) {
+    const kb = this.getKnowledgeBase();
+    const index = kb.sources.findIndex(s => s.id === sourceId);
+    if (index !== -1) {
+      kb.sources.splice(index, 1);
+      this.data.lastUpdated = new Date().toISOString();
+      this.scheduleSave();
+    }
+    return this.data.knowledgeBase;
+  }
+
+  /**
+   * Add a report to Knowledge Base
+   */
+  addKBReport(report) {
+    const kb = this.getKnowledgeBase();
+    const newReport = {
+      ...report,
+      id: report.id || 'rpt_' + Date.now(),
+      createdAt: report.createdAt || new Date().toISOString()
+    };
+    kb.reports.push(newReport);
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return newReport;
+  }
+
+  /**
+   * Delete a Knowledge Base report
+   */
+  deleteKBReport(reportId) {
+    const kb = this.getKnowledgeBase();
+    const index = kb.reports.findIndex(r => r.id === reportId);
+    if (index !== -1) {
+      kb.reports.splice(index, 1);
+      this.data.lastUpdated = new Date().toISOString();
+      this.scheduleSave();
+    }
+    return this.data.knowledgeBase;
+  }
+
   /**
    * Update settings
    */
