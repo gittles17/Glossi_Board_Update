@@ -739,13 +739,19 @@ Respond with ONLY the category name (lowercase).`;
 SOURCES:
 ${context}
 
-RESPONSE GUIDELINES:
+FORMATTING RULES:
+- Use numbered sections for major topics (1. Topic Name)
+- Use - for bullet points under each section
+- Bold sparingly: only the first key term per bullet, not entire sentences
+- Keep bullets concise (1-2 lines max)
+- Add source citation at end of bullet: [Source: title]
+- No excessive formatting or emphasis
+- Be direct and scannable
+
+CONTENT RULES:
 - Answer based ONLY on the provided sources
-- Use clear markdown formatting: ## for headers, **bold** for emphasis, - for bullet points
-- Cite sources inline using [Source: title] format
-- If information is not in sources, clearly state "This information is not in the available sources"
-- Be concise and well-structured
-- Prioritize the most recent and relevant information`;
+- If information is not in sources, say so clearly
+- Prioritize recent and relevant information`;
 
       const response = await this.aiProcessor.chat(systemPrompt, message);
       
@@ -1624,18 +1630,21 @@ Guidelines:
     // Basic markdown parsing
     let html = this.escapeHtml(content);
     
-    // Headers
+    // Numbered headers like "1. Title" become h2
+    html = html.replace(/^(\d+)\.\s+(.+)$/gm, '<h2>$1. $2</h2>');
+    
+    // Regular headers
     html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
     html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
     html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
     
-    // Bold (do this before italic to handle ** correctly)
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Move source citations to end of line, smaller
+    html = html.replace(/\[Source: (.+?)\]/g, '<span class="kb-inline-citation">$1</span>');
     
     // Process bullet points with nesting support
     const lines = html.split('\n');
     const processedLines = [];
-    let listStack = []; // Track nested list depths
+    let listStack = [];
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -1646,10 +1655,19 @@ Guidelines:
       
       if (bulletMatch) {
         const indent = bulletMatch[1].length;
-        const bulletContent = bulletMatch[3];
-        const depth = Math.floor(indent / 2); // 2 spaces = 1 level
+        let bulletContent = bulletMatch[3];
+        const depth = Math.floor(indent / 2);
         
-        // Close lists if we're going back up
+        // Remove excessive bold - only keep first bold segment
+        const boldMatches = bulletContent.match(/\*\*(.+?)\*\*/g);
+        if (boldMatches && boldMatches.length > 0) {
+          // Only bold the first segment, make rest regular
+          bulletContent = bulletContent.replace(/\*\*(.+?)\*\*/g, (match, p1, idx) => {
+            return idx === 0 ? `<strong>${p1}</strong>` : p1;
+          });
+        }
+        
+        // Close lists if going back up
         while (listStack.length > depth + 1) {
           processedLines.push('</ul>');
           listStack.pop();
@@ -1674,7 +1692,22 @@ Guidelines:
           if (trimmedLine.startsWith('<h')) {
             processedLines.push(trimmedLine);
           } else {
-            processedLines.push('<p>' + trimmedLine + '</p>');
+            // Process bold in paragraphs - limit to first occurrence
+            let processed = trimmedLine;
+            const boldCount = (processed.match(/\*\*(.+?)\*\*/g) || []).length;
+            if (boldCount > 1) {
+              let first = true;
+              processed = processed.replace(/\*\*(.+?)\*\*/g, (match, p1) => {
+                if (first) {
+                  first = false;
+                  return `<strong>${p1}</strong>`;
+                }
+                return p1;
+              });
+            } else {
+              processed = processed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            }
+            processedLines.push('<p>' + processed + '</p>');
           }
         }
       }
@@ -1687,12 +1720,6 @@ Guidelines:
     }
     
     html = processedLines.join('');
-    
-    // Source citations
-    html = html.replace(/\[Source: (.+?)\]/g, '<span class="kb-citation">$1</span>');
-    
-    // Inline citations (text in backticks)
-    html = html.replace(/`([^`]+)`/g, '<code class="kb-inline-citation">$1</code>');
     
     return html;
   }
