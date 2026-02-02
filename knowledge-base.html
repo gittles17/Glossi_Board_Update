@@ -374,6 +374,14 @@
         storage.save();
       });
       
+      // Direct binding for Generate Report button (backup)
+      const generateBtn = document.querySelector('.kb-action-btn[data-action="generate"]');
+      if (generateBtn) {
+        generateBtn.addEventListener('click', () => {
+          knowledgeBase.showReportModal();
+        });
+      }
+      
       // Settings modal
       const menuBtn = document.getElementById('menu-btn');
       const settingsModal = document.getElementById('settings-modal');
