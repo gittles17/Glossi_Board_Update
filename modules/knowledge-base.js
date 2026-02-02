@@ -1793,6 +1793,10 @@ Guidelines:
     
     this.reports = this.reports.filter(r => r.id !== reportId);
     this.saveData();
+    // Force immediate sync to server (bypass debounce)
+    if (this.storage.save) {
+      this.storage.save();
+    }
     this.renderReports();
     this.showToast('Report deleted', 'success');
   }
