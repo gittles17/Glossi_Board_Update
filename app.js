@@ -156,6 +156,21 @@ class GlossiDashboard {
       }
     });
     
+    // Parent checkbox toggles all links children
+    document.getElementById('share-links')?.addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      document.getElementById('share-links-list')?.querySelectorAll('.share-link-item').forEach(cb => {
+        cb.checked = checked;
+      });
+    });
+    
+    // Delegated handler for individual link checkboxes
+    document.getElementById('share-links-list')?.addEventListener('change', (e) => {
+      if (e.target.classList.contains('share-link-item')) {
+        this.syncLinksParentCheckbox();
+      }
+    });
+    
     // Email preview modal
     document.getElementById('email-preview-close')?.addEventListener('click', () => {
       this.hideModal('email-preview-modal');
@@ -2142,6 +2157,30 @@ RULES:
       reportsCheckbox.checked = reports.length > 0;
     }
     
+    // Populate links section
+    const quickLinks = storage.getQuickLinks();
+    const linksList = document.getElementById('share-links-list');
+    const linksCheckbox = document.getElementById('share-links');
+    
+    if (linksList) {
+      if (quickLinks.length > 0) {
+        linksList.innerHTML = quickLinks.map(link => `
+          <label class="checkbox-subitem">
+            <input type="checkbox" class="share-link-item" data-link-id="${link.id}" ${link.emailEnabled !== false ? 'checked' : ''}>
+            <span class="checkbox-subitem-label">${link.name}</span>
+          </label>
+        `).join('');
+        linksList.classList.add('has-items');
+      } else {
+        linksList.innerHTML = '<span class="checkbox-subitem-label" style="opacity: 0.5;">No links configured</span>';
+      }
+    }
+    
+    if (linksCheckbox) {
+      linksCheckbox.disabled = quickLinks.length === 0;
+      linksCheckbox.checked = quickLinks.length > 0;
+    }
+    
     this.showModal('share-email-modal');
   }
   
@@ -2156,6 +2195,18 @@ RULES:
     reportsCheckbox.checked = checkedCount > 0;
     reportsCheckbox.indeterminate = checkedCount > 0 && checkedCount < allCheckboxes.length;
   }
+  
+  syncLinksParentCheckbox() {
+    const linksList = document.getElementById('share-links-list');
+    const linksCheckbox = document.getElementById('share-links');
+    if (!linksList || !linksCheckbox) return;
+    
+    const allCheckboxes = linksList.querySelectorAll('.share-link-item');
+    const checkedCount = linksList.querySelectorAll('.share-link-item:checked').length;
+    
+    linksCheckbox.checked = checkedCount > 0;
+    linksCheckbox.indeterminate = checkedCount > 0 && checkedCount < allCheckboxes.length;
+  }
 
   /**
    * Generate and send email with selected sections
@@ -2165,6 +2216,7 @@ RULES:
     const includeSeedRaise = document.getElementById('share-seedraise')?.checked;
     const includeMeetings = document.getElementById('share-meetings')?.checked;
     const includeReports = document.getElementById('share-reports')?.checked;
+    const includeLinks = document.getElementById('share-links')?.checked;
     
     // Show processing state
     const generateBtn = document.getElementById('share-email-generate');
@@ -2180,7 +2232,8 @@ RULES:
         pipeline: includePipeline,
         seedRaise: includeSeedRaise,
         meetings: includeMeetings,
-        reports: includeReports
+        reports: includeReports,
+        links: includeLinks
       });
       
       // Polish with AI
@@ -2296,6 +2349,26 @@ RULES:
       }
     }
     
+    // Links (selected ones)
+    if (sections.links) {
+      const allLinks = storage.getQuickLinks();
+      const linksList = document.getElementById('share-links-list');
+      const selectedIds = new Set();
+      
+      linksList?.querySelectorAll('.share-link-item:checked').forEach(cb => {
+        selectedIds.add(cb.dataset.linkId);
+      });
+      
+      const selectedLinks = allLinks.filter(l => selectedIds.has(l.id));
+      
+      if (selectedLinks.length > 0) {
+        content.links = selectedLinks.map(l => ({
+          name: l.emailLabel || l.name,
+          url: l.url
+        }));
+      }
+    }
+    
     return content;
   }
 
@@ -2306,14 +2379,14 @@ RULES:
     const systemPrompt = `You are a professional email writer. Format the following weekly update data into a polished, professional email.
 
 RULES:
+- No emojis or special characters
+- Plain text formatting only
+- Simple dashes for bullets
+- Clean section headers (no decorative lines or symbols)
+- Sophisticated, understated tone
+- Direct and factual
+- Brief sign-off without flourish
 - Keep it concise and scannable
-- Use clear section headers
-- Highlight key wins and action items
-- Professional but personable tone
-- Use bullet points for lists
-- Include all provided data, don't make up information
-- Format numbers consistently
-- End with a brief sign-off
 
 IMPORTANT: Your response must be valid JSON with this exact format:
 {
@@ -2321,13 +2394,17 @@ IMPORTANT: Your response must be valid JSON with this exact format:
   "body": "the full email body text"
 }
 
-The highlights should capture the most important 1-2 things (e.g., "3 New Deals, $500K Pipeline Growth").
+The highlights should capture the most important 1-2 things (e.g., "3 New Deals, Pipeline Growth").
 The body should NOT include a subject line or greeting like "Dear X".`;
 
+    const linksSection = content.links && content.links.length > 0 
+      ? `\n\nLINKS TO INCLUDE AT END:\n${content.links.map(l => `${l.name}: ${l.url}`).join('\n')}`
+      : '';
+    
     const userPrompt = `Create a weekly update email for: ${content.weekRange}
 
 DATA TO INCLUDE:
-${JSON.stringify(content.sections, null, 2)}
+${JSON.stringify(content.sections, null, 2)}${linksSection}
 
 Format this into a clean, professional weekly update email. Return as JSON with "highlights" and "body" fields.`;
 
