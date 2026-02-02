@@ -726,27 +726,6 @@ class GlossiDashboard {
     });
 
 
-    // Link modal
-    document.getElementById('add-link-btn').addEventListener('click', () => {
-      this.openAddLink();
-    });
-
-    document.getElementById('link-modal-close').addEventListener('click', () => {
-      this.hideModal('link-modal');
-    });
-
-    document.getElementById('link-cancel').addEventListener('click', () => {
-      this.hideModal('link-modal');
-    });
-
-    document.getElementById('link-save').addEventListener('click', () => {
-      this.saveLink();
-    });
-
-    document.getElementById('link-delete').addEventListener('click', () => {
-      this.deleteLink();
-    });
-
     // Investor modal
     document.getElementById('add-investor-btn').addEventListener('click', () => {
       this.openAddInvestor();
