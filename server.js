@@ -2,9 +2,18 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
+const multer = require('multer');
+const pdfParse = require('pdf-parse');
+const cheerio = require('cheerio');
 
 const app = express();
 const PORT = process.env.PORT || 5500;
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+});
 
 // Database connection (Railway provides DATABASE_URL)
 const useDatabase = !!process.env.DATABASE_URL;
@@ -255,6 +264,150 @@ app.post('/api/reset', async (req, res) => {
     res.json({ success: true, message: 'Data reset to defaults' });
   } catch (error) {
     console.error('Error resetting data:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// FILE PROCESSING ENDPOINTS
+// ============================================
+
+// Process PDF - extract text
+app.post('/api/process-pdf', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+    
+    const data = await pdfParse(req.file.buffer);
+    
+    res.json({
+      success: true,
+      title: req.file.originalname.replace('.pdf', ''),
+      content: data.text,
+      pageCount: data.numpages,
+      info: data.info
+    });
+  } catch (error) {
+    console.error('PDF processing error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Fetch URL content
+app.post('/api/fetch-url', async (req, res) => {
+  try {
+    const { url } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'No URL provided' });
+    }
+    
+    // Fetch the URL
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; GlossiBot/1.0)'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    
+    // Remove script and style elements
+    $('script, style, nav, footer, header, aside').remove();
+    
+    // Get title
+    let title = $('title').text().trim() || 
+                $('h1').first().text().trim() || 
+                new URL(url).hostname;
+    
+    // Get main content
+    let content = '';
+    
+    // Try common content selectors
+    const contentSelectors = ['article', 'main', '.content', '.post', '.article', '#content', '.entry-content'];
+    for (const selector of contentSelectors) {
+      const el = $(selector);
+      if (el.length && el.text().trim().length > 100) {
+        content = el.text().trim();
+        break;
+      }
+    }
+    
+    // Fallback to body text
+    if (!content) {
+      content = $('body').text().trim();
+    }
+    
+    // Clean up whitespace
+    content = content.replace(/\s+/g, ' ').substring(0, 100000);
+    
+    res.json({
+      success: true,
+      title,
+      content,
+      url
+    });
+  } catch (error) {
+    console.error('URL fetch error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Transcribe audio using OpenAI Whisper
+app.post('/api/transcribe', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+    
+    // Get OpenAI API key from settings
+    let openaiKey = process.env.OPENAI_API_KEY;
+    
+    // Try to get from database if not in env
+    if (!openaiKey && useDatabase) {
+      const result = await pool.query("SELECT data FROM app_data WHERE key = 'settings'");
+      if (result.rows.length > 0 && result.rows[0].data.openaiApiKey) {
+        openaiKey = result.rows[0].data.openaiApiKey;
+      }
+    }
+    
+    if (!openaiKey) {
+      return res.status(400).json({ success: false, error: 'OpenAI API key not configured' });
+    }
+    
+    // Create form data for OpenAI
+    const formData = new FormData();
+    formData.append('file', new Blob([req.file.buffer]), req.file.originalname);
+    formData.append('model', 'whisper-1');
+    
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiKey}`
+      },
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenAI API error: ${error}`);
+    }
+    
+    const result = await response.json();
+    
+    res.json({
+      success: true,
+      title: req.file.originalname.replace(/\.[^/.]+$/, ''),
+      transcript: result.text,
+      duration: null
+    });
+  } catch (error) {
+    console.error('Transcription error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

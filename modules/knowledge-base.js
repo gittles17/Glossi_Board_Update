@@ -311,44 +311,97 @@ class KnowledgeBase {
    * Handle a dropped file
    */
   async handleDroppedFile(file) {
-    const supportedTypes = ['text/plain', 'application/pdf', 'text/markdown', 'text/csv'];
-    const supportedExtensions = ['.txt', '.md', '.pdf', '.csv', '.json'];
+    const textExtensions = ['.txt', '.md', '.csv', '.json'];
+    const pdfExtensions = ['.pdf'];
+    const audioExtensions = ['.mp3', '.wav', '.m4a', '.webm', '.ogg'];
     
     const ext = '.' + file.name.split('.').pop().toLowerCase();
-    const isSupported = supportedTypes.includes(file.type) || supportedExtensions.includes(ext);
+    const isText = textExtensions.includes(ext);
+    const isPdf = pdfExtensions.includes(ext);
+    const isAudio = audioExtensions.includes(ext);
     
-    if (!isSupported) {
+    if (!isText && !isPdf && !isAudio) {
       this.showToast(`Unsupported file type: ${file.name}`, 'error');
       return;
     }
     
     try {
       let content = '';
+      let title = file.name.replace(/\.[^/.]+$/, '');
+      let type = 'file';
+      let metadata = {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
+      };
       
-      if (file.type === 'application/pdf' || ext === '.pdf') {
-        this.showToast('Processing PDF...', 'info');
-        content = `[PDF content from: ${file.name}]`;
-      } else {
+      if (isText) {
+        // Read text files directly
         content = await file.text();
+        this.showToast(`Processing: ${file.name}`, 'info');
+        
+      } else if (isPdf) {
+        // Send to server for PDF extraction
+        this.showToast(`Extracting PDF text: ${file.name}`, 'info');
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch('/api/process-pdf', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || 'PDF processing failed');
+        }
+        
+        content = result.content;
+        title = result.title || title;
+        metadata.pageCount = result.pageCount;
+        type = 'pdf';
+        
+      } else if (isAudio) {
+        // Send to server for Whisper transcription
+        this.showToast(`Transcribing audio: ${file.name} (this may take a moment)`, 'info');
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch('/api/transcribe', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Transcription failed');
+        }
+        
+        content = result.transcript;
+        title = result.title || title;
+        metadata.duration = result.duration;
+        type = 'audio';
       }
       
-      // Determine category
+      // Determine category using AI
       let category = 'other';
-      if (this.aiProcessor && this.aiProcessor.isConfigured()) {
+      if (this.aiProcessor && this.aiProcessor.isConfigured() && content) {
         category = await this.categorizeSource(content.substring(0, 1000));
       }
       
-      // Create source object - store full content (up to 500KB)
+      // Create source object - store extracted text (up to 500KB)
       const source = {
         id: 'src_' + Date.now(),
-        type: 'file',
-        title: file.name,
+        type,
+        title,
         content: content.substring(0, 500000),
         category,
         metadata: {
-          fileName: file.name,
-          fileSize: file.size,
-          fileType: file.type,
+          ...metadata,
           contentLength: content.length
         },
         createdAt: new Date().toISOString()
@@ -357,10 +410,10 @@ class KnowledgeBase {
       this.sources.push(source);
       this.saveData();
       this.renderSources();
-      this.showToast(`Added: ${file.name}`, 'success');
+      this.showToast(`Added: ${title}`, 'success');
       
     } catch (error) {
-      this.showToast(`Failed to read file: ${error.message}`, 'error');
+      this.showToast(`Failed to process file: ${error.message}`, 'error');
     }
   }
 
@@ -585,19 +638,34 @@ class KnowledgeBase {
   }
 
   /**
-   * Fetch URL content
-   * Note: Direct browser fetch is limited by CORS. For full functionality, use server-side proxy.
+   * Fetch URL content via server proxy
    */
   async fetchUrl(url) {
-    // Try to extract domain/title from URL
-    const urlObj = new URL(url);
-    const title = urlObj.hostname + urlObj.pathname.substring(0, 30);
-    
-    // Store URL reference for manual content addition
-    return {
-      title: title,
-      content: `[URL Reference: ${url}]\n\nNote: Paste the relevant content from this URL manually, or use a browser extension to extract the content.`
-    };
+    try {
+      const response = await fetch('/api/fetch-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch URL');
+      }
+      
+      return {
+        title: result.title,
+        content: result.content
+      };
+    } catch (error) {
+      // Fallback to URL reference if server fetch fails
+      const urlObj = new URL(url);
+      return {
+        title: urlObj.hostname,
+        content: `[URL: ${url}]\n\nNote: Could not fetch content. Error: ${error.message}`
+      };
+    }
   }
 
   /**
