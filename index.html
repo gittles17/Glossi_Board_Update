@@ -155,91 +155,98 @@
       <div class="panel-content">
         <!-- Current Meeting Summary -->
         <div class="meeting-card" id="current-meeting">
-          <!-- Summary Section -->
-          <div class="meeting-section collapsible" id="summary-section">
-            <div class="section-header-row clickable" data-toggle="summary-content">
-              <div class="section-header-left">
-                <button class="collapse-toggle" aria-expanded="true">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </button>
-                <h4>Summary</h4>
-                <span class="item-count" id="summary-count"></span>
+          <div class="meeting-columns">
+            <!-- Left Column: Summary & Decisions -->
+            <div class="meeting-column-left">
+              <!-- Summary Section -->
+              <div class="meeting-section collapsible" id="summary-section">
+                <div class="section-header-row clickable" data-toggle="summary-content">
+                  <div class="section-header-left">
+                    <button class="collapse-toggle" aria-expanded="true">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
+                    <h4>Summary</h4>
+                    <span class="item-count" id="summary-count"></span>
+                  </div>
+                  <button class="add-btn-small" id="add-summary-btn" title="Add summary point">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                  </button>
+                </div>
+                <div class="section-content" id="summary-content">
+                  <ul class="summary-list" id="meeting-summary">
+                    <li class="empty-state">No meeting notes yet. Click + to add notes.</li>
+                  </ul>
+                </div>
               </div>
-              <button class="add-btn-small" id="add-summary-btn" title="Add summary point">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-              </button>
+
+              <!-- Key Decisions -->
+              <div class="meeting-section collapsible" id="decisions-section">
+                <div class="section-header-row clickable" data-toggle="decisions-content">
+                  <div class="section-header-left">
+                    <button class="collapse-toggle" aria-expanded="true">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
+                    <h4>Key Decisions</h4>
+                    <span class="item-count" id="decisions-count"></span>
+                  </div>
+                  <button class="add-btn-small" id="add-decision-btn" title="Add decision">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                  </button>
+                </div>
+                <div class="section-content" id="decisions-content">
+                  <ul class="decisions-list" id="decisions-list">
+                    <li class="empty-state">No decisions recorded.</li>
+                  </ul>
+                </div>
+              </div>
             </div>
-            <div class="section-content" id="summary-content">
-              <ul class="summary-list" id="meeting-summary">
-                <li class="empty-state">No meeting notes yet. Click + to add notes.</li>
-              </ul>
+
+            <!-- Right Column: Action Items -->
+            <div class="meeting-column-right">
+              <!-- Action Items -->
+              <div class="meeting-section collapsible" id="actions-section">
+                <div class="section-header-row clickable" data-toggle="actions-content">
+                  <div class="section-header-left">
+                    <button class="collapse-toggle" aria-expanded="true">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
+                    <h4>Action Items</h4>
+                  </div>
+                  <div class="section-header-right">
+                    <button class="add-btn-small" id="add-todo-btn" title="Add action item">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                    </button>
+                    <span class="meeting-status" id="meeting-status">
+                      <span id="todo-progress">0/0 complete</span>
+                    </span>
+                  </div>
+                </div>
+                <div class="section-content" id="actions-content">
+                  <div class="action-progress-bar" id="action-progress-bar">
+                    <div class="action-progress-fill" id="action-progress-fill"></div>
+                  </div>
+                  <div class="todo-list" id="todo-list">
+                    <div class="empty-state">No action items yet.</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-
-          <!-- Key Decisions -->
-          <div class="meeting-section collapsible" id="decisions-section">
-            <div class="section-header-row clickable" data-toggle="decisions-content">
-              <div class="section-header-left">
-                <button class="collapse-toggle" aria-expanded="true">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </button>
-                <h4>Key Decisions</h4>
-                <span class="item-count" id="decisions-count"></span>
-              </div>
-              <button class="add-btn-small" id="add-decision-btn" title="Add decision">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-              </button>
-            </div>
-            <div class="section-content" id="decisions-content">
-              <ul class="decisions-list" id="decisions-list">
-                <li class="empty-state">No decisions recorded.</li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- Action Items -->
-          <div class="meeting-section collapsible" id="actions-section">
-            <div class="section-header-row clickable" data-toggle="actions-content">
-              <div class="section-header-left">
-                <button class="collapse-toggle" aria-expanded="true">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </button>
-                <h4>Action Items</h4>
-              </div>
-              <div class="section-header-right">
-                <button class="add-btn-small" id="add-todo-btn" title="Add action item">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                  </svg>
-                </button>
-                <span class="meeting-status" id="meeting-status">
-                  <span id="todo-progress">0/0 complete</span>
-                </span>
-              </div>
-            </div>
-            <div class="section-content" id="actions-content">
-              <div class="action-progress-bar" id="action-progress-bar">
-                <div class="action-progress-fill" id="action-progress-fill"></div>
-              </div>
-              <div class="todo-list" id="todo-list">
-                <div class="empty-state">No action items yet.</div>
-              </div>
-            </div>
-          </div>
-
         </div>
 
       </div>

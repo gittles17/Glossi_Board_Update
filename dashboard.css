@@ -3233,6 +3233,38 @@ body::after {
   overflow: hidden;
 }
 
+/* Two-column layout for Week at a Glance */
+.meeting-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.meeting-column-left {
+  border-right: 1px solid var(--border-color);
+}
+
+.meeting-column-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.meeting-column-left .meeting-section:last-child,
+.meeting-column-right .meeting-section:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 900px) {
+  .meeting-columns {
+    grid-template-columns: 1fr;
+  }
+  
+  .meeting-column-left {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+}
+
 .meeting-header {
   display: flex;
   align-items: center;
