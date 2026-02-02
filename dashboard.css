@@ -3635,6 +3635,60 @@ body::after {
   margin-bottom: var(--space-1);
 }
 
+/* Completed todos collapsible section */
+.todo-completed-section {
+  margin-top: var(--space-4);
+  border-top: 1px solid var(--border-color);
+  padding-top: var(--space-3);
+}
+
+.todo-completed-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: var(--space-2) var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast);
+  width: 100%;
+}
+
+.todo-completed-toggle:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.todo-completed-toggle .toggle-chevron {
+  transition: transform var(--duration-fast);
+  opacity: 0.6;
+}
+
+.todo-completed-section.expanded .toggle-chevron {
+  transform: rotate(90deg);
+}
+
+.todo-completed-content {
+  display: none;
+  padding-top: var(--space-2);
+}
+
+.todo-completed-section.expanded .todo-completed-content {
+  display: block;
+}
+
+.todo-completed-content .todo-group {
+  opacity: 0.7;
+}
+
+.todo-completed-content .todo-group-header {
+  color: var(--text-muted);
+}
+
 .add-todo-btn {
   display: flex;
   align-items: center;

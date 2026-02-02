@@ -3091,49 +3091,88 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       summaryContainer.innerHTML = '<li class="empty-state">No summary yet.</li>';
     }
 
-    // Todos (grouped by owner, editable)
+    // Todos (grouped by owner, editable) - separate active and completed
     const todoContainer = document.getElementById('todo-list');
     if (meeting.todos && meeting.todos.length > 0) {
-      // Group todos by resolved owner name
-      const todosByOwner = {};
-      meeting.todos.forEach(todo => {
-        const owner = this.resolveOwnerName(todo.owner);
-        if (!todosByOwner[owner]) {
-          todosByOwner[owner] = [];
-        }
-        todosByOwner[owner].push(todo);
-      });
-
-      // Render grouped todos
+      // Separate active and completed todos
+      const activeTodos = meeting.todos.filter(t => !t.completed);
+      const completedTodos = meeting.todos.filter(t => t.completed);
+      
+      // Helper to render todo item HTML
+      const renderTodoItem = (todo) => `
+        <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}" draggable="true">
+          <div class="todo-checkbox ${todo.completed ? 'checked' : ''}" onclick="window.dashboard.toggleTodo('${meeting.id}', '${todo.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+          <div class="todo-content">
+            <span class="todo-text editable-item" contenteditable="true" data-type="todo-text" data-todo-id="${todo.id}">${todo.text}</span>
+            <span class="todo-owner-edit editable-item" contenteditable="true" data-type="todo-owner" data-todo-id="${todo.id}" title="Click to change assignee">${this.resolveOwnerName(todo.owner)}</span>
+          </div>
+          <button class="delete-btn" onclick="window.dashboard.deleteTodo('${meeting.id}', '${todo.id}')" title="Delete">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      `;
+      
+      // Helper to group todos by owner
+      const groupByOwner = (todos) => {
+        const grouped = {};
+        todos.forEach(todo => {
+          const owner = this.resolveOwnerName(todo.owner);
+          if (!grouped[owner]) grouped[owner] = [];
+          grouped[owner].push(todo);
+        });
+        return grouped;
+      };
+      
       let html = '';
-      Object.entries(todosByOwner).forEach(([owner, todos]) => {
+      
+      // Render active todos grouped by owner
+      if (activeTodos.length > 0) {
+        const activeByOwner = groupByOwner(activeTodos);
+        Object.entries(activeByOwner).forEach(([owner, todos]) => {
+          html += `
+            <div class="todo-group" data-owner="${owner}">
+              <div class="todo-group-header">${owner}</div>
+              <div class="todo-group-items">
+                ${todos.map(renderTodoItem).join('')}
+              </div>
+            </div>
+          `;
+        });
+      } else {
+        html += '<div class="empty-state">No active action items.</div>';
+      }
+      
+      // Render completed todos in collapsible section
+      if (completedTodos.length > 0) {
+        const completedByOwner = groupByOwner(completedTodos);
         html += `
-          <div class="todo-group" data-owner="${owner}">
-            <div class="todo-group-header">${owner}</div>
-            <div class="todo-group-items">
-              ${todos.map(todo => `
-                <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}" draggable="true">
-                  <div class="todo-checkbox ${todo.completed ? 'checked' : ''}" onclick="window.dashboard.toggleTodo('${meeting.id}', '${todo.id}')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
+          <div class="todo-completed-section">
+            <button class="todo-completed-toggle" onclick="this.parentElement.classList.toggle('expanded')">
+              <svg class="toggle-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              <span>Completed (${completedTodos.length})</span>
+            </button>
+            <div class="todo-completed-content">
+              ${Object.entries(completedByOwner).map(([owner, todos]) => `
+                <div class="todo-group" data-owner="${owner}">
+                  <div class="todo-group-header">${owner}</div>
+                  <div class="todo-group-items">
+                    ${todos.map(renderTodoItem).join('')}
                   </div>
-                  <div class="todo-content">
-                    <span class="todo-text editable-item" contenteditable="true" data-type="todo-text" data-todo-id="${todo.id}">${todo.text}</span>
-                    <span class="todo-owner-edit editable-item" contenteditable="true" data-type="todo-owner" data-todo-id="${todo.id}" title="Click to change assignee">${this.resolveOwnerName(todo.owner)}</span>
-                  </div>
-                  <button class="delete-btn" onclick="window.dashboard.deleteTodo('${meeting.id}', '${todo.id}')" title="Delete">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                  </button>
                 </div>
               `).join('')}
             </div>
           </div>
         `;
-      });
+      }
       
       todoContainer.innerHTML = html;
       this.setupTodoEditListeners(todoContainer, meeting.id);
