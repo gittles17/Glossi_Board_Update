@@ -5634,19 +5634,137 @@ body::after {
   margin-left: auto;
 }
 
-.pipeline-content {
+/* Pipeline Kanban */
+.pipeline-kanban {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.pipeline-column {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  min-height: 120px;
+}
+
+.pipeline-column .column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.pipeline-column .column-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pipeline-column .column-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pipeline-column .column-count {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.pipeline-column .column-total {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-green);
+}
+
+.pipeline-column .column-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Pipeline Deal Card */
+.pipeline-deal-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  transition: all 0.15s ease;
+}
+
+.pipeline-deal-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.pipeline-deal-card .deal-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.pipeline-deal-card .deal-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-green);
+  margin-bottom: var(--space-1);
+}
+
+.pipeline-deal-card .deal-notes {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Pipeline Highlights */
+.pipeline-highlights {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
-  min-height: 100px;
-  max-height: 300px;
-  overflow-y: auto;
+}
+
+.highlights-header {
+  margin-bottom: var(--space-3);
+}
+
+.highlights-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.highlights-content {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.highlights-content ul {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.highlights-content li {
+  margin-bottom: var(--space-2);
+}
+
+.highlights-content li:last-child {
+  margin-bottom: 0;
 }
 
 .pipeline-empty {
   text-align: center;
-  padding: var(--space-6);
+  padding: var(--space-4);
   color: var(--text-muted);
 }
 
@@ -5660,26 +5778,13 @@ body::after {
   opacity: 0.7;
 }
 
-.pipeline-email-display {
-  white-space: pre-wrap;
-  font-family: var(--font-sans);
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--text-primary);
-}
-
-.pipeline-email-display strong,
-.pipeline-email-display b {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
 .pipeline-updated {
   font-size: 11px;
   color: var(--text-muted);
   margin-top: var(--space-3);
   padding-top: var(--space-3);
   border-top: 1px solid var(--border-color);
+  text-align: right;
 }
 
 /* Modal description */
@@ -5687,6 +5792,23 @@ body::after {
   font-size: 13px;
   color: var(--text-secondary);
   margin-bottom: var(--space-4);
+}
+
+/* Responsive Pipeline Kanban */
+@media (max-width: 1200px) {
+  .pipeline-kanban {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .pipeline-kanban {
+    grid-template-columns: 1fr;
+  }
+  
+  .pipeline-header {
+    flex-wrap: wrap;
+  }
 }
 
 /* Responsive Kanban */

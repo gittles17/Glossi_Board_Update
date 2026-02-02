@@ -899,40 +899,109 @@ class GlossiDashboard {
   }
 
   /**
-   * Render the pipeline section from pasted email content
+   * Render the pipeline section from parsed data
    */
   renderPipelineSection() {
-    const container = document.getElementById('pipeline-content');
     const totalEl = document.getElementById('pipeline-total-value');
     const countEl = document.getElementById('pipeline-deal-count');
-    
-    if (!container) return;
+    const highlightsContainer = document.getElementById('highlights-content');
     
     const pipelineData = this.data?.pipelineEmail || storage.getPipelineEmail?.() || null;
     
-    if (!pipelineData || !pipelineData.content) {
-      container.innerHTML = `
-        <div class="pipeline-empty">
-          <p>No pipeline data yet</p>
-          <p class="pipeline-hint">Click "Update" to paste your weekly pipeline email</p>
-        </div>
-      `;
-      if (totalEl) totalEl.textContent = '$0';
-      if (countEl) countEl.textContent = '0 deals';
-      return;
+    // Render each stage column
+    const stages = ['discovery', 'proposal', 'negotiation', 'closing'];
+    stages.forEach(stage => {
+      const stageContainer = document.getElementById(`pipeline-stage-${stage}`);
+      const countSpan = document.getElementById(`pipeline-count-${stage}`);
+      const totalSpan = document.getElementById(`pipeline-total-${stage}`);
+      
+      if (!stageContainer) return;
+      
+      const deals = pipelineData?.deals?.filter(d => d.stage === stage) || [];
+      
+      if (countSpan) countSpan.textContent = `(${deals.length})`;
+      
+      // Calculate stage total
+      let stageTotal = 0;
+      deals.forEach(deal => {
+        const value = this.parseMoneyValue(deal.value);
+        stageTotal += value;
+      });
+      if (totalSpan) totalSpan.textContent = stageTotal > 0 ? this.formatMoney(stageTotal) : '';
+      
+      if (deals.length === 0) {
+        stageContainer.innerHTML = '<div class="empty-state">No deals</div>';
+      } else {
+        stageContainer.innerHTML = deals.map(deal => `
+          <div class="pipeline-deal-card">
+            <div class="deal-name">${this.escapeHtml(deal.name)}</div>
+            ${deal.value ? `<div class="deal-value">${this.escapeHtml(deal.value)}</div>` : ''}
+            ${deal.notes ? `<div class="deal-notes">${this.escapeHtml(deal.notes)}</div>` : ''}
+          </div>
+        `).join('');
+      }
+    });
+    
+    // Update totals
+    const allDeals = pipelineData?.deals || [];
+    let grandTotal = 0;
+    allDeals.forEach(deal => {
+      grandTotal += this.parseMoneyValue(deal.value);
+    });
+    
+    if (totalEl) totalEl.textContent = grandTotal > 0 ? this.formatMoney(grandTotal) : '$0';
+    if (countEl) countEl.textContent = `${allDeals.length} deal${allDeals.length !== 1 ? 's' : ''}`;
+    
+    // Render highlights
+    if (highlightsContainer) {
+      const highlights = pipelineData?.highlights || [];
+      const updatedDate = pipelineData?.updatedAt ? new Date(pipelineData.updatedAt).toLocaleDateString() : '';
+      
+      if (highlights.length === 0 && allDeals.length === 0) {
+        highlightsContainer.innerHTML = `
+          <div class="pipeline-empty">
+            <p>No pipeline data yet</p>
+            <p class="pipeline-hint">Click "Update" to paste your weekly pipeline email</p>
+          </div>
+        `;
+      } else if (highlights.length === 0) {
+        highlightsContainer.innerHTML = `
+          <p>No highlights extracted.</p>
+          ${updatedDate ? `<div class="pipeline-updated">Last updated: ${updatedDate}</div>` : ''}
+        `;
+      } else {
+        highlightsContainer.innerHTML = `
+          <ul>
+            ${highlights.map(h => `<li>${this.escapeHtml(h)}</li>`).join('')}
+          </ul>
+          ${updatedDate ? `<div class="pipeline-updated">Last updated: ${updatedDate}</div>` : ''}
+        `;
+      }
     }
-    
-    // Display the pasted content
-    const updatedDate = pipelineData.updatedAt ? new Date(pipelineData.updatedAt).toLocaleDateString() : '';
-    
-    container.innerHTML = `
-      <div class="pipeline-email-display">${this.escapeHtml(pipelineData.content)}</div>
-      ${updatedDate ? `<div class="pipeline-updated">Last updated: ${updatedDate}</div>` : ''}
-    `;
-    
-    // Update stats if provided
-    if (totalEl && pipelineData.total) totalEl.textContent = pipelineData.total;
-    if (countEl && pipelineData.dealCount) countEl.textContent = pipelineData.dealCount;
+  }
+
+  /**
+   * Parse money value string to number
+   */
+  parseMoneyValue(value) {
+    if (!value) return 0;
+    const cleaned = value.replace(/[^0-9.KkMm]/g, '');
+    let num = parseFloat(cleaned) || 0;
+    if (/[Kk]/.test(value)) num *= 1000;
+    if (/[Mm]/.test(value)) num *= 1000000;
+    return num;
+  }
+
+  /**
+   * Format number as money string
+   */
+  formatMoney(value) {
+    if (value >= 1000000) {
+      return '$' + (value / 1000000).toFixed(1) + 'M';
+    } else if (value >= 1000) {
+      return '$' + (value / 1000).toFixed(0) + 'K';
+    }
+    return '$' + value.toFixed(0);
   }
 
   /**
@@ -942,8 +1011,8 @@ class GlossiDashboard {
     const pipelineData = this.data?.pipelineEmail || storage.getPipelineEmail?.() || null;
     const textarea = document.getElementById('pipeline-email-content');
     
-    if (textarea && pipelineData?.content) {
-      textarea.value = pipelineData.content;
+    if (textarea && pipelineData?.rawContent) {
+      textarea.value = pipelineData.rawContent;
     } else if (textarea) {
       textarea.value = '';
     }
@@ -953,45 +1022,104 @@ class GlossiDashboard {
   }
 
   /**
-   * Save the pipeline email content
+   * Save and parse the pipeline email content using AI
    */
-  savePipelineEmail() {
+  async savePipelineEmail() {
     const textarea = document.getElementById('pipeline-email-content');
     const content = textarea?.value?.trim() || '';
     
-    // Extract some basic stats from the content (rough estimates)
-    let total = '$0';
-    let dealCount = '0 deals';
-    
-    // Try to extract total from common patterns
-    const totalMatch = content.match(/total[:\s]*\$?([\d,\.]+[KkMm]?)/i);
-    if (totalMatch) {
-      total = '$' + totalMatch[1].toUpperCase();
+    if (!content) {
+      this.showToast('Please paste pipeline email content', 'error');
+      return;
     }
     
-    // Count lines that look like deals (have dollar amounts)
-    const dealLines = content.split('\n').filter(line => /\$[\d,\.]+/.test(line));
-    if (dealLines.length > 0) {
-      dealCount = dealLines.length + ' deals';
+    // Show processing state
+    const saveBtn = document.getElementById('pipeline-edit-save');
+    const originalText = saveBtn?.innerHTML;
+    if (saveBtn) {
+      saveBtn.innerHTML = 'Processing...';
+      saveBtn.disabled = true;
     }
     
-    const pipelineData = {
-      content,
-      total,
-      dealCount,
-      updatedAt: new Date().toISOString()
-    };
-    
-    // Save to storage
-    if (!this.data.pipelineEmail) {
-      this.data.pipelineEmail = {};
+    try {
+      // Use AI to parse the email content
+      const parsedData = await this.parsePipelineWithAI(content);
+      
+      const pipelineData = {
+        rawContent: content,
+        deals: parsedData.deals || [],
+        highlights: parsedData.highlights || [],
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Save to storage
+      if (!this.data.pipelineEmail) {
+        this.data.pipelineEmail = {};
+      }
+      this.data.pipelineEmail = pipelineData;
+      storage.updatePipelineEmail(pipelineData);
+      
+      this.hideModal('pipeline-edit-modal');
+      this.renderPipelineSection();
+      this.showToast('Pipeline updated successfully', 'success');
+    } catch (error) {
+      this.showToast('Failed to parse pipeline: ' + error.message, 'error');
+    } finally {
+      if (saveBtn) {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+      }
     }
-    this.data.pipelineEmail = pipelineData;
-    storage.updatePipelineEmail(pipelineData);
+  }
+
+  /**
+   * Parse pipeline email content using Claude AI
+   */
+  async parsePipelineWithAI(content) {
+    const systemPrompt = `You are a pipeline data parser for a sales/business development dashboard. 
+Parse the provided email content and extract:
+1. Individual deals/opportunities with their stage, value, and any notes
+2. Key highlights or important updates
+
+For stages, categorize each deal into one of these 4 stages based on context:
+- discovery: Early stage, initial contact, qualifying leads
+- proposal: Sent proposal, demo scheduled, pricing discussed
+- negotiation: Active negotiations, contract review, terms discussion
+- closing: Final stages, verbal commitment, paperwork in progress
+
+Return a JSON object with this exact structure:
+{
+  "deals": [
+    {
+      "name": "Company or deal name",
+      "value": "$50K" or "TBD",
+      "stage": "discovery|proposal|negotiation|closing",
+      "notes": "Brief context or status"
+    }
+  ],
+  "highlights": [
+    "Key highlight or update 1",
+    "Key highlight or update 2"
+  ]
+}
+
+Extract real data from the email. If a deal value is not specified, use "TBD".
+For highlights, extract the most important updates, wins, or action items mentioned.
+Return ONLY valid JSON, no other text.`;
+
+    const result = await aiProcessor.chat(systemPrompt, content);
     
-    this.hideModal('pipeline-edit-modal');
-    this.renderPipelineSection();
-    this.showToast('Pipeline updated', 'success');
+    try {
+      // Try to parse the JSON response
+      const jsonMatch = result.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      throw new Error('Invalid response format');
+    } catch (e) {
+      // Return empty structure if parsing fails
+      return { deals: [], highlights: ['Failed to parse email content. Please try again.'] };
+    }
   }
 
   /**
