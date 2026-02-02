@@ -143,74 +143,42 @@
       </button>
     </div>
     
-    <!-- Pipeline Content Card (Week at a Glance style) -->
-    <div class="pipeline-content-card">
-      <div class="pipeline-columns">
-        <!-- Left Column: Revenue by Stage & Key Updates -->
-        <div class="pipeline-column-left">
-          <!-- Revenue by Stage -->
-          <div class="meeting-section" id="revenue-section">
-            <div class="section-header-row">
-              <div class="section-header-left">
-                <h4>Revenue by Stage</h4>
-              </div>
-            </div>
-            <div class="section-content">
-              <div class="stage-list" id="pipeline-stage-list">
-                <!-- Populated by JS -->
-              </div>
-            </div>
-          </div>
-
-          <!-- Key Updates -->
-          <div class="meeting-section" id="updates-section">
-            <div class="section-header-row">
-              <div class="section-header-left">
-                <h4>Key Updates</h4>
-                <span class="item-count" id="updates-count"></span>
-              </div>
-            </div>
-            <div class="section-content">
-              <ul class="updates-list" id="pipeline-updates-list">
-                <li class="empty-state">No updates yet.</li>
-              </ul>
-            </div>
-          </div>
+    <!-- 3 Horizontal Stage Cards -->
+    <div class="pipeline-stage-cards">
+      <div class="stage-card" data-stage="discovery">
+        <div class="stage-card-header">
+          <span class="stage-card-title">Discovery</span>
+          <span class="stage-card-count" id="discovery-count"></span>
         </div>
-
-        <!-- Right Column: Closest to Close & Marketing -->
-        <div class="pipeline-column-right">
-          <!-- Closest to Close -->
-          <div class="meeting-section" id="close-section">
-            <div class="section-header-row">
-              <div class="section-header-left">
-                <h4>Closest to Close</h4>
-                <span class="item-count" id="close-count"></span>
-              </div>
-            </div>
-            <div class="section-content">
-              <ul class="close-list" id="pipeline-close-list">
-                <li class="empty-state">No deals in late stages.</li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- Marketing -->
-          <div class="meeting-section" id="marketing-section">
-            <div class="section-header-row">
-              <div class="section-header-left">
-                <h4>Marketing</h4>
-                <span class="item-count" id="marketing-count"></span>
-              </div>
-            </div>
-            <div class="section-content">
-              <ul class="marketing-list" id="pipeline-marketing-list">
-                <li class="empty-state">No marketing updates.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        <div class="stage-card-value" id="discovery-value">$0</div>
+        <div class="stage-card-trend" id="discovery-trend"></div>
+        <div class="stage-card-deals collapsed" id="discovery-deals"></div>
       </div>
+      <div class="stage-card" data-stage="demo">
+        <div class="stage-card-header">
+          <span class="stage-card-title">Demo</span>
+          <span class="stage-card-count" id="demo-count"></span>
+        </div>
+        <div class="stage-card-value" id="demo-value">$0</div>
+        <div class="stage-card-trend" id="demo-trend"></div>
+        <div class="stage-card-deals collapsed" id="demo-deals"></div>
+      </div>
+      <div class="stage-card" data-stage="pilot">
+        <div class="stage-card-header">
+          <span class="stage-card-title">Pilot</span>
+          <span class="stage-card-count" id="pilot-count"></span>
+        </div>
+        <div class="stage-card-value" id="pilot-value">$0</div>
+        <div class="stage-card-trend" id="pilot-trend"></div>
+        <div class="stage-card-deals collapsed" id="pilot-deals"></div>
+      </div>
+    </div>
+
+    <!-- Minimal Highlights -->
+    <div class="pipeline-highlights-minimal" id="pipeline-highlights">
+      <div class="highlight-row" id="highlight-hot"></div>
+      <div class="highlight-row" id="highlight-updates"></div>
+      <div class="highlight-row" id="highlight-marketing"></div>
     </div>
   </section>
 

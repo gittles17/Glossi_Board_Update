@@ -927,127 +927,103 @@ class GlossiDashboard {
     if (totalEl) totalEl.textContent = this.formatMoney(grandTotal);
     if (closedEl) closedEl.textContent = this.formatMoney(closedTotal);
     
-    // Render Revenue by Stage
-    const stageListEl = document.getElementById('pipeline-stage-list');
-    if (stageListEl) {
-      const stageLabels = { discovery: 'Discovery', demo: 'Demo', pilot: 'Pilot' };
-      let stageHtml = '';
+    // Render each stage card
+    stages.forEach(stage => {
+      const data = stageTotals[stage];
+      const prevData = prevStageTotals[stage];
+      const diff = data.total - prevData.total;
       
-      stages.forEach(stage => {
-        const data = stageTotals[stage];
-        const prevData = prevStageTotals[stage];
-        const diff = data.total - prevData.total;
-        let trendClass = 'trend-neutral';
-        let trendText = '';
-        
+      // Value
+      const valueEl = document.getElementById(`${stage}-value`);
+      if (valueEl) valueEl.textContent = this.formatMoney(data.total);
+      
+      // Count
+      const countEl = document.getElementById(`${stage}-count`);
+      if (countEl) countEl.textContent = data.count > 0 ? `(${data.count})` : '';
+      
+      // Trend
+      const trendEl = document.getElementById(`${stage}-trend`);
+      if (trendEl) {
         if (previousData) {
           if (diff > 0) {
-            trendClass = 'trend-positive';
-            trendText = `+${this.formatMoney(diff)}`;
+            trendEl.textContent = `+${this.formatMoney(diff)}`;
+            trendEl.className = 'stage-card-trend trend-positive';
           } else if (diff < 0) {
-            trendClass = 'trend-negative';
-            trendText = this.formatMoney(diff);
+            trendEl.textContent = this.formatMoney(diff);
+            trendEl.className = 'stage-card-trend trend-negative';
           } else {
-            trendText = 'No change';
+            trendEl.textContent = 'No change';
+            trendEl.className = 'stage-card-trend trend-neutral';
           }
-        }
-        
-        stageHtml += `
-          <div class="stage-row">
-            <span class="stage-name">${stageLabels[stage]}</span>
-            <span class="stage-value">
-              <span class="stage-amount">${this.formatMoney(data.total)}</span>
-              <span class="stage-trend ${trendClass}">${trendText}</span>
-            </span>
-          </div>
-        `;
-      });
-      
-      // Add total row
-      const totalDiff = grandTotal - prevGrandTotal;
-      let totalTrendClass = 'trend-neutral';
-      let totalTrendText = '';
-      if (previousData) {
-        if (totalDiff > 0) {
-          totalTrendClass = 'trend-positive';
-          totalTrendText = `+${this.formatMoney(totalDiff)}`;
-        } else if (totalDiff < 0) {
-          totalTrendClass = 'trend-negative';
-          totalTrendText = this.formatMoney(totalDiff);
         } else {
-          totalTrendText = 'No change';
+          trendEl.textContent = '';
+          trendEl.className = 'stage-card-trend';
         }
       }
       
-      stageHtml += `
-        <div class="stage-row stage-total">
-          <span class="stage-name">Total Pipeline</span>
-          <span class="stage-value">
-            <span class="stage-amount">${this.formatMoney(grandTotal)}</span>
-            <span class="stage-trend ${totalTrendClass}">${totalTrendText}</span>
-          </span>
-        </div>
-      `;
-      
-      stageListEl.innerHTML = stageHtml;
-    }
-    
-    // Render Closest to Close (Pilot stage deals)
-    const closeListEl = document.getElementById('pipeline-close-list');
-    const closeCountEl = document.getElementById('close-count');
-    const pilotDeals = stageTotals['pilot']?.deals || [];
-    
-    if (closeCountEl) closeCountEl.textContent = pilotDeals.length > 0 ? pilotDeals.length : '';
-    
-    if (closeListEl) {
-      if (pilotDeals.length === 0) {
-        closeListEl.innerHTML = '<li class="empty-state">No deals in late stages.</li>';
-      } else {
-        closeListEl.innerHTML = pilotDeals.map(deal => `
-          <li>
-            <div class="close-deal">
-              <div class="close-deal-header">
-                <span class="close-deal-name">${this.escapeHtml(deal.name)}</span>
-                <span class="close-deal-value">${this.escapeHtml(deal.value || 'TBD')}</span>
-              </div>
-              ${deal.nextSteps ? `<div class="close-deal-blocker">${this.escapeHtml(deal.nextSteps)}</div>` : ''}
+      // Deals list (expandable)
+      const dealsEl = document.getElementById(`${stage}-deals`);
+      if (dealsEl) {
+        if (data.deals.length === 0) {
+          dealsEl.innerHTML = '<div class="empty-state">No deals</div>';
+        } else {
+          dealsEl.innerHTML = data.deals.map(deal => `
+            <div class="deal-item">
+              <span class="deal-name">${this.escapeHtml(deal.name)}</span>
+              <span class="deal-value">${this.escapeHtml(deal.value || 'TBD')}</span>
             </div>
-          </li>
-        `).join('');
+          `).join('');
+        }
+      }
+    });
+    
+    // Add click handlers for stage cards
+    document.querySelectorAll('.stage-card').forEach(card => {
+      card.onclick = () => {
+        const stage = card.dataset.stage;
+        const dealsEl = document.getElementById(`${stage}-deals`);
+        if (dealsEl) dealsEl.classList.toggle('collapsed');
+      };
+    });
+    
+    // Render minimal highlights
+    const hotEl = document.getElementById('highlight-hot');
+    const updatesEl = document.getElementById('highlight-updates');
+    const marketingEl = document.getElementById('highlight-marketing');
+    
+    // Hot deals (pilot stage with blockers)
+    const pilotDeals = stageTotals['pilot']?.deals || [];
+    if (hotEl) {
+      if (pilotDeals.length > 0) {
+        const hotItems = pilotDeals.slice(0, 3).map(d => {
+          const blocker = d.nextSteps ? ` (${d.nextSteps.substring(0, 40)}${d.nextSteps.length > 40 ? '...' : ''})` : '';
+          return `${d.name}${blocker}`;
+        }).join(' · ');
+        hotEl.innerHTML = `<span class="highlight-label label-hot">Hot:</span> ${this.escapeHtml(hotItems)}`;
+      } else {
+        hotEl.innerHTML = '';
       }
     }
     
-    // Render Key Updates
-    const updatesListEl = document.getElementById('pipeline-updates-list');
-    const updatesCountEl = document.getElementById('updates-count');
+    // Key updates
     const keyUpdates = highlights?.keyUpdates || [];
-    
-    if (updatesCountEl) updatesCountEl.textContent = keyUpdates.length > 0 ? keyUpdates.length : '';
-    
-    if (updatesListEl) {
-      if (keyUpdates.length === 0) {
-        updatesListEl.innerHTML = '<li class="empty-state">No updates yet.</li>';
+    if (updatesEl) {
+      if (keyUpdates.length > 0) {
+        const updateItems = keyUpdates.slice(0, 3).map(u => u.substring(0, 50) + (u.length > 50 ? '...' : '')).join(' · ');
+        updatesEl.innerHTML = `<span class="highlight-label label-new">New:</span> ${this.escapeHtml(updateItems)}`;
       } else {
-        updatesListEl.innerHTML = keyUpdates.map(update => `
-          <li>${this.escapeHtml(update)}</li>
-        `).join('');
+        updatesEl.innerHTML = '';
       }
     }
     
-    // Render Marketing
-    const marketingListEl = document.getElementById('pipeline-marketing-list');
-    const marketingCountEl = document.getElementById('marketing-count');
+    // Marketing
     const marketing = highlights?.marketing || [];
-    
-    if (marketingCountEl) marketingCountEl.textContent = marketing.length > 0 ? marketing.length : '';
-    
-    if (marketingListEl) {
-      if (marketing.length === 0) {
-        marketingListEl.innerHTML = '<li class="empty-state">No marketing updates.</li>';
+    if (marketingEl) {
+      if (marketing.length > 0) {
+        const marketingItems = marketing.slice(0, 3).map(m => m.substring(0, 40) + (m.length > 40 ? '...' : '')).join(' · ');
+        marketingEl.innerHTML = `<span class="highlight-label label-marketing">Marketing:</span> ${this.escapeHtml(marketingItems)}`;
       } else {
-        marketingListEl.innerHTML = marketing.map(item => `
-          <li>${this.escapeHtml(item)}</li>
-        `).join('');
+        marketingEl.innerHTML = '';
       }
     }
   }

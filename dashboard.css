@@ -5655,166 +5655,173 @@ body::after {
   margin-left: auto;
 }
 
-/* Pipeline Content Card (Week at a Glance style) */
-.pipeline-content-card {
-  background: rgba(255, 255, 255, 0.02);
+/* Pipeline Stage Cards (3 horizontal cards like Seed Raise) */
+.pipeline-stage-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.stage-card {
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-.pipeline-columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-}
-
-.pipeline-column-left {
-  border-right: 1px solid var(--border-color);
-}
-
-.pipeline-column-left .meeting-section:last-child,
-.pipeline-column-right .meeting-section:last-child {
-  border-bottom: none;
-}
-
-/* Stage List (Revenue by Stage) */
-.stage-list {
+  padding: var(--space-5);
   display: flex;
   flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.stage-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.stage-card-header {
+  display: flex;
+  align-items: center;
   gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
-.stage-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-2) 0;
-}
-
-.stage-row .stage-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.stage-row .stage-value {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.stage-row .stage-amount {
-  font-size: 14px;
+.stage-card-title {
+  font-size: 12px;
   font-weight: 600;
-  color: var(--accent-green);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.stage-card-count {
   font-family: var(--font-mono);
-}
-
-.stage-row .stage-trend {
   font-size: 11px;
-  font-weight: 500;
-  min-width: 50px;
-  text-align: right;
+  color: var(--text-dim);
 }
 
-.stage-row .stage-trend.trend-positive {
+.stage-card-value {
+  font-family: var(--font-sans);
+  font-size: 32px;
+  font-weight: 300;
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: var(--space-2);
+}
+
+.stage-card-trend {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.stage-card-trend.trend-positive {
   color: #10b981;
 }
 
-.stage-row .stage-trend.trend-negative {
+.stage-card-trend.trend-negative {
   color: #ef4444;
 }
 
-.stage-row .stage-trend.trend-neutral {
+.stage-card-trend.trend-neutral {
   color: var(--text-muted);
 }
 
-.stage-row.stage-total {
-  border-top: 1px solid var(--border-color);
+/* Expandable deals list */
+.stage-card-deals {
+  width: 100%;
+  margin-top: var(--space-3);
   padding-top: var(--space-3);
-  margin-top: var(--space-2);
+  border-top: 1px solid var(--border-color);
+  text-align: left;
 }
 
-.stage-row.stage-total .stage-name {
-  font-weight: 600;
+.stage-card-deals.collapsed {
+  display: none;
 }
 
-.stage-row.stage-total .stage-amount {
-  font-size: 16px;
-}
-
-/* Close List Styling */
-.close-list,
-.updates-list,
-.marketing-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.stage-card-deals .deal-item {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.close-list li,
-.updates-list li,
-.marketing-list li {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-.close-list li.empty-state,
-.updates-list li.empty-state,
-.marketing-list li.empty-state {
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-.close-deal {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.close-deal-header {
-  display: flex;
+  justify-content: space-between;
   align-items: center;
+  padding: var(--space-2) 0;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stage-card-deals .deal-item:last-child {
+  border-bottom: none;
+}
+
+.stage-card-deals .deal-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.stage-card-deals .deal-value {
+  color: var(--accent-green);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.stage-card-deals .empty-state {
+  color: var(--text-dim);
+  font-size: 11px;
+  font-style: italic;
+  text-align: center;
+  padding: var(--space-2);
+}
+
+/* Minimal Highlights */
+.pipeline-highlights-minimal {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
 }
 
-.close-deal-name {
-  font-weight: 500;
-  color: var(--text-primary);
+.highlight-row {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
 }
 
-.close-deal-value {
-  font-size: 12px;
+.highlight-row:empty {
+  display: none;
+}
+
+.highlight-label {
   font-weight: 600;
-  color: var(--accent-green);
-  font-family: var(--font-mono);
-}
-
-.close-deal-blocker {
-  font-size: 12px;
   color: var(--text-muted);
-  padding-left: var(--space-3);
+  margin-right: var(--space-2);
 }
 
-.close-deal-blocker::before {
-  content: "→ ";
-  color: var(--text-dim);
+.highlight-label.label-hot {
+  color: #ef4444;
+}
+
+.highlight-label.label-new {
+  color: #10b981;
+}
+
+.highlight-label.label-marketing {
+  color: #60a5fa;
 }
 
 /* Responsive Pipeline */
 @media (max-width: 900px) {
-  .pipeline-columns {
+  .pipeline-stage-cards {
     grid-template-columns: 1fr;
+    gap: var(--space-3);
   }
   
-  .pipeline-column-left {
-    border-right: none;
-    border-bottom: 1px solid var(--border-color);
+  .stage-card {
+    padding: var(--space-4);
+  }
+  
+  .stage-card-value {
+    font-size: 28px;
   }
 }
 
