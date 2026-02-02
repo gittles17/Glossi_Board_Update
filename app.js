@@ -784,6 +784,23 @@ class GlossiDashboard {
       this.deleteInvestor();
     });
 
+    // Pipeline update modal
+    document.getElementById('pipeline-update-btn').addEventListener('click', () => {
+      this.openPipelineUpdate();
+    });
+
+    document.getElementById('pipeline-modal-close').addEventListener('click', () => {
+      this.hideModal('pipeline-update-modal');
+    });
+
+    document.getElementById('pipeline-cancel').addEventListener('click', () => {
+      this.hideModal('pipeline-update-modal');
+    });
+
+    document.getElementById('pipeline-extract').addEventListener('click', () => {
+      this.processPipelineUpdate();
+    });
+
     // Color picker
     document.querySelectorAll('.color-option').forEach(option => {
       option.addEventListener('click', () => {
@@ -2703,95 +2720,142 @@ class GlossiDashboard {
   }
 
   /**
-   * Two-step import: Parse into chunks, then AI suggests destinations
+   * Simple auto-import: Opus analyzes and auto-adds to sections
    */
   async analyzeAndShowOptions() {
     if (!this.pendingDroppedContent) return;
     
     const content = this.pendingDroppedContent;
     
-    // Show loading modal
-    this.showModal('content-action-modal');
-    document.getElementById('unified-modal-title').textContent = 'Parsing Content...';
-    document.getElementById('content-analysis-result').innerHTML = `
-      <div class="unified-loading">
-        <div class="spinner"></div>
-        <p>Step 1: Breaking down your content...</p>
-      </div>
-    `;
-    document.getElementById('unified-preview-sections').innerHTML = '';
-    document.getElementById('unified-preview-footer').style.display = 'none';
+    // Show loading toast
+    this.showToast('Analyzing content...', 'info');
 
     try {
-      // Step 1: Parse document into intelligent chunks using Opus
-      const chunks = await this.parseIntoChunks(content);
-      console.log('Parsed chunks:', chunks);
+      // Single Opus call to extract everything
+      const result = await this.extractForCheatSheet(content);
+      console.log('Extraction result:', result);
       
-      // Update loading message
-      document.getElementById('content-analysis-result').innerHTML = `
-        <div class="unified-loading">
-          <div class="spinner"></div>
-          <p>Step 2: Analyzing ${chunks.length} items...</p>
-        </div>
-      `;
+      // Compress source for linking
+      const compressedSource = {
+        fileName: content.fileName,
+        type: content.type,
+        text: content.content?.text ? this.compressText(content.content.text).text : null,
+        addedAt: new Date().toISOString()
+      };
       
-      // Step 2: Get AI suggestions for each chunk
-      const categorizedChunks = await this.categorizeChunks(chunks);
-      console.log('Categorized:', categorizedChunks);
+      let counts = { talkingPoints: 0, quotes: 0, notes: 0 };
       
-      // Store for later
-      this.pendingChunks = categorizedChunks;
+      // Auto-add talking points
+      if (result.talkingPoints?.length > 0) {
+        result.talkingPoints.forEach(tp => {
+          storage.addTalkingPoint(tp.title, tp.content, tp.category || 'core');
+          counts.talkingPoints++;
+        });
+      }
       
-      // Step 3: Show import wizard with drag-drop
-      this.showImportWizard(categorizedChunks, content.fileName);
+      // Auto-add quotes
+      if (result.quotes?.length > 0) {
+        result.quotes.forEach(q => {
+          storage.addQuote({
+            quote: q.quote,
+            source: q.source,
+            context: q.context || '',
+            sourceFile: compressedSource
+          });
+          counts.quotes++;
+        });
+      }
+      
+      // Auto-add notes
+      if (result.notes?.length > 0) {
+        result.notes.forEach(n => {
+          storage.addThought({
+            content: `TITLE: ${n.title}\n${n.content}`,
+            fileName: content.fileName,
+            originalSource: compressedSource
+          });
+          counts.notes++;
+        });
+      }
+      
+      // Refresh UI
+      this.data = storage.getData();
+      this.render();
+      
+      // Build summary toast
+      const parts = [];
+      if (counts.talkingPoints) parts.push(`${counts.talkingPoints} talking points`);
+      if (counts.quotes) parts.push(`${counts.quotes} quotes`);
+      if (counts.notes) parts.push(`${counts.notes} notes`);
+      
+      if (parts.length > 0) {
+        this.showToast(`Added: ${parts.join(', ')}`, 'success');
+      } else {
+        this.showToast('No items extracted', 'info');
+      }
+      
+      this.pendingDroppedContent = null;
       
     } catch (error) {
       console.error('Import error:', error);
-      this.hideModal('content-action-modal');
-      this.showToast('Failed to parse: ' + error.message, 'error');
+      this.showToast('Failed to analyze: ' + error.message, 'error');
       this.pendingDroppedContent = null;
     }
   }
 
   /**
-   * Step 1: Parse document into intelligent chunks using Opus
+   * Extract content for cheat sheet (talking points, quotes, notes)
    */
-  async parseIntoChunks(content) {
+  async extractForCheatSheet(content) {
     const textContent = content.content?.text || '';
     const isImage = content.type === 'image';
     
-    const prompt = `Parse this document into logical, bite-sized chunks for an investor dashboard import.
+    const existingTalkingPoints = this.data?.talkingPoints || [];
+    const existingContext = existingTalkingPoints.length > 0
+      ? `Current talking points: ${existingTalkingPoints.map(tp => tp.title).join(', ')}`
+      : 'No existing talking points.';
+    
+    const prompt = `Extract content for an investor cheat sheet. Be thorough but selective.
 
-DOCUMENT:
-${isImage ? '[Image content - extract all visible text and data]' : textContent.substring(0, 15000)}
+${existingContext}
 
-Break into chunks based on:
-- Section headings with their content
-- Individual bullet points or list items (each as separate chunk)
-- Tables (each row as chunk if company data)
-- Blockquotes (each as separate chunk)
-- Key metrics/numbers with context
-- Company/partner mentions with context
+CONTENT TO ANALYZE:
+${isImage ? '[Image - extract all visible text]' : textContent.substring(0, 12000)}
 
-Return JSON array:
+Extract into three categories:
+
+1. TALKING POINTS - Strong investor-ready statements
+   - Punchy, casual language (like talking to a friend)
+   - Concrete numbers and traction
+   - Max 5 new talking points
+   - Don't duplicate existing ones
+
+2. QUOTES - Customer/partner/investor quotes
+   - Exact quote text with attribution
+   - Only genuine quotes (in quotation marks or blockquotes)
+
+3. NOTES - Reference material worth saving
+   - Team updates, context, research
+   - Info that's useful but not investor-facing
+
+Return JSON:
 {
-  "chunks": [
-    {
-      "id": 1,
-      "title": "Short descriptive title",
-      "content": "The actual content (keep it concise but complete)",
-      "type": "metric|company|quote|insight|partnership|team|other"
-    }
+  "talkingPoints": [
+    { "title": "Short punchy title", "content": "1-2 sentences, casual tone", "category": "core|traction|market|testimonials" }
+  ],
+  "quotes": [
+    { "quote": "The exact quote text", "source": "Name, Title/Company", "context": "Brief context" }
+  ],
+  "notes": [
+    { "title": "Note title", "content": "The content" }
   ]
 }
 
-RULES:
-1. Each chunk should be ONE logical piece of information
-2. Don't merge different topics into one chunk
-3. Keep company names, dollar amounts, and specific details intact
-4. Quotes should include attribution
-5. Be thorough - don't skip any substantive information
-6. 15-40 chunks is typical for a detailed document`;
+TONE RULES:
+- Talking points should sound like a confident founder at a coffee chat
+- No corporate jargon or buzzwords
+- Specific > vague (use real numbers)
+- Short > long`;
 
     let messages;
     
@@ -2820,14 +2884,130 @@ RULES:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 8000,
+        max_tokens: 4000,
         messages
       })
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error?.message || 'Parsing failed');
+      throw new Error(error.error?.message || 'Extraction failed');
+    }
+
+    const result = await response.json();
+    const responseText = result.content[0].text;
+    
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Failed to parse response');
+    
+    return JSON.parse(jsonMatch[0]);
+  }
+
+  /**
+   * Open pipeline update modal
+   */
+  openPipelineUpdate() {
+    document.getElementById('pipeline-paste-text').value = '';
+    this.showModal('pipeline-update-modal');
+    document.getElementById('pipeline-paste-text').focus();
+  }
+
+  /**
+   * Process pasted pipeline email
+   */
+  async processPipelineUpdate() {
+    const text = document.getElementById('pipeline-paste-text').value.trim();
+    if (!text) {
+      this.showToast('Please paste your pipeline email', 'error');
+      return;
+    }
+    
+    this.showToast('Extracting deals...', 'info');
+    
+    try {
+      const deals = await this.extractPipelineDeals(text);
+      
+      if (deals.length === 0) {
+        this.showToast('No deals found in text', 'info');
+        return;
+      }
+      
+      // Add/update deals
+      deals.forEach(deal => {
+        storage.addPipelineDeal({
+          name: deal.name,
+          value: deal.value || '',
+          stage: deal.stage || 'discovery',
+          timing: deal.timing || ''
+        });
+      });
+      
+      // Update pipeline total if provided
+      if (deals.pipelineTotal) {
+        this.data.pipeline.totalValue = deals.pipelineTotal;
+        const stat = this.data.stats.find(s => s.id === 'pipeline');
+        if (stat) stat.value = deals.pipelineTotal;
+      }
+      
+      this.data = storage.getData();
+      this.render();
+      this.hideModal('pipeline-update-modal');
+      this.showToast(`Pipeline updated: ${deals.length} deals`, 'success');
+      
+    } catch (error) {
+      console.error('Pipeline update error:', error);
+      this.showToast('Failed to extract: ' + error.message, 'error');
+    }
+  }
+
+  /**
+   * Extract pipeline deals from email text
+   */
+  async extractPipelineDeals(text) {
+    const prompt = `Extract sales pipeline deals from this email/text.
+
+TEXT:
+${text.substring(0, 8000)}
+
+Extract each company/deal mentioned with:
+- Company name
+- Deal value (if mentioned)
+- Stage: discovery, demo, validation, pilot, or closed
+- Timing (Q1, Q2, etc. if mentioned)
+
+Also extract the total pipeline value if mentioned.
+
+Return JSON:
+{
+  "pipelineTotal": "$1.5M+" or null,
+  "deals": [
+    { "name": "Company Name", "value": "$50K", "stage": "pilot", "timing": "Q1" }
+  ]
+}
+
+RULES:
+- Only include actual sales prospects/deals
+- Partnerships and integrations are NOT pipeline deals
+- Stage mapping: "talking to" = discovery, "demo scheduled" = demo, "evaluating" = validation, "pilot" = pilot`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.settings.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Extraction failed');
     }
 
     const result = await response.json();
@@ -2837,53 +3017,10 @@ RULES:
     if (!jsonMatch) throw new Error('Failed to parse response');
     
     const parsed = JSON.parse(jsonMatch[0]);
-    return parsed.chunks || [];
+    const deals = parsed.deals || [];
+    deals.pipelineTotal = parsed.pipelineTotal;
+    return deals;
   }
-
-  /**
-   * Step 2: Categorize chunks with AI suggestions
-   */
-  async categorizeChunks(chunks) {
-    const siteContext = this.buildSiteContext();
-    
-    const prompt = `Categorize these content chunks for an investor cheat sheet dashboard.
-
-CURRENT SITE DATA:
-- Pipeline: ${siteContext.pipelineTotal} (${siteContext.pipeline.length} deals)
-- Talking Points: ${siteContext.talkingPoints.length}
-- Quotes: ${siteContext.quotes.length}
-
-CHUNKS TO CATEGORIZE:
-${chunks.map((c, i) => `${i + 1}. [${c.type}] "${c.title}": ${c.content.substring(0, 150)}...`).join('\n')}
-
-For EACH chunk, suggest the best destination:
-- "pipeline" - Sales deals with companies (name, value, stage)
-- "partnership" - Strategic partners, integrations, channel partners
-- "talkingPoint" - Strong investor-ready statement (rewrite to be punchy)
-- "quote" - Customer/partner quote with attribution
-- "note" - Reference material worth saving
-- "skip" - Not useful for the dashboard
-
-Return JSON:
-{
-  "categorized": [
-    {
-      "chunkId": 1,
-      "destination": "pipeline|partnership|talkingPoint|quote|note|skip",
-      "confidence": "high|medium|low",
-      "displayTitle": "Short title for wizard",
-      "displayContent": "Content as it should appear (rewrite if needed for clarity)",
-      "metadata": { "value": "$50K", "stage": "pilot", "source": "Person Name" }
-    }
-  ]
-}
-
-RULES:
-1. Be generous with categorization - when in doubt, use "note" not "skip"
-2. Rewrite talkingPoints to be punchy and investor-friendly (casual tone)
-3. Extract company name, value, stage for pipeline items
-4. Extract quote text and source for quotes
-5. Partnership = integrations, resellers, tech partners (not sales prospects)`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -2925,281 +3062,6 @@ RULES:
         metadata: cat.metadata || {}
       };
     });
-  }
-
-  /**
-   * Step 3: Show import wizard with drag-drop between categories
-   */
-  showImportWizard(chunks, fileName) {
-    document.getElementById('unified-modal-title').textContent = `Import: ${fileName || 'Content'}`;
-    document.getElementById('content-analysis-result').innerHTML = '';
-    
-    // Group chunks by destination
-    const groups = {
-      pipeline: [],
-      partnership: [],
-      talkingPoint: [],
-      quote: [],
-      note: [],
-      skip: []
-    };
-    
-    chunks.forEach(chunk => {
-      const dest = chunk.destination || 'note';
-      if (groups[dest]) {
-        groups[dest].push(chunk);
-      } else {
-        groups.note.push(chunk);
-      }
-    });
-    
-    const groupLabels = {
-      pipeline: { label: 'Pipeline', color: '#3b82f6', icon: '💼' },
-      partnership: { label: 'Partnerships', color: '#8b5cf6', icon: '🤝' },
-      talkingPoint: { label: 'Talking Points', color: '#22c55e', icon: '💬' },
-      quote: { label: 'Quotes', color: '#f59e0b', icon: '❝' },
-      note: { label: 'Notes', color: '#6b7280', icon: '📝' },
-      skip: { label: 'Skip', color: '#374151', icon: '⊘' }
-    };
-    
-    let html = '<div class="import-wizard">';
-    
-    Object.entries(groups).forEach(([key, items]) => {
-      const info = groupLabels[key];
-      html += `
-        <div class="wizard-group" data-group="${key}">
-          <div class="wizard-group-header" style="border-left-color: ${info.color}">
-            <span class="group-icon">${info.icon}</span>
-            <span class="group-label">${info.label}</span>
-            <span class="group-count">${items.length}</span>
-          </div>
-          <div class="wizard-group-items" data-group="${key}">
-            ${items.map(item => `
-              <div class="wizard-item" draggable="true" data-chunk-id="${item.id}">
-                <div class="item-drag-handle">⋮⋮</div>
-                <div class="item-body">
-                  <div class="item-title">${this.escapeHtml(item.displayTitle)}</div>
-                  <div class="item-preview">${this.escapeHtml(item.displayContent?.substring(0, 100))}${item.displayContent?.length > 100 ? '...' : ''}</div>
-                  ${item.metadata?.value ? `<div class="item-meta">${item.metadata.value} ${item.metadata.stage ? '• ' + item.metadata.stage : ''}</div>` : ''}
-                  ${item.metadata?.source ? `<div class="item-meta">- ${item.metadata.source}</div>` : ''}
-                </div>
-                ${item.confidence === 'low' ? '<div class="item-confidence" title="Low confidence suggestion">?</div>' : ''}
-              </div>
-            `).join('')}
-            ${items.length === 0 ? '<div class="wizard-empty">Drag items here</div>' : ''}
-          </div>
-        </div>
-      `;
-    });
-    
-    html += '</div>';
-    
-    document.getElementById('unified-preview-sections').innerHTML = html;
-    document.getElementById('unified-preview-sections').style.display = 'block';
-    
-    // Setup drag-drop
-    this.setupWizardDragDrop();
-    
-    // Show footer
-    const footerEl = document.getElementById('unified-preview-footer');
-    footerEl.innerHTML = `
-      <div class="wizard-footer-info">
-        <span class="footer-count">${chunks.length - groups.skip.length} items to import</span>
-      </div>
-      <div class="wizard-footer-actions">
-        <button class="btn-secondary" onclick="window.dashboard.cancelImport()">Cancel</button>
-        <button class="btn-primary" onclick="window.dashboard.applyImport()">Import Selected</button>
-      </div>
-    `;
-    footerEl.style.display = 'flex';
-  }
-
-  /**
-   * Setup drag-drop between wizard groups
-   */
-  setupWizardDragDrop() {
-    const items = document.querySelectorAll('.wizard-item');
-    const groups = document.querySelectorAll('.wizard-group-items');
-    
-    let draggedItem = null;
-    
-    items.forEach(item => {
-      item.addEventListener('dragstart', (e) => {
-        draggedItem = item;
-        item.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-      });
-      
-      item.addEventListener('dragend', () => {
-        item.classList.remove('dragging');
-        draggedItem = null;
-        groups.forEach(g => g.classList.remove('drag-over'));
-        this.updateImportCounts();
-      });
-    });
-    
-    groups.forEach(group => {
-      group.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        group.classList.add('drag-over');
-      });
-      
-      group.addEventListener('dragleave', () => {
-        group.classList.remove('drag-over');
-      });
-      
-      group.addEventListener('drop', (e) => {
-        e.preventDefault();
-        group.classList.remove('drag-over');
-        
-        if (draggedItem) {
-          // Remove empty placeholder if exists
-          const empty = group.querySelector('.wizard-empty');
-          if (empty) empty.remove();
-          
-          // Move item to new group
-          group.appendChild(draggedItem);
-          
-          // Update chunk's destination
-          const chunkId = parseInt(draggedItem.dataset.chunkId);
-          const newDest = group.dataset.group;
-          const chunk = this.pendingChunks.find(c => c.id === chunkId);
-          if (chunk) chunk.destination = newDest;
-          
-          // Add empty placeholder to old group if needed
-          document.querySelectorAll('.wizard-group-items').forEach(g => {
-            if (g.children.length === 0) {
-              g.innerHTML = '<div class="wizard-empty">Drag items here</div>';
-            }
-          });
-        }
-      });
-    });
-  }
-
-  /**
-   * Update import counts in footer
-   */
-  updateImportCounts() {
-    const skipCount = document.querySelectorAll('.wizard-group[data-group="skip"] .wizard-item').length;
-    const totalCount = document.querySelectorAll('.wizard-item').length;
-    const importCount = totalCount - skipCount;
-    
-    const countEl = document.querySelector('.footer-count');
-    if (countEl) {
-      countEl.textContent = `${importCount} items to import`;
-    }
-    
-    // Update group counts
-    document.querySelectorAll('.wizard-group').forEach(group => {
-      const count = group.querySelectorAll('.wizard-item').length;
-      const countEl = group.querySelector('.group-count');
-      if (countEl) countEl.textContent = count;
-    });
-  }
-
-  /**
-   * Cancel import
-   */
-  cancelImport() {
-    this.hideModal('content-action-modal');
-    this.pendingDroppedContent = null;
-    this.pendingChunks = null;
-  }
-
-  /**
-   * Apply import from wizard
-   */
-  async applyImport() {
-    if (!this.pendingChunks) return;
-    
-    const content = this.pendingDroppedContent;
-    
-    // Compress source for linking
-    const compressedSource = {
-      fileName: content?.fileName,
-      type: content?.type,
-      text: content?.content?.text ? this.compressText(content.content.text).text : null,
-      addedAt: new Date().toISOString()
-    };
-    
-    let counts = { pipeline: 0, partnership: 0, talkingPoint: 0, quote: 0, note: 0 };
-    
-    // Get items from each group (based on current DOM position after drag-drop)
-    document.querySelectorAll('.wizard-group').forEach(groupEl => {
-      const groupName = groupEl.dataset.group;
-      if (groupName === 'skip') return;
-      
-      groupEl.querySelectorAll('.wizard-item').forEach(itemEl => {
-        const chunkId = parseInt(itemEl.dataset.chunkId);
-        const chunk = this.pendingChunks.find(c => c.id === chunkId);
-        if (!chunk) return;
-        
-        if (groupName === 'pipeline') {
-          storage.addPipelineDeal({
-            name: chunk.metadata?.name || chunk.displayTitle,
-            value: chunk.metadata?.value || '',
-            stage: chunk.metadata?.stage || 'discovery',
-            sourceFile: compressedSource
-          });
-          counts.pipeline++;
-        }
-        else if (groupName === 'partnership') {
-          storage.addPipelineDeal({
-            name: chunk.metadata?.name || chunk.displayTitle,
-            value: chunk.metadata?.value || '',
-            stage: 'partnership',
-            note: chunk.displayContent,
-            category: 'partnerships',
-            sourceFile: compressedSource
-          });
-          counts.partnership++;
-        }
-        else if (groupName === 'talkingPoint') {
-          storage.addTalkingPoint(
-            chunk.displayTitle,
-            chunk.displayContent,
-            chunk.metadata?.category || 'core'
-          );
-          counts.talkingPoint++;
-        }
-        else if (groupName === 'quote') {
-          storage.addQuote({
-            quote: chunk.displayContent,
-            source: chunk.metadata?.source || 'Unknown',
-            sourceFile: compressedSource
-          });
-          counts.quote++;
-        }
-        else if (groupName === 'note') {
-          storage.addThought({
-            content: `TITLE: ${chunk.displayTitle}\n${chunk.displayContent}`,
-            fileName: content?.fileName,
-            originalSource: compressedSource
-          });
-          counts.note++;
-        }
-      });
-    });
-    
-    // Refresh UI
-    this.data = storage.getData();
-    this.render();
-    
-    // Build summary
-    const parts = [];
-    if (counts.pipeline) parts.push(`${counts.pipeline} deals`);
-    if (counts.partnership) parts.push(`${counts.partnership} partnerships`);
-    if (counts.talkingPoint) parts.push(`${counts.talkingPoint} talking points`);
-    if (counts.quote) parts.push(`${counts.quote} quotes`);
-    if (counts.note) parts.push(`${counts.note} notes`);
-    
-    this.hideModal('content-action-modal');
-    this.showToast(`Imported: ${parts.join(', ')}`, 'success');
-    
-    this.pendingDroppedContent = null;
-    this.pendingChunks = null;
   }
 
   /**

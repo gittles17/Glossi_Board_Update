@@ -1339,6 +1339,67 @@ body::after {
   background: rgba(239, 68, 68, 0.1);
 }
 
+/* Pipeline Update Button */
+.pipeline-update-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pipeline-update-btn:hover {
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.pipeline-update-btn svg {
+  opacity: 0.7;
+}
+
+.pipeline-update-btn:hover svg {
+  opacity: 1;
+}
+
+/* Pipeline Paste Modal */
+.modal-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: var(--space-4);
+}
+
+.pipeline-paste-area {
+  width: 100%;
+  min-height: 200px;
+  padding: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  resize: vertical;
+}
+
+.pipeline-paste-area:focus {
+  outline: none;
+  border-color: var(--accent-green);
+}
+
+.pipeline-paste-area::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
 /* ============================================
    TALKING POINTS EXPANDED
    ============================================ */
