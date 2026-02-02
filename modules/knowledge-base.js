@@ -908,102 +908,125 @@ ${linksData}
   getPipelineData() {
     const lines = [];
     
-    // Try multiple sources for pipeline data
+    // Primary source: Current pipeline email data (this is where the main pipeline data lives)
+    const pipelineEmail = this.storage.getPipelineEmail?.() || this.storage.getData()?.pipelineEmail;
     
-    // Source 1: Pipeline history (from pasted emails)
-    const history = this.storage.getPipelineHistory();
-    if (history && history.length > 0) {
-      const latest = history[0]; // Already sorted newest first
+    if (pipelineEmail) {
+      // Get update date
+      if (pipelineEmail.updatedAt) {
+        lines.push(`Pipeline Data (as of ${new Date(pipelineEmail.updatedAt).toLocaleDateString()}):`);
+      } else {
+        lines.push('Current Pipeline:');
+      }
       
-      if (latest.date) {
-        lines.push(`Pipeline Email (${new Date(latest.date).toLocaleDateString()}):`);
-      }
-      if (latest.pipelineTotal) {
-        lines.push(`Total Pipeline: ${latest.pipelineTotal}`);
-      }
+      // Calculate total from deals
+      const deals = pipelineEmail.deals || [];
+      let totalPipeline = 0;
+      const stageBreakdown = {};
+      
+      deals.forEach(deal => {
+        const value = this.parseMoneyValue(deal.value || deal.amount || '0');
+        totalPipeline += value;
+        const stage = deal.stage || 'unknown';
+        if (!stageBreakdown[stage]) {
+          stageBreakdown[stage] = { total: 0, count: 0, deals: [] };
+        }
+        stageBreakdown[stage].total += value;
+        stageBreakdown[stage].count++;
+        stageBreakdown[stage].deals.push(deal);
+      });
+      
+      lines.push(`Total Pipeline: $${(totalPipeline / 1000).toFixed(0)}K`);
+      lines.push('');
       
       // Stage breakdown
-      if (latest.stages) {
-        lines.push('\nPipeline by Stage:');
-        Object.entries(latest.stages).forEach(([stage, data]) => {
-          if (data && data.revenue) {
-            lines.push(`- ${stage}: ${data.revenue} (${data.count || 0} deals)`);
+      if (Object.keys(stageBreakdown).length > 0) {
+        lines.push('Pipeline by Stage:');
+        Object.entries(stageBreakdown).forEach(([stage, data]) => {
+          lines.push(`- ${stage.charAt(0).toUpperCase() + stage.slice(1)}: $${(data.total / 1000).toFixed(0)}K (${data.count} deals)`);
+        });
+      }
+      
+      // All deals
+      if (deals.length > 0) {
+        lines.push('\nAll Active Deals:');
+        deals.forEach(deal => {
+          const name = deal.name || deal.company || 'Unknown';
+          const value = deal.value || deal.amount || 'TBD';
+          const stage = deal.stage || 'unknown';
+          const timing = deal.timing ? ` - Timing: ${deal.timing}` : '';
+          const nextSteps = deal.nextSteps ? ` - Next: ${deal.nextSteps}` : '';
+          lines.push(`- ${name}: ${value} (${stage})${timing}${nextSteps}`);
+        });
+      }
+      
+      // Highlights section
+      const highlights = pipelineEmail.highlights || {};
+      
+      // Hot deals
+      if (highlights.hotDeals && highlights.hotDeals.length > 0) {
+        lines.push('\nHot Deals (Closest to Close):');
+        highlights.hotDeals.forEach(item => {
+          if (typeof item === 'string') {
+            lines.push(`- ${item}`);
+          } else {
+            lines.push(`- ${item.name || item.company}: ${item.value || item.amount || ''}${item.notes ? ' - ' + item.notes : ''}`);
           }
         });
       }
       
-      // Deals
-      if (latest.deals && latest.deals.length > 0) {
-        lines.push('\nActive Deals:');
-        latest.deals.forEach(deal => {
-          const name = deal.company || deal.name || 'Unknown';
-          const amount = deal.amount || deal.value || 'TBD';
-          const stage = deal.stage || 'Unknown';
-          lines.push(`- ${name}: ${amount} (${stage})${deal.nextSteps ? ' - Next: ' + deal.nextSteps : ''}`);
-        });
-      }
-      
-      // Hot deals
-      if (latest.hotDeals && latest.hotDeals.length > 0) {
-        lines.push('\nHot Deals (Closest to Close):');
-        latest.hotDeals.forEach(deal => {
-          const name = deal.company || deal.name || 'Unknown';
-          const amount = deal.amount || deal.value || 'TBD';
-          lines.push(`- ${name}: ${amount}${deal.blockers ? ' - Blockers: ' + deal.blockers : ''}`);
-        });
-      }
-      
-      // Highlights
-      if (latest.highlights && latest.highlights.length > 0) {
-        lines.push('\nPipeline Highlights:');
-        latest.highlights.forEach(h => lines.push(`- ${h}`));
-      }
-      
-      // Key updates text
-      if (latest.keyUpdates) {
+      // Key updates
+      if (highlights.keyUpdates && highlights.keyUpdates.length > 0) {
         lines.push('\nKey Updates:');
-        lines.push(latest.keyUpdates);
+        highlights.keyUpdates.forEach(update => lines.push(`- ${update}`));
+      }
+      
+      // Marketing
+      if (highlights.marketing && highlights.marketing.length > 0) {
+        lines.push('\nMarketing Updates:');
+        highlights.marketing.forEach(item => lines.push(`- ${item}`));
       }
     }
     
-    // Source 2: Pipeline email content (raw parsed data)
-    const pipelineEmail = this.storage.getPipelineEmail?.() || this.storage.data?.pipelineEmail;
-    if (pipelineEmail && lines.length === 0) {
-      if (pipelineEmail.pipelineTotal) {
-        lines.push(`Total Pipeline: ${pipelineEmail.pipelineTotal}`);
-      }
-      if (pipelineEmail.deals && pipelineEmail.deals.length > 0) {
-        lines.push('\nDeals:');
-        pipelineEmail.deals.forEach(deal => {
-          lines.push(`- ${deal.company || deal.name}: ${deal.amount || deal.value} (${deal.stage})`);
+    // Secondary source: Pipeline history (for historical context)
+    const history = this.storage.getPipelineHistory?.() || [];
+    if (history && history.length > 0 && lines.length === 0) {
+      const latest = history[0];
+      if (latest.deals && latest.deals.length > 0) {
+        lines.push('Historical Pipeline Data:');
+        latest.deals.forEach(deal => {
+          const name = deal.name || deal.company || 'Unknown';
+          const value = deal.value || deal.amount || 'TBD';
+          lines.push(`- ${name}: ${value} (${deal.stage || 'unknown'})`);
         });
       }
     }
     
-    // Source 3: Stats (basic metrics)
-    const data = this.storage.getData();
-    if (data && data.stats) {
-      const pipelineStat = data.stats.find(s => s.id === 'pipeline' || s.label?.toLowerCase().includes('pipeline'));
-      if (pipelineStat && pipelineStat.value && pipelineStat.value !== '$0') {
-        if (lines.length === 0) {
-          lines.push('Pipeline Metrics:');
+    // Fallback: Basic stats
+    if (lines.length === 0) {
+      const data = this.storage.getData();
+      if (data && data.stats) {
+        const pipelineStat = data.stats.find(s => s.id === 'pipeline' || s.label?.toLowerCase().includes('pipeline'));
+        if (pipelineStat && pipelineStat.value) {
+          lines.push(`Pipeline Value: ${pipelineStat.value}`);
         }
-        lines.push(`\nDashboard Pipeline Value: ${pipelineStat.value}`);
-      }
-      
-      // Add other relevant stats
-      const prospectsStat = data.stats.find(s => s.id === 'prospects' || s.label?.toLowerCase().includes('prospect'));
-      if (prospectsStat && prospectsStat.value && prospectsStat.value !== '0') {
-        lines.push(`Prospects: ${prospectsStat.value}`);
-      }
-      
-      const closedStat = data.stats.find(s => s.id === 'closed' || s.label?.toLowerCase().includes('closed'));
-      if (closedStat) {
-        lines.push(`Closed: ${closedStat.value}${closedStat.note ? ' (' + closedStat.note + ')' : ''}`);
       }
     }
     
     return lines.length > 0 ? lines.join('\n') : null;
+  }
+  
+  /**
+   * Parse money value string to number
+   */
+  parseMoneyValue(value) {
+    if (!value) return 0;
+    if (typeof value === 'number') return value;
+    const str = String(value).replace(/[^0-9.kKmM]/g, '');
+    let num = parseFloat(str) || 0;
+    if (/[kK]/.test(value)) num *= 1000;
+    if (/[mM]/.test(value)) num *= 1000000;
+    return num;
   }
   
   /**
