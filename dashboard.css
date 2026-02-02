@@ -5603,6 +5603,7 @@ body::after {
   align-items: center;
   gap: var(--space-4);
   margin-bottom: var(--space-4);
+  flex-wrap: wrap;
 }
 
 .pipeline-header h2 {
@@ -5610,6 +5611,35 @@ body::after {
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
+}
+
+.pipeline-progress {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.pipeline-total {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pipeline-progress .progress-divider {
+  font-size: 24px;
+  color: var(--text-muted);
+}
+
+.pipeline-closed {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--accent-green);
+}
+
+.pipeline-closed-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: -4px;
 }
 
 .pipeline-summary {
@@ -5706,14 +5736,14 @@ body::after {
   color: var(--text-muted);
 }
 
-/* Total card styling */
-.pipeline-card.pipeline-card-total {
-  background: rgba(16, 185, 129, 0.08);
-  border-color: rgba(16, 185, 129, 0.2);
+/* Partnerships card styling */
+.pipeline-card.pipeline-card-partnerships {
+  background: rgba(167, 139, 250, 0.08);
+  border-color: rgba(167, 139, 250, 0.2);
 }
 
-.pipeline-card.pipeline-card-total .card-value {
-  font-size: 32px;
+.pipeline-card.pipeline-card-partnerships .card-value {
+  color: #a78bfa;
 }
 
 /* Card deals dropdown */

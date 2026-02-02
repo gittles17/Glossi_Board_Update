@@ -125,6 +125,12 @@
   <section class="pipeline-section">
     <div class="pipeline-header">
       <h2>Pipeline</h2>
+      <div class="pipeline-progress">
+        <span class="pipeline-total" id="pipeline-total-value">$0</span>
+        <span class="progress-divider">/</span>
+        <span class="pipeline-closed" id="pipeline-closed-value">$0</span>
+        <span class="pipeline-closed-label">closed</span>
+      </div>
       <button class="add-btn-small" id="edit-pipeline-btn" title="Update Pipeline">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -133,13 +139,8 @@
       </button>
     </div>
     
-    <!-- 5 Square Cards: Total + 4 Stages -->
+    <!-- 5 Square Cards: 4 Stages + Partnerships -->
     <div class="pipeline-cards" id="pipeline-funnel">
-      <div class="pipeline-card pipeline-card-total" data-stage="total">
-        <span class="card-title">Total</span>
-        <span class="card-value" id="pipeline-total-value">$0</span>
-        <span class="card-change" id="pipeline-change-total"></span>
-      </div>
       <div class="pipeline-card" data-stage="discovery" onclick="window.dashboard.togglePipelineCard('discovery')">
         <span class="card-title">Discovery</span>
         <span class="card-value" id="pipeline-total-discovery">$0</span>
@@ -163,6 +164,11 @@
         <span class="card-value" id="pipeline-total-closing">$0</span>
         <span class="card-change" id="pipeline-change-closing"></span>
         <div class="card-deals collapsed" id="pipeline-deals-closing"></div>
+      </div>
+      <div class="pipeline-card pipeline-card-partnerships" data-stage="partnerships">
+        <span class="card-title">Partnerships</span>
+        <span class="card-value" id="pipeline-total-partnerships">0</span>
+        <span class="card-change" id="pipeline-change-partnerships"></span>
       </div>
     </div>
 

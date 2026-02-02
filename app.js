@@ -889,24 +889,29 @@ class GlossiDashboard {
       prevGrandTotal += stageTotal;
     });
     
-    // Render total card with change
+    // Get closed deals and partnerships from old pipeline data
+    const allClients = storage.getAllPipelineClients?.() || [];
+    const closedDeals = allClients.filter(c => c.stage === 'closed' || c.category === 'closed');
+    let closedTotal = 0;
+    closedDeals.forEach(d => { closedTotal += this.parseMoneyValue(d.value); });
+    
+    const partnerships = allClients.filter(c => c.category === 'partnerships' || c.stage === 'partnership');
+    
+    // Render header totals (total pipeline / closed)
     const totalEl = document.getElementById('pipeline-total-value');
-    const totalChangeEl = document.getElementById('pipeline-change-total');
+    const closedEl = document.getElementById('pipeline-closed-value');
     if (totalEl) totalEl.textContent = this.formatMoney(grandTotal);
-    if (totalChangeEl) {
-      const totalDiff = grandTotal - prevGrandTotal;
-      this.renderChangeIndicator(totalChangeEl, totalDiff, previousData);
-    }
+    if (closedEl) closedEl.textContent = this.formatMoney(closedTotal);
     
     // Render each stage card
     stages.forEach(stage => {
       const data = stageTotals[stage];
       const prevData = prevStageTotals[stage];
-      const totalEl = document.getElementById(`pipeline-total-${stage}`);
+      const stageValueEl = document.getElementById(`pipeline-total-${stage}`);
       const changeEl = document.getElementById(`pipeline-change-${stage}`);
       const dealsEl = document.getElementById(`pipeline-deals-${stage}`);
       
-      if (totalEl) totalEl.textContent = this.formatMoney(data.total);
+      if (stageValueEl) stageValueEl.textContent = this.formatMoney(data.total);
       
       // Render change indicator
       if (changeEl) {
@@ -930,6 +935,10 @@ class GlossiDashboard {
         }
       }
     });
+    
+    // Render partnerships card
+    const partnershipsEl = document.getElementById('pipeline-total-partnerships');
+    if (partnershipsEl) partnershipsEl.textContent = partnerships.length;
     
     // Render highlights
     this.renderPipelineHighlights(highlights, pipelineData?.updatedAt);
