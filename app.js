@@ -915,7 +915,7 @@ class GlossiDashboard {
     try { this.renderPipeline(); } catch (e) { console.error('renderPipeline error:', e); }
     try { this.renderTalkingPoints(); } catch (e) { console.error('renderTalkingPoints error:', e); }
     try { this.renderQuotes(); } catch (e) { console.error('renderQuotes error:', e); }
-    try { this.renderThoughts(); } catch (e) { console.error('renderThoughts error:', e); }
+    try { this.renderScratchpad(); } catch (e) { console.error('renderScratchpad error:', e); }
     try { this.renderQuickLinks(); } catch (e) { console.error('renderQuickLinks error:', e); }
     try { this.renderSeedRaise(); } catch (e) { console.error('renderSeedRaise error:', e); }
     try { this.renderMeetingSelector(); } catch (e) { console.error('renderMeetingSelector error:', e); }
@@ -3151,7 +3151,20 @@ RULES:
       const quotes = storage.getQuotes() || [];
       const thoughts = storage.getThoughts() || [];
 
-      const prompt = `You are curating an investor cheat sheet. Analyze this content and recommend what to KEEP vs CUT.
+      const prompt = `You are curating an investor cheat sheet for Glossi, a seed-stage startup.
+
+GLOSSI CONTEXT:
+- Stage: Seed (finding product-market fit)
+- Investor targets: Mix of angels, pre-seed/seed VCs, Series A VCs, and strategic investors
+- Priority themes: traction, product differentiation, customer love, market opportunity, revenue model
+
+QUALITY SIGNALS (good content should have at least one):
+- Specific numbers or metrics (e.g., "$1.2M pipeline", "10+ prospects")
+- Unique angle competitors can't claim
+- Customer voice or proof (testimonials, case studies)
+- Addresses common investor objections
+- Memorable/quotable phrasing
+- Validates market size or timing
 
 CURRENT TALKING POINTS (${talkingPoints.length}):
 ${talkingPoints.map((tp, i) => `${i + 1}. "${tp.title}": ${tp.content}`).join('\n')}
@@ -3159,28 +3172,38 @@ ${talkingPoints.map((tp, i) => `${i + 1}. "${tp.title}": ${tp.content}`).join('\
 CURRENT QUOTES (${quotes.length}):
 ${quotes.map((q, i) => `${i + 1}. "${q.quote}" - ${q.source}`).join('\n')}
 
-CURRENT NOTES/THOUGHTS (${thoughts.length}):
-${thoughts.map((t, i) => `${i + 1}. ${t.content?.substring(0, 150)}...`).join('\n')}
+CURRENT SCRATCHPAD (${thoughts.length}):
+${thoughts.map((t, i) => {
+  const createdAt = t.createdAt ? new Date(t.createdAt) : null;
+  const ageWeeks = createdAt ? Math.floor((Date.now() - createdAt.getTime()) / (7 * 24 * 60 * 60 * 1000)) : 0;
+  return `${i + 1}. [${ageWeeks}w old] ${t.content?.substring(0, 150)}...`;
+}).join('\n')}
 
 CURATION RULES:
-- Max 6-8 talking points (investors can't absorb more)
+- Target: 5-7 talking points maximum (investors can't absorb more)
 - Max 3-5 quotes (quality over quantity)
-- Notes can be archived if redundant with talking points
-- KEEP: Concrete numbers, recent wins, investor-exciting facts
+- Scratchpad items older than 4 weeks without quality signals should be archived
+- KEEP: Items with quality signals above
 - CUT: Vague statements, duplicates, outdated info, internal details
 - MERGE: Similar items into stronger single points
+- PROMOTE: Scratchpad items that are investor-ready
+- ARCHIVE: Stale content (mark with action "archive")
+
+For each recommendation, include a confidence level: "high", "medium", or "low"
+- High confidence: Auto-apply (for low-risk changes like categorization)
+- Medium/Low confidence: Needs user review (for cuts, merges, promotions)
 
 Return JSON:
 {
   "summary": "Brief summary of recommended changes",
   "talkingPoints": [
-    { "index": 0, "action": "keep|cut|merge", "reason": "Why", "mergeWith": null or index }
+    { "index": 0, "action": "keep|cut|merge", "reason": "Why", "confidence": "high|medium|low", "mergeWith": null or index }
   ],
   "quotes": [
-    { "index": 0, "action": "keep|cut", "reason": "Why" }
+    { "index": 0, "action": "keep|cut", "reason": "Why", "confidence": "high|medium|low" }
   ],
-  "thoughts": [
-    { "index": 0, "action": "keep|cut|promote", "reason": "Why", "promoteTo": null or "talkingPoint" }
+  "scratchpad": [
+    { "index": 0, "action": "keep|cut|promote|archive", "reason": "Why", "confidence": "high|medium|low", "promoteTo": null or "talkingPoint" }
   ],
   "newMergedPoints": [
     { "title": "Merged title", "content": "Combined content", "mergedFrom": [0, 2] }
@@ -3214,7 +3237,7 @@ Return JSON:
       if (!jsonMatch) throw new Error('Failed to parse curation response');
       
       const curation = JSON.parse(jsonMatch[0]);
-      this.pendingCuration = { curation, talkingPoints, quotes, thoughts };
+      this.pendingCuration = { curation, talkingPoints, quotes, scratchpad: thoughts };
       
       this.showCurationResults(curation, talkingPoints, quotes, thoughts);
       
@@ -3321,41 +3344,47 @@ Return JSON:
       `;
     }
 
-    // Thoughts section
-    if (thoughts.length > 0) {
-      const nKeep = curation.thoughts?.filter(r => r.action === 'keep').length || 0;
-      const nCut = curation.thoughts?.filter(r => r.action === 'cut').length || 0;
-      const nPromote = curation.thoughts?.filter(r => r.action === 'promote').length || 0;
+    // Scratchpad section
+    const scratchpadRecs = curation.scratchpad || curation.thoughts || [];
+    if (thoughts.length > 0 && scratchpadRecs.length > 0) {
+      const nKeep = scratchpadRecs.filter(r => r.action === 'keep').length || 0;
+      const nCut = scratchpadRecs.filter(r => r.action === 'cut').length || 0;
+      const nPromote = scratchpadRecs.filter(r => r.action === 'promote').length || 0;
+      const nArchive = scratchpadRecs.filter(r => r.action === 'archive').length || 0;
       
       sectionsHtml += `
         <div class="curation-section">
           <div class="curation-section-header">
-            <h4>Notes</h4>
+            <h4>Scratchpad</h4>
             <span class="curation-stats">
               <span class="stat-keep">${nKeep} keep</span>
               <span class="stat-cut">${nCut} cut</span>
               ${nPromote > 0 ? `<span class="stat-promote">${nPromote} promote</span>` : ''}
+              ${nArchive > 0 ? `<span class="stat-archive">${nArchive} archive</span>` : ''}
             </span>
           </div>
           <div class="curation-items">
-            ${(curation.thoughts || []).map((rec, i) => {
+            ${scratchpadRecs.map((rec, i) => {
               const t = thoughts[rec.index];
               if (!t) return '';
               const title = t.content?.match(/^TITLE:\s*(.+?)(?:\n|$)/i)?.[1] || t.fileName || 'Untitled';
+              const confidenceClass = rec.confidence === 'high' ? 'confidence-high' : rec.confidence === 'low' ? 'confidence-low' : 'confidence-medium';
               return `
-                <div class="curation-item ${rec.action}" data-type="thought" data-index="${rec.index}">
+                <div class="curation-item ${rec.action} ${confidenceClass}" data-type="scratchpad" data-index="${rec.index}">
                   <div class="curation-item-icon">
                     ${rec.action === 'keep' ? '<span class="icon-keep">✓</span>' : 
                       rec.action === 'cut' ? '<span class="icon-cut">✕</span>' : 
+                      rec.action === 'archive' ? '<span class="icon-archive">📦</span>' :
                       '<span class="icon-promote">↑</span>'}
                   </div>
                   <div class="curation-item-content">
                     <div class="curation-item-title">${this.escapeHtml(title)}</div>
                     <div class="curation-item-reason">${this.escapeHtml(rec.reason)}</div>
+                    <span class="confidence-indicator" title="${rec.confidence} confidence"></span>
                   </div>
                   <label class="curation-toggle">
                     <input type="checkbox" ${rec.action !== 'cut' ? 'checked' : ''}>
-                    <span class="toggle-label">${rec.action === 'cut' ? 'Keep anyway' : rec.action === 'promote' ? 'Promote' : 'Include'}</span>
+                    <span class="toggle-label">${rec.action === 'cut' ? 'Keep anyway' : rec.action === 'promote' ? 'Promote' : rec.action === 'archive' ? 'Archive' : 'Include'}</span>
                   </label>
                 </div>
               `;
@@ -3374,10 +3403,12 @@ Return JSON:
   applyCuration() {
     if (!this.pendingCuration) return;
     
-    const { curation, talkingPoints, quotes, thoughts } = this.pendingCuration;
+    const { curation, talkingPoints, quotes, scratchpad } = this.pendingCuration;
+    const thoughts = scratchpad || this.pendingCuration.thoughts || [];
     let deletedCount = 0;
     let mergedCount = 0;
     let promotedCount = 0;
+    let archivedCount = 0;
 
     // Process talking points - collect indices to delete (checked=false means delete)
     const tpToDelete = [];
@@ -3419,34 +3450,45 @@ Return JSON:
       deletedCount++;
     });
 
-    // Process thoughts
-    const thoughtsToDelete = [];
-    const thoughtsToPromote = [];
-    document.querySelectorAll('.curation-item[data-type="thought"]').forEach(el => {
+    // Process scratchpad items
+    const scratchpadRecs = curation.scratchpad || curation.thoughts || [];
+    const itemsToDelete = [];
+    const itemsToPromote = [];
+    const itemsToArchive = [];
+    document.querySelectorAll('.curation-item[data-type="scratchpad"], .curation-item[data-type="thought"]').forEach(el => {
       const checkbox = el.querySelector('input[type="checkbox"]');
       const index = parseInt(el.dataset.index);
-      const rec = curation.thoughts?.find(r => r.index === index);
+      const rec = scratchpadRecs.find(r => r.index === index);
       
       if (!checkbox.checked) {
         const t = thoughts[index];
-        if (t) thoughtsToDelete.push(t.id);
+        if (t) itemsToDelete.push(t.id);
       } else if (rec?.action === 'promote' && checkbox.checked) {
         const t = thoughts[index];
-        if (t) thoughtsToPromote.push(t);
+        if (t) itemsToPromote.push(t);
+      } else if (rec?.action === 'archive' && checkbox.checked) {
+        const t = thoughts[index];
+        if (t) itemsToArchive.push(t.id);
       }
     });
     
-    thoughtsToDelete.forEach(id => {
-      storage.deleteThought(id);
+    itemsToDelete.forEach(id => {
+      storage.deleteScratchpadItem(id);
       deletedCount++;
     });
 
-    // Promote thoughts to talking points
-    thoughtsToPromote.forEach(thought => {
-      const title = thought.content?.match(/^TITLE:\s*(.+?)(?:\n|$)/i)?.[1] || 'Promoted Note';
-      const body = thought.content?.replace(/^TITLE:\s*.+\n?/i, '').trim() || thought.content;
+    // Archive stale items
+    itemsToArchive.forEach(id => {
+      storage.archiveScratchpadItem(id);
+      archivedCount++;
+    });
+
+    // Promote scratchpad items to talking points
+    itemsToPromote.forEach(item => {
+      const title = item.content?.match(/^TITLE:\s*(.+?)(?:\n|$)/i)?.[1] || 'Promoted Note';
+      const body = item.content?.replace(/^TITLE:\s*.+\n?/i, '').trim() || item.content;
       storage.addTalkingPoint(title, body, 'core');
-      storage.deleteThought(thought.id);
+      storage.deleteScratchpadItem(item.id);
       promotedCount++;
     });
 
@@ -3469,8 +3511,120 @@ Return JSON:
     if (deletedCount) parts.push(`${deletedCount} removed`);
     if (mergedCount) parts.push(`${mergedCount} merged`);
     if (promotedCount) parts.push(`${promotedCount} promoted`);
+    if (archivedCount) parts.push(`${archivedCount} archived`);
     
     this.showToast(parts.length > 0 ? `Curated: ${parts.join(', ')}` : 'No changes made', 'success');
+  }
+
+  /**
+   * Run auto-curation after new content is added (if enabled)
+   */
+  async runAutoCuration() {
+    // Check if auto-curation is enabled
+    if (!this.settings.autoCurate) return;
+    
+    // Check if API is configured
+    if (!aiProcessor.isConfigured()) return;
+    
+    // Don't run if we have very little content
+    const scratchpad = storage.getScratchpad();
+    const talkingPoints = this.data?.talkingPoints || [];
+    if (scratchpad.length < 3 && talkingPoints.length < 5) return;
+    
+    // Show non-blocking notification
+    this.showToast('Running smart curation...', 'info');
+    
+    try {
+      // Run curation analysis
+      const quotes = storage.getQuotes() || [];
+      const thoughts = scratchpad;
+
+      const prompt = `You are performing a QUICK curation check for Glossi's investor cheat sheet.
+Only flag items that CLEARLY need attention. Be conservative.
+
+CURRENT TALKING POINTS (${talkingPoints.length}):
+${talkingPoints.map((tp, i) => `${i + 1}. "${tp.title}": ${tp.content}`).join('\n')}
+
+CURRENT SCRATCHPAD (${thoughts.length}):
+${thoughts.slice(0, 10).map((t, i) => {
+  const createdAt = t.createdAt ? new Date(t.createdAt) : null;
+  const ageWeeks = createdAt ? Math.floor((Date.now() - createdAt.getTime()) / (7 * 24 * 60 * 60 * 1000)) : 0;
+  return `${i + 1}. [${ageWeeks}w old] ${t.content?.substring(0, 100)}...`;
+}).join('\n')}
+
+AUTO-CURATION RULES:
+- Only auto-apply HIGH CONFIDENCE changes
+- Archive items older than ${this.settings.staleThresholdWeeks || 4} weeks without quality signals
+- Flag obvious duplicates
+- Target: 5-7 talking points
+
+Return JSON (only include items that need action):
+{
+  "autoApply": [
+    { "type": "scratchpad", "index": 0, "action": "archive", "reason": "Stale (8 weeks old)" }
+  ],
+  "needsReview": [
+    { "type": "talkingPoint", "index": 0, "action": "merge", "reason": "Similar to #2", "confidence": "medium" }
+  ],
+  "summary": "Brief summary or null if nothing to do"
+}`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.settings.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!response.ok) return;
+
+      const result = await response.json();
+      const responseText = result.content[0].text;
+      
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return;
+      
+      const curation = JSON.parse(jsonMatch[0]);
+      
+      // Auto-apply high-confidence changes
+      let autoAppliedCount = 0;
+      if (curation.autoApply?.length > 0) {
+        for (const item of curation.autoApply) {
+          if (item.type === 'scratchpad' && item.action === 'archive') {
+            const scratchpadItem = thoughts[item.index];
+            if (scratchpadItem) {
+              storage.archiveScratchpadItem(scratchpadItem.id);
+              autoAppliedCount++;
+            }
+          }
+        }
+      }
+      
+      // Show notification if there are items needing review
+      const needsReviewCount = curation.needsReview?.length || 0;
+      
+      if (autoAppliedCount > 0 || needsReviewCount > 0) {
+        this.data = storage.getData();
+        this.renderScratchpad();
+        
+        const parts = [];
+        if (autoAppliedCount > 0) parts.push(`${autoAppliedCount} auto-archived`);
+        if (needsReviewCount > 0) parts.push(`${needsReviewCount} need review`);
+        
+        this.showToast(parts.join(', ') + ' - Click Curate to review', 'info');
+      }
+      
+    } catch (error) {
+      // Silently fail for auto-curation
+    }
   }
 
   /**
@@ -4486,7 +4640,7 @@ RULES:
                     }
                   });
                   this.data = storage.getData();
-                  this.renderThoughts();
+                  this.renderScratchpad();
                 });
               } else {
                 // Text content - save immediately
@@ -4638,7 +4792,7 @@ RULES:
               }
             });
             this.data = storage.getData();
-            this.renderThoughts();
+            this.renderScratchpad();
           });
         } else {
           // Handle text/audio - save immediately with compressed source
@@ -5329,7 +5483,7 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
     storage.addThought(thought);
     
     this.hideModal('content-action-modal');
-    this.renderThoughts();
+    this.renderScratchpad();
     this.showToast(`Saved ${items.length} items from ${source.fileName || 'document'}`, 'success');
     
     this.pendingGroupedItems = null;
@@ -5481,7 +5635,7 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
    */
   closeItemReview() {
     this.hideModal('content-action-modal');
-    this.renderThoughts();
+    this.renderScratchpad();
     this.renderTalkingPoints();
     this.pendingItems = null;
     this.currentItemIndex = 0;
@@ -5592,7 +5746,7 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
     storage.addThought(thought);
     
     this.hideModal('content-action-modal');
-    this.renderThoughts();
+    this.renderScratchpad();
     this.showToast('Saved to Thoughts', 'success');
     
     this.pendingAnalysis = null;
@@ -5759,21 +5913,24 @@ Content: "${content.substring(0, 300)}"`
   }
 
   /**
-   * Render thoughts list
+   * Render scratchpad list (formerly thoughts)
    */
-  renderThoughts() {
-    const thoughts = storage.getThoughts();
-    const container = document.getElementById('thoughts-list');
-    const countEl = document.getElementById('thoughts-count');
+  renderScratchpad() {
+    const items = storage.getScratchpad();
+    const container = document.getElementById('scratchpad-list');
+    const countEl = document.getElementById('scratchpad-count');
     
-    countEl.textContent = thoughts.length > 0 ? `(${thoughts.length})` : '';
+    if (!container || !countEl) return;
     
-    if (thoughts.length === 0) {
+    countEl.textContent = items.length > 0 ? `(${items.length})` : '';
+    
+    if (items.length === 0) {
       container.innerHTML = '';
+      this.renderArchivedScratchpad();
       return;
     }
     
-    container.innerHTML = thoughts.map(thought => {
+    container.innerHTML = items.map(thought => {
       const date = new Date(thought.createdAt).toLocaleDateString('en-US', { 
         month: 'short', 
         day: 'numeric' 
@@ -5938,11 +6095,98 @@ Content: "${content.substring(0, 300)}"`
     }).join('');
     
     // Setup edit listeners after render
-    setTimeout(() => this.setupThoughtEditListeners(), 0);
+    setTimeout(() => this.setupScratchpadEditListeners(), 0);
+    
+    // Also render archived section
+    this.renderArchivedScratchpad();
   }
 
   /**
-   * Toggle thought expand/collapse
+   * Render archived scratchpad items
+   */
+  renderArchivedScratchpad() {
+    const archived = storage.getArchivedScratchpad();
+    const container = document.getElementById('scratchpad-list');
+    if (!container) return;
+    
+    // Remove existing archived section
+    const existingArchived = container.querySelector('.archived-section');
+    if (existingArchived) existingArchived.remove();
+    
+    if (archived.length === 0) return;
+    
+    const archivedHtml = `
+      <div class="archived-section">
+        <div class="archived-header" onclick="this.parentElement.classList.toggle('expanded')">
+          <svg class="archived-expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <span>Archived (${archived.length})</span>
+        </div>
+        <div class="archived-items">
+          ${archived.map(item => {
+            const content = item.content || '';
+            const titleMatch = content.match(/^TITLE:\s*(.+?)(?:\n|$)/i);
+            const title = titleMatch ? titleMatch[1].trim() : (item.fileName || 'Untitled');
+            const archivedDate = new Date(item.archivedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            
+            return `
+              <div class="archived-item" data-archived-id="${item.id}">
+                <span class="archived-item-title">${this.escapeHtml(title)}</span>
+                <span class="archived-item-date">${archivedDate}</span>
+                <div class="archived-item-actions">
+                  <button class="restore-btn" onclick="window.dashboard.restoreArchivedItem('${item.id}')" title="Restore">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="1 4 1 10 7 10"></polyline>
+                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                    </svg>
+                  </button>
+                  <button class="delete-btn" onclick="window.dashboard.deleteArchivedItem('${item.id}')" title="Delete permanently">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', archivedHtml);
+  }
+
+  /**
+   * Restore an archived scratchpad item
+   */
+  restoreArchivedItem(id) {
+    storage.restoreArchivedItem(id);
+    this.renderScratchpad();
+    this.showToast('Item restored', 'success');
+  }
+
+  /**
+   * Permanently delete an archived item
+   */
+  deleteArchivedItem(id) {
+    storage.deleteArchivedItem(id);
+    this.renderScratchpad();
+    this.showToast('Item permanently deleted', 'success');
+  }
+
+  /**
+   * Archive a scratchpad item
+   */
+  archiveScratchpadItem(id) {
+    storage.archiveScratchpadItem(id);
+    this.renderScratchpad();
+    this.showToast('Item archived', 'success');
+  }
+
+  /**
+   * Toggle scratchpad item expand/collapse
    */
   toggleThought(id) {
     const el = document.querySelector(`.thought-item[data-thought-id="${id}"]`);
@@ -5952,7 +6196,7 @@ Content: "${content.substring(0, 300)}"`
   }
 
   /**
-   * Delete a thought
+   * Delete a scratchpad item
    */
   deleteThought(id) {
     const el = document.querySelector(`[data-thought-id="${id}"]`);
@@ -5962,10 +6206,10 @@ Content: "${content.substring(0, 300)}"`
     }
     
     setTimeout(() => {
-      storage.deleteThought(id);
-      this.renderThoughts();
+      storage.deleteScratchpadItem(id);
+      this.renderScratchpad();
     }, 150);
-    this.showToast('Thought deleted', 'success');
+    this.showToast('Item deleted', 'success');
   }
 
   /**
@@ -6179,7 +6423,7 @@ Respond with just the category name (core, traction, market, or testimonials) an
     storage.deleteThought(id);
     
     this.hideModal('content-action-modal');
-    this.renderThoughts();
+    this.renderScratchpad();
     this.renderTalkingPoints();
     this.showToast(`Added to ${category === 'testimonials' ? 'Customer Validation' : category} talking points`, 'success');
     
@@ -6216,7 +6460,7 @@ Respond with just the category name (core, traction, market, or testimonials) an
     }
     
     setTimeout(() => {
-      this.renderThoughts();
+      this.renderScratchpad();
       this.renderTalkingPoints();
     }, 200);
     
@@ -6268,7 +6512,7 @@ Respond with just the category name (core, traction, market, or testimonials) an
     }
     
     setTimeout(() => {
-      this.renderThoughts();
+      this.renderScratchpad();
       this.renderTalkingPoints();
     }, 200);
     
@@ -6307,7 +6551,7 @@ Respond with just the category name (core, traction, market, or testimonials) an
         this.showToast('Item deleted', 'success');
       }
       
-      this.renderThoughts();
+      this.renderScratchpad();
     }, 150);
   }
 
@@ -6368,10 +6612,10 @@ Respond with just the category name (core, traction, market, or testimonials) an
   }
 
   /**
-   * Setup thought edit listeners
+   * Setup scratchpad edit listeners
    */
-  setupThoughtEditListeners() {
-    const container = document.getElementById('thoughts-list');
+  setupScratchpadEditListeners() {
+    const container = document.getElementById('scratchpad-list');
     if (!container) return;
     
     container.querySelectorAll('[contenteditable="true"]').forEach(el => {
@@ -6656,10 +6900,22 @@ Respond with just the category name (core, traction, market, or testimonials) an
     if (seedRaiseTarget) {
       storage.updateSeedTarget(seedRaiseTarget);
     }
+
+    // Smart curation settings
+    const autoCurateEl = document.getElementById('auto-curate-toggle');
+    const staleThresholdEl = document.getElementById('stale-threshold');
+    const autoCurate = autoCurateEl ? autoCurateEl.checked : true;
+    const staleThresholdWeeks = staleThresholdEl ? parseInt(staleThresholdEl.value) || 4 : 4;
     
     // Update storage and local settings
     this.data = storage.getData();
-    this.settings = storage.updateSettings({ apiKey, openaiApiKey, email: emailSettings });
+    this.settings = storage.updateSettings({ 
+      apiKey, 
+      openaiApiKey, 
+      email: emailSettings,
+      autoCurate,
+      staleThresholdWeeks
+    });
     aiProcessor.setApiKey(apiKey);
     OPENAI_API_KEY = openaiApiKey || null;
 
@@ -6715,6 +6971,16 @@ Respond with just the category name (core, traction, market, or testimonials) an
     } else {
       openaiStatusEl.classList.remove('connected');
       openaiStatusEl.querySelector('.status-text').textContent = 'Not configured';
+    }
+
+    // Smart curation settings
+    const autoCurateEl = document.getElementById('auto-curate-toggle');
+    const staleThresholdEl = document.getElementById('stale-threshold');
+    if (autoCurateEl) {
+      autoCurateEl.checked = this.settings.autoCurate !== false;
+    }
+    if (staleThresholdEl) {
+      staleThresholdEl.value = this.settings.staleThresholdWeeks || 4;
     }
 
     // Populate email settings

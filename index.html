@@ -368,13 +368,13 @@
           </div>
         </div>
 
-        <!-- Thoughts Repository -->
-        <div class="section-card section-thoughts">
+        <!-- Scratchpad -->
+        <div class="section-card section-scratchpad">
           <div class="card-header">
-            <h3>Thoughts</h3>
-            <span class="thoughts-count" id="thoughts-count"></span>
+            <h3>Scratchpad</h3>
+            <span class="scratchpad-count" id="scratchpad-count"></span>
           </div>
-          <div class="thoughts-list" id="thoughts-list">
+          <div class="scratchpad-list" id="scratchpad-list">
           </div>
         </div>
       </div>
@@ -495,6 +495,26 @@
           <div class="input-group input-group-inline">
             <label for="seed-raise-target">Target Amount</label>
             <input type="text" id="seed-raise-target" class="input input-sm" placeholder="e.g., $500K" value="$500K">
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>Smart Curation</h3>
+          <p class="settings-description">AI-powered content curation that helps keep your cheat sheet focused.</p>
+          <div class="toggle-group">
+            <label class="toggle-row">
+              <input type="checkbox" id="auto-curate-toggle" checked>
+              <span class="toggle-switch"></span>
+              <span class="toggle-label">Auto-curate when new content is added</span>
+            </label>
+          </div>
+          <div class="input-group input-group-inline" style="margin-top: var(--space-3);">
+            <label for="stale-threshold">Archive stale content after</label>
+            <select id="stale-threshold" class="input input-sm">
+              <option value="2">2 weeks</option>
+              <option value="4" selected>4 weeks</option>
+              <option value="6">6 weeks</option>
+              <option value="8">8 weeks</option>
+            </select>
           </div>
         </div>
         <div class="settings-section">

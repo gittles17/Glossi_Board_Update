@@ -49,6 +49,8 @@ const DEFAULT_SETTINGS = {
   apiKey: '',
   autoSave: true,
   theme: 'dark',
+  autoCurate: true,
+  staleThresholdWeeks: 4,
   email: {
     // Section order (drag to reorder)
     sectionOrder: ['metrics', 'pipeline', 'talkingPoints', 'highlights', 'decisions', 'actionItems'],
@@ -325,35 +327,49 @@ class Storage {
   }
 
   /**
-   * Get all thoughts
+   * Get all scratchpad items (formerly thoughts)
    */
-  getThoughts() {
+  getScratchpad() {
     return this.data.thoughts || [];
   }
 
   /**
-   * Add a new thought (preserves all properties including isGrouped, items, suggestedCategory)
+   * Alias for backwards compatibility
    */
-  addThought(thought) {
-    if (!this.data.thoughts) {
-      this.data.thoughts = [];
-    }
-    const newThought = {
-      ...thought,  // Keep all passed properties (isGrouped, items, suggestedCategory, etc.)
-      id: 'thought_' + Date.now(),
-      type: thought.type || 'text',
-      createdAt: new Date().toISOString()
-    };
-    this.data.thoughts.unshift(newThought); // Add to beginning
-    this.data.lastUpdated = new Date().toISOString();
-    this.scheduleSave();
-    return newThought;
+  getThoughts() {
+    return this.getScratchpad();
   }
 
   /**
-   * Update an existing thought
+   * Add a new scratchpad item (preserves all properties including isGrouped, items, suggestedCategory)
    */
-  updateThought(id, updates) {
+  addScratchpadItem(item) {
+    if (!this.data.thoughts) {
+      this.data.thoughts = [];
+    }
+    const newItem = {
+      ...item,  // Keep all passed properties (isGrouped, items, suggestedCategory, etc.)
+      id: 'scratchpad_' + Date.now(),
+      type: item.type || 'text',
+      createdAt: new Date().toISOString()
+    };
+    this.data.thoughts.unshift(newItem); // Add to beginning
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return newItem;
+  }
+
+  /**
+   * Alias for backwards compatibility
+   */
+  addThought(thought) {
+    return this.addScratchpadItem(thought);
+  }
+
+  /**
+   * Update an existing scratchpad item
+   */
+  updateScratchpadItem(id, updates) {
     if (!this.data.thoughts) return null;
     const index = this.data.thoughts.findIndex(t => t.id === id);
     if (index !== -1) {
@@ -366,13 +382,95 @@ class Storage {
   }
 
   /**
-   * Delete a thought
+   * Alias for backwards compatibility
    */
-  deleteThought(id) {
+  updateThought(id, updates) {
+    return this.updateScratchpadItem(id, updates);
+  }
+
+  /**
+   * Delete a scratchpad item
+   */
+  deleteScratchpadItem(id) {
     if (!this.data.thoughts) return this.data;
     const index = this.data.thoughts.findIndex(t => t.id === id);
     if (index !== -1) {
       this.data.thoughts.splice(index, 1);
+      this.data.lastUpdated = new Date().toISOString();
+      this.scheduleSave();
+    }
+    return this.data;
+  }
+
+  /**
+   * Alias for backwards compatibility
+   */
+  deleteThought(id) {
+    return this.deleteScratchpadItem(id);
+  }
+
+  /**
+   * Get archived scratchpad items
+   */
+  getArchivedScratchpad() {
+    if (!this.data.archivedScratchpad) {
+      this.data.archivedScratchpad = [];
+    }
+    return this.data.archivedScratchpad;
+  }
+
+  /**
+   * Archive a scratchpad item (move to archived section)
+   */
+  archiveScratchpadItem(id) {
+    if (!this.data.thoughts) return null;
+    const index = this.data.thoughts.findIndex(t => t.id === id);
+    if (index === -1) return null;
+    
+    const item = this.data.thoughts[index];
+    item.archivedAt = new Date().toISOString();
+    item.archivedFrom = 'scratchpad';
+    
+    if (!this.data.archivedScratchpad) {
+      this.data.archivedScratchpad = [];
+    }
+    this.data.archivedScratchpad.unshift(item);
+    this.data.thoughts.splice(index, 1);
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return item;
+  }
+
+  /**
+   * Restore an archived scratchpad item
+   */
+  restoreArchivedItem(id) {
+    if (!this.data.archivedScratchpad) return null;
+    const index = this.data.archivedScratchpad.findIndex(t => t.id === id);
+    if (index === -1) return null;
+    
+    const item = this.data.archivedScratchpad[index];
+    delete item.archivedAt;
+    delete item.archivedFrom;
+    
+    if (!this.data.thoughts) {
+      this.data.thoughts = [];
+    }
+    this.data.thoughts.unshift(item);
+    this.data.archivedScratchpad.splice(index, 1);
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return item;
+  }
+
+  /**
+   * Permanently delete an archived item
+   */
+  deleteArchivedItem(id) {
+    if (!this.data.archivedScratchpad) return this.data;
+    const index = this.data.archivedScratchpad.findIndex(t => t.id === id);
+    if (index !== -1) {
+      this.data.archivedScratchpad.splice(index, 1);
       this.data.lastUpdated = new Date().toISOString();
       this.scheduleSave();
     }
