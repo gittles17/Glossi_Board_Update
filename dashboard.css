@@ -1400,6 +1400,169 @@ body::after {
   opacity: 0.6;
 }
 
+/* Curation Modal */
+.curation-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  gap: var(--space-4);
+}
+
+.curation-loading p {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.curation-results {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.curation-summary {
+  padding: var(--space-4);
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+}
+
+.curation-summary-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.curation-section {
+  margin-bottom: var(--space-4);
+}
+
+.curation-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.curation-section-header h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.curation-stats {
+  display: flex;
+  gap: var(--space-3);
+  font-size: 12px;
+}
+
+.curation-stats .stat-keep {
+  color: #4ade80;
+}
+
+.curation-stats .stat-cut {
+  color: #f87171;
+}
+
+.curation-stats .stat-merge,
+.curation-stats .stat-promote {
+  color: #fbbf24;
+}
+
+.curation-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.curation-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: all 0.15s ease;
+}
+
+.curation-item.keep {
+  border-left: 3px solid #4ade80;
+}
+
+.curation-item.cut {
+  border-left: 3px solid #f87171;
+  opacity: 0.7;
+}
+
+.curation-item.merge {
+  border-left: 3px solid #fbbf24;
+}
+
+.curation-item.promote {
+  border-left: 3px solid #60a5fa;
+}
+
+.curation-item-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.icon-keep { color: #4ade80; }
+.icon-cut { color: #f87171; }
+.icon-merge { color: #fbbf24; }
+.icon-promote { color: #60a5fa; }
+
+.curation-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.curation-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.curation-item-reason {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.curation-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.curation-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.curation-toggle .toggle-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 /* ============================================
    TALKING POINTS EXPANDED
    ============================================ */

@@ -164,6 +164,11 @@ class GlossiDashboard {
       this.shareViaEmail();
     });
 
+    document.getElementById('menu-curate').addEventListener('click', () => {
+      dropdown.classList.remove('open');
+      this.curateAllContent();
+    });
+
     document.getElementById('menu-settings').addEventListener('click', () => {
       dropdown.classList.remove('open');
       this.renderSettingsStatus();
@@ -799,6 +804,21 @@ class GlossiDashboard {
 
     document.getElementById('pipeline-extract').addEventListener('click', () => {
       this.processPipelineUpdate();
+    });
+
+    // Curation modal
+    document.getElementById('curation-modal-close').addEventListener('click', () => {
+      this.hideModal('curation-modal');
+      this.pendingCuration = null;
+    });
+
+    document.getElementById('curation-cancel').addEventListener('click', () => {
+      this.hideModal('curation-modal');
+      this.pendingCuration = null;
+    });
+
+    document.getElementById('curation-apply').addEventListener('click', () => {
+      this.applyCuration();
     });
 
     // Color picker
@@ -3020,6 +3040,343 @@ RULES:
     const deals = parsed.deals || [];
     deals.pipelineTotal = parsed.pipelineTotal;
     return deals;
+  }
+
+  /**
+   * Curate all content - AI analyzes and recommends what to keep/cut
+   */
+  async curateAllContent() {
+    // Show modal with loading state
+    this.showModal('curation-modal');
+    document.getElementById('curation-loading').style.display = 'flex';
+    document.getElementById('curation-results').style.display = 'none';
+    document.getElementById('curation-footer').style.display = 'none';
+
+    try {
+      const talkingPoints = this.data?.talkingPoints || [];
+      const quotes = storage.getQuotes() || [];
+      const thoughts = storage.getThoughts() || [];
+
+      const prompt = `You are curating an investor cheat sheet. Analyze this content and recommend what to KEEP vs CUT.
+
+CURRENT TALKING POINTS (${talkingPoints.length}):
+${talkingPoints.map((tp, i) => `${i + 1}. "${tp.title}": ${tp.content}`).join('\n')}
+
+CURRENT QUOTES (${quotes.length}):
+${quotes.map((q, i) => `${i + 1}. "${q.quote}" - ${q.source}`).join('\n')}
+
+CURRENT NOTES/THOUGHTS (${thoughts.length}):
+${thoughts.map((t, i) => `${i + 1}. ${t.content?.substring(0, 150)}...`).join('\n')}
+
+CURATION RULES:
+- Max 6-8 talking points (investors can't absorb more)
+- Max 3-5 quotes (quality over quantity)
+- Notes can be archived if redundant with talking points
+- KEEP: Concrete numbers, recent wins, investor-exciting facts
+- CUT: Vague statements, duplicates, outdated info, internal details
+- MERGE: Similar items into stronger single points
+
+Return JSON:
+{
+  "summary": "Brief summary of recommended changes",
+  "talkingPoints": [
+    { "index": 0, "action": "keep|cut|merge", "reason": "Why", "mergeWith": null or index }
+  ],
+  "quotes": [
+    { "index": 0, "action": "keep|cut", "reason": "Why" }
+  ],
+  "thoughts": [
+    { "index": 0, "action": "keep|cut|promote", "reason": "Why", "promoteTo": null or "talkingPoint" }
+  ],
+  "newMergedPoints": [
+    { "title": "Merged title", "content": "Combined content", "mergedFrom": [0, 2] }
+  ]
+}`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.settings.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Curation failed');
+      }
+
+      const result = await response.json();
+      const responseText = result.content[0].text;
+      
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Failed to parse curation response');
+      
+      const curation = JSON.parse(jsonMatch[0]);
+      this.pendingCuration = { curation, talkingPoints, quotes, thoughts };
+      
+      this.showCurationResults(curation, talkingPoints, quotes, thoughts);
+      
+    } catch (error) {
+      console.error('Curation error:', error);
+      this.hideModal('curation-modal');
+      this.showToast('Curation failed: ' + error.message, 'error');
+    }
+  }
+
+  /**
+   * Show curation results in modal
+   */
+  showCurationResults(curation, talkingPoints, quotes, thoughts) {
+    document.getElementById('curation-loading').style.display = 'none';
+    document.getElementById('curation-results').style.display = 'block';
+    document.getElementById('curation-footer').style.display = 'flex';
+
+    // Summary
+    document.getElementById('curation-summary').innerHTML = `
+      <div class="curation-summary-text">${this.escapeHtml(curation.summary)}</div>
+    `;
+
+    // Build sections
+    let sectionsHtml = '';
+
+    // Talking Points section
+    const tpKeep = curation.talkingPoints?.filter(r => r.action === 'keep').length || 0;
+    const tpCut = curation.talkingPoints?.filter(r => r.action === 'cut').length || 0;
+    const tpMerge = curation.talkingPoints?.filter(r => r.action === 'merge').length || 0;
+    
+    sectionsHtml += `
+      <div class="curation-section">
+        <div class="curation-section-header">
+          <h4>Talking Points</h4>
+          <span class="curation-stats">
+            <span class="stat-keep">${tpKeep} keep</span>
+            <span class="stat-cut">${tpCut} cut</span>
+            ${tpMerge > 0 ? `<span class="stat-merge">${tpMerge} merge</span>` : ''}
+          </span>
+        </div>
+        <div class="curation-items">
+          ${(curation.talkingPoints || []).map((rec, i) => {
+            const tp = talkingPoints[rec.index];
+            if (!tp) return '';
+            return `
+              <div class="curation-item ${rec.action}" data-type="talkingPoint" data-index="${rec.index}">
+                <div class="curation-item-icon">
+                  ${rec.action === 'keep' ? '<span class="icon-keep">✓</span>' : 
+                    rec.action === 'cut' ? '<span class="icon-cut">✕</span>' : 
+                    '<span class="icon-merge">⊕</span>'}
+                </div>
+                <div class="curation-item-content">
+                  <div class="curation-item-title">${this.escapeHtml(tp.title)}</div>
+                  <div class="curation-item-reason">${this.escapeHtml(rec.reason)}</div>
+                </div>
+                <label class="curation-toggle">
+                  <input type="checkbox" ${rec.action === 'keep' || rec.action === 'merge' ? 'checked' : ''} data-action="${rec.action}">
+                  <span class="toggle-label">${rec.action === 'cut' ? 'Keep anyway' : 'Include'}</span>
+                </label>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+
+    // Quotes section
+    if (quotes.length > 0) {
+      const qKeep = curation.quotes?.filter(r => r.action === 'keep').length || 0;
+      const qCut = curation.quotes?.filter(r => r.action === 'cut').length || 0;
+      
+      sectionsHtml += `
+        <div class="curation-section">
+          <div class="curation-section-header">
+            <h4>Quotes</h4>
+            <span class="curation-stats">
+              <span class="stat-keep">${qKeep} keep</span>
+              <span class="stat-cut">${qCut} cut</span>
+            </span>
+          </div>
+          <div class="curation-items">
+            ${(curation.quotes || []).map((rec, i) => {
+              const q = quotes[rec.index];
+              if (!q) return '';
+              return `
+                <div class="curation-item ${rec.action}" data-type="quote" data-index="${rec.index}">
+                  <div class="curation-item-icon">
+                    ${rec.action === 'keep' ? '<span class="icon-keep">✓</span>' : '<span class="icon-cut">✕</span>'}
+                  </div>
+                  <div class="curation-item-content">
+                    <div class="curation-item-title">"${this.escapeHtml(q.quote?.substring(0, 60))}..."</div>
+                    <div class="curation-item-reason">${this.escapeHtml(rec.reason)}</div>
+                  </div>
+                  <label class="curation-toggle">
+                    <input type="checkbox" ${rec.action === 'keep' ? 'checked' : ''}>
+                    <span class="toggle-label">${rec.action === 'cut' ? 'Keep anyway' : 'Include'}</span>
+                  </label>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Thoughts section
+    if (thoughts.length > 0) {
+      const nKeep = curation.thoughts?.filter(r => r.action === 'keep').length || 0;
+      const nCut = curation.thoughts?.filter(r => r.action === 'cut').length || 0;
+      const nPromote = curation.thoughts?.filter(r => r.action === 'promote').length || 0;
+      
+      sectionsHtml += `
+        <div class="curation-section">
+          <div class="curation-section-header">
+            <h4>Notes</h4>
+            <span class="curation-stats">
+              <span class="stat-keep">${nKeep} keep</span>
+              <span class="stat-cut">${nCut} cut</span>
+              ${nPromote > 0 ? `<span class="stat-promote">${nPromote} promote</span>` : ''}
+            </span>
+          </div>
+          <div class="curation-items">
+            ${(curation.thoughts || []).map((rec, i) => {
+              const t = thoughts[rec.index];
+              if (!t) return '';
+              const title = t.content?.match(/^TITLE:\s*(.+?)(?:\n|$)/i)?.[1] || t.fileName || 'Untitled';
+              return `
+                <div class="curation-item ${rec.action}" data-type="thought" data-index="${rec.index}">
+                  <div class="curation-item-icon">
+                    ${rec.action === 'keep' ? '<span class="icon-keep">✓</span>' : 
+                      rec.action === 'cut' ? '<span class="icon-cut">✕</span>' : 
+                      '<span class="icon-promote">↑</span>'}
+                  </div>
+                  <div class="curation-item-content">
+                    <div class="curation-item-title">${this.escapeHtml(title)}</div>
+                    <div class="curation-item-reason">${this.escapeHtml(rec.reason)}</div>
+                  </div>
+                  <label class="curation-toggle">
+                    <input type="checkbox" ${rec.action !== 'cut' ? 'checked' : ''}>
+                    <span class="toggle-label">${rec.action === 'cut' ? 'Keep anyway' : rec.action === 'promote' ? 'Promote' : 'Include'}</span>
+                  </label>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    document.getElementById('curation-sections').innerHTML = sectionsHtml;
+  }
+
+  /**
+   * Apply curation changes
+   */
+  applyCuration() {
+    if (!this.pendingCuration) return;
+    
+    const { curation, talkingPoints, quotes, thoughts } = this.pendingCuration;
+    let deletedCount = 0;
+    let mergedCount = 0;
+    let promotedCount = 0;
+
+    // Process talking points - collect indices to delete (checked=false means delete)
+    const tpToDelete = [];
+    document.querySelectorAll('.curation-item[data-type="talkingPoint"]').forEach(el => {
+      const checkbox = el.querySelector('input[type="checkbox"]');
+      const index = parseInt(el.dataset.index);
+      const rec = curation.talkingPoints?.find(r => r.index === index);
+      
+      if (!checkbox.checked && rec?.action !== 'merge') {
+        const tp = talkingPoints[index];
+        if (tp) tpToDelete.push(tp.id || tp.title);
+      }
+    });
+    
+    // Delete talking points
+    tpToDelete.forEach(id => {
+      const currentTps = this.data?.talkingPoints || [];
+      const idx = currentTps.findIndex(tp => tp.id === id || tp.title === id);
+      if (idx !== -1) {
+        storage.deleteTalkingPoint(idx);
+        deletedCount++;
+      }
+    });
+
+    // Process quotes
+    const quotesToDelete = [];
+    document.querySelectorAll('.curation-item[data-type="quote"]').forEach(el => {
+      const checkbox = el.querySelector('input[type="checkbox"]');
+      const index = parseInt(el.dataset.index);
+      
+      if (!checkbox.checked) {
+        const q = quotes[index];
+        if (q) quotesToDelete.push(q.id);
+      }
+    });
+    
+    quotesToDelete.forEach(id => {
+      storage.deleteQuote(id);
+      deletedCount++;
+    });
+
+    // Process thoughts
+    const thoughtsToDelete = [];
+    const thoughtsToPromote = [];
+    document.querySelectorAll('.curation-item[data-type="thought"]').forEach(el => {
+      const checkbox = el.querySelector('input[type="checkbox"]');
+      const index = parseInt(el.dataset.index);
+      const rec = curation.thoughts?.find(r => r.index === index);
+      
+      if (!checkbox.checked) {
+        const t = thoughts[index];
+        if (t) thoughtsToDelete.push(t.id);
+      } else if (rec?.action === 'promote' && checkbox.checked) {
+        const t = thoughts[index];
+        if (t) thoughtsToPromote.push(t);
+      }
+    });
+    
+    thoughtsToDelete.forEach(id => {
+      storage.deleteThought(id);
+      deletedCount++;
+    });
+
+    // Promote thoughts to talking points
+    thoughtsToPromote.forEach(thought => {
+      const title = thought.content?.match(/^TITLE:\s*(.+?)(?:\n|$)/i)?.[1] || 'Promoted Note';
+      const body = thought.content?.replace(/^TITLE:\s*.+\n?/i, '').trim() || thought.content;
+      storage.addTalkingPoint(title, body, 'core');
+      storage.deleteThought(thought.id);
+      promotedCount++;
+    });
+
+    // Add merged points
+    if (curation.newMergedPoints?.length > 0) {
+      curation.newMergedPoints.forEach(merged => {
+        storage.addTalkingPoint(merged.title, merged.content, 'core');
+        mergedCount++;
+      });
+    }
+
+    // Refresh
+    this.data = storage.getData();
+    this.render();
+    this.hideModal('curation-modal');
+    this.pendingCuration = null;
+
+    // Show summary
+    const parts = [];
+    if (deletedCount) parts.push(`${deletedCount} removed`);
+    if (mergedCount) parts.push(`${mergedCount} merged`);
+    if (promotedCount) parts.push(`${promotedCount} promoted`);
+    
+    this.showToast(parts.length > 0 ? `Curated: ${parts.join(', ')}` : 'No changes made', 'success');
   }
 
   /**
