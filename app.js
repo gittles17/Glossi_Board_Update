@@ -825,6 +825,11 @@ class GlossiDashboard {
     const deals = pipelineData?.deals || [];
     const highlights = pipelineData?.highlights || {};
     
+    // Get previous week's data for comparison
+    const history = this.data?.pipelineHistory || storage.getPipelineHistory?.() || [];
+    const previousData = history.length > 0 ? history[0] : null;
+    const previousDeals = previousData?.deals || [];
+    
     // Map old stage names to new ones
     const stageMap = {
       'discovery': 'discovery',
@@ -841,7 +846,12 @@ class GlossiDashboard {
       stage: stageMap[d.stage] || d.stage
     }));
     
-    // Calculate totals by stage
+    const normalizedPrevDeals = previousDeals.map(d => ({
+      ...d,
+      stage: stageMap[d.stage] || d.stage
+    }));
+    
+    // Calculate totals by stage (current)
     const stages = ['discovery', 'demo', 'pilot', 'closing'];
     const stageTotals = {};
     let grandTotal = 0;
@@ -854,21 +864,42 @@ class GlossiDashboard {
       grandTotal += stageTotal;
     });
     
-    // Render total card
+    // Calculate totals by stage (previous week)
+    const prevStageTotals = {};
+    let prevGrandTotal = 0;
+    
+    stages.forEach(stage => {
+      const stageDeals = normalizedPrevDeals.filter(d => d.stage === stage);
+      let stageTotal = 0;
+      stageDeals.forEach(d => { stageTotal += this.parseMoneyValue(d.value); });
+      prevStageTotals[stage] = { total: stageTotal, count: stageDeals.length };
+      prevGrandTotal += stageTotal;
+    });
+    
+    // Render total card with change
     const totalEl = document.getElementById('pipeline-total-value');
-    const totalCountEl = document.getElementById('pipeline-total-count');
+    const totalChangeEl = document.getElementById('pipeline-change-total');
     if (totalEl) totalEl.textContent = this.formatMoney(grandTotal);
-    if (totalCountEl) totalCountEl.textContent = `${normalizedDeals.length} deal${normalizedDeals.length !== 1 ? 's' : ''}`;
+    if (totalChangeEl) {
+      const totalDiff = grandTotal - prevGrandTotal;
+      this.renderChangeIndicator(totalChangeEl, totalDiff, previousData);
+    }
     
     // Render each stage card
     stages.forEach(stage => {
       const data = stageTotals[stage];
-      const countEl = document.getElementById(`pipeline-count-${stage}`);
+      const prevData = prevStageTotals[stage];
       const totalEl = document.getElementById(`pipeline-total-${stage}`);
+      const changeEl = document.getElementById(`pipeline-change-${stage}`);
       const dealsEl = document.getElementById(`pipeline-deals-${stage}`);
       
-      if (countEl) countEl.textContent = data.count;
       if (totalEl) totalEl.textContent = this.formatMoney(data.total);
+      
+      // Render change indicator
+      if (changeEl) {
+        const valueDiff = data.total - prevData.total;
+        this.renderChangeIndicator(changeEl, valueDiff, previousData);
+      }
       
       if (dealsEl) {
         if (data.deals.length === 0) {
@@ -889,6 +920,28 @@ class GlossiDashboard {
     
     // Render highlights
     this.renderPipelineHighlights(highlights, pipelineData?.updatedAt);
+  }
+
+  /**
+   * Render change indicator for pipeline cards
+   */
+  renderChangeIndicator(el, diff, hasPreviousData) {
+    if (!hasPreviousData) {
+      el.textContent = '';
+      el.className = 'card-change';
+      return;
+    }
+    
+    if (diff > 0) {
+      el.textContent = `+${this.formatMoney(diff)}`;
+      el.className = 'card-change change-positive';
+    } else if (diff < 0) {
+      el.textContent = this.formatMoney(diff);
+      el.className = 'card-change change-negative';
+    } else {
+      el.textContent = 'No change';
+      el.className = 'card-change change-neutral';
+    }
   }
 
   /**
