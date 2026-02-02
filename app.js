@@ -940,6 +940,18 @@ class GlossiDashboard {
     const partnershipsEl = document.getElementById('pipeline-total-partnerships');
     if (partnershipsEl) partnershipsEl.textContent = partnerships.length;
     
+    // Render "as of" date
+    const updatedAtEl = document.getElementById('pipeline-updated-at');
+    if (updatedAtEl) {
+      if (pipelineData?.updatedAt) {
+        const date = new Date(pipelineData.updatedAt);
+        const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        updatedAtEl.textContent = `as of ${formatted}`;
+      } else {
+        updatedAtEl.textContent = '';
+      }
+    }
+    
     // Render highlights
     this.renderPipelineHighlights(highlights, pipelineData?.updatedAt);
   }

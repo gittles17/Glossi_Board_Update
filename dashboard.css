@@ -5649,6 +5649,12 @@ body::after {
   margin-left: -2px;
 }
 
+.pipeline-updated {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-left: auto;
+}
+
 .pipeline-summary {
   display: flex;
   align-items: center;
