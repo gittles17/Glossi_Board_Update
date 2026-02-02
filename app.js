@@ -1501,142 +1501,65 @@ RULES:
       }).join('');
     }
     
-    // Render to links card on homepage (grouped by section)
+    // Render to links card on homepage (grouped by section) - matches Seed Raise funnel structure
     if (linksListContainer) {
       if (links.length === 0 && sections.length === 0) {
-        linksListContainer.innerHTML = '<div class="empty-state">No links added yet. Click + to add a link.</div>';
+        linksListContainer.innerHTML = '<div class="empty-state">No links added yet. Click + to add a section.</div>';
         linksListContainer.classList.add('empty');
       } else {
         linksListContainer.classList.remove('empty');
         
-        // Render each section
+        // Render each section (like funnel-column in Seed Raise)
         linksListContainer.innerHTML = sections.map(section => {
           const sectionLinks = linksBySection[section.id] || [];
-          const isCollapsed = this.collapsedLinkSections?.has(section.id);
           
           return `
-            <div class="link-section" data-section-id="${section.id}" data-section-order="${section.order}">
-              <div class="link-section-header">
-                <div class="link-section-drag-handle" title="Drag to reorder">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="9" cy="6" r="2"></circle>
-                    <circle cx="15" cy="6" r="2"></circle>
-                    <circle cx="9" cy="12" r="2"></circle>
-                    <circle cx="15" cy="12" r="2"></circle>
-                    <circle cx="9" cy="18" r="2"></circle>
-                    <circle cx="15" cy="18" r="2"></circle>
-                  </svg>
-                </div>
-                <button class="link-section-collapse ${isCollapsed ? 'collapsed' : ''}" data-section-id="${section.id}">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </button>
-                <span class="link-section-name" data-section-id="${section.id}">${section.name}</span>
-                <span class="link-section-count">${sectionLinks.length}</span>
-                <div class="link-section-actions">
-                  <button class="section-edit-btn" onclick="event.stopPropagation(); window.dashboard.editLinkSection('${section.id}')" title="Edit section">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                    </svg>
-                  </button>
-                  <button class="section-add-link-btn" onclick="event.stopPropagation(); window.dashboard.openAddLink('${section.id}')" title="Add link to section">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                  </button>
+            <div class="link-column" data-section-id="${section.id}">
+              <div class="link-column-header">
+                <div class="link-column-title-row">
+                  <span class="link-column-title" data-section-id="${section.id}">${section.name}</span>
+                  <span class="link-column-count">(${sectionLinks.length})</span>
                 </div>
               </div>
-              <div class="link-section-content ${isCollapsed ? 'collapsed' : ''}" data-section-id="${section.id}">
+              <div class="link-column-items" data-section-id="${section.id}">
                 ${sectionLinks.length === 0 ? `
-                  <div class="link-section-empty" data-section-id="${section.id}">
-                    Drop links here or click + to add
-                  </div>
-                ` : sectionLinks.map(link => {
-                  const icon = iconMap[link.icon] || iconMap.link;
-                  return `
-                    <div class="link-item" data-link-id="${link.id}" data-section-id="${section.id}" data-order="${link.order}" draggable="true">
-                      <div class="link-item-drag-handle">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                          <circle cx="9" cy="6" r="2"></circle>
-                          <circle cx="15" cy="6" r="2"></circle>
-                          <circle cx="9" cy="12" r="2"></circle>
-                          <circle cx="15" cy="12" r="2"></circle>
-                          <circle cx="9" cy="18" r="2"></circle>
-                          <circle cx="15" cy="18" r="2"></circle>
-                        </svg>
-                      </div>
-                      <div class="link-item-icon ${link.color || 'default'}">${icon}</div>
-                      <div class="link-item-content">
-                        <div class="link-item-name">${link.name}</div>
-                        <div class="link-item-url">${link.url}</div>
-                      </div>
-                      <div class="link-item-actions">
-                        <button class="edit" onclick="event.stopPropagation(); window.dashboard.editLink('${link.id}')" title="Edit">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                          </svg>
-                        </button>
-                        <button class="delete" onclick="event.stopPropagation(); window.dashboard.deleteLinkDirect('${link.id}')" title="Delete">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                          </svg>
-                        </button>
-                      </div>
+                  <div class="empty-state drop-hint">Drop here</div>
+                ` : sectionLinks.map(link => `
+                  <div class="link-card" data-link-id="${link.id}" data-section-id="${section.id}" draggable="true">
+                    <div class="link-card-info">
+                      <span class="link-card-name">${link.name}</span>
+                      <span class="link-card-url">${link.url}</span>
                     </div>
-                  `;
-                }).join('')}
+                  </div>
+                `).join('')}
               </div>
             </div>
           `;
         }).join('');
         
-        // Add click handlers for links and collapse toggles
+        // Setup handlers (like Seed Raise)
         this.setupLinkCardHandlers(linksListContainer, links);
       }
     }
   }
   
   /**
-   * Setup event handlers for links card
+   * Setup event handlers for links card (matches Seed Raise pattern)
    */
   setupLinkCardHandlers(container, links) {
-    // Initialize collapsed sections set if not exists
-    if (!this.collapsedLinkSections) {
-      this.collapsedLinkSections = new Set();
-    }
-    
-    // Section collapse toggles
-    container.querySelectorAll('.link-section-collapse').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const sectionId = btn.dataset.sectionId;
-        const content = container.querySelector(`.link-section-content[data-section-id="${sectionId}"]`);
-        
-        if (this.collapsedLinkSections.has(sectionId)) {
-          this.collapsedLinkSections.delete(sectionId);
-          btn.classList.remove('collapsed');
-          content?.classList.remove('collapsed');
-        } else {
-          this.collapsedLinkSections.add(sectionId);
-          btn.classList.add('collapsed');
-          content?.classList.add('collapsed');
+    // Click to edit link (like investor cards)
+    container.querySelectorAll('.link-card').forEach(card => {
+      card.addEventListener('click', () => {
+        if (!card.classList.contains('dragging')) {
+          this.editLink(card.dataset.linkId);
         }
       });
     });
     
-    // Click to open links
-    container.querySelectorAll('.link-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        if (!e.target.closest('.link-item-actions') && !e.target.closest('.link-item-drag-handle')) {
-          const linkId = item.dataset.linkId;
-          const link = links.find(l => l.id === linkId);
-          if (link) window.open(link.url, '_blank');
-        }
+    // Click section title to edit name
+    container.querySelectorAll('.link-column-title').forEach(title => {
+      title.addEventListener('click', () => {
+        this.editLinkSection(title.dataset.sectionId);
       });
     });
     
@@ -1645,118 +1568,59 @@ RULES:
   }
   
   /**
-   * Setup drag and drop for links
+   * Setup drag and drop for links (matches Seed Raise setupInvestorDragDrop)
    */
   setupLinkDragDrop(container) {
-    const linkItems = container.querySelectorAll('.link-item[draggable="true"]');
-    const sectionContents = container.querySelectorAll('.link-section-content');
+    const cards = container.querySelectorAll('.link-card[draggable="true"]');
+    const columns = container.querySelectorAll('.link-column-items');
 
     // Disable dragging on touch devices to allow scrolling
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     if (isTouchDevice) {
-      linkItems.forEach(item => {
-        item.removeAttribute('draggable');
+      cards.forEach(card => {
+        card.removeAttribute('draggable');
       });
       return;
     }
 
-    // Link drag handlers (like investor cards in Seed Raise)
-    linkItems.forEach(item => {
-      item.addEventListener('dragstart', (e) => {
-        item.classList.add('dragging');
-        e.dataTransfer.setData('text/plain', item.dataset.linkId);
-        e.dataTransfer.setData('application/x-link-section', item.dataset.sectionId);
+    // Link card drag handlers (exactly like investor cards)
+    cards.forEach(card => {
+      card.addEventListener('dragstart', (e) => {
+        card.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', card.dataset.linkId);
         e.dataTransfer.effectAllowed = 'move';
       });
 
-      item.addEventListener('dragend', () => {
-        item.classList.remove('dragging');
-        sectionContents.forEach(col => col.classList.remove('drag-over'));
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        columns.forEach(col => col.classList.remove('drag-over'));
       });
     });
 
-    // Section content as drop zones (like columns in Seed Raise)
-    sectionContents.forEach(sectionContent => {
-      sectionContent.addEventListener('dragover', (e) => {
+    // Columns as drop zones (exactly like Seed Raise)
+    columns.forEach(column => {
+      column.addEventListener('dragover', (e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
-        sectionContent.classList.add('drag-over');
+        column.classList.add('drag-over');
       });
 
-      sectionContent.addEventListener('dragleave', (e) => {
-        if (!sectionContent.contains(e.relatedTarget)) {
-          sectionContent.classList.remove('drag-over');
+      column.addEventListener('dragleave', (e) => {
+        if (!column.contains(e.relatedTarget)) {
+          column.classList.remove('drag-over');
         }
       });
 
-      sectionContent.addEventListener('drop', (e) => {
+      column.addEventListener('drop', (e) => {
         e.preventDefault();
-        sectionContent.classList.remove('drag-over');
+        column.classList.remove('drag-over');
         
         const linkId = e.dataTransfer.getData('text/plain');
-        const targetSectionId = sectionContent.dataset.sectionId;
+        const newSectionId = column.dataset.sectionId;
         
-        if (linkId && targetSectionId) {
-          this.moveLinkToSection(linkId, targetSectionId);
+        if (linkId && newSectionId) {
+          this.moveLinkToSection(linkId, newSectionId);
         }
-      });
-    });
-
-    // Section drag handlers (for reordering sections via drag handle)
-    container.querySelectorAll('.link-section').forEach(section => {
-      const handle = section.querySelector('.link-section-drag-handle');
-      
-      handle?.addEventListener('mousedown', () => {
-        section.setAttribute('draggable', 'true');
-      });
-      
-      section.addEventListener('dragstart', (e) => {
-        if (!e.target.closest('.link-section-drag-handle')) {
-          e.preventDefault();
-          return;
-        }
-        section.classList.add('section-dragging');
-        e.dataTransfer.setData('application/x-section-id', section.dataset.sectionId);
-        e.dataTransfer.effectAllowed = 'move';
-      });
-      
-      section.addEventListener('dragend', () => {
-        section.classList.remove('section-dragging');
-        section.removeAttribute('draggable');
-        container.querySelectorAll('.link-section').forEach(el => el.classList.remove('section-drag-over'));
-      });
-      
-      section.addEventListener('dragover', (e) => {
-        const sectionId = e.dataTransfer.types.includes('application/x-section-id');
-        if (!sectionId) return;
-        e.preventDefault();
-        section.classList.add('section-drag-over');
-      });
-      
-      section.addEventListener('dragleave', () => {
-        section.classList.remove('section-drag-over');
-      });
-      
-      section.addEventListener('drop', (e) => {
-        const draggedSectionId = e.dataTransfer.getData('application/x-section-id');
-        if (!draggedSectionId || draggedSectionId === section.dataset.sectionId) return;
-        
-        e.preventDefault();
-        section.classList.remove('section-drag-over');
-        
-        // Reorder sections
-        const allSections = [...container.querySelectorAll('.link-section')];
-        const draggedSection = container.querySelector(`.link-section[data-section-id="${draggedSectionId}"]`);
-        const draggedIndex = allSections.indexOf(draggedSection);
-        const targetIndex = allSections.indexOf(section);
-        
-        const sectionIds = allSections.map(s => s.dataset.sectionId);
-        sectionIds.splice(draggedIndex, 1);
-        sectionIds.splice(targetIndex, 0, draggedSectionId);
-        
-        storage.reorderLinkSections(sectionIds);
-        this.data = storage.getData();
-        this.renderQuickLinks();
       });
     });
   }
@@ -1770,17 +1634,17 @@ RULES:
     
     if (!link || link.section === newSectionId) return;
 
-    // Optimistic: Move DOM element immediately
-    const card = document.querySelector(`.link-item[data-link-id="${linkId}"]`);
-    const targetSection = document.querySelector(`.link-section-content[data-section-id="${newSectionId}"]`);
+    // Optimistic: Move DOM element immediately (like Seed Raise)
+    const card = document.querySelector(`.link-card[data-link-id="${linkId}"]`);
+    const targetColumn = document.querySelector(`.link-column-items[data-section-id="${newSectionId}"]`);
     
-    if (card && targetSection) {
+    if (card && targetColumn) {
       // Animate the move
       card.style.opacity = '0.5';
       card.style.transform = 'scale(0.95)';
       
       requestAnimationFrame(() => {
-        targetSection.appendChild(card);
+        targetColumn.appendChild(card);
         card.dataset.sectionId = newSectionId;
         card.style.opacity = '';
         card.style.transform = '';
@@ -1890,7 +1754,7 @@ RULES:
     if (!section) return;
     
     // Find the section name element and make it editable
-    const nameEl = document.querySelector(`.link-section-name[data-section-id="${sectionId}"]`);
+    const nameEl = document.querySelector(`.link-column-title[data-section-id="${sectionId}"]`);
     if (!nameEl) return;
     
     // Store original name
