@@ -586,8 +586,8 @@ class GlossiDashboard {
       }
     });
     
-    document.getElementById('add-link-btn')?.addEventListener('click', () => {
-      this.openAddLink();
+    document.getElementById('add-section-btn')?.addEventListener('click', () => {
+      this.addLinkSection();
     });
 
     document.getElementById('decision-modal-close').addEventListener('click', () => {
@@ -1408,12 +1408,14 @@ RULES:
   }
 
   /**
-   * Render quick links dynamically
+   * Render quick links dynamically (grouped by section)
    */
   renderQuickLinks() {
     const container = document.getElementById('quick-links-container');
     const linksListContainer = document.getElementById('links-list');
     const links = storage.getQuickLinks();
+    const sections = storage.getLinkSections();
+    const linksBySection = storage.getQuickLinksBySection();
 
     const iconMap = {
       globe: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1472,54 +1474,301 @@ RULES:
       }).join('');
     }
     
-    // Render to links card on homepage
+    // Render to links card on homepage (grouped by section)
     if (linksListContainer) {
-      if (links.length === 0) {
+      if (links.length === 0 && sections.length === 0) {
         linksListContainer.innerHTML = '<div class="empty-state">No links added yet. Click + to add a link.</div>';
         linksListContainer.classList.add('empty');
       } else {
         linksListContainer.classList.remove('empty');
-        linksListContainer.innerHTML = links.map(link => {
-          const icon = iconMap[link.icon] || iconMap.link;
+        
+        // Render each section
+        linksListContainer.innerHTML = sections.map(section => {
+          const sectionLinks = linksBySection[section.id] || [];
+          const isCollapsed = this.collapsedLinkSections?.has(section.id);
+          
           return `
-            <div class="link-item" data-link-id="${link.id}">
-              <div class="link-item-icon ${link.color || 'default'}">${icon}</div>
-              <div class="link-item-content">
-                <div class="link-item-name">${link.name}</div>
-                <div class="link-item-url">${link.url}</div>
+            <div class="link-section" data-section-id="${section.id}" data-section-order="${section.order}">
+              <div class="link-section-header">
+                <div class="link-section-drag-handle" title="Drag to reorder">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="9" cy="6" r="2"></circle>
+                    <circle cx="15" cy="6" r="2"></circle>
+                    <circle cx="9" cy="12" r="2"></circle>
+                    <circle cx="15" cy="12" r="2"></circle>
+                    <circle cx="9" cy="18" r="2"></circle>
+                    <circle cx="15" cy="18" r="2"></circle>
+                  </svg>
+                </div>
+                <button class="link-section-collapse ${isCollapsed ? 'collapsed' : ''}" data-section-id="${section.id}">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <span class="link-section-name" data-section-id="${section.id}">${section.name}</span>
+                <span class="link-section-count">${sectionLinks.length}</span>
+                <div class="link-section-actions">
+                  <button class="section-edit-btn" onclick="event.stopPropagation(); window.dashboard.editLinkSection('${section.id}')" title="Edit section">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                  </button>
+                  <button class="section-add-link-btn" onclick="event.stopPropagation(); window.dashboard.openAddLink('${section.id}')" title="Add link to section">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div class="link-item-actions">
-                <button class="edit" onclick="event.stopPropagation(); window.dashboard.editLink('${link.id}')" title="Edit">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                  </svg>
-                </button>
-                <button class="delete" onclick="event.stopPropagation(); window.dashboard.deleteLinkDirect('${link.id}')" title="Delete">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                  </svg>
-                </button>
+              <div class="link-section-content ${isCollapsed ? 'collapsed' : ''}" data-section-id="${section.id}">
+                ${sectionLinks.length === 0 ? `
+                  <div class="link-section-empty" data-section-id="${section.id}">
+                    Drop links here or click + to add
+                  </div>
+                ` : sectionLinks.map(link => {
+                  const icon = iconMap[link.icon] || iconMap.link;
+                  return `
+                    <div class="link-item" data-link-id="${link.id}" data-section-id="${section.id}" data-order="${link.order}" draggable="true">
+                      <div class="link-item-drag-handle">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                          <circle cx="9" cy="6" r="2"></circle>
+                          <circle cx="15" cy="6" r="2"></circle>
+                          <circle cx="9" cy="12" r="2"></circle>
+                          <circle cx="15" cy="12" r="2"></circle>
+                          <circle cx="9" cy="18" r="2"></circle>
+                          <circle cx="15" cy="18" r="2"></circle>
+                        </svg>
+                      </div>
+                      <div class="link-item-icon ${link.color || 'default'}">${icon}</div>
+                      <div class="link-item-content">
+                        <div class="link-item-name">${link.name}</div>
+                        <div class="link-item-url">${link.url}</div>
+                      </div>
+                      <div class="link-item-actions">
+                        <button class="edit" onclick="event.stopPropagation(); window.dashboard.editLink('${link.id}')" title="Edit">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                          </svg>
+                        </button>
+                        <button class="delete" onclick="event.stopPropagation(); window.dashboard.deleteLinkDirect('${link.id}')" title="Delete">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
               </div>
             </div>
           `;
         }).join('');
         
-        // Add click handlers to open links
-        linksListContainer.querySelectorAll('.link-item').forEach(item => {
-          item.addEventListener('click', (e) => {
-            if (!e.target.closest('.link-item-actions')) {
-              const linkId = item.dataset.linkId;
-              const link = links.find(l => l.id === linkId);
-              if (link) window.open(link.url, '_blank');
-            }
-          });
-        });
+        // Add click handlers for links and collapse toggles
+        this.setupLinkCardHandlers(linksListContainer, links);
       }
     }
   }
   
+  /**
+   * Setup event handlers for links card
+   */
+  setupLinkCardHandlers(container, links) {
+    // Initialize collapsed sections set if not exists
+    if (!this.collapsedLinkSections) {
+      this.collapsedLinkSections = new Set();
+    }
+    
+    // Section collapse toggles
+    container.querySelectorAll('.link-section-collapse').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sectionId = btn.dataset.sectionId;
+        const content = container.querySelector(`.link-section-content[data-section-id="${sectionId}"]`);
+        
+        if (this.collapsedLinkSections.has(sectionId)) {
+          this.collapsedLinkSections.delete(sectionId);
+          btn.classList.remove('collapsed');
+          content?.classList.remove('collapsed');
+        } else {
+          this.collapsedLinkSections.add(sectionId);
+          btn.classList.add('collapsed');
+          content?.classList.add('collapsed');
+        }
+      });
+    });
+    
+    // Click to open links
+    container.querySelectorAll('.link-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (!e.target.closest('.link-item-actions') && !e.target.closest('.link-item-drag-handle')) {
+          const linkId = item.dataset.linkId;
+          const link = links.find(l => l.id === linkId);
+          if (link) window.open(link.url, '_blank');
+        }
+      });
+    });
+    
+    // Setup drag and drop
+    this.setupLinkDragDrop(container);
+  }
+  
+  /**
+   * Setup drag and drop for links
+   */
+  setupLinkDragDrop(container) {
+    let draggedItem = null;
+    let draggedSection = null;
+    
+    // Link drag handlers
+    container.querySelectorAll('.link-item[draggable="true"]').forEach(item => {
+      item.addEventListener('dragstart', (e) => {
+        draggedItem = item;
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', item.dataset.linkId);
+      });
+      
+      item.addEventListener('dragend', () => {
+        item.classList.remove('dragging');
+        container.querySelectorAll('.link-item').forEach(el => el.classList.remove('drag-over'));
+        container.querySelectorAll('.link-section-content').forEach(el => el.classList.remove('drag-over'));
+        draggedItem = null;
+      });
+    });
+    
+    // Section content as drop zones
+    container.querySelectorAll('.link-section-content').forEach(sectionContent => {
+      sectionContent.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        
+        if (!draggedItem) return;
+        
+        sectionContent.classList.add('drag-over');
+        
+        // Find position to insert
+        const afterElement = this.getDragAfterElementLink(sectionContent, e.clientY);
+        const items = [...sectionContent.querySelectorAll('.link-item:not(.dragging)')];
+        
+        items.forEach(el => el.classList.remove('drag-over'));
+        if (afterElement) {
+          afterElement.classList.add('drag-over');
+        }
+      });
+      
+      sectionContent.addEventListener('dragleave', (e) => {
+        if (!sectionContent.contains(e.relatedTarget)) {
+          sectionContent.classList.remove('drag-over');
+        }
+      });
+      
+      sectionContent.addEventListener('drop', (e) => {
+        e.preventDefault();
+        sectionContent.classList.remove('drag-over');
+        
+        if (!draggedItem) return;
+        
+        const linkId = draggedItem.dataset.linkId;
+        const targetSectionId = sectionContent.dataset.sectionId;
+        const afterElement = this.getDragAfterElementLink(sectionContent, e.clientY);
+        
+        // Calculate new order
+        let newOrder = 0;
+        if (afterElement) {
+          newOrder = parseInt(afterElement.dataset.order) || 0;
+        } else {
+          // Append to end
+          const items = sectionContent.querySelectorAll('.link-item');
+          newOrder = items.length;
+        }
+        
+        // Update storage
+        storage.reorderLinks(linkId, targetSectionId, newOrder);
+        this.data = storage.getData();
+        this.renderQuickLinks();
+      });
+    });
+    
+    // Section drag handlers (for reordering sections)
+    container.querySelectorAll('.link-section').forEach(section => {
+      const handle = section.querySelector('.link-section-drag-handle');
+      
+      handle?.addEventListener('mousedown', () => {
+        section.setAttribute('draggable', 'true');
+      });
+      
+      section.addEventListener('dragstart', (e) => {
+        if (!e.target.closest('.link-section-drag-handle')) {
+          e.preventDefault();
+          return;
+        }
+        draggedSection = section;
+        section.classList.add('section-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      
+      section.addEventListener('dragend', () => {
+        section.classList.remove('section-dragging');
+        section.removeAttribute('draggable');
+        container.querySelectorAll('.link-section').forEach(el => el.classList.remove('section-drag-over'));
+        draggedSection = null;
+      });
+      
+      section.addEventListener('dragover', (e) => {
+        if (!draggedSection || draggedSection === section) return;
+        e.preventDefault();
+        section.classList.add('section-drag-over');
+      });
+      
+      section.addEventListener('dragleave', () => {
+        section.classList.remove('section-drag-over');
+      });
+      
+      section.addEventListener('drop', (e) => {
+        if (!draggedSection || draggedSection === section) return;
+        e.preventDefault();
+        section.classList.remove('section-drag-over');
+        
+        // Reorder sections
+        const allSections = [...container.querySelectorAll('.link-section')];
+        const draggedIndex = allSections.indexOf(draggedSection);
+        const targetIndex = allSections.indexOf(section);
+        
+        // Get new order
+        const sectionIds = allSections.map(s => s.dataset.sectionId);
+        sectionIds.splice(draggedIndex, 1);
+        sectionIds.splice(targetIndex, 0, draggedSection.dataset.sectionId);
+        
+        storage.reorderLinkSections(sectionIds);
+        this.data = storage.getData();
+        this.renderQuickLinks();
+      });
+    });
+  }
+  
+  /**
+   * Get element to insert link after based on mouse position
+   */
+  getDragAfterElementLink(container, y) {
+    const draggableElements = [...container.querySelectorAll('.link-item:not(.dragging)')];
+    
+    return draggableElements.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      
+      if (offset < 0 && offset > closest.offset) {
+        return { offset: offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+
   /**
    * Delete a link directly (from links card)
    */
@@ -1541,8 +1790,9 @@ RULES:
   /**
    * Open add link modal
    */
-  openAddLink() {
+  openAddLink(sectionId = null) {
     this.editingLinkId = null;
+    this.selectedLinkSection = sectionId;
     document.getElementById('link-modal-title').textContent = 'Add Link';
     document.getElementById('link-name').value = '';
     document.getElementById('link-url').value = '';
@@ -1554,7 +1804,82 @@ RULES:
     document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
     document.querySelector('.color-option.default').classList.add('selected');
     
+    // Populate section dropdown
+    this.populateLinkSectionDropdown(sectionId);
+    
     this.showModal('link-modal');
+  }
+  
+  /**
+   * Populate link section dropdown
+   */
+  populateLinkSectionDropdown(selectedId = null) {
+    const dropdown = document.getElementById('link-section');
+    if (!dropdown) return;
+    
+    const sections = storage.getLinkSections();
+    dropdown.innerHTML = sections.map(section => 
+      `<option value="${section.id}" ${section.id === selectedId ? 'selected' : ''}>${section.name}</option>`
+    ).join('');
+  }
+  
+  /**
+   * Add a new link section
+   */
+  addLinkSection() {
+    const name = prompt('Enter section name:');
+    if (!name || !name.trim()) return;
+    
+    storage.addLinkSection(name.trim());
+    this.data = storage.getData();
+    this.renderQuickLinks();
+  }
+  
+  /**
+   * Edit a link section
+   */
+  editLinkSection(sectionId) {
+    const sections = storage.getLinkSections();
+    const section = sections.find(s => s.id === sectionId);
+    if (!section) return;
+    
+    const newName = prompt('Edit section name:', section.name);
+    if (newName === null) return; // Cancelled
+    
+    if (!newName.trim()) {
+      // Delete section if name is empty
+      if (sections.length > 1) {
+        if (confirm('Delete this section? Links will be moved to the first section.')) {
+          storage.deleteLinkSection(sectionId);
+          this.data = storage.getData();
+          this.renderQuickLinks();
+        }
+      } else {
+        alert('Cannot delete the last section.');
+      }
+      return;
+    }
+    
+    storage.updateLinkSection(sectionId, { name: newName.trim() });
+    this.data = storage.getData();
+    this.renderQuickLinks();
+  }
+  
+  /**
+   * Delete a link section
+   */
+  deleteLinkSection(sectionId) {
+    const sections = storage.getLinkSections();
+    if (sections.length <= 1) {
+      alert('Cannot delete the last section.');
+      return;
+    }
+    
+    if (confirm('Delete this section? Links will be moved to another section.')) {
+      storage.deleteLinkSection(sectionId);
+      this.data = storage.getData();
+      this.renderQuickLinks();
+    }
   }
 
   /**
@@ -1566,6 +1891,7 @@ RULES:
     if (!link) return;
 
     this.editingLinkId = id;
+    this.selectedLinkSection = link.section;
     document.getElementById('link-modal-title').textContent = 'Edit Link';
     document.getElementById('link-name').value = link.name;
     document.getElementById('link-url').value = link.url;
@@ -1577,6 +1903,9 @@ RULES:
     document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
     const colorOption = document.querySelector(`.color-option.${link.color || 'default'}`);
     if (colorOption) colorOption.classList.add('selected');
+    
+    // Populate section dropdown
+    this.populateLinkSectionDropdown(link.section);
     
     this.showModal('link-modal');
   }
@@ -1591,6 +1920,8 @@ RULES:
     const emailEnabled = document.getElementById('link-email-enabled').checked;
     const selectedColor = document.querySelector('.color-option.selected');
     const color = selectedColor ? selectedColor.dataset.color : 'default';
+    const sectionDropdown = document.getElementById('link-section');
+    const section = sectionDropdown?.value || this.selectedLinkSection || storage.getLinkSections()[0]?.id;
 
     if (!name || !url) {
       this.showToast('Please enter a name and URL', 'error');
@@ -1615,7 +1946,8 @@ RULES:
       icon,
       color,
       emailEnabled,
-      emailLabel: emailLabel || name
+      emailLabel: emailLabel || name,
+      section
     };
 
     if (this.editingLinkId) {
@@ -1627,7 +1959,6 @@ RULES:
     this.data = storage.getData();
     this.hideModal('link-modal');
     this.renderQuickLinks();
-    this.renderSettingsStatus(); // Refresh email link toggles
   }
 
   /**

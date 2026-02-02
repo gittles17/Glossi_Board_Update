@@ -17,12 +17,17 @@ const DEFAULT_DATA = {
     { id: 'partnerships', value: '0', label: 'Partnerships', note: '' },
     { id: 'closed', value: '0', label: 'Closed', note: '$0 revenue' }
   ],
+  linkSections: [
+    { id: 'resources', name: 'Resources', order: 0 },
+    { id: 'media', name: 'Media', order: 1 },
+    { id: 'documents', name: 'Documents', order: 2 }
+  ],
   quickLinks: [
-    { id: 'website', name: 'Glossi.io', url: 'https://glossi.io', icon: 'globe', color: 'default', emailEnabled: true, emailLabel: 'Website' },
-    { id: 'video', name: 'Pitch Video', url: 'https://www.youtube.com/watch?v=kXbQqM35iHA', icon: 'video', color: 'red', emailEnabled: true, emailLabel: 'Pitch Video' },
-    { id: 'deck', name: 'Deck', url: 'https://docsend.com/view/sqmwqnjh9zk8pncu', icon: 'document', color: 'blue', emailEnabled: true, emailLabel: 'Deck' },
-    { id: 'article', name: 'a16z Article', url: 'https://a16z.com/ai-is-learning-to-build-reality/', icon: 'book', color: 'purple', emailEnabled: true, emailLabel: 'a16z - AI World Models' },
-    { id: 'link5', name: 'AI Won\'t Kill 3D', url: 'https://www.linkedin.com/pulse/why-ai-wont-kill-3d-jonathan-gitlin-krhyc/', icon: 'globe', color: 'default', emailEnabled: true, emailLabel: 'AI Won\'t Kill 3D' }
+    { id: 'website', name: 'Glossi.io', url: 'https://glossi.io', icon: 'globe', color: 'default', emailEnabled: true, emailLabel: 'Website', section: 'resources', order: 0 },
+    { id: 'video', name: 'Pitch Video', url: 'https://www.youtube.com/watch?v=kXbQqM35iHA', icon: 'video', color: 'red', emailEnabled: true, emailLabel: 'Pitch Video', section: 'media', order: 0 },
+    { id: 'deck', name: 'Deck', url: 'https://docsend.com/view/sqmwqnjh9zk8pncu', icon: 'document', color: 'blue', emailEnabled: true, emailLabel: 'Deck', section: 'documents', order: 0 },
+    { id: 'article', name: 'a16z Article', url: 'https://a16z.com/ai-is-learning-to-build-reality/', icon: 'book', color: 'purple', emailEnabled: true, emailLabel: 'a16z - AI World Models', section: 'media', order: 1 },
+    { id: 'link5', name: 'AI Won\'t Kill 3D', url: 'https://www.linkedin.com/pulse/why-ai-wont-kill-3d-jonathan-gitlin-krhyc/', icon: 'globe', color: 'default', emailEnabled: true, emailLabel: 'AI Won\'t Kill 3D', section: 'media', order: 2 }
   ],
   seedRaise: {
     target: '$500K',
@@ -162,6 +167,38 @@ class Storage {
     if (!this.data.quickLinks || this.data.quickLinks.length === 0) {
       this.data.quickLinks = DEFAULT_DATA.quickLinks;
       this.save();
+    }
+
+    // Migrate: Ensure link sections exist
+    if (!this.data.linkSections || this.data.linkSections.length === 0) {
+      this.data.linkSections = DEFAULT_DATA.linkSections;
+      this.save();
+    }
+
+    // Migrate: Assign sections to existing links that don't have one
+    let needsSave = false;
+    if (this.data.quickLinks) {
+      this.data.quickLinks.forEach((link, index) => {
+        if (!link.section) {
+          // Auto-assign based on content type
+          if (link.icon === 'video' || link.url?.includes('youtube') || link.url?.includes('vimeo')) {
+            link.section = 'media';
+          } else if (link.icon === 'document' || link.url?.includes('docsend') || link.url?.includes('.pdf')) {
+            link.section = 'documents';
+          } else {
+            link.section = 'resources';
+          }
+          link.order = index;
+          needsSave = true;
+        }
+        if (link.order === undefined) {
+          link.order = index;
+          needsSave = true;
+        }
+      });
+      if (needsSave) {
+        this.save();
+      }
     }
 
     // Create initial snapshot if no history exists
@@ -592,10 +629,119 @@ class Storage {
   }
 
   /**
+   * Get link sections
+   */
+  getLinkSections() {
+    return (this.data.linkSections || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+  }
+
+  /**
+   * Add a link section
+   */
+  addLinkSection(name) {
+    if (!this.data.linkSections) {
+      this.data.linkSections = [];
+    }
+    const maxOrder = Math.max(-1, ...this.data.linkSections.map(s => s.order || 0));
+    const newSection = {
+      id: 'section_' + Date.now(),
+      name: name,
+      order: maxOrder + 1
+    };
+    this.data.linkSections.push(newSection);
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return newSection;
+  }
+
+  /**
+   * Update a link section
+   */
+  updateLinkSection(id, updates) {
+    const index = this.data.linkSections.findIndex(s => s.id === id);
+    if (index >= 0) {
+      this.data.linkSections[index] = { ...this.data.linkSections[index], ...updates };
+      this.data.lastUpdated = new Date().toISOString();
+      this.scheduleSave();
+    }
+    return this.data;
+  }
+
+  /**
+   * Delete a link section (moves links to first section)
+   */
+  deleteLinkSection(id) {
+    const sections = this.getLinkSections();
+    if (sections.length <= 1) return this.data; // Don't delete last section
+    
+    const index = this.data.linkSections.findIndex(s => s.id === id);
+    if (index >= 0) {
+      // Move all links in this section to the first available section
+      const firstOtherSection = sections.find(s => s.id !== id);
+      if (firstOtherSection && this.data.quickLinks) {
+        this.data.quickLinks.forEach(link => {
+          if (link.section === id) {
+            link.section = firstOtherSection.id;
+          }
+        });
+      }
+      this.data.linkSections.splice(index, 1);
+      this.data.lastUpdated = new Date().toISOString();
+      this.scheduleSave();
+    }
+    return this.data;
+  }
+
+  /**
+   * Reorder link sections
+   */
+  reorderLinkSections(sectionIds) {
+    sectionIds.forEach((id, index) => {
+      const section = this.data.linkSections.find(s => s.id === id);
+      if (section) {
+        section.order = index;
+      }
+    });
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return this.data;
+  }
+
+  /**
    * Get quick links
    */
   getQuickLinks() {
     return this.data.quickLinks || [];
+  }
+
+  /**
+   * Get quick links grouped by section
+   */
+  getQuickLinksBySection() {
+    const links = this.getQuickLinks();
+    const sections = this.getLinkSections();
+    const grouped = {};
+    
+    // Initialize all sections
+    sections.forEach(section => {
+      grouped[section.id] = [];
+    });
+    
+    // Group links by section
+    links.forEach(link => {
+      const sectionId = link.section || (sections[0]?.id || 'resources');
+      if (!grouped[sectionId]) {
+        grouped[sectionId] = [];
+      }
+      grouped[sectionId].push(link);
+    });
+    
+    // Sort links within each section by order
+    Object.keys(grouped).forEach(sectionId => {
+      grouped[sectionId].sort((a, b) => (a.order || 0) - (b.order || 0));
+    });
+    
+    return grouped;
   }
 
   /**
@@ -605,6 +751,13 @@ class Storage {
     if (!this.data.quickLinks) {
       this.data.quickLinks = [];
     }
+    const sections = this.getLinkSections();
+    const sectionId = link.section || (sections[0]?.id || 'resources');
+    
+    // Get max order in target section
+    const sectionLinks = this.data.quickLinks.filter(l => l.section === sectionId);
+    const maxOrder = Math.max(-1, ...sectionLinks.map(l => l.order || 0));
+    
     const newLink = {
       id: 'link_' + Date.now(),
       name: link.name,
@@ -612,7 +765,9 @@ class Storage {
       icon: link.icon || 'link',
       color: link.color || 'default',
       emailEnabled: link.emailEnabled !== false,
-      emailLabel: link.emailLabel || link.name
+      emailLabel: link.emailLabel || link.name,
+      section: sectionId,
+      order: maxOrder + 1
     };
     this.data.quickLinks.push(newLink);
     this.data.lastUpdated = new Date().toISOString();
@@ -630,6 +785,35 @@ class Storage {
       this.data.lastUpdated = new Date().toISOString();
       this.scheduleSave();
     }
+    return this.data;
+  }
+
+  /**
+   * Reorder links within and across sections
+   */
+  reorderLinks(linkId, targetSectionId, newOrder) {
+    const link = this.data.quickLinks.find(l => l.id === linkId);
+    if (!link) return this.data;
+    
+    const oldSection = link.section;
+    link.section = targetSectionId;
+    link.order = newOrder;
+    
+    // Reorder other links in target section
+    const sectionLinks = this.data.quickLinks
+      .filter(l => l.section === targetSectionId && l.id !== linkId)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    sectionLinks.forEach((l, idx) => {
+      if (idx >= newOrder) {
+        l.order = idx + 1;
+      } else {
+        l.order = idx;
+      }
+    });
+    
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
     return this.data;
   }
 

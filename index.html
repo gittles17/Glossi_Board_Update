@@ -311,7 +311,7 @@
         <div class="links-card" id="links-card">
           <div class="links-header">
             <h4>Quick Links</h4>
-            <button class="add-btn-small" id="add-link-btn" title="Add link">
+            <button class="add-btn-small" id="add-section-btn" title="Add section">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -319,7 +319,7 @@
             </button>
           </div>
           <div class="links-list" id="links-list">
-            <!-- Populated by JS -->
+            <!-- Populated by JS with sections and links -->
           </div>
         </div>
 
@@ -505,6 +505,12 @@
         <div class="notes-input-section">
           <label for="link-url">URL</label>
           <input type="url" id="link-url" placeholder="https://..." class="input">
+        </div>
+        <div class="notes-input-section">
+          <label for="link-section">Section</label>
+          <select id="link-section" class="input">
+            <!-- Populated dynamically -->
+          </select>
         </div>
         <div class="notes-input-section">
           <label for="link-email-label">Email Label (optional)</label>
