@@ -2703,7 +2703,7 @@ class GlossiDashboard {
   }
 
   /**
-   * Analyze content comprehensively and show preview modal
+   * Two-step import: Parse into chunks, then AI suggests destinations
    */
   async analyzeAndShowOptions() {
     if (!this.pendingDroppedContent) return;
@@ -2712,42 +2712,494 @@ class GlossiDashboard {
     
     // Show loading modal
     this.showModal('content-action-modal');
-    document.getElementById('unified-modal-title').textContent = 'Analyzing...';
+    document.getElementById('unified-modal-title').textContent = 'Parsing Content...';
     document.getElementById('content-analysis-result').innerHTML = `
       <div class="unified-loading">
         <div class="spinner"></div>
-        <p>Opus is analyzing your content...</p>
+        <p>Step 1: Breaking down your content...</p>
       </div>
     `;
     document.getElementById('unified-preview-sections').innerHTML = '';
     document.getElementById('unified-preview-footer').style.display = 'none';
 
     try {
-      // Get current site context for consistency checking
-      const siteContext = this.buildSiteContext();
+      // Step 1: Parse document into intelligent chunks using Opus
+      const chunks = await this.parseIntoChunks(content);
+      console.log('Parsed chunks:', chunks);
       
-      // Comprehensive AI extraction
-      const extraction = await this.extractContentComprehensively(
-        content.content,
-        content.type,
-        content.fileName,
-        siteContext
-      );
+      // Update loading message
+      document.getElementById('content-analysis-result').innerHTML = `
+        <div class="unified-loading">
+          <div class="spinner"></div>
+          <p>Step 2: Analyzing ${chunks.length} items...</p>
+        </div>
+      `;
       
-      console.log('Extraction complete:', extraction);
+      // Step 2: Get AI suggestions for each chunk
+      const categorizedChunks = await this.categorizeChunks(chunks);
+      console.log('Categorized:', categorizedChunks);
       
-      // Store for applying later
-      this.pendingExtraction = extraction;
+      // Store for later
+      this.pendingChunks = categorizedChunks;
       
-      // Show preview modal
-      this.showExtractionPreview(extraction, content.fileName);
+      // Step 3: Show import wizard with drag-drop
+      this.showImportWizard(categorizedChunks, content.fileName);
       
     } catch (error) {
-      console.error('Analysis error:', error);
+      console.error('Import error:', error);
       this.hideModal('content-action-modal');
-      this.showToast('Failed to analyze: ' + error.message, 'error');
+      this.showToast('Failed to parse: ' + error.message, 'error');
       this.pendingDroppedContent = null;
     }
+  }
+
+  /**
+   * Step 1: Parse document into intelligent chunks using Opus
+   */
+  async parseIntoChunks(content) {
+    const textContent = content.content?.text || '';
+    const isImage = content.type === 'image';
+    
+    const prompt = `Parse this document into logical, bite-sized chunks for an investor dashboard import.
+
+DOCUMENT:
+${isImage ? '[Image content - extract all visible text and data]' : textContent.substring(0, 15000)}
+
+Break into chunks based on:
+- Section headings with their content
+- Individual bullet points or list items (each as separate chunk)
+- Tables (each row as chunk if company data)
+- Blockquotes (each as separate chunk)
+- Key metrics/numbers with context
+- Company/partner mentions with context
+
+Return JSON array:
+{
+  "chunks": [
+    {
+      "id": 1,
+      "title": "Short descriptive title",
+      "content": "The actual content (keep it concise but complete)",
+      "type": "metric|company|quote|insight|partnership|team|other"
+    }
+  ]
+}
+
+RULES:
+1. Each chunk should be ONE logical piece of information
+2. Don't merge different topics into one chunk
+3. Keep company names, dollar amounts, and specific details intact
+4. Quotes should include attribution
+5. Be thorough - don't skip any substantive information
+6. 15-40 chunks is typical for a detailed document`;
+
+    let messages;
+    
+    if (isImage && content.content?.dataUrl) {
+      const matches = content.content.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (!matches) throw new Error('Invalid image data');
+      
+      messages = [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: matches[1], data: matches[2] } },
+          { type: 'text', text: prompt }
+        ]
+      }];
+    } else {
+      messages = [{ role: 'user', content: prompt }];
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.settings.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 8000,
+        messages
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Parsing failed');
+    }
+
+    const result = await response.json();
+    const responseText = result.content[0].text;
+    
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Failed to parse response');
+    
+    const parsed = JSON.parse(jsonMatch[0]);
+    return parsed.chunks || [];
+  }
+
+  /**
+   * Step 2: Categorize chunks with AI suggestions
+   */
+  async categorizeChunks(chunks) {
+    const siteContext = this.buildSiteContext();
+    
+    const prompt = `Categorize these content chunks for an investor cheat sheet dashboard.
+
+CURRENT SITE DATA:
+- Pipeline: ${siteContext.pipelineTotal} (${siteContext.pipeline.length} deals)
+- Talking Points: ${siteContext.talkingPoints.length}
+- Quotes: ${siteContext.quotes.length}
+
+CHUNKS TO CATEGORIZE:
+${chunks.map((c, i) => `${i + 1}. [${c.type}] "${c.title}": ${c.content.substring(0, 150)}...`).join('\n')}
+
+For EACH chunk, suggest the best destination:
+- "pipeline" - Sales deals with companies (name, value, stage)
+- "partnership" - Strategic partners, integrations, channel partners
+- "talkingPoint" - Strong investor-ready statement (rewrite to be punchy)
+- "quote" - Customer/partner quote with attribution
+- "note" - Reference material worth saving
+- "skip" - Not useful for the dashboard
+
+Return JSON:
+{
+  "categorized": [
+    {
+      "chunkId": 1,
+      "destination": "pipeline|partnership|talkingPoint|quote|note|skip",
+      "confidence": "high|medium|low",
+      "displayTitle": "Short title for wizard",
+      "displayContent": "Content as it should appear (rewrite if needed for clarity)",
+      "metadata": { "value": "$50K", "stage": "pilot", "source": "Person Name" }
+    }
+  ]
+}
+
+RULES:
+1. Be generous with categorization - when in doubt, use "note" not "skip"
+2. Rewrite talkingPoints to be punchy and investor-friendly (casual tone)
+3. Extract company name, value, stage for pipeline items
+4. Extract quote text and source for quotes
+5. Partnership = integrations, resellers, tech partners (not sales prospects)`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.settings.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 8000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Categorization failed');
+    }
+
+    const result = await response.json();
+    const responseText = result.content[0].text;
+    
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Failed to parse categorization');
+    
+    const parsed = JSON.parse(jsonMatch[0]);
+    
+    // Merge original chunks with categorization
+    return chunks.map((chunk, i) => {
+      const cat = parsed.categorized?.find(c => c.chunkId === chunk.id || c.chunkId === i + 1) || {};
+      return {
+        ...chunk,
+        destination: cat.destination || 'note',
+        confidence: cat.confidence || 'low',
+        displayTitle: cat.displayTitle || chunk.title,
+        displayContent: cat.displayContent || chunk.content,
+        metadata: cat.metadata || {}
+      };
+    });
+  }
+
+  /**
+   * Step 3: Show import wizard with drag-drop between categories
+   */
+  showImportWizard(chunks, fileName) {
+    document.getElementById('unified-modal-title').textContent = `Import: ${fileName || 'Content'}`;
+    document.getElementById('content-analysis-result').innerHTML = '';
+    
+    // Group chunks by destination
+    const groups = {
+      pipeline: [],
+      partnership: [],
+      talkingPoint: [],
+      quote: [],
+      note: [],
+      skip: []
+    };
+    
+    chunks.forEach(chunk => {
+      const dest = chunk.destination || 'note';
+      if (groups[dest]) {
+        groups[dest].push(chunk);
+      } else {
+        groups.note.push(chunk);
+      }
+    });
+    
+    const groupLabels = {
+      pipeline: { label: 'Pipeline', color: '#3b82f6', icon: '💼' },
+      partnership: { label: 'Partnerships', color: '#8b5cf6', icon: '🤝' },
+      talkingPoint: { label: 'Talking Points', color: '#22c55e', icon: '💬' },
+      quote: { label: 'Quotes', color: '#f59e0b', icon: '❝' },
+      note: { label: 'Notes', color: '#6b7280', icon: '📝' },
+      skip: { label: 'Skip', color: '#374151', icon: '⊘' }
+    };
+    
+    let html = '<div class="import-wizard">';
+    
+    Object.entries(groups).forEach(([key, items]) => {
+      const info = groupLabels[key];
+      html += `
+        <div class="wizard-group" data-group="${key}">
+          <div class="wizard-group-header" style="border-left-color: ${info.color}">
+            <span class="group-icon">${info.icon}</span>
+            <span class="group-label">${info.label}</span>
+            <span class="group-count">${items.length}</span>
+          </div>
+          <div class="wizard-group-items" data-group="${key}">
+            ${items.map(item => `
+              <div class="wizard-item" draggable="true" data-chunk-id="${item.id}">
+                <div class="item-drag-handle">⋮⋮</div>
+                <div class="item-body">
+                  <div class="item-title">${this.escapeHtml(item.displayTitle)}</div>
+                  <div class="item-preview">${this.escapeHtml(item.displayContent?.substring(0, 100))}${item.displayContent?.length > 100 ? '...' : ''}</div>
+                  ${item.metadata?.value ? `<div class="item-meta">${item.metadata.value} ${item.metadata.stage ? '• ' + item.metadata.stage : ''}</div>` : ''}
+                  ${item.metadata?.source ? `<div class="item-meta">- ${item.metadata.source}</div>` : ''}
+                </div>
+                ${item.confidence === 'low' ? '<div class="item-confidence" title="Low confidence suggestion">?</div>' : ''}
+              </div>
+            `).join('')}
+            ${items.length === 0 ? '<div class="wizard-empty">Drag items here</div>' : ''}
+          </div>
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+    
+    document.getElementById('unified-preview-sections').innerHTML = html;
+    document.getElementById('unified-preview-sections').style.display = 'block';
+    
+    // Setup drag-drop
+    this.setupWizardDragDrop();
+    
+    // Show footer
+    const footerEl = document.getElementById('unified-preview-footer');
+    footerEl.innerHTML = `
+      <div class="wizard-footer-info">
+        <span class="footer-count">${chunks.length - groups.skip.length} items to import</span>
+      </div>
+      <div class="wizard-footer-actions">
+        <button class="btn-secondary" onclick="window.dashboard.cancelImport()">Cancel</button>
+        <button class="btn-primary" onclick="window.dashboard.applyImport()">Import Selected</button>
+      </div>
+    `;
+    footerEl.style.display = 'flex';
+  }
+
+  /**
+   * Setup drag-drop between wizard groups
+   */
+  setupWizardDragDrop() {
+    const items = document.querySelectorAll('.wizard-item');
+    const groups = document.querySelectorAll('.wizard-group-items');
+    
+    let draggedItem = null;
+    
+    items.forEach(item => {
+      item.addEventListener('dragstart', (e) => {
+        draggedItem = item;
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      
+      item.addEventListener('dragend', () => {
+        item.classList.remove('dragging');
+        draggedItem = null;
+        groups.forEach(g => g.classList.remove('drag-over'));
+        this.updateImportCounts();
+      });
+    });
+    
+    groups.forEach(group => {
+      group.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        group.classList.add('drag-over');
+      });
+      
+      group.addEventListener('dragleave', () => {
+        group.classList.remove('drag-over');
+      });
+      
+      group.addEventListener('drop', (e) => {
+        e.preventDefault();
+        group.classList.remove('drag-over');
+        
+        if (draggedItem) {
+          // Remove empty placeholder if exists
+          const empty = group.querySelector('.wizard-empty');
+          if (empty) empty.remove();
+          
+          // Move item to new group
+          group.appendChild(draggedItem);
+          
+          // Update chunk's destination
+          const chunkId = parseInt(draggedItem.dataset.chunkId);
+          const newDest = group.dataset.group;
+          const chunk = this.pendingChunks.find(c => c.id === chunkId);
+          if (chunk) chunk.destination = newDest;
+          
+          // Add empty placeholder to old group if needed
+          document.querySelectorAll('.wizard-group-items').forEach(g => {
+            if (g.children.length === 0) {
+              g.innerHTML = '<div class="wizard-empty">Drag items here</div>';
+            }
+          });
+        }
+      });
+    });
+  }
+
+  /**
+   * Update import counts in footer
+   */
+  updateImportCounts() {
+    const skipCount = document.querySelectorAll('.wizard-group[data-group="skip"] .wizard-item').length;
+    const totalCount = document.querySelectorAll('.wizard-item').length;
+    const importCount = totalCount - skipCount;
+    
+    const countEl = document.querySelector('.footer-count');
+    if (countEl) {
+      countEl.textContent = `${importCount} items to import`;
+    }
+    
+    // Update group counts
+    document.querySelectorAll('.wizard-group').forEach(group => {
+      const count = group.querySelectorAll('.wizard-item').length;
+      const countEl = group.querySelector('.group-count');
+      if (countEl) countEl.textContent = count;
+    });
+  }
+
+  /**
+   * Cancel import
+   */
+  cancelImport() {
+    this.hideModal('content-action-modal');
+    this.pendingDroppedContent = null;
+    this.pendingChunks = null;
+  }
+
+  /**
+   * Apply import from wizard
+   */
+  async applyImport() {
+    if (!this.pendingChunks) return;
+    
+    const content = this.pendingDroppedContent;
+    
+    // Compress source for linking
+    const compressedSource = {
+      fileName: content?.fileName,
+      type: content?.type,
+      text: content?.content?.text ? this.compressText(content.content.text).text : null,
+      addedAt: new Date().toISOString()
+    };
+    
+    let counts = { pipeline: 0, partnership: 0, talkingPoint: 0, quote: 0, note: 0 };
+    
+    // Get items from each group (based on current DOM position after drag-drop)
+    document.querySelectorAll('.wizard-group').forEach(groupEl => {
+      const groupName = groupEl.dataset.group;
+      if (groupName === 'skip') return;
+      
+      groupEl.querySelectorAll('.wizard-item').forEach(itemEl => {
+        const chunkId = parseInt(itemEl.dataset.chunkId);
+        const chunk = this.pendingChunks.find(c => c.id === chunkId);
+        if (!chunk) return;
+        
+        if (groupName === 'pipeline') {
+          storage.addPipelineDeal({
+            name: chunk.metadata?.name || chunk.displayTitle,
+            value: chunk.metadata?.value || '',
+            stage: chunk.metadata?.stage || 'discovery',
+            sourceFile: compressedSource
+          });
+          counts.pipeline++;
+        }
+        else if (groupName === 'partnership') {
+          storage.addPipelineDeal({
+            name: chunk.metadata?.name || chunk.displayTitle,
+            value: chunk.metadata?.value || '',
+            stage: 'partnership',
+            note: chunk.displayContent,
+            category: 'partnerships',
+            sourceFile: compressedSource
+          });
+          counts.partnership++;
+        }
+        else if (groupName === 'talkingPoint') {
+          storage.addTalkingPoint(
+            chunk.displayTitle,
+            chunk.displayContent,
+            chunk.metadata?.category || 'core'
+          );
+          counts.talkingPoint++;
+        }
+        else if (groupName === 'quote') {
+          storage.addQuote({
+            quote: chunk.displayContent,
+            source: chunk.metadata?.source || 'Unknown',
+            sourceFile: compressedSource
+          });
+          counts.quote++;
+        }
+        else if (groupName === 'note') {
+          storage.addThought({
+            content: `TITLE: ${chunk.displayTitle}\n${chunk.displayContent}`,
+            fileName: content?.fileName,
+            originalSource: compressedSource
+          });
+          counts.note++;
+        }
+      });
+    });
+    
+    // Refresh UI
+    this.data = storage.getData();
+    this.render();
+    
+    // Build summary
+    const parts = [];
+    if (counts.pipeline) parts.push(`${counts.pipeline} deals`);
+    if (counts.partnership) parts.push(`${counts.partnership} partnerships`);
+    if (counts.talkingPoint) parts.push(`${counts.talkingPoint} talking points`);
+    if (counts.quote) parts.push(`${counts.quote} quotes`);
+    if (counts.note) parts.push(`${counts.note} notes`);
+    
+    this.hideModal('content-action-modal');
+    this.showToast(`Imported: ${parts.join(', ')}`, 'success');
+    
+    this.pendingDroppedContent = null;
+    this.pendingChunks = null;
   }
 
   /**
