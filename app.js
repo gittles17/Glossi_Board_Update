@@ -854,19 +854,11 @@ class GlossiDashboard {
       grandTotal += stageTotal;
     });
     
-    // Render total
+    // Render total card
     const totalEl = document.getElementById('pipeline-total-value');
+    const totalCountEl = document.getElementById('pipeline-total-count');
     if (totalEl) totalEl.textContent = this.formatMoney(grandTotal);
-    
-    // Render changes summary
-    const changesEl = document.getElementById('pipeline-changes');
-    if (changesEl && pipelineData?.changes) {
-      const c = pipelineData.changes;
-      const parts = [];
-      if (c.newDeals > 0) parts.push(`<span class="change-new">+${c.newDeals} new</span>`);
-      if (c.stalled > 0) parts.push(`<span class="change-stalled">${c.stalled} stalled</span>`);
-      changesEl.innerHTML = parts.join(' ');
-    }
+    if (totalCountEl) totalCountEl.textContent = `${normalizedDeals.length} deal${normalizedDeals.length !== 1 ? 's' : ''}`;
     
     // Render each stage card
     stages.forEach(stage => {

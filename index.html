@@ -125,10 +125,6 @@
   <section class="pipeline-section">
     <div class="pipeline-header">
       <h2>Pipeline</h2>
-      <div class="pipeline-summary">
-        <span class="pipeline-total" id="pipeline-total-value">$0</span>
-        <span class="pipeline-changes" id="pipeline-changes"></span>
-      </div>
       <button class="add-btn-small" id="edit-pipeline-btn" title="Update Pipeline">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -137,46 +133,35 @@
       </button>
     </div>
     
-    <!-- 4 Stage Cards (like seed raise funnel) -->
-    <div class="pipeline-funnel" id="pipeline-funnel">
-      <div class="pipeline-card" data-stage="discovery">
-        <div class="card-header" onclick="window.dashboard.togglePipelineCard('discovery')">
-          <div class="card-header-left">
-            <span class="card-title">Discovery</span>
-            <span class="card-count" id="pipeline-count-discovery">0</span>
-          </div>
-          <span class="card-total" id="pipeline-total-discovery">$0</span>
-        </div>
+    <!-- 5 Square Cards: Total + 4 Stages -->
+    <div class="pipeline-cards" id="pipeline-funnel">
+      <div class="pipeline-card pipeline-card-total" data-stage="total">
+        <span class="card-title">Total</span>
+        <span class="card-value" id="pipeline-total-value">$0</span>
+        <span class="card-count" id="pipeline-total-count">0 deals</span>
+      </div>
+      <div class="pipeline-card" data-stage="discovery" onclick="window.dashboard.togglePipelineCard('discovery')">
+        <span class="card-title">Discovery</span>
+        <span class="card-value" id="pipeline-total-discovery">$0</span>
+        <span class="card-count" id="pipeline-count-discovery">0</span>
         <div class="card-deals collapsed" id="pipeline-deals-discovery"></div>
       </div>
-      <div class="pipeline-card" data-stage="demo">
-        <div class="card-header" onclick="window.dashboard.togglePipelineCard('demo')">
-          <div class="card-header-left">
-            <span class="card-title">Demo</span>
-            <span class="card-count" id="pipeline-count-demo">0</span>
-          </div>
-          <span class="card-total" id="pipeline-total-demo">$0</span>
-        </div>
+      <div class="pipeline-card" data-stage="demo" onclick="window.dashboard.togglePipelineCard('demo')">
+        <span class="card-title">Demo</span>
+        <span class="card-value" id="pipeline-total-demo">$0</span>
+        <span class="card-count" id="pipeline-count-demo">0</span>
         <div class="card-deals collapsed" id="pipeline-deals-demo"></div>
       </div>
-      <div class="pipeline-card" data-stage="pilot">
-        <div class="card-header" onclick="window.dashboard.togglePipelineCard('pilot')">
-          <div class="card-header-left">
-            <span class="card-title">Pilot</span>
-            <span class="card-count" id="pipeline-count-pilot">0</span>
-          </div>
-          <span class="card-total" id="pipeline-total-pilot">$0</span>
-        </div>
+      <div class="pipeline-card" data-stage="pilot" onclick="window.dashboard.togglePipelineCard('pilot')">
+        <span class="card-title">Pilot</span>
+        <span class="card-value" id="pipeline-total-pilot">$0</span>
+        <span class="card-count" id="pipeline-count-pilot">0</span>
         <div class="card-deals collapsed" id="pipeline-deals-pilot"></div>
       </div>
-      <div class="pipeline-card" data-stage="closing">
-        <div class="card-header" onclick="window.dashboard.togglePipelineCard('closing')">
-          <div class="card-header-left">
-            <span class="card-title">Closing</span>
-            <span class="card-count" id="pipeline-count-closing">0</span>
-          </div>
-          <span class="card-total" id="pipeline-total-closing">$0</span>
-        </div>
+      <div class="pipeline-card" data-stage="closing" onclick="window.dashboard.togglePipelineCard('closing')">
+        <span class="card-title">Closing</span>
+        <span class="card-value" id="pipeline-total-closing">$0</span>
+        <span class="card-count" id="pipeline-count-closing">0</span>
         <div class="card-deals collapsed" id="pipeline-deals-closing"></div>
       </div>
     </div>
