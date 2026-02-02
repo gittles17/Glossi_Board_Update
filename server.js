@@ -4,7 +4,8 @@ const path = require('path');
 const { Pool } = require('pg');
 const multer = require('multer');
 const pdfParse = require('pdf-parse');
-const cheerio = require('cheerio');
+const axios = require('axios');
+const FormData = require('form-data');
 
 const app = express();
 const PORT = process.env.PORT || 5500;
@@ -303,53 +304,44 @@ app.post('/api/fetch-url', async (req, res) => {
       return res.status(400).json({ success: false, error: 'No URL provided' });
     }
     
-    // Fetch the URL
-    const response = await fetch(url, {
+    // Fetch the URL using axios
+    const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; GlossiBot/1.0)'
-      }
+      },
+      timeout: 30000
     });
     
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
+    const html = response.data;
     
-    const html = await response.text();
-    const $ = cheerio.load(html);
+    // Simple HTML to text extraction (no cheerio needed)
+    // Remove script and style tags
+    let text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+    text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+    text = text.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '');
+    text = text.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
+    text = text.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '');
     
-    // Remove script and style elements
-    $('script, style, nav, footer, header, aside').remove();
+    // Extract title
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    let title = titleMatch ? titleMatch[1].trim() : new URL(url).hostname;
     
-    // Get title
-    let title = $('title').text().trim() || 
-                $('h1').first().text().trim() || 
-                new URL(url).hostname;
-    
-    // Get main content
-    let content = '';
-    
-    // Try common content selectors
-    const contentSelectors = ['article', 'main', '.content', '.post', '.article', '#content', '.entry-content'];
-    for (const selector of contentSelectors) {
-      const el = $(selector);
-      if (el.length && el.text().trim().length > 100) {
-        content = el.text().trim();
-        break;
-      }
-    }
-    
-    // Fallback to body text
-    if (!content) {
-      content = $('body').text().trim();
-    }
+    // Remove all HTML tags and decode entities
+    text = text.replace(/<[^>]+>/g, ' ');
+    text = text.replace(/&nbsp;/g, ' ');
+    text = text.replace(/&amp;/g, '&');
+    text = text.replace(/&lt;/g, '<');
+    text = text.replace(/&gt;/g, '>');
+    text = text.replace(/&quot;/g, '"');
+    text = text.replace(/&#39;/g, "'");
     
     // Clean up whitespace
-    content = content.replace(/\s+/g, ' ').substring(0, 100000);
+    text = text.replace(/\s+/g, ' ').trim().substring(0, 100000);
     
     res.json({
       success: true,
       title,
-      content,
+      content: text,
       url
     });
   } catch (error) {
@@ -382,33 +374,30 @@ app.post('/api/transcribe', upload.single('file'), async (req, res) => {
     
     // Create form data for OpenAI
     const formData = new FormData();
-    formData.append('file', new Blob([req.file.buffer]), req.file.originalname);
+    formData.append('file', req.file.buffer, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype
+    });
     formData.append('model', 'whisper-1');
     
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
+    const response = await axios.post('https://api.openai.com/v1/audio/transcriptions', formData, {
       headers: {
-        'Authorization': `Bearer ${openaiKey}`
+        'Authorization': `Bearer ${openaiKey}`,
+        ...formData.getHeaders()
       },
-      body: formData
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
     });
-    
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`OpenAI API error: ${error}`);
-    }
-    
-    const result = await response.json();
     
     res.json({
       success: true,
       title: req.file.originalname.replace(/\.[^/.]+$/, ''),
-      transcript: result.text,
+      transcript: response.data.text,
       duration: null
     });
   } catch (error) {
-    console.error('Transcription error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Transcription error:', error.response?.data || error.message);
+    res.status(500).json({ success: false, error: error.response?.data?.error?.message || error.message });
   }
 });
 
