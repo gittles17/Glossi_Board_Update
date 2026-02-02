@@ -1155,8 +1155,20 @@ Guidelines:
 
       const response = await this.aiProcessor.chat(systemPrompt, fullPrompt);
       
-      // Generate title from prompt
-      const title = this.reportPrompt.substring(0, 50) + (this.reportPrompt.length > 50 ? '...' : '');
+      // Generate title from AI based on prompt and response
+      let title = '';
+      try {
+        const titleResponse = await this.aiProcessor.chat(
+          'Generate a brief, descriptive title (max 6 words) for this report. Return ONLY the title, no quotes or explanation.',
+          `Request: ${this.reportPrompt}\n\nReport content: ${response.substring(0, 500)}`
+        );
+        title = titleResponse.trim().replace(/^["']|["']$/g, '');
+        if (title.length > 60) {
+          title = title.substring(0, 57) + '...';
+        }
+      } catch (e) {
+        title = this.reportPrompt.substring(0, 50) + (this.reportPrompt.length > 50 ? '...' : '');
+      }
       
       // Save report
       const report = {
