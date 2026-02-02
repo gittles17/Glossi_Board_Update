@@ -98,6 +98,9 @@
         </button>
       </div>
 
+      <!-- Resize Handle: Sources <-> Workspace -->
+      <div class="kb-resize-handle" id="kb-resize-left" title="Drag to resize"></div>
+
       <!-- Main Workspace -->
       <div class="kb-workspace" id="kb-workspace">
 
@@ -134,6 +137,9 @@
           </div>
         </div>
       </div>
+
+      <!-- Resize Handle: Workspace <-> Reports -->
+      <div class="kb-resize-handle" id="kb-resize-right" title="Drag to resize"></div>
 
       <!-- Reports Panel (Collapsible) -->
       <div class="kb-reports-panel" id="kb-reports-panel">
@@ -410,7 +416,91 @@
           settingsModal.classList.remove('visible');
         }
       });
+      
+      // Pane resize functionality
+      setupPaneResize();
     });
+    
+    function setupPaneResize() {
+      const sourcesSidebar = document.getElementById('kb-sources-sidebar');
+      const reportsPanel = document.getElementById('kb-reports-panel');
+      const resizeLeft = document.getElementById('kb-resize-left');
+      const resizeRight = document.getElementById('kb-resize-right');
+      
+      let isResizing = false;
+      let currentHandle = null;
+      let startX = 0;
+      let startWidth = 0;
+      
+      // Load saved widths from localStorage
+      const savedSourcesWidth = localStorage.getItem('kb-sources-width');
+      const savedReportsWidth = localStorage.getItem('kb-reports-width');
+      
+      if (savedSourcesWidth && sourcesSidebar) {
+        sourcesSidebar.style.width = savedSourcesWidth + 'px';
+        sourcesSidebar.style.minWidth = savedSourcesWidth + 'px';
+      }
+      if (savedReportsWidth && reportsPanel) {
+        reportsPanel.style.width = savedReportsWidth + 'px';
+        reportsPanel.style.minWidth = savedReportsWidth + 'px';
+      }
+      
+      function startResize(e, handle, targetElement, direction) {
+        isResizing = true;
+        currentHandle = handle;
+        startX = e.clientX;
+        startWidth = targetElement.offsetWidth;
+        
+        handle.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        
+        const onMouseMove = (e) => {
+          if (!isResizing) return;
+          
+          const delta = direction === 'left' 
+            ? e.clientX - startX 
+            : startX - e.clientX;
+          
+          const newWidth = Math.max(150, Math.min(500, startWidth + delta));
+          targetElement.style.width = newWidth + 'px';
+          targetElement.style.minWidth = newWidth + 'px';
+        };
+        
+        const onMouseUp = () => {
+          if (!isResizing) return;
+          
+          isResizing = false;
+          handle.classList.remove('dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          
+          // Save width to localStorage
+          const storageKey = handle === resizeLeft ? 'kb-sources-width' : 'kb-reports-width';
+          localStorage.setItem(storageKey, targetElement.offsetWidth);
+          
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+        };
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      }
+      
+      if (resizeLeft && sourcesSidebar) {
+        resizeLeft.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          startResize(e, resizeLeft, sourcesSidebar, 'left');
+        });
+      }
+      
+      if (resizeRight && reportsPanel) {
+        resizeRight.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          startResize(e, resizeRight, reportsPanel, 'right');
+        });
+      }
+    }
   </script>
 </body>
 </html>

@@ -8580,6 +8580,50 @@ body::after {
   min-height: 600px;
 }
 
+/* KB Pane Resize Handles */
+.kb-resize-handle {
+  width: 6px;
+  background: transparent;
+  cursor: col-resize;
+  position: relative;
+  flex-shrink: 0;
+  z-index: 10;
+  transition: background 0.15s ease;
+}
+
+.kb-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 32px;
+  background: var(--border-color);
+  border-radius: 1px;
+  opacity: 0;
+  transition: opacity 0.15s ease, height 0.15s ease;
+}
+
+.kb-resize-handle:hover::after {
+  opacity: 1;
+  height: 48px;
+}
+
+.kb-resize-handle.dragging::after {
+  opacity: 1;
+  height: 100%;
+  background: var(--accent-blue);
+}
+
+.kb-resize-handle:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.kb-resize-handle.dragging {
+  background: rgba(var(--accent-blue-rgb), 0.1);
+}
+
 /* ============================================
    REPORT VIEW MODAL
    ============================================ */
