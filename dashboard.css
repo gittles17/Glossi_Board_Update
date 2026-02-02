@@ -7131,6 +7131,56 @@ body::after {
   gap: var(--space-3);
 }
 
+/* Prompt Suggestions */
+.kb-prompt-suggestions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: var(--space-4);
+}
+
+.kb-prompt-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+  max-width: 600px;
+  width: 100%;
+}
+
+.kb-prompt-btn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.kb-prompt-btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--accent-blue);
+}
+
+.kb-prompt-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.kb-prompt-text {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.kb-prompt-btn:hover .kb-prompt-text {
+  color: var(--text-primary);
+}
+
 .kb-message {
   display: flex;
   gap: var(--space-3);

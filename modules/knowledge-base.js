@@ -1415,13 +1415,47 @@ Guidelines:
     
     if (!this.currentConversation || this.currentConversation.messages.length === 0) {
       container.innerHTML = `
-        <div class="kb-message kb-message-system">
-          <div class="kb-message-content">
-            <p><strong>Welcome to your Knowledge Base</strong></p>
-            <p>Add sources (documents, URLs, text) and I'll help you analyze them, answer questions, and generate reports.</p>
+        <div class="kb-prompt-suggestions" id="kb-prompt-suggestions">
+          <div class="kb-prompt-grid">
+            <button class="kb-prompt-btn" data-prompt="What are the key highlights I should share with investors this week?">
+              <span class="kb-prompt-icon">📊</span>
+              <span class="kb-prompt-text">Key highlights for investors</span>
+            </button>
+            <button class="kb-prompt-btn" data-prompt="Summarize our pipeline status and identify deals that need attention.">
+              <span class="kb-prompt-icon">🎯</span>
+              <span class="kb-prompt-text">Pipeline status summary</span>
+            </button>
+            <button class="kb-prompt-btn" data-prompt="What are our strongest talking points for fundraising conversations?">
+              <span class="kb-prompt-icon">💬</span>
+              <span class="kb-prompt-text">Fundraising talking points</span>
+            </button>
+            <button class="kb-prompt-btn" data-prompt="Draft a brief investor update based on recent progress.">
+              <span class="kb-prompt-icon">✉️</span>
+              <span class="kb-prompt-text">Draft investor update</span>
+            </button>
+            <button class="kb-prompt-btn" data-prompt="What risks or blockers should I be aware of right now?">
+              <span class="kb-prompt-icon">⚠️</span>
+              <span class="kb-prompt-text">Risks and blockers</span>
+            </button>
+            <button class="kb-prompt-btn" data-prompt="Compare our current metrics to last month. What changed?">
+              <span class="kb-prompt-icon">📈</span>
+              <span class="kb-prompt-text">Month-over-month changes</span>
+            </button>
           </div>
         </div>
       `;
+      // Bind click handlers for prompt buttons
+      container.querySelectorAll('.kb-prompt-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const prompt = btn.dataset.prompt;
+          const chatInput = document.getElementById('kb-chat-input');
+          if (chatInput && prompt) {
+            chatInput.value = prompt;
+            chatInput.focus();
+            this.sendMessage();
+          }
+        });
+      });
       return;
     }
     
