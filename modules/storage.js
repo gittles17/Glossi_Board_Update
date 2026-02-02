@@ -931,9 +931,9 @@ class Storage {
   }
 
   /**
-   * Get pipeline history
+   * Get pipeline history from data object (legacy)
    */
-  getPipelineHistory() {
+  getDataPipelineHistory() {
     return this.data.pipelineHistory || [];
   }
 

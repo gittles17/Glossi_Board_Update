@@ -906,49 +906,104 @@ ${linksData}
    * Get Pipeline data from storage
    */
   getPipelineData() {
-    const history = this.storage.getPipelineHistory();
-    if (!history || history.length === 0) return null;
-    
-    const latest = history[history.length - 1];
     const lines = [];
     
-    lines.push(`As of: ${new Date(latest.date).toLocaleDateString()}`);
-    lines.push(`Total Pipeline: ${latest.pipelineTotal || 'N/A'}`);
-    lines.push('');
+    // Try multiple sources for pipeline data
     
-    // Stage breakdown
-    if (latest.stages) {
-      lines.push('Pipeline by Stage:');
-      Object.entries(latest.stages).forEach(([stage, data]) => {
-        if (data && data.revenue) {
-          lines.push(`- ${stage}: ${data.revenue} (${data.count || 0} deals)`);
+    // Source 1: Pipeline history (from pasted emails)
+    const history = this.storage.getPipelineHistory();
+    if (history && history.length > 0) {
+      const latest = history[0]; // Already sorted newest first
+      
+      if (latest.date) {
+        lines.push(`Pipeline Email (${new Date(latest.date).toLocaleDateString()}):`);
+      }
+      if (latest.pipelineTotal) {
+        lines.push(`Total Pipeline: ${latest.pipelineTotal}`);
+      }
+      
+      // Stage breakdown
+      if (latest.stages) {
+        lines.push('\nPipeline by Stage:');
+        Object.entries(latest.stages).forEach(([stage, data]) => {
+          if (data && data.revenue) {
+            lines.push(`- ${stage}: ${data.revenue} (${data.count || 0} deals)`);
+          }
+        });
+      }
+      
+      // Deals
+      if (latest.deals && latest.deals.length > 0) {
+        lines.push('\nActive Deals:');
+        latest.deals.forEach(deal => {
+          const name = deal.company || deal.name || 'Unknown';
+          const amount = deal.amount || deal.value || 'TBD';
+          const stage = deal.stage || 'Unknown';
+          lines.push(`- ${name}: ${amount} (${stage})${deal.nextSteps ? ' - Next: ' + deal.nextSteps : ''}`);
+        });
+      }
+      
+      // Hot deals
+      if (latest.hotDeals && latest.hotDeals.length > 0) {
+        lines.push('\nHot Deals (Closest to Close):');
+        latest.hotDeals.forEach(deal => {
+          const name = deal.company || deal.name || 'Unknown';
+          const amount = deal.amount || deal.value || 'TBD';
+          lines.push(`- ${name}: ${amount}${deal.blockers ? ' - Blockers: ' + deal.blockers : ''}`);
+        });
+      }
+      
+      // Highlights
+      if (latest.highlights && latest.highlights.length > 0) {
+        lines.push('\nPipeline Highlights:');
+        latest.highlights.forEach(h => lines.push(`- ${h}`));
+      }
+      
+      // Key updates text
+      if (latest.keyUpdates) {
+        lines.push('\nKey Updates:');
+        lines.push(latest.keyUpdates);
+      }
+    }
+    
+    // Source 2: Pipeline email content (raw parsed data)
+    const pipelineEmail = this.storage.getPipelineEmail?.() || this.storage.data?.pipelineEmail;
+    if (pipelineEmail && lines.length === 0) {
+      if (pipelineEmail.pipelineTotal) {
+        lines.push(`Total Pipeline: ${pipelineEmail.pipelineTotal}`);
+      }
+      if (pipelineEmail.deals && pipelineEmail.deals.length > 0) {
+        lines.push('\nDeals:');
+        pipelineEmail.deals.forEach(deal => {
+          lines.push(`- ${deal.company || deal.name}: ${deal.amount || deal.value} (${deal.stage})`);
+        });
+      }
+    }
+    
+    // Source 3: Stats (basic metrics)
+    const data = this.storage.getData();
+    if (data && data.stats) {
+      const pipelineStat = data.stats.find(s => s.id === 'pipeline' || s.label?.toLowerCase().includes('pipeline'));
+      if (pipelineStat && pipelineStat.value && pipelineStat.value !== '$0') {
+        if (lines.length === 0) {
+          lines.push('Pipeline Metrics:');
         }
-      });
+        lines.push(`\nDashboard Pipeline Value: ${pipelineStat.value}`);
+      }
+      
+      // Add other relevant stats
+      const prospectsStat = data.stats.find(s => s.id === 'prospects' || s.label?.toLowerCase().includes('prospect'));
+      if (prospectsStat && prospectsStat.value && prospectsStat.value !== '0') {
+        lines.push(`Prospects: ${prospectsStat.value}`);
+      }
+      
+      const closedStat = data.stats.find(s => s.id === 'closed' || s.label?.toLowerCase().includes('closed'));
+      if (closedStat) {
+        lines.push(`Closed: ${closedStat.value}${closedStat.note ? ' (' + closedStat.note + ')' : ''}`);
+      }
     }
     
-    // Deals
-    if (latest.deals && latest.deals.length > 0) {
-      lines.push('\nActive Deals:');
-      latest.deals.forEach(deal => {
-        lines.push(`- ${deal.company}: ${deal.amount} (${deal.stage})${deal.nextSteps ? ' - ' + deal.nextSteps : ''}`);
-      });
-    }
-    
-    // Hot deals
-    if (latest.hotDeals && latest.hotDeals.length > 0) {
-      lines.push('\nHot Deals (Closest to Close):');
-      latest.hotDeals.forEach(deal => {
-        lines.push(`- ${deal.company}: ${deal.amount}${deal.blockers ? ' - Blockers: ' + deal.blockers : ''}`);
-      });
-    }
-    
-    // Highlights
-    if (latest.highlights && latest.highlights.length > 0) {
-      lines.push('\nHighlights:');
-      latest.highlights.forEach(h => lines.push(`- ${h}`));
-    }
-    
-    return lines.join('\n');
+    return lines.length > 0 ? lines.join('\n') : null;
   }
   
   /**
