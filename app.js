@@ -5298,19 +5298,26 @@ Content: "${content.substring(0, 300)}"`
           </div>
         `;
       } else if (hasAnalysis) {
+        // Get the body text (everything after TITLE line)
+        const bodyText = content.replace(/^TITLE:\s*.+\n?/i, '').replace(/^SUMMARY:\s*.+\n?/im, '').trim();
+        const nonBulletContent = bodyText.replace(/^-\s*.+$/gm, '').trim();
+        
         expandableContent = `
           <div class="thought-expand-content">
-            ${summary ? `<div class="thought-summary" contenteditable="true" data-field="summary" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(summary)}</div>` : ''}
+            ${summary ? `<div class="thought-summary">${this.escapeHtml(summary)}</div>` : ''}
+            ${nonBulletContent && !summary ? `<div class="thought-body">${this.escapeHtml(nonBulletContent)}</div>` : ''}
             ${bullets.length > 0 ? `
               <ul class="thought-bullets">
-                ${bullets.map((b, i) => `<li contenteditable="true" data-field="bullet-${i}" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
+                ${bullets.map((b, i) => `<li>${this.escapeHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}
               </ul>
             ` : ''}
           </div>
         `;
       } else {
         expandableContent = `
-          <div class="thought-content" contenteditable="true" data-field="raw" data-thought-id="${thought.id}" onclick="event.stopPropagation()">${this.escapeHtml(content)}</div>
+          <div class="thought-expand-content">
+            <div class="thought-body">${this.escapeHtml(content)}</div>
+          </div>
         `;
       }
       
