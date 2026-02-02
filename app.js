@@ -1648,80 +1648,61 @@ RULES:
    * Setup drag and drop for links
    */
   setupLinkDragDrop(container) {
-    let draggedItem = null;
-    let draggedSection = null;
-    
-    // Link drag handlers
-    container.querySelectorAll('.link-item[draggable="true"]').forEach(item => {
-      item.addEventListener('dragstart', (e) => {
-        draggedItem = item;
-        item.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', item.dataset.linkId);
+    const linkItems = container.querySelectorAll('.link-item[draggable="true"]');
+    const sectionContents = container.querySelectorAll('.link-section-content');
+
+    // Disable dragging on touch devices to allow scrolling
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (isTouchDevice) {
+      linkItems.forEach(item => {
+        item.removeAttribute('draggable');
       });
-      
+      return;
+    }
+
+    // Link drag handlers (like investor cards in Seed Raise)
+    linkItems.forEach(item => {
+      item.addEventListener('dragstart', (e) => {
+        item.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', item.dataset.linkId);
+        e.dataTransfer.setData('application/x-link-section', item.dataset.sectionId);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
       item.addEventListener('dragend', () => {
         item.classList.remove('dragging');
-        container.querySelectorAll('.link-item').forEach(el => el.classList.remove('drag-over'));
-        container.querySelectorAll('.link-section-content').forEach(el => el.classList.remove('drag-over'));
-        draggedItem = null;
+        sectionContents.forEach(col => col.classList.remove('drag-over'));
       });
     });
-    
-    // Section content as drop zones
-    container.querySelectorAll('.link-section-content').forEach(sectionContent => {
+
+    // Section content as drop zones (like columns in Seed Raise)
+    sectionContents.forEach(sectionContent => {
       sectionContent.addEventListener('dragover', (e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
-        
-        if (!draggedItem) return;
-        
         sectionContent.classList.add('drag-over');
-        
-        // Find position to insert
-        const afterElement = this.getDragAfterElementLink(sectionContent, e.clientY);
-        const items = [...sectionContent.querySelectorAll('.link-item:not(.dragging)')];
-        
-        items.forEach(el => el.classList.remove('drag-over'));
-        if (afterElement) {
-          afterElement.classList.add('drag-over');
-        }
       });
-      
+
       sectionContent.addEventListener('dragleave', (e) => {
         if (!sectionContent.contains(e.relatedTarget)) {
           sectionContent.classList.remove('drag-over');
         }
       });
-      
+
       sectionContent.addEventListener('drop', (e) => {
         e.preventDefault();
         sectionContent.classList.remove('drag-over');
         
-        if (!draggedItem) return;
-        
-        const linkId = draggedItem.dataset.linkId;
+        const linkId = e.dataTransfer.getData('text/plain');
         const targetSectionId = sectionContent.dataset.sectionId;
-        const afterElement = this.getDragAfterElementLink(sectionContent, e.clientY);
         
-        // Calculate new order
-        let newOrder = 0;
-        if (afterElement) {
-          newOrder = parseInt(afterElement.dataset.order) || 0;
-        } else {
-          // Append to end
-          const items = sectionContent.querySelectorAll('.link-item');
-          newOrder = items.length;
+        if (linkId && targetSectionId) {
+          this.moveLinkToSection(linkId, targetSectionId);
         }
-        
-        // Update storage
-        storage.reorderLinks(linkId, targetSectionId, newOrder);
-        this.data = storage.getData();
-        this.renderQuickLinks();
       });
     });
-    
-    // Section drag handlers (for reordering sections)
+
+    // Section drag handlers (for reordering sections via drag handle)
     container.querySelectorAll('.link-section').forEach(section => {
       const handle = section.querySelector('.link-section-drag-handle');
       
@@ -1734,8 +1715,8 @@ RULES:
           e.preventDefault();
           return;
         }
-        draggedSection = section;
         section.classList.add('section-dragging');
+        e.dataTransfer.setData('application/x-section-id', section.dataset.sectionId);
         e.dataTransfer.effectAllowed = 'move';
       });
       
@@ -1743,11 +1724,11 @@ RULES:
         section.classList.remove('section-dragging');
         section.removeAttribute('draggable');
         container.querySelectorAll('.link-section').forEach(el => el.classList.remove('section-drag-over'));
-        draggedSection = null;
       });
       
       section.addEventListener('dragover', (e) => {
-        if (!draggedSection || draggedSection === section) return;
+        const sectionId = e.dataTransfer.types.includes('application/x-section-id');
+        if (!sectionId) return;
         e.preventDefault();
         section.classList.add('section-drag-over');
       });
@@ -1757,25 +1738,63 @@ RULES:
       });
       
       section.addEventListener('drop', (e) => {
-        if (!draggedSection || draggedSection === section) return;
+        const draggedSectionId = e.dataTransfer.getData('application/x-section-id');
+        if (!draggedSectionId || draggedSectionId === section.dataset.sectionId) return;
+        
         e.preventDefault();
         section.classList.remove('section-drag-over');
         
         // Reorder sections
         const allSections = [...container.querySelectorAll('.link-section')];
+        const draggedSection = container.querySelector(`.link-section[data-section-id="${draggedSectionId}"]`);
         const draggedIndex = allSections.indexOf(draggedSection);
         const targetIndex = allSections.indexOf(section);
         
-        // Get new order
         const sectionIds = allSections.map(s => s.dataset.sectionId);
         sectionIds.splice(draggedIndex, 1);
-        sectionIds.splice(targetIndex, 0, draggedSection.dataset.sectionId);
+        sectionIds.splice(targetIndex, 0, draggedSectionId);
         
         storage.reorderLinkSections(sectionIds);
         this.data = storage.getData();
         this.renderQuickLinks();
       });
     });
+  }
+  
+  /**
+   * Move link to a new section with optimistic UI update (like moveInvestorToStage)
+   */
+  moveLinkToSection(linkId, newSectionId) {
+    const links = storage.getQuickLinks();
+    const link = links.find(l => l.id === linkId);
+    
+    if (!link || link.section === newSectionId) return;
+
+    // Optimistic: Move DOM element immediately
+    const card = document.querySelector(`.link-item[data-link-id="${linkId}"]`);
+    const targetSection = document.querySelector(`.link-section-content[data-section-id="${newSectionId}"]`);
+    
+    if (card && targetSection) {
+      // Animate the move
+      card.style.opacity = '0.5';
+      card.style.transform = 'scale(0.95)';
+      
+      requestAnimationFrame(() => {
+        targetSection.appendChild(card);
+        card.dataset.sectionId = newSectionId;
+        card.style.opacity = '';
+        card.style.transform = '';
+      });
+    }
+
+    // Persist in background
+    const sectionLinks = links.filter(l => l.section === newSectionId);
+    const newOrder = sectionLinks.length;
+    storage.reorderLinks(linkId, newSectionId, newOrder);
+    this.data = storage.getData();
+    
+    // Delayed re-render to update counts and sync state
+    setTimeout(() => this.renderQuickLinks(), 150);
   }
   
   /**

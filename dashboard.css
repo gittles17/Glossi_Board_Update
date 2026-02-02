@@ -4326,8 +4326,9 @@ body::after {
 }
 
 .link-section-content.drag-over {
-  background: rgba(59, 130, 246, 0.05);
-  border-color: var(--accent-blue);
+  background: rgba(91, 176, 154, 0.1);
+  border: 2px dashed var(--accent-green);
+  border-radius: var(--radius-md);
 }
 
 .link-section-empty {
@@ -4359,12 +4360,8 @@ body::after {
 }
 
 .link-item.dragging {
-  opacity: 0.4;
-  transform: scale(0.98);
-}
-
-.link-item.drag-over {
-  border-top: 2px solid var(--accent-blue);
+  opacity: 0.5;
+  transform: scale(0.95);
 }
 
 .link-item-drag-handle {
