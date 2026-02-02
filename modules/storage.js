@@ -3,7 +3,7 @@
  * Handles file-based persistence for the Glossi Dashboard
  */
 
-// Default data structure - Clean slate with just links
+// Default data structure - Clean slate ready for rebuild
 const DEFAULT_DATA = {
   company: {
     name: 'Glossi',
@@ -11,23 +11,12 @@ const DEFAULT_DATA = {
     description: 'Generate unlimited product images and videos without ever compromising your brand.',
     demoUrl: 'https://www.youtube.com/watch?v=kXbQqM35iHA'
   },
-  pipeline: {
-    totalValue: '$0',
-    closestToClose: [],
-    inProgress: [],
-    partnerships: [],
-    closed: [],
-    exploring: ''
-  },
   stats: [
     { id: 'pipeline', value: '$0', label: 'Pipeline', note: '' },
     { id: 'prospects', value: '0', label: 'Prospects', note: '' },
     { id: 'partnerships', value: '0', label: 'Partnerships', note: '' },
     { id: 'closed', value: '0', label: 'Closed', note: '$0 revenue' }
   ],
-  moat: [],
-  talkingPoints: [],
-  talkingPointCategories: ['core', 'traction', 'market', 'testimonials'],
   quickLinks: [
     { id: 'website', name: 'Glossi.io', url: 'https://glossi.io', icon: 'globe', color: 'default', emailEnabled: true, emailLabel: 'Website' },
     { id: 'video', name: 'Pitch Video', url: 'https://www.youtube.com/watch?v=kXbQqM35iHA', icon: 'video', color: 'red', emailEnabled: true, emailLabel: 'Pitch Video' },
@@ -35,9 +24,6 @@ const DEFAULT_DATA = {
     { id: 'article', name: 'a16z Article', url: 'https://a16z.com/ai-is-learning-to-build-reality/', icon: 'book', color: 'purple', emailEnabled: true, emailLabel: 'a16z - AI World Models' },
     { id: 'link5', name: 'AI Won\'t Kill 3D', url: 'https://www.linkedin.com/pulse/why-ai-wont-kill-3d-jonathan-gitlin-krhyc/', icon: 'globe', color: 'default', emailEnabled: true, emailLabel: 'AI Won\'t Kill 3D' }
   ],
-  thoughts: [],
-  quotes: [],
-  milestones: [],
   seedRaise: {
     target: '$500K',
     investors: []

@@ -47,13 +47,6 @@
             </svg>
             Share
           </button>
-          <button class="dropdown-item" id="menu-curate">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 20h9"></path>
-              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-            </svg>
-            Curate Content
-          </button>
           <button class="dropdown-item" id="menu-settings">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="3"></circle>
@@ -305,77 +298,9 @@
           </div>
         </div>
 
-        <!-- Pipeline Summary -->
-        <div class="section-card section-card-pipeline">
-          <div class="card-header">
-            <h3>Pipeline Highlights</h3>
-            <div class="card-header-right">
-              <button class="pipeline-update-btn" id="pipeline-update-btn" title="Paste weekly email to update">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-                </svg>
-                Update
-              </button>
-              <button class="add-btn-small" id="add-pipeline-btn" title="Add pipeline deal">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-              </button>
-            </div>
-          </div>
-          <div class="pipeline-list" id="pipeline-hot">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-
-        <!-- Key Talking Points -->
-        <div class="section-card">
-          <div class="card-header">
-            <h3>Key Talking Points</h3>
-            <div class="header-actions">
-              <button class="fix-btn" id="fix-talking-points-btn" title="Fix duplicates and misplaced items">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-                </svg>
-                Fix
-              </button>
-              <button class="add-btn-small" id="add-talking-point-btn" title="Add talking point">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-              </button>
-            </div>
-          </div>
-          <div class="talking-points-expanded" id="talking-points">
-            <!-- Populated by JS with full explanations -->
-          </div>
-        </div>
-
-        <!-- Quotes Library -->
-        <div class="section-card section-quotes">
-          <div class="card-header">
-            <h3>Quotes Library</h3>
-            <span class="quotes-count" id="quotes-count"></span>
-          </div>
-          <div class="quotes-featured" id="quotes-featured">
-            <!-- Featured quotes (max 3) shown here -->
-          </div>
-          <div class="quotes-list" id="quotes-list">
-            <!-- All quotes populated by JS -->
-          </div>
-        </div>
-
-        <!-- Scratchpad -->
-        <div class="section-card section-scratchpad">
-          <div class="card-header">
-            <h3>Scratchpad</h3>
-            <span class="scratchpad-count" id="scratchpad-count"></span>
-          </div>
-          <div class="scratchpad-list" id="scratchpad-list">
-          </div>
+        <!-- Cheat Sheet Content Area - Ready for rebuild -->
+        <div id="cheatsheet-content">
+          <!-- New cheat sheet sections will be added here -->
         </div>
       </div>
     </section>
@@ -495,26 +420,6 @@
           <div class="input-group input-group-inline">
             <label for="seed-raise-target">Target Amount</label>
             <input type="text" id="seed-raise-target" class="input input-sm" placeholder="e.g., $500K" value="$500K">
-          </div>
-        </div>
-        <div class="settings-section">
-          <h3>Smart Curation</h3>
-          <p class="settings-description">AI-powered content curation that helps keep your cheat sheet focused.</p>
-          <div class="toggle-group">
-            <label class="toggle-row">
-              <input type="checkbox" id="auto-curate-toggle" checked>
-              <span class="toggle-switch"></span>
-              <span class="toggle-label">Auto-curate when new content is added</span>
-            </label>
-          </div>
-          <div class="input-group input-group-inline" style="margin-top: var(--space-3);">
-            <label for="stale-threshold">Archive stale content after</label>
-            <select id="stale-threshold" class="input input-sm">
-              <option value="2">2 weeks</option>
-              <option value="4" selected>4 weeks</option>
-              <option value="6">6 weeks</option>
-              <option value="8">8 weeks</option>
-            </select>
           </div>
         </div>
         <div class="settings-section">
@@ -671,34 +576,6 @@
     </div>
   </div>
 
-  <!-- Talking Point Modal -->
-  <div class="modal-overlay" id="talking-point-modal">
-    <div class="modal">
-      <div class="modal-header">
-        <h2 id="talking-point-modal-title">Add Talking Point</h2>
-        <button class="btn-icon modal-close" id="talking-point-modal-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="notes-input-section">
-          <label for="talking-point-title">Title</label>
-          <input type="text" id="talking-point-title" placeholder="e.g., 3D Asset Pipeline" class="input">
-        </div>
-        <div class="notes-input-section">
-          <label for="talking-point-content">Description</label>
-          <textarea id="talking-point-content" class="input textarea" rows="4" placeholder="Key differentiator or compelling narrative for investor conversations..."></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="talking-point-cancel">Cancel</button>
-        <button class="btn btn-primary" id="talking-point-save">Save</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Decision Modal -->
   <div class="modal-overlay" id="decision-modal">
@@ -725,47 +602,6 @@
     </div>
   </div>
 
-  <!-- Pipeline Modal -->
-  <div class="modal-overlay" id="pipeline-modal">
-    <div class="modal">
-      <div class="modal-header">
-        <h2 id="pipeline-modal-title">Add Pipeline Deal</h2>
-        <button class="btn-icon modal-close" id="pipeline-modal-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="notes-input-section">
-          <label for="pipeline-name">Company Name</label>
-          <input type="text" id="pipeline-name" placeholder="e.g., Acme Corp" class="input">
-        </div>
-        <div class="notes-input-section">
-          <label for="pipeline-value">Deal Value</label>
-          <input type="text" id="pipeline-value" placeholder="e.g., $50K" class="input">
-        </div>
-        <div class="notes-input-section">
-          <label for="pipeline-stage">Stage</label>
-          <select id="pipeline-stage" class="input">
-            <option value="discovery">Discovery</option>
-            <option value="demo">Demo</option>
-            <option value="validation">Validation</option>
-            <option value="pilot">Pilot</option>
-          </select>
-        </div>
-        <div class="notes-input-section">
-          <label for="pipeline-timing">Timing</label>
-          <input type="text" id="pipeline-timing" placeholder="e.g., Q1" class="input">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="pipeline-cancel">Cancel</button>
-        <button class="btn btn-primary" id="pipeline-save">Add</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Link Modal -->
   <div class="modal-overlay" id="link-modal">
@@ -894,18 +730,6 @@
     </div>
   </div>
 
-  <!-- Image Preview Modal -->
-  <div class="modal-overlay" id="image-preview-modal">
-    <div class="modal modal-image-preview">
-      <button class="btn-icon modal-close image-preview-close" id="image-preview-close">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-      <img id="image-preview-img" src="" alt="Preview">
-    </div>
-  </div>
 
   <!-- Progress Overlay -->
   <div class="progress-overlay" id="progress-overlay">
@@ -919,64 +743,6 @@
     </div>
   </div>
 
-  <!-- Curation Preview Modal -->
-  <div class="modal-overlay" id="curation-modal">
-    <div class="modal modal-large">
-      <div class="modal-header">
-        <h2>Content Curation</h2>
-        <button class="btn-icon modal-close" id="curation-modal-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div id="curation-loading" class="curation-loading">
-          <div class="spinner"></div>
-          <p>Analyzing your content...</p>
-        </div>
-        <div id="curation-results" class="curation-results" style="display: none;">
-          <div class="curation-summary" id="curation-summary"></div>
-          <div class="curation-sections" id="curation-sections"></div>
-        </div>
-      </div>
-      <div class="modal-footer" id="curation-footer" style="display: none;">
-        <button class="btn btn-secondary" id="curation-cancel">Cancel</button>
-        <button class="btn btn-primary" id="curation-apply">Apply Changes</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Pipeline Update Modal -->
-  <div class="modal-overlay" id="pipeline-update-modal">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>Update Pipeline</h2>
-        <button class="btn-icon modal-close" id="pipeline-modal-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <p class="modal-hint">Paste your weekly sales/pipeline email below. Opus will extract deal updates.</p>
-        <textarea id="pipeline-paste-text" class="pipeline-paste-area" rows="12" placeholder="Paste your pipeline email here...
-
-Example:
-Pipeline update - $1.5M total
-
-MagnaFlow - $50K pilot starting Q1
-VF Corp - Re-engaged, $2M+ opportunity  
-Centric Brands - Discovery call next week"></textarea>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="pipeline-cancel">Cancel</button>
-        <button class="btn btn-primary" id="pipeline-extract">Extract Deals</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Toast Notifications -->
   <div class="toast-container" id="toast-container"></div>
