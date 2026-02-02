@@ -29,11 +29,12 @@ class GlossiDashboard {
       'jg': 'Jonathan',
       'adam': 'Adam',
       'ricky': 'Ricky',
-      'jonathan': 'Jonathan'
+      'jonathan': 'Jonathan',
+      'will': 'Will'
     };
     
     // Available team members for quick assignment
-    this.teamMembers = ['Ricky', 'Jonathan', 'Adam', 'Unassigned'];
+    this.teamMembers = ['Ricky', 'Jonathan', 'Adam', 'Will', 'Unassigned'];
   }
 
   /**
@@ -42,7 +43,12 @@ class GlossiDashboard {
   resolveOwnerName(name) {
     if (!name) return 'Unassigned';
     const lower = name.toLowerCase().trim();
-    return this.nameAliases[lower] || name;
+    // Return alias if found, otherwise title-case the name for consistency
+    if (this.nameAliases[lower]) {
+      return this.nameAliases[lower];
+    }
+    // Title-case unknown names (e.g., "WILL" -> "Will", "john" -> "John")
+    return name.trim().charAt(0).toUpperCase() + name.trim().slice(1).toLowerCase();
   }
 
   /**
@@ -2095,7 +2101,7 @@ RULES:
   }
 
   /**
-   * Setup drag and drop for todo items between owner groups
+   * Setup drag and drop for todo items (reorder within groups and move between groups)
    */
   setupTodoDragDrop(meetingId) {
     const todoItems = document.querySelectorAll('.todo-item[draggable="true"]');
@@ -2105,18 +2111,53 @@ RULES:
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     if (isTouchDevice) {
       todoItems.forEach(item => item.removeAttribute('draggable'));
-      return; // Skip drag setup on touch devices
+      return;
     }
+
+    let draggedId = null;
+    let dropIndicator = null;
+
+    // Create drop indicator element
+    const createDropIndicator = () => {
+      const indicator = document.createElement('div');
+      indicator.className = 'todo-drop-indicator';
+      indicator.style.cssText = 'height: 2px; background: var(--accent-blue, #4A90D9); margin: 2px 0; border-radius: 1px; pointer-events: none;';
+      return indicator;
+    };
+
+    const removeDropIndicator = () => {
+      if (dropIndicator && dropIndicator.parentNode) {
+        dropIndicator.parentNode.removeChild(dropIndicator);
+      }
+      dropIndicator = null;
+    };
+
+    const getDropPosition = (group, y) => {
+      const items = [...group.querySelectorAll('.todo-item:not(.dragging)')];
+      for (let i = 0; i < items.length; i++) {
+        const rect = items[i].getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        if (y < midY) {
+          return { element: items[i], position: 'before' };
+        }
+      }
+      return { element: null, position: 'end' };
+    };
 
     todoItems.forEach(item => {
       item.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/plain', item.dataset.todoId);
+        draggedId = item.dataset.todoId;
+        e.dataTransfer.setData('text/plain', draggedId);
         e.dataTransfer.effectAllowed = 'move';
         item.classList.add('dragging');
+        setTimeout(() => item.style.opacity = '0.4', 0);
       });
 
       item.addEventListener('dragend', () => {
         item.classList.remove('dragging');
+        item.style.opacity = '';
+        draggedId = null;
+        removeDropIndicator();
         todoGroups.forEach(group => group.classList.remove('drag-over'));
       });
     });
@@ -2126,11 +2167,23 @@ RULES:
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         group.classList.add('drag-over');
+
+        // Show drop indicator at correct position
+        const { element, position } = getDropPosition(group, e.clientY);
+        removeDropIndicator();
+        dropIndicator = createDropIndicator();
+        
+        if (position === 'end') {
+          group.appendChild(dropIndicator);
+        } else if (element) {
+          element.parentNode.insertBefore(dropIndicator, element);
+        }
       });
 
       group.addEventListener('dragleave', (e) => {
         if (!group.contains(e.relatedTarget)) {
           group.classList.remove('drag-over');
+          removeDropIndicator();
         }
       });
 
@@ -2140,52 +2193,68 @@ RULES:
         
         const todoId = e.dataTransfer.getData('text/plain');
         const newOwner = group.closest('.todo-group').dataset.owner;
+        const { element, position } = getDropPosition(group, e.clientY);
+        const targetTodoId = element?.dataset?.todoId || null;
+        
+        removeDropIndicator();
         
         if (todoId && newOwner) {
-          this.moveTodoToOwner(meetingId, todoId, newOwner);
+          this.moveTodoToPosition(meetingId, todoId, newOwner, targetTodoId, position);
         }
       });
     });
   }
 
   /**
-   * Move todo to a new owner with optimistic UI update
+   * Move todo to a new position (reorder or change owner)
    */
-  moveTodoToOwner(meetingId, todoId, newOwner) {
+  moveTodoToPosition(meetingId, todoId, newOwner, targetTodoId, position) {
     const meeting = meetingsManager.getMeeting(meetingId);
     if (!meeting || !meeting.todos) return;
 
-    const todo = meeting.todos.find(t => t.id === todoId);
-    if (!todo || this.resolveOwnerName(todo.owner) === newOwner) return;
+    const todoIndex = meeting.todos.findIndex(t => t.id === todoId);
+    if (todoIndex === -1) return;
 
-    // Optimistic: Move DOM element immediately
-    const todoEl = document.querySelector(`[data-todo-id="${todoId}"]`);
-    const targetGroup = document.querySelector(`.todo-group[data-owner="${newOwner}"] .todo-group-items`);
+    const todo = meeting.todos[todoIndex];
+    const currentOwner = this.resolveOwnerName(todo.owner);
     
-    if (todoEl && targetGroup) {
-      // Animate the move
-      todoEl.style.opacity = '0.5';
-      todoEl.style.transform = 'scale(0.95)';
-      
-      requestAnimationFrame(() => {
-        targetGroup.appendChild(todoEl);
-        todoEl.style.opacity = '';
-        todoEl.style.transform = '';
-        
-        // Update the owner badge in the UI
-        const ownerBadge = todoEl.querySelector('.todo-owner-edit');
-        if (ownerBadge) {
-          ownerBadge.textContent = newOwner;
-        }
-      });
+    // Remove from current position
+    meeting.todos.splice(todoIndex, 1);
+    
+    // Update owner if changed
+    if (currentOwner !== newOwner) {
+      todo.owner = newOwner;
     }
-
-    // Persist in background and do full re-render to sync state
-    todo.owner = newOwner;
-    meetingsManager.updateMeeting(meeting);
     
-    // Delayed re-render to ensure data consistency
-    setTimeout(() => this.renderMeeting(meeting), 150);
+    // Find new position
+    let insertIndex;
+    if (targetTodoId && position === 'before') {
+      insertIndex = meeting.todos.findIndex(t => t.id === targetTodoId);
+      if (insertIndex === -1) insertIndex = meeting.todos.length;
+    } else {
+      // Insert at end of the target owner's todos
+      const ownerTodos = meeting.todos.filter(t => this.resolveOwnerName(t.owner) === newOwner);
+      if (ownerTodos.length > 0) {
+        const lastOwnerTodo = ownerTodos[ownerTodos.length - 1];
+        insertIndex = meeting.todos.findIndex(t => t.id === lastOwnerTodo.id) + 1;
+      } else {
+        insertIndex = meeting.todos.length;
+      }
+    }
+    
+    // Insert at new position
+    meeting.todos.splice(insertIndex, 0, todo);
+    
+    // Save and re-render
+    meetingsManager.updateMeeting(meeting);
+    this.renderMeeting(meeting);
+  }
+
+  /**
+   * Move todo to a new owner (legacy method for compatibility)
+   */
+  moveTodoToOwner(meetingId, todoId, newOwner) {
+    this.moveTodoToPosition(meetingId, todoId, newOwner, null, 'end');
   }
 
   /**
@@ -3209,8 +3278,21 @@ Format this into a clean, professional weekly update email. Return as JSON with 
 
     const todo = meeting.todos.find(t => t.id === todoId);
     if (todo) {
-      // Resolve alias to full name
-      todo.owner = this.resolveOwnerName(newOwner);
+      // First resolve alias to full name
+      let resolvedOwner = this.resolveOwnerName(newOwner);
+      
+      // Check if there's an existing owner in this meeting that matches (case-insensitive)
+      // This ensures "WILL" matches existing "Will" group
+      const existingOwners = [...new Set(meeting.todos.map(t => this.resolveOwnerName(t.owner)))];
+      const matchingOwner = existingOwners.find(
+        existing => existing.toLowerCase() === resolvedOwner.toLowerCase()
+      );
+      
+      if (matchingOwner) {
+        resolvedOwner = matchingOwner;
+      }
+      
+      todo.owner = resolvedOwner;
       meetingsManager.updateMeeting(meeting);
     }
   }
