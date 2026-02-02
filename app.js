@@ -825,13 +825,29 @@ class GlossiDashboard {
     const deals = pipelineData?.deals || [];
     const highlights = pipelineData?.highlights || {};
     
+    // Map old stage names to new ones
+    const stageMap = {
+      'discovery': 'discovery',
+      'proposal': 'demo',
+      'demo': 'demo',
+      'negotiation': 'pilot',
+      'pilot': 'pilot',
+      'closing': 'closing'
+    };
+    
+    // Normalize deal stages
+    const normalizedDeals = deals.map(d => ({
+      ...d,
+      stage: stageMap[d.stage] || d.stage
+    }));
+    
     // Calculate totals by stage
     const stages = ['discovery', 'demo', 'pilot', 'closing'];
     const stageTotals = {};
     let grandTotal = 0;
     
     stages.forEach(stage => {
-      const stageDeals = deals.filter(d => d.stage === stage);
+      const stageDeals = normalizedDeals.filter(d => d.stage === stage);
       let stageTotal = 0;
       stageDeals.forEach(d => { stageTotal += this.parseMoneyValue(d.value); });
       stageTotals[stage] = { deals: stageDeals, total: stageTotal, count: stageDeals.length };
@@ -883,7 +899,7 @@ class GlossiDashboard {
     this.renderPipelineHighlights(highlights, pipelineData?.updatedAt);
     
     // Show empty state if no data
-    if (deals.length === 0) {
+    if (normalizedDeals.length === 0) {
       const funnelEl = document.getElementById('pipeline-funnel');
       if (funnelEl) {
         funnelEl.innerHTML = `
