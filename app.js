@@ -590,6 +590,33 @@ class GlossiDashboard {
       this.addLinkSection();
     });
 
+    // Link modal event listeners
+    document.getElementById('link-modal-close')?.addEventListener('click', () => {
+      this.hideModal('link-modal');
+    });
+
+    document.getElementById('link-cancel')?.addEventListener('click', () => {
+      this.hideModal('link-modal');
+    });
+
+    document.getElementById('link-save')?.addEventListener('click', () => {
+      this.saveLink();
+    });
+
+    document.getElementById('link-delete')?.addEventListener('click', () => {
+      if (this.editingLinkId) {
+        this.deleteLink(this.editingLinkId);
+      }
+    });
+
+    // Color picker event listeners for link modal
+    document.querySelectorAll('.color-picker .color-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.color-picker .color-option').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+      });
+    });
+
     document.getElementById('decision-modal-close').addEventListener('click', () => {
       this.hideModal('decision-modal');
     });
