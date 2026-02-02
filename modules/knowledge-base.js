@@ -1205,22 +1205,27 @@ Guidelines:
       });
     });
     
-    // Add click handlers for source chips
-    container.querySelectorAll('.kb-source-chip').forEach(chip => {
+    // Add click handlers for sources
+    container.querySelectorAll('.kb-source-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const sourceId = item.dataset.id;
+        this.showSourceDetails(sourceId);
+      });
+      
       // Right-click context menu
-      chip.addEventListener('contextmenu', (e) => {
+      item.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        this.showSourceContextMenu(e, chip.dataset.id);
+        this.showSourceContextMenu(e, item.dataset.id);
       });
       
       // Drag start
-      chip.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/plain', chip.dataset.id);
-        chip.classList.add('dragging');
+      item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', item.dataset.id);
+        item.classList.add('dragging');
       });
       
-      chip.addEventListener('dragend', () => {
-        chip.classList.remove('dragging');
+      item.addEventListener('dragend', () => {
+        item.classList.remove('dragging');
       });
     });
     
@@ -1243,6 +1248,22 @@ Guidelines:
         if (sourceId) {
           this.moveSourceToFolder(sourceId, folderName);
         }
+      });
+    });
+    
+    // Add toggle handlers
+    container.querySelectorAll('.kb-source-toggle').forEach(toggle => {
+      toggle.addEventListener('change', (e) => {
+        const sourceId = e.target.closest('.kb-source-item').dataset.id;
+        this.toggleSource(sourceId, e.target.checked);
+      });
+    });
+    
+    // Add delete handlers
+    container.querySelectorAll('.kb-source-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const sourceId = e.target.closest('.kb-source-item').dataset.id;
+        this.deleteSource(sourceId);
       });
     });
   }
@@ -1355,34 +1376,28 @@ Guidelines:
     const isProcessing = source.processing === true;
     const progress = source.progress || 0;
     
-    // Get icon based on source type
-    const typeIcons = {
-      file: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>',
-      pdf: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line></svg>',
-      audio: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>',
-      image: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>',
-      text: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>'
-    };
-    const icon = typeIcons[source.type] || typeIcons.file;
-    
-    // Format tooltip info
-    const date = source.createdAt ? new Date(source.createdAt).toLocaleDateString() : '';
-    const contentPreview = source.content ? source.content.substring(0, 100).replace(/\n/g, ' ') + '...' : '';
-    
     return `
-      <div class="kb-source-chip ${source.enabled === false ? 'disabled' : ''} ${isProcessing ? 'processing' : ''}" data-id="${source.id}" draggable="${!isProcessing}">
-        <div class="kb-source-chip-icon">${icon}</div>
-        <span class="kb-source-chip-label">${this.escapeHtml(source.title)}</span>
-        ${isProcessing ? `
-          <div class="kb-source-chip-progress">
-            <div class="kb-source-chip-progress-fill" data-id="${source.id}" style="width: ${progress}%"></div>
-          </div>
-        ` : ''}
-        <div class="kb-source-tooltip">
-          <div class="kb-source-tooltip-title">${this.escapeHtml(source.title)}</div>
-          <div class="kb-source-tooltip-meta">${source.type || 'file'} ${date ? '• ' + date : ''}</div>
-          ${contentPreview ? `<div class="kb-source-tooltip-preview">${this.escapeHtml(contentPreview)}</div>` : ''}
+      <div class="kb-source-item ${source.enabled === false ? 'disabled' : ''} ${isProcessing ? 'processing' : ''}" data-id="${source.id}" draggable="${!isProcessing}">
+        <label class="kb-source-toggle-wrap" onclick="event.stopPropagation()">
+          <input type="checkbox" class="kb-source-toggle" ${source.enabled !== false ? 'checked' : ''} ${isProcessing ? 'disabled' : ''}>
+        </label>
+        <div class="kb-source-item-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
         </div>
+        <div class="kb-source-item-content">
+          <div class="kb-source-item-title">${this.escapeHtml(source.title)}</div>
+          ${isProcessing ? `
+            <div class="kb-source-progress">
+              <div class="kb-source-progress-fill" data-id="${source.id}" style="width: ${progress}%"></div>
+            </div>
+          ` : ''}
+        </div>
+        <button class="kb-source-delete" onclick="event.stopPropagation()" title="Delete source" ${isProcessing ? 'disabled' : ''}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+        </button>
       </div>
     `;
   }
