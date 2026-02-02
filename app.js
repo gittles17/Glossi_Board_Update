@@ -986,7 +986,7 @@ class GlossiDashboard {
       };
     });
     
-    // Render highlights with full details
+    // Render highlights with full details in cards
     const hotEl = document.getElementById('highlight-hot');
     const updatesEl = document.getElementById('highlight-updates');
     const marketingEl = document.getElementById('highlight-marketing');
@@ -999,7 +999,14 @@ class GlossiDashboard {
           const blocker = d.nextSteps ? `<span class="highlight-detail">${this.escapeHtml(d.nextSteps)}</span>` : '';
           return `<div class="highlight-item"><strong>${this.escapeHtml(d.name)}</strong> <span class="highlight-value">${this.escapeHtml(d.value || '')}</span>${blocker}</div>`;
         }).join('');
-        hotEl.innerHTML = `<div class="highlight-section"><span class="highlight-label label-hot">Hot Deals</span>${hotItems}</div>`;
+        hotEl.innerHTML = `
+          <div class="highlight-card">
+            <div class="highlight-card-header">
+              <span class="highlight-card-title title-hot">Hot Deals</span>
+              <span class="highlight-card-count">${pilotDeals.length}</span>
+            </div>
+            <div class="highlight-card-content">${hotItems}</div>
+          </div>`;
       } else {
         hotEl.innerHTML = '';
       }
@@ -1010,7 +1017,14 @@ class GlossiDashboard {
     if (updatesEl) {
       if (keyUpdates.length > 0) {
         const updateItems = keyUpdates.map(u => `<div class="highlight-item">${this.escapeHtml(u)}</div>`).join('');
-        updatesEl.innerHTML = `<div class="highlight-section"><span class="highlight-label label-new">Key Updates</span>${updateItems}</div>`;
+        updatesEl.innerHTML = `
+          <div class="highlight-card">
+            <div class="highlight-card-header">
+              <span class="highlight-card-title title-updates">Key Updates</span>
+              <span class="highlight-card-count">${keyUpdates.length}</span>
+            </div>
+            <div class="highlight-card-content">${updateItems}</div>
+          </div>`;
       } else {
         updatesEl.innerHTML = '';
       }
@@ -1021,7 +1035,14 @@ class GlossiDashboard {
     if (marketingEl) {
       if (marketing.length > 0) {
         const marketingItems = marketing.map(m => `<div class="highlight-item">${this.escapeHtml(m)}</div>`).join('');
-        marketingEl.innerHTML = `<div class="highlight-section"><span class="highlight-label label-marketing">Marketing</span>${marketingItems}</div>`;
+        marketingEl.innerHTML = `
+          <div class="highlight-card">
+            <div class="highlight-card-header">
+              <span class="highlight-card-title title-marketing">Marketing</span>
+              <span class="highlight-card-count">${marketing.length}</span>
+            </div>
+            <div class="highlight-card-content">${marketingItems}</div>
+          </div>`;
       } else {
         marketingEl.innerHTML = '';
       }

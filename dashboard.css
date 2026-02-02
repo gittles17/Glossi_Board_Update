@@ -5774,61 +5774,93 @@ body::after {
   padding: var(--space-2);
 }
 
-/* Pipeline Highlights */
+/* Pipeline Highlights - Card Style */
 .pipeline-highlights-minimal {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-4);
-  margin-top: var(--space-2);
+  margin-top: var(--space-4);
 }
 
 .highlight-row {
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
 }
 
 .highlight-row:empty {
   display: none;
 }
 
-.highlight-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+/* Highlight Card - matches stage-card styling */
+.highlight-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  transition: all 0.15s ease;
+  height: 100%;
 }
 
-.highlight-label {
+.highlight-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.highlight-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.highlight-card-title {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: var(--space-1);
-  display: block;
 }
 
-.highlight-label.label-hot {
+.highlight-card-title.title-hot {
   color: #ef4444;
 }
 
-.highlight-label.label-new {
+.highlight-card-title.title-updates {
   color: #10b981;
 }
 
-.highlight-label.label-marketing {
+.highlight-card-title.title-marketing {
   color: #60a5fa;
+}
+
+.highlight-card-count {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: auto;
+}
+
+.highlight-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .highlight-item {
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-secondary);
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: var(--space-2);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-1);
 }
 
 .highlight-item:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .highlight-item strong {
@@ -5854,6 +5886,10 @@ body::after {
   .pipeline-highlights-minimal {
     grid-template-columns: 1fr;
     gap: var(--space-3);
+  }
+  
+  .highlight-card {
+    padding: var(--space-3);
   }
 }
 
@@ -6896,12 +6932,12 @@ body::after {
 
 .kb-source-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-2);
   padding: var(--space-2);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, opacity 0.15s ease;
   margin-bottom: var(--space-1);
 }
 
@@ -6911,6 +6947,52 @@ body::after {
 
 .kb-source-item.active {
   background: rgba(var(--accent-blue-rgb), 0.15);
+}
+
+.kb-source-item.disabled {
+  opacity: 0.4;
+}
+
+.kb-source-item.disabled .kb-source-item-icon,
+.kb-source-item.disabled .kb-source-item-title {
+  opacity: 0.6;
+}
+
+/* Source toggle checkbox */
+.kb-source-toggle-wrap {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.kb-source-toggle {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent-green);
+  cursor: pointer;
+}
+
+/* Source delete button */
+.kb-source-delete {
+  background: none;
+  border: none;
+  padding: var(--space-1);
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kb-source-item:hover .kb-source-delete {
+  opacity: 1;
+}
+
+.kb-source-delete:hover {
+  color: #ef4444;
 }
 
 .kb-source-item-icon {

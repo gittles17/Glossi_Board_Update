@@ -998,7 +998,10 @@ Guidelines:
     };
     
     container.innerHTML = this.sources.map(source => `
-      <div class="kb-source-item" data-id="${source.id}">
+      <div class="kb-source-item ${source.enabled === false ? 'disabled' : ''}" data-id="${source.id}">
+        <label class="kb-source-toggle-wrap" onclick="event.stopPropagation()">
+          <input type="checkbox" class="kb-source-toggle" ${source.enabled !== false ? 'checked' : ''}>
+        </label>
         <div class="kb-source-item-icon">
           ${categoryIcons[source.category] || categoryIcons.other}
         </div>
@@ -1009,6 +1012,9 @@ Guidelines:
             <span class="kb-source-freshness ${source.freshness}"></span>
           </div>
         </div>
+        <button class="kb-source-delete" onclick="event.stopPropagation()" title="Delete source">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+        </button>
       </div>
     `).join('');
     
@@ -1017,6 +1023,22 @@ Guidelines:
       item.addEventListener('click', () => {
         const sourceId = item.dataset.id;
         this.showSourceDetails(sourceId);
+      });
+    });
+    
+    // Add toggle handlers
+    container.querySelectorAll('.kb-source-toggle').forEach(toggle => {
+      toggle.addEventListener('change', (e) => {
+        const sourceId = e.target.closest('.kb-source-item').dataset.id;
+        this.toggleSource(sourceId, e.target.checked);
+      });
+    });
+    
+    // Add delete handlers
+    container.querySelectorAll('.kb-source-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const sourceId = e.target.closest('.kb-source-item').dataset.id;
+        this.deleteSource(sourceId);
       });
     });
   }
@@ -1030,6 +1052,36 @@ Guidelines:
     
     // For now, just highlight it and show content in chat
     this.sendMessage(`Tell me about the source "${source.title}"`);
+  }
+
+  /**
+   * Toggle source enabled/disabled state
+   */
+  toggleSource(sourceId, enabled) {
+    const source = this.sources.find(s => s.id === sourceId);
+    if (!source) return;
+    
+    source.enabled = enabled;
+    this.saveData();
+    this.renderSources();
+    this.showToast(`Source "${source.title}" ${enabled ? 'enabled' : 'disabled'}`, 'info');
+  }
+
+  /**
+   * Delete a source
+   */
+  deleteSource(sourceId) {
+    const source = this.sources.find(s => s.id === sourceId);
+    if (!source) return;
+    
+    if (!confirm(`Delete "${source.title}"? This cannot be undone.`)) {
+      return;
+    }
+    
+    this.sources = this.sources.filter(s => s.id !== sourceId);
+    this.saveData();
+    this.renderSources();
+    this.showToast(`Deleted "${source.title}"`, 'success');
   }
 
   /**
