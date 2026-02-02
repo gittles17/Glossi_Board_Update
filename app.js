@@ -3022,48 +3022,6 @@ RULES:
     return deals;
   }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.settings.apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 8000,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Categorization failed');
-    }
-
-    const result = await response.json();
-    const responseText = result.content[0].text;
-    
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Failed to parse categorization');
-    
-    const parsed = JSON.parse(jsonMatch[0]);
-    
-    // Merge original chunks with categorization
-    return chunks.map((chunk, i) => {
-      const cat = parsed.categorized?.find(c => c.chunkId === chunk.id || c.chunkId === i + 1) || {};
-      return {
-        ...chunk,
-        destination: cat.destination || 'note',
-        confidence: cat.confidence || 'low',
-        displayTitle: cat.displayTitle || chunk.title,
-        displayContent: cat.displayContent || chunk.content,
-        metadata: cat.metadata || {}
-      };
-    });
-  }
-
   /**
    * Build context of current site data for AI
    */
