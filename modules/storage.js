@@ -26,7 +26,16 @@ const DEFAULT_DATA = {
   ],
   seedRaise: {
     target: '$500K',
-    investors: []
+    investors: [
+      { id: 'inv_1', name: 'Bobby', amount: 'TBD', stage: 'interested', notes: 'advisor?' },
+      { id: 'inv_2', name: 'James Trice', amount: '25k', stage: 'interested', notes: '' },
+      { id: 'inv_3', name: 'Andrew Riley', amount: 'TBD', stage: 'inTalks', notes: 'Board seat?' },
+      { id: 'inv_4', name: 'George K', amount: '25k', stage: 'inTalks', notes: '' },
+      { id: 'inv_5', name: 'JG', amount: '25k', stage: 'committed', notes: '' },
+      { id: 'inv_6', name: 'Ricky', amount: '100k', stage: 'committed', notes: '' },
+      { id: 'inv_7', name: 'Matt Stern', amount: '15k', stage: 'committed', notes: '' },
+      { id: 'inv_8', name: 'Josh Stern', amount: '15k', stage: 'committed', notes: '' }
+    ]
   },
   lastUpdated: '2026-02-01T00:00:00.000Z'
 };
