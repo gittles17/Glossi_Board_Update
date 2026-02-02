@@ -5846,14 +5846,14 @@ Content: "${content.substring(0, 300)}"`
         </div>
         <div class="quote-actions">
           <button class="quote-action-btn feature-btn ${q.featured ? 'active' : ''}" 
-                  onclick="dashboard.toggleQuoteFeatured('${q.id}')" 
+                  onclick="window.dashboard.toggleQuoteFeatured('${q.id}')" 
                   title="${q.featured ? 'Remove from email' : 'Feature in email'}">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="${q.featured ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
             </svg>
           </button>
           <button class="quote-action-btn delete-btn" 
-                  onclick="dashboard.deleteQuote('${q.id}')" 
+                  onclick="window.dashboard.deleteQuote('${q.id}')" 
                   title="Delete quote">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"></polyline>
