@@ -3917,7 +3917,7 @@ TONE RULES:
     }
 
     const result = await response.json();
-    const responseText = result.content[0].text;
+    const responseText = result.content?.[0]?.text || '';
     
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('Failed to parse response');
@@ -4029,7 +4029,7 @@ RULES:
     }
 
     const result = await response.json();
-    const responseText = result.content[0].text;
+    const responseText = result.content?.[0]?.text || '';
     
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('Failed to parse response');
@@ -4135,7 +4135,7 @@ Return JSON:
       }
 
       const result = await response.json();
-      const responseText = result.content[0].text;
+      const responseText = result.content?.[0]?.text || '';
       
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('Failed to parse curation response');
@@ -4490,7 +4490,7 @@ Return JSON (only include items that need action):
       if (!response.ok) return;
 
       const result = await response.json();
-      const responseText = result.content[0].text;
+      const responseText = result.content?.[0]?.text || '';
       
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) return;
@@ -4597,7 +4597,7 @@ RULES:
       }
 
       const result = await response.json();
-      const responseText = result.content[0].text;
+      const responseText = result.content?.[0]?.text || '';
       
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('Failed to parse response');
@@ -4751,7 +4751,7 @@ RULES:
     }
 
     const result = await response.json();
-    const responseText = result.content[0].text;
+    const responseText = result.content?.[0]?.text || '';
     
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('Failed to parse response');
@@ -5890,7 +5890,7 @@ KEY POINTS:
     }
     
     const result = await response.json();
-    return result.content[0].text;
+    return result.content?.[0]?.text || '';
   }
 
   /**
@@ -5932,7 +5932,7 @@ KEY POINTS:
     }
     
     const result = await response.json();
-    return result.content[0].text;
+    return result.content?.[0]?.text || '';
   }
 
   /**
@@ -6129,7 +6129,7 @@ Rules:
     }
 
     const result = await response.json();
-    const responseText = result.content[0].text;
+    const responseText = result.content?.[0]?.text || '';
     
     // Extract JSON from response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -6195,7 +6195,7 @@ Respond with JSON:
     }
 
     const result = await response.json();
-    const responseText = result.content[0].text;
+    const responseText = result.content?.[0]?.text || '';
     
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('Failed to parse response');
@@ -6256,7 +6256,7 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
     }
     
     const result = await response.json();
-    const responseText = result.content[0].text;
+    const responseText = result.content?.[0]?.text || '';
     
     // Extract JSON from response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -6663,7 +6663,7 @@ Content: "${content.substring(0, 300)}"`
       
       if (response.ok) {
         const result = await response.json();
-        const text = result.content[0].text.toLowerCase().trim();
+        const text = (result.content?.[0]?.text || '').toLowerCase().trim();
         
         if (text.includes('testimonial')) return 'testimonials';
         if (text.includes('traction')) return 'traction';
@@ -7066,7 +7066,7 @@ Respond with just the category name (core, traction, market, or testimonials) an
       
       if (response.ok) {
         const result = await response.json();
-        const suggestion = result.content[0].text.toLowerCase();
+        const suggestion = (result.content?.[0]?.text || '').toLowerCase();
         
         // Parse category from response
         let category = 'core';

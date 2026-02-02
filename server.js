@@ -83,8 +83,12 @@ app.get('/api/data', async (req, res) => {
       files.forEach(file => {
         const filePath = path.join(DATA_DIR, file);
         if (fs.existsSync(filePath)) {
-          const key = file.replace('.json', '').replace(/-/g, '_');
-          data[key] = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+          try {
+            const key = file.replace('.json', '').replace(/-/g, '_');
+            data[key] = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+          } catch (e) {
+            console.warn(`Failed to parse ${file}:`, e.message);
+          }
         }
       });
     }
@@ -173,7 +177,7 @@ app.post('/api/clear-quotes', async (req, res) => {
     if (useDatabase) {
       // Get current dashboard data
       const result = await pool.query("SELECT data FROM app_data WHERE key = 'dashboard_data'");
-      if (result.rows.length > 0) {
+      if (result.rows.length > 0 && result.rows[0]?.data) {
         const data = result.rows[0].data;
         data.quotes = []; // Clear quotes
         
@@ -192,11 +196,16 @@ app.post('/api/clear-quotes', async (req, res) => {
       // Clear from local file
       const filePath = path.join(DATA_DIR, 'dashboard-data.json');
       if (fs.existsSync(filePath)) {
-        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        data.quotes = [];
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-        console.log('Quotes cleared from local file');
-        res.json({ success: true, message: 'Quotes cleared from local storage' });
+        try {
+          const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+          data.quotes = [];
+          fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+          console.log('Quotes cleared from local file');
+          res.json({ success: true, message: 'Quotes cleared from local storage' });
+        } catch (e) {
+          console.error('Failed to parse dashboard file:', e.message);
+          res.status(500).json({ success: false, error: 'Failed to parse dashboard file' });
+        }
       } else {
         res.json({ success: true, message: 'No dashboard data file found' });
       }
@@ -363,7 +372,7 @@ app.post('/api/transcribe', upload.single('file'), async (req, res) => {
     // Try to get from database if not in env
     if (!openaiKey && useDatabase) {
       const result = await pool.query("SELECT data FROM app_data WHERE key = 'settings'");
-      if (result.rows.length > 0 && result.rows[0].data.openaiApiKey) {
+      if (result.rows.length > 0 && result.rows[0]?.data?.openaiApiKey) {
         openaiKey = result.rows[0].data.openaiApiKey;
       }
     }

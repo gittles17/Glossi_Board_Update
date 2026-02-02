@@ -135,25 +135,31 @@ class Storage {
     }
 
     // Fallback to localStorage if server data is empty
+    // Helper to safely parse JSON from localStorage
+    const safeJsonParse = (key, fallback) => {
+      try {
+        const stored = localStorage.getItem(key);
+        return stored ? JSON.parse(stored) : fallback;
+      } catch (e) {
+        console.warn(`Failed to parse ${key} from localStorage, using default:`, e);
+        return fallback;
+      }
+    };
+
     if (!this.data) {
-      const storedData = localStorage.getItem('glossi_data');
-      this.data = storedData ? JSON.parse(storedData) : { ...DEFAULT_DATA };
+      this.data = safeJsonParse('glossi_data', { ...DEFAULT_DATA });
     }
     if (!this.settings) {
-      const storedSettings = localStorage.getItem('glossi_settings');
-      this.settings = storedSettings ? JSON.parse(storedSettings) : { ...DEFAULT_SETTINGS };
+      this.settings = safeJsonParse('glossi_settings', { ...DEFAULT_SETTINGS });
     }
     if (!this.meetings || this.meetings.length === 0) {
-      const storedMeetings = localStorage.getItem('glossi_meetings');
-      this.meetings = storedMeetings ? JSON.parse(storedMeetings) : [];
+      this.meetings = safeJsonParse('glossi_meetings', []);
     }
     if (!this.pipelineHistory || this.pipelineHistory.length === 0) {
-      const storedPipelineHistory = localStorage.getItem('glossi_pipeline_history');
-      this.pipelineHistory = storedPipelineHistory ? JSON.parse(storedPipelineHistory) : [];
+      this.pipelineHistory = safeJsonParse('glossi_pipeline_history', []);
     }
     if (!this.statHistory || this.statHistory.length === 0) {
-      const storedStatHistory = localStorage.getItem('glossi_stat_history');
-      this.statHistory = storedStatHistory ? JSON.parse(storedStatHistory) : [];
+      this.statHistory = safeJsonParse('glossi_stat_history', []);
     }
 
     console.log('Final loaded data:');

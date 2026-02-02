@@ -57,7 +57,7 @@ class AIProcessor {
       }
 
       const data = await response.json();
-      return data.content[0].text;
+      return data.content?.[0]?.text || '';
     } catch (error) {
       console.error('Claude API error:', error);
       throw error;
@@ -408,7 +408,7 @@ Be concise but comprehensive.`
       }
 
       const data = await response.json();
-      return data.content[0].text;
+      return data.content?.[0]?.text || '';
     } catch (error) {
       console.error('Image analysis error:', error);
       throw error;
@@ -463,7 +463,7 @@ Be concise but comprehensive.`
       }
 
       const data = await response.json();
-      return data.content[0].text;
+      return data.content?.[0]?.text || '';
     } catch (error) {
       console.error('Image vision analysis error:', error);
       throw error;
