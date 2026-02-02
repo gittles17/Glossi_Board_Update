@@ -4288,11 +4288,17 @@ body::after {
 
 .link-section-content {
   padding: var(--space-2);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-1);
   min-height: 40px;
   transition: all var(--duration-fast) var(--ease-out);
+}
+
+@media (max-width: 600px) {
+  .link-section-content {
+    grid-template-columns: 1fr;
+  }
 }
 
 .link-section-content.collapsed {
@@ -4312,6 +4318,7 @@ body::after {
   opacity: 0.6;
   border: 1px dashed var(--border-color);
   border-radius: var(--radius-sm);
+  grid-column: 1 / -1;
 }
 
 /* Link Items */
