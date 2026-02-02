@@ -7648,6 +7648,7 @@ body::after {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   overflow: hidden;
+  min-height: 0; /* Required for nested flex scroll */
 }
 
 /* Quick Actions Bar */
@@ -7693,7 +7694,28 @@ body::after {
 .kb-chat-area {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: var(--space-3);
+  min-height: 0; /* Required for flex child to scroll */
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for chat */
+.kb-chat-area::-webkit-scrollbar {
+  width: 8px;
+}
+
+.kb-chat-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kb-chat-area::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.kb-chat-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .kb-messages {
