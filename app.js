@@ -986,7 +986,7 @@ class GlossiDashboard {
       };
     });
     
-    // Render minimal highlights
+    // Render highlights with full details
     const hotEl = document.getElementById('highlight-hot');
     const updatesEl = document.getElementById('highlight-updates');
     const marketingEl = document.getElementById('highlight-marketing');
@@ -995,11 +995,11 @@ class GlossiDashboard {
     const pilotDeals = stageTotals['pilot']?.deals || [];
     if (hotEl) {
       if (pilotDeals.length > 0) {
-        const hotItems = pilotDeals.slice(0, 3).map(d => {
-          const blocker = d.nextSteps ? ` (${d.nextSteps.substring(0, 40)}${d.nextSteps.length > 40 ? '...' : ''})` : '';
-          return `${d.name}${blocker}`;
-        }).join(' · ');
-        hotEl.innerHTML = `<span class="highlight-label label-hot">Hot:</span> ${this.escapeHtml(hotItems)}`;
+        const hotItems = pilotDeals.map(d => {
+          const blocker = d.nextSteps ? `<span class="highlight-detail">${this.escapeHtml(d.nextSteps)}</span>` : '';
+          return `<div class="highlight-item"><strong>${this.escapeHtml(d.name)}</strong> <span class="highlight-value">${this.escapeHtml(d.value || '')}</span>${blocker}</div>`;
+        }).join('');
+        hotEl.innerHTML = `<div class="highlight-section"><span class="highlight-label label-hot">Hot Deals</span>${hotItems}</div>`;
       } else {
         hotEl.innerHTML = '';
       }
@@ -1009,8 +1009,8 @@ class GlossiDashboard {
     const keyUpdates = highlights?.keyUpdates || [];
     if (updatesEl) {
       if (keyUpdates.length > 0) {
-        const updateItems = keyUpdates.slice(0, 3).map(u => u.substring(0, 50) + (u.length > 50 ? '...' : '')).join(' · ');
-        updatesEl.innerHTML = `<span class="highlight-label label-new">New:</span> ${this.escapeHtml(updateItems)}`;
+        const updateItems = keyUpdates.map(u => `<div class="highlight-item">${this.escapeHtml(u)}</div>`).join('');
+        updatesEl.innerHTML = `<div class="highlight-section"><span class="highlight-label label-new">Key Updates</span>${updateItems}</div>`;
       } else {
         updatesEl.innerHTML = '';
       }
@@ -1020,8 +1020,8 @@ class GlossiDashboard {
     const marketing = highlights?.marketing || [];
     if (marketingEl) {
       if (marketing.length > 0) {
-        const marketingItems = marketing.slice(0, 3).map(m => m.substring(0, 40) + (m.length > 40 ? '...' : '')).join(' · ');
-        marketingEl.innerHTML = `<span class="highlight-label label-marketing">Marketing:</span> ${this.escapeHtml(marketingItems)}`;
+        const marketingItems = marketing.map(m => `<div class="highlight-item">${this.escapeHtml(m)}</div>`).join('');
+        marketingEl.innerHTML = `<div class="highlight-section"><span class="highlight-label label-marketing">Marketing</span>${marketingItems}</div>`;
       } else {
         marketingEl.innerHTML = '';
       }

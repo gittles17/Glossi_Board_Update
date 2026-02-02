@@ -5774,11 +5774,12 @@ body::after {
   padding: var(--space-2);
 }
 
-/* Minimal Highlights */
+/* Pipeline Highlights */
 .pipeline-highlights-minimal {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-top: var(--space-2);
 }
 
 .highlight-row {
@@ -5791,10 +5792,19 @@ body::after {
   display: none;
 }
 
+.highlight-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 .highlight-label {
+  font-size: 11px;
   font-weight: 600;
-  color: var(--text-muted);
-  margin-right: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-1);
+  display: block;
 }
 
 .highlight-label.label-hot {
@@ -5807,6 +5817,44 @@ body::after {
 
 .highlight-label.label-marketing {
   color: #60a5fa;
+}
+
+.highlight-item {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.highlight-item:last-child {
+  border-bottom: none;
+}
+
+.highlight-item strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.highlight-value {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-green);
+  margin-left: var(--space-2);
+}
+
+.highlight-detail {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: var(--space-1);
+}
+
+@media (max-width: 900px) {
+  .pipeline-highlights-minimal {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
 }
 
 /* Responsive Pipeline */
