@@ -977,17 +977,28 @@ class GlossiDashboard {
     // Current week option
     if (currentData?.updatedAt) {
       const date = new Date(currentData.updatedAt);
-      const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      options += `<option value="current">Current (${formatted})</option>`;
+      const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      options += `<option value="current">${formatted}</option>`;
     } else {
       options += '<option value="current">Current</option>';
     }
     
-    // Historical weeks
+    // Historical weeks (dedupe by date string to avoid showing same date multiple times)
+    const seenDates = new Set();
+    if (currentData?.updatedAt) {
+      seenDates.add(new Date(currentData.updatedAt).toDateString());
+    }
+    
     history.forEach((week, index) => {
       if (week?.updatedAt) {
         const date = new Date(week.updatedAt);
-        const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const dateKey = date.toDateString();
+        
+        // Skip if we've already shown this date
+        if (seenDates.has(dateKey)) return;
+        seenDates.add(dateKey);
+        
+        const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         options += `<option value="${index}">${formatted}</option>`;
       }
     });
