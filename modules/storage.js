@@ -158,6 +158,12 @@ class Storage {
     this.data = { ...DEFAULT_DATA, ...this.data };
     this.settings = { ...DEFAULT_SETTINGS, ...this.settings };
 
+    // Migrate: Ensure default quick links exist if none are present
+    if (!this.data.quickLinks || this.data.quickLinks.length === 0) {
+      this.data.quickLinks = DEFAULT_DATA.quickLinks;
+      this.save();
+    }
+
     // Create initial snapshot if no history exists
     if (this.pipelineHistory.length === 0) {
       this.savePipelineSnapshot('Initial snapshot');
