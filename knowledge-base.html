@@ -218,21 +218,6 @@
           </div>
         </div>
 
-        <!-- Step 3: Final Generate (shown after questions or if prompt is clear) -->
-        <div class="kb-report-step" id="kb-report-step-3" style="display: none;">
-          <div class="kb-report-ready">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-              <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
-            <span>Ready to generate your report</span>
-          </div>
-          <div class="notes-input-section">
-            <label for="kb-report-context">Add any additional context (optional)</label>
-            <textarea id="kb-report-context" class="input textarea" rows="2" placeholder="Any extra details or specific focus areas..."></textarea>
-          </div>
-        </div>
-
         <!-- Loading state -->
         <div class="kb-report-step" id="kb-report-loading" style="display: none;">
           <div class="kb-report-loading-content">
@@ -246,12 +231,6 @@
         <button class="btn btn-secondary" id="kb-report-back" style="display: none;">Back</button>
         <button class="btn btn-primary" id="kb-report-continue">
           Continue
-        </button>
-        <button class="btn btn-primary" id="kb-report-generate" style="display: none;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-          </svg>
-          Generate Now
         </button>
       </div>
     </div>

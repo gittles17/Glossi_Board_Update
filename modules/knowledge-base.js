@@ -819,28 +819,22 @@ ${source.content}
     // Show step 1, hide others
     const step1 = document.getElementById('kb-report-step-1');
     const step2 = document.getElementById('kb-report-step-2');
-    const step3 = document.getElementById('kb-report-step-3');
     const loading = document.getElementById('kb-report-loading');
     
     if (step1) step1.style.display = 'block';
     if (step2) step2.style.display = 'none';
-    if (step3) step3.style.display = 'none';
     if (loading) loading.style.display = 'none';
     
     // Reset buttons
     const continueBtn = document.getElementById('kb-report-continue');
-    const generateBtn = document.getElementById('kb-report-generate');
     const backBtn = document.getElementById('kb-report-back');
     
     if (continueBtn) continueBtn.style.display = 'inline-flex';
-    if (generateBtn) generateBtn.style.display = 'none';
     if (backBtn) backBtn.style.display = 'none';
     
     // Clear inputs
     const promptInput = document.getElementById('kb-report-prompt');
     if (promptInput) promptInput.value = '';
-    const contextInput = document.getElementById('kb-report-context');
-    if (contextInput) contextInput.value = '';
   }
 
   /**
@@ -927,14 +921,15 @@ Only ask questions that would meaningfully improve the report. If the prompt is 
       }
       
       if (evaluation.ready) {
-        // Skip to step 3 (ready to generate)
-        this.showReportStep3();
+        // Prompt is clear, generate directly
+        this.generateReport();
       } else if (evaluation.questions && evaluation.questions.length > 0) {
         // Show clarifying questions
         this.reportQuestions = evaluation.questions;
         this.showReportStep2(evaluation.questions);
       } else {
-        this.showReportStep3();
+        // No questions, generate directly
+        this.generateReport();
       }
     } catch (error) {
       this.showToast('Failed to evaluate request: ' + error.message, 'error');
@@ -1025,28 +1020,8 @@ Only ask questions that would meaningfully improve the report. If the prompt is 
       }
     });
     
-    this.showReportStep3();
-  }
-
-  /**
-   * Show step 3 (ready to generate)
-   */
-  showReportStep3() {
-    this.reportStep = 3;
-    
-    const loading = document.getElementById('kb-report-loading');
-    const step2 = document.getElementById('kb-report-step-2');
-    const step3 = document.getElementById('kb-report-step-3');
-    const backBtn = document.getElementById('kb-report-back');
-    const continueBtn = document.getElementById('kb-report-continue');
-    const generateBtn = document.getElementById('kb-report-generate');
-    
-    if (loading) loading.style.display = 'none';
-    if (step2) step2.style.display = 'none';
-    if (step3) step3.style.display = 'block';
-    if (backBtn) backBtn.style.display = 'inline-flex';
-    if (continueBtn) continueBtn.style.display = 'none';
-    if (generateBtn) generateBtn.style.display = 'inline-flex';
+    // Generate report directly after collecting answers
+    this.generateReport();
   }
 
   /**
@@ -1055,10 +1030,8 @@ Only ask questions that would meaningfully improve the report. If the prompt is 
   goBackReportStep() {
     const step1 = document.getElementById('kb-report-step-1');
     const step2 = document.getElementById('kb-report-step-2');
-    const step3 = document.getElementById('kb-report-step-3');
     const backBtn = document.getElementById('kb-report-back');
     const continueBtn = document.getElementById('kb-report-continue');
-    const generateBtn = document.getElementById('kb-report-generate');
     
     if (this.reportStep === 2) {
       // Back to step 1
@@ -1070,22 +1043,6 @@ Only ask questions that would meaningfully improve the report. If the prompt is 
         continueBtn.style.display = 'inline-flex';
         continueBtn.textContent = 'Continue';
         continueBtn.onclick = () => this.evaluateReportPrompt();
-      }
-    } else if (this.reportStep === 3) {
-      if (this.reportQuestions.length > 0) {
-        // Back to step 2
-        this.showReportStep2(this.reportQuestions);
-      } else {
-        // Back to step 1
-        this.reportStep = 1;
-        if (step3) step3.style.display = 'none';
-        if (step1) step1.style.display = 'block';
-        if (backBtn) backBtn.style.display = 'none';
-        if (continueBtn) {
-          continueBtn.style.display = 'inline-flex';
-          continueBtn.onclick = () => this.evaluateReportPrompt();
-        }
-        if (generateBtn) generateBtn.style.display = 'none';
       }
     }
   }
@@ -1106,11 +1063,7 @@ Only ask questions that would meaningfully improve the report. If the prompt is 
       return;
     }
     
-    // Get additional context if provided
-    const contextInput = document.getElementById('kb-report-context');
-    const additionalContext = contextInput ? contextInput.value.trim() : '';
-    
-    // Build full prompt from original request + answers + context
+    // Build full prompt from original request + answers
     let fullPrompt = this.reportPrompt;
     
     if (Object.keys(this.reportAnswers).length > 0) {
@@ -1123,21 +1076,19 @@ Only ask questions that would meaningfully improve the report. If the prompt is 
       }
     }
     
-    if (additionalContext) {
-      fullPrompt += '\n\nAdditional context: ' + additionalContext;
-    }
-    
     // Show loading in modal
-    const step3 = document.getElementById('kb-report-step-3');
+    const step1 = document.getElementById('kb-report-step-1');
+    const step2 = document.getElementById('kb-report-step-2');
     const loading = document.getElementById('kb-report-loading');
     const loadingText = document.getElementById('kb-report-loading-text');
-    const generateBtn = document.getElementById('kb-report-generate');
+    const continueBtn = document.getElementById('kb-report-continue');
     const backBtn = document.getElementById('kb-report-back');
     
-    if (step3) step3.style.display = 'none';
+    if (step1) step1.style.display = 'none';
+    if (step2) step2.style.display = 'none';
     if (loading) loading.style.display = 'block';
     if (loadingText) loadingText.textContent = 'Generating your report...';
-    if (generateBtn) generateBtn.style.display = 'none';
+    if (continueBtn) continueBtn.style.display = 'none';
     if (backBtn) backBtn.style.display = 'none';
     
     try {
@@ -1197,16 +1148,8 @@ Guidelines:
       this.showToast('Report generated successfully', 'success');
     } catch (error) {
       this.showToast('Failed to generate report: ' + error.message, 'error');
-      // Show step 3 again
-      const loadingEl = document.getElementById('kb-report-loading');
-      const step3El = document.getElementById('kb-report-step-3');
-      const generateEl = document.getElementById('kb-report-generate');
-      const backEl = document.getElementById('kb-report-back');
-      
-      if (loadingEl) loadingEl.style.display = 'none';
-      if (step3El) step3El.style.display = 'block';
-      if (generateEl) generateEl.style.display = 'inline-flex';
-      if (backEl) backEl.style.display = 'inline-flex';
+      // Go back to step 1
+      this.resetReportModal();
     }
   }
 
