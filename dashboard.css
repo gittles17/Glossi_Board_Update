@@ -304,10 +304,15 @@ body::after {
   padding: var(--space-3);
 }
 
-.dropdown-menu.open {
+.dropdown-menu.open,
+.dropdown-menu.active {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
+}
+
+.dropdown-wrapper {
+  position: relative;
 }
 
 .menu-upload-section {
