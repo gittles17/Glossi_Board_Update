@@ -7458,6 +7458,7 @@ body::after {
 
 .kb-reports-panel.collapsed .kb-reports-title,
 .kb-reports-panel.collapsed .kb-reports-count,
+.kb-reports-panel.collapsed .kb-add-report-btn,
 .kb-reports-panel.collapsed .kb-report-item-title,
 .kb-reports-panel.collapsed .kb-report-item-meta,
 .kb-reports-panel.collapsed .kb-empty-reports {
@@ -7504,6 +7505,25 @@ body::after {
   padding: 2px 6px;
   border-radius: 10px;
   margin-left: auto;
+}
+
+.kb-add-report-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.kb-add-report-btn:hover {
+  background: var(--accent-green-dim);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
 }
 
 .kb-reports-list {

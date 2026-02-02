@@ -74,15 +74,6 @@
 
       <!-- Main Workspace -->
       <div class="kb-workspace" id="kb-workspace">
-        <!-- Quick Actions Bar -->
-        <div class="kb-quick-actions" id="kb-quick-actions">
-          <button class="kb-action-btn kb-action-generate" data-action="generate" title="Generate report">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-            </svg>
-            <span>Generate Report</span>
-          </button>
-        </div>
 
         <!-- Chat/Conversation Area -->
         <div class="kb-chat-area" id="kb-chat-area">
@@ -127,6 +118,12 @@
           </button>
           <span class="kb-reports-title">Reports</span>
           <span class="kb-reports-count" id="kb-reports-count">0</span>
+          <button class="kb-add-report-btn" id="kb-add-report-btn" title="Generate Report">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
         </div>
         <div class="kb-reports-list" id="kb-reports-list">
           <!-- Reports rendered dynamically -->
@@ -374,10 +371,10 @@
         storage.save();
       });
       
-      // Direct binding for Generate Report button (backup)
-      const generateBtn = document.querySelector('.kb-action-btn[data-action="generate"]');
-      if (generateBtn) {
-        generateBtn.addEventListener('click', () => {
+      // Add Report button click handler
+      const addReportBtn = document.getElementById('kb-add-report-btn');
+      if (addReportBtn) {
+        addReportBtn.addEventListener('click', () => {
           knowledgeBase.showReportModal();
         });
       }
