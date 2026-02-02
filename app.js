@@ -108,8 +108,6 @@ class GlossiDashboard {
   setupMenuDropdown() {
     const menuBtn = document.getElementById('menu-btn');
     const dropdown = document.getElementById('dropdown-menu');
-    const menuDropZone = document.getElementById('menu-drop-zone');
-    const menuFileInput = document.getElementById('menu-file-input');
 
     // Toggle menu on button click
     menuBtn.addEventListener('click', (e) => {
@@ -121,44 +119,6 @@ class GlossiDashboard {
     document.addEventListener('click', (e) => {
       if (!dropdown.contains(e.target) && !menuBtn.contains(e.target)) {
         dropdown.classList.remove('open');
-      }
-    });
-
-    // Menu drop zone - click to browse
-    menuDropZone.addEventListener('click', (e) => {
-      e.stopPropagation();
-      menuFileInput.click();
-    });
-
-    // Menu drop zone - file selected
-    menuFileInput.addEventListener('change', (e) => {
-      if (e.target.files.length > 0) {
-        this.processDroppedFile(e.target.files[0]);
-        menuFileInput.value = '';
-      }
-    });
-
-    // Menu drop zone - drag events
-    menuDropZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      menuDropZone.classList.add('drag-over');
-    });
-
-    menuDropZone.addEventListener('dragleave', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      menuDropZone.classList.remove('drag-over');
-    });
-
-    menuDropZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      menuDropZone.classList.remove('drag-over');
-
-      const files = e.dataTransfer.files;
-      if (files.length > 0) {
-        this.processDroppedFile(files[0]);
       }
     });
 
