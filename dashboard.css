@@ -7021,6 +7021,139 @@ body::after {
   text-overflow: ellipsis;
 }
 
+.kb-source-item.dragging {
+  opacity: 0.5;
+}
+
+/* Folders */
+.kb-folder {
+  margin-bottom: var(--space-1);
+}
+
+.kb-folder-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px var(--space-2);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease;
+}
+
+.kb-folder-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.kb-folder-chevron {
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.kb-folder.expanded .kb-folder-chevron {
+  transform: rotate(90deg);
+}
+
+.kb-folder-icon {
+  color: var(--accent-orange);
+  flex-shrink: 0;
+}
+
+.kb-folder-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kb-folder-count {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 5px;
+  border-radius: 8px;
+}
+
+.kb-folder-contents {
+  display: none;
+  padding-left: var(--space-4);
+}
+
+.kb-folder.expanded .kb-folder-contents {
+  display: block;
+}
+
+.kb-folder.drag-over {
+  background: var(--accent-blue-dim);
+  border-radius: var(--radius-sm);
+}
+
+/* Create folder button */
+.kb-create-folder-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  margin-left: var(--space-1);
+}
+
+.kb-create-folder-btn:hover {
+  background: var(--accent-orange-dim);
+  border-color: var(--accent-orange);
+  color: var(--accent-orange);
+}
+
+/* Context Menu */
+.kb-context-menu {
+  position: fixed;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+  min-width: 150px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.kb-context-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.1s ease;
+}
+
+.kb-context-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.kb-context-danger:hover {
+  background: var(--accent-red-dim);
+  color: var(--accent-red);
+}
+
+.kb-context-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: var(--space-1) 0;
+}
+
 .kb-source-item-meta {
   font-size: 10px;
   color: var(--text-muted);
@@ -7131,54 +7264,40 @@ body::after {
   gap: var(--space-3);
 }
 
-/* Prompt Suggestions */
-.kb-prompt-suggestions {
+/* Suggested Questions (bottom of chat) */
+.kb-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.kb-suggestion-btn {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.kb-suggestion-btn:hover {
+  background: var(--accent-blue-dim);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.kb-empty-chat {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 200px;
-  padding: var(--space-4);
-}
-
-.kb-prompt-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-3);
-  max-width: 600px;
-  width: 100%;
-}
-
-.kb-prompt-btn {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.15s ease;
-}
-
-.kb-prompt-btn:hover {
-  background: var(--bg-elevated);
-  border-color: var(--accent-blue);
-}
-
-.kb-prompt-icon {
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.kb-prompt-text {
-  color: var(--text-secondary);
+  height: 100%;
+  color: var(--text-muted);
   font-size: 13px;
-  line-height: 1.4;
-}
-
-.kb-prompt-btn:hover .kb-prompt-text {
-  color: var(--text-primary);
 }
 
 .kb-message {

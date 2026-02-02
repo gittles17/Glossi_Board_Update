@@ -21,6 +21,9 @@ class KnowledgeBase {
     this.reportPrompt = '';
     this.reportAnswers = {};
     this.reportQuestions = [];
+    // Folder state
+    this.expandedFolders = {};
+    this.folders = [];
   }
 
   /**
@@ -1317,34 +1320,102 @@ Guidelines:
       other: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>'
     };
     
-    const sourcesHtml = this.sources.map(source => `
-      <div class="kb-source-item ${source.enabled === false ? 'disabled' : ''}" data-id="${source.id}">
-        <label class="kb-source-toggle-wrap" onclick="event.stopPropagation()">
-          <input type="checkbox" class="kb-source-toggle" ${source.enabled !== false ? 'checked' : ''}>
-        </label>
-        <div class="kb-source-item-icon">
-          ${categoryIcons[source.category] || categoryIcons.other}
-        </div>
-        <div class="kb-source-item-content">
-          <div class="kb-source-item-title">${this.escapeHtml(source.title)}</div>
-          <div class="kb-source-item-meta">
-            <span class="kb-source-item-category">${source.category}</span>
-            <span class="kb-source-freshness ${source.freshness}"></span>
+    // Group sources by folder
+    const folders = {};
+    const ungrouped = [];
+    
+    this.sources.forEach(source => {
+      if (source.folder) {
+        if (!folders[source.folder]) {
+          folders[source.folder] = [];
+        }
+        folders[source.folder].push(source);
+      } else {
+        ungrouped.push(source);
+      }
+    });
+    
+    // Render folders
+    let sourcesHtml = '';
+    
+    Object.keys(folders).sort().forEach(folderName => {
+      const folderSources = folders[folderName];
+      const isExpanded = this.expandedFolders && this.expandedFolders[folderName];
+      sourcesHtml += `
+        <div class="kb-folder ${isExpanded ? 'expanded' : ''}" data-folder="${this.escapeHtml(folderName)}">
+          <div class="kb-folder-header">
+            <svg class="kb-folder-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+            <svg class="kb-folder-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="kb-folder-name">${this.escapeHtml(folderName)}</span>
+            <span class="kb-folder-count">${folderSources.length}</span>
+          </div>
+          <div class="kb-folder-contents">
+            ${folderSources.map(source => this.renderSourceItem(source)).join('')}
           </div>
         </div>
-        <button class="kb-source-delete" onclick="event.stopPropagation()" title="Delete source">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
-        </button>
-      </div>
-    `).join('');
+      `;
+    });
+    
+    // Render ungrouped sources
+    sourcesHtml += ungrouped.map(source => this.renderSourceItem(source)).join('');
     
     container.innerHTML = sourcesHtml + dropIndicator;
+    
+    // Add folder click handlers
+    container.querySelectorAll('.kb-folder-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const folderName = header.closest('.kb-folder').dataset.folder;
+        this.toggleFolder(folderName);
+      });
+    });
     
     // Add click handlers for sources
     container.querySelectorAll('.kb-source-item').forEach(item => {
       item.addEventListener('click', () => {
         const sourceId = item.dataset.id;
         this.showSourceDetails(sourceId);
+      });
+      
+      // Right-click context menu
+      item.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        this.showSourceContextMenu(e, item.dataset.id);
+      });
+      
+      // Drag start
+      item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', item.dataset.id);
+        item.classList.add('dragging');
+      });
+      
+      item.addEventListener('dragend', () => {
+        item.classList.remove('dragging');
+      });
+    });
+    
+    // Folder drop zones
+    container.querySelectorAll('.kb-folder').forEach(folder => {
+      folder.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        folder.classList.add('drag-over');
+      });
+      
+      folder.addEventListener('dragleave', () => {
+        folder.classList.remove('drag-over');
+      });
+      
+      folder.addEventListener('drop', (e) => {
+        e.preventDefault();
+        folder.classList.remove('drag-over');
+        const sourceId = e.dataTransfer.getData('text/plain');
+        const folderName = folder.dataset.folder;
+        if (sourceId) {
+          this.moveSourceToFolder(sourceId, folderName);
+        }
       });
     });
     
@@ -1363,6 +1434,68 @@ Guidelines:
         this.deleteSource(sourceId);
       });
     });
+  }
+
+  /**
+   * Show context menu for source
+   */
+  showSourceContextMenu(e, sourceId) {
+    // Remove existing menu
+    const existingMenu = document.querySelector('.kb-context-menu');
+    if (existingMenu) existingMenu.remove();
+    
+    const source = this.sources.find(s => s.id === sourceId);
+    if (!source) return;
+    
+    // Get all folder names
+    const folderNames = [...new Set(this.sources.filter(s => s.folder).map(s => s.folder))];
+    
+    const menu = document.createElement('div');
+    menu.className = 'kb-context-menu';
+    menu.style.left = e.pageX + 'px';
+    menu.style.top = e.pageY + 'px';
+    
+    let folderOptions = '';
+    if (folderNames.length > 0) {
+      folderOptions = folderNames.map(f => 
+        `<button class="kb-context-item" data-action="move" data-folder="${this.escapeHtml(f)}">Move to ${this.escapeHtml(f)}</button>`
+      ).join('');
+      if (source.folder) {
+        folderOptions += `<button class="kb-context-item" data-action="move" data-folder="">Remove from folder</button>`;
+      }
+    }
+    
+    menu.innerHTML = `
+      <button class="kb-context-item" data-action="rename">Rename</button>
+      ${folderOptions}
+      <div class="kb-context-divider"></div>
+      <button class="kb-context-item kb-context-danger" data-action="delete">Delete</button>
+    `;
+    
+    document.body.appendChild(menu);
+    
+    // Handle menu clicks
+    menu.querySelectorAll('.kb-context-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const action = item.dataset.action;
+        if (action === 'rename') {
+          this.renameSource(sourceId);
+        } else if (action === 'move') {
+          this.moveSourceToFolder(sourceId, item.dataset.folder);
+        } else if (action === 'delete') {
+          this.deleteSource(sourceId);
+        }
+        menu.remove();
+      });
+    });
+    
+    // Close menu on click outside
+    setTimeout(() => {
+      document.addEventListener('click', function closeMenu() {
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
+      });
+    }, 10);
   }
 
   /**
@@ -1407,6 +1540,82 @@ Guidelines:
   }
 
   /**
+   * Render a single source item
+   */
+  renderSourceItem(source) {
+    return `
+      <div class="kb-source-item ${source.enabled === false ? 'disabled' : ''}" data-id="${source.id}" draggable="true">
+        <label class="kb-source-toggle-wrap" onclick="event.stopPropagation()">
+          <input type="checkbox" class="kb-source-toggle" ${source.enabled !== false ? 'checked' : ''}>
+        </label>
+        <div class="kb-source-item-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+        </div>
+        <div class="kb-source-item-content">
+          <div class="kb-source-item-title">${this.escapeHtml(source.title)}</div>
+        </div>
+        <button class="kb-source-delete" onclick="event.stopPropagation()" title="Delete source">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+        </button>
+      </div>
+    `;
+  }
+
+  /**
+   * Rename a source
+   */
+  renameSource(sourceId) {
+    const source = this.sources.find(s => s.id === sourceId);
+    if (!source) return;
+    
+    const newName = prompt('Rename source:', source.title);
+    if (newName && newName.trim() && newName.trim() !== source.title) {
+      source.title = newName.trim();
+      this.saveData();
+      this.renderSources();
+      this.showToast('Source renamed', 'success');
+    }
+  }
+
+  /**
+   * Create a new folder
+   */
+  createFolder() {
+    const name = prompt('Folder name:');
+    if (name && name.trim()) {
+      this.folders.push(name.trim());
+      this.expandedFolders[name.trim()] = true;
+      this.saveData();
+      this.renderSources();
+      this.showToast(`Folder "${name.trim()}" created`, 'success');
+    }
+  }
+
+  /**
+   * Move source to folder
+   */
+  moveSourceToFolder(sourceId, folderName) {
+    const source = this.sources.find(s => s.id === sourceId);
+    if (!source) return;
+    
+    source.folder = folderName || null;
+    this.saveData();
+    this.renderSources();
+    this.showToast(folderName ? `Moved to "${folderName}"` : 'Moved out of folder', 'success');
+  }
+
+  /**
+   * Toggle folder expansion
+   */
+  toggleFolder(folderName) {
+    this.expandedFolders[folderName] = !this.expandedFolders[folderName];
+    this.renderSources();
+  }
+
+  /**
    * Render messages
    */
   renderMessages() {
@@ -1414,48 +1623,7 @@ Guidelines:
     if (!container) return;
     
     if (!this.currentConversation || this.currentConversation.messages.length === 0) {
-      container.innerHTML = `
-        <div class="kb-prompt-suggestions" id="kb-prompt-suggestions">
-          <div class="kb-prompt-grid">
-            <button class="kb-prompt-btn" data-prompt="What are the key highlights I should share with investors this week?">
-              <span class="kb-prompt-icon">📊</span>
-              <span class="kb-prompt-text">Key highlights for investors</span>
-            </button>
-            <button class="kb-prompt-btn" data-prompt="Summarize our pipeline status and identify deals that need attention.">
-              <span class="kb-prompt-icon">🎯</span>
-              <span class="kb-prompt-text">Pipeline status summary</span>
-            </button>
-            <button class="kb-prompt-btn" data-prompt="What are our strongest talking points for fundraising conversations?">
-              <span class="kb-prompt-icon">💬</span>
-              <span class="kb-prompt-text">Fundraising talking points</span>
-            </button>
-            <button class="kb-prompt-btn" data-prompt="Draft a brief investor update based on recent progress.">
-              <span class="kb-prompt-icon">✉️</span>
-              <span class="kb-prompt-text">Draft investor update</span>
-            </button>
-            <button class="kb-prompt-btn" data-prompt="What risks or blockers should I be aware of right now?">
-              <span class="kb-prompt-icon">⚠️</span>
-              <span class="kb-prompt-text">Risks and blockers</span>
-            </button>
-            <button class="kb-prompt-btn" data-prompt="Compare our current metrics to last month. What changed?">
-              <span class="kb-prompt-icon">📈</span>
-              <span class="kb-prompt-text">Month-over-month changes</span>
-            </button>
-          </div>
-        </div>
-      `;
-      // Bind click handlers for prompt buttons
-      container.querySelectorAll('.kb-prompt-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const prompt = btn.dataset.prompt;
-          const chatInput = document.getElementById('kb-chat-input');
-          if (chatInput && prompt) {
-            chatInput.value = prompt;
-            chatInput.focus();
-            this.sendMessage();
-          }
-        });
-      });
+      container.innerHTML = '<div class="kb-empty-chat"><p>Ask a question or click a suggestion below</p></div>';
       return;
     }
     
