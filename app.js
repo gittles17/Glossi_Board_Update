@@ -692,27 +692,6 @@ class GlossiDashboard {
       this.saveDecision();
     });
 
-    document.getElementById('add-pipeline-btn').addEventListener('click', () => {
-      this.showModal('pipeline-modal');
-      document.getElementById('pipeline-name').value = '';
-      document.getElementById('pipeline-value').value = '';
-      document.getElementById('pipeline-stage').value = 'discovery';
-      document.getElementById('pipeline-timing').value = '';
-      document.getElementById('pipeline-name').focus();
-    });
-
-    document.getElementById('pipeline-modal-close').addEventListener('click', () => {
-      this.hideModal('pipeline-modal');
-    });
-
-    document.getElementById('pipeline-cancel').addEventListener('click', () => {
-      this.hideModal('pipeline-modal');
-    });
-
-    document.getElementById('pipeline-save').addEventListener('click', () => {
-      this.savePipelineDeal();
-    });
-
     document.getElementById('notes-modal-close').addEventListener('click', () => {
       this.hideModal('notes-modal');
     });
@@ -729,26 +708,6 @@ class GlossiDashboard {
       this.saveMeetingDirectly();
     });
 
-    // Talking point modal
-    document.getElementById('add-talking-point-btn').addEventListener('click', () => {
-      this.openAddTalkingPoint();
-    });
-
-    document.getElementById('fix-talking-points-btn').addEventListener('click', () => {
-      this.fixTalkingPointRedundancies();
-    });
-
-    document.getElementById('talking-point-modal-close').addEventListener('click', () => {
-      this.hideModal('talking-point-modal');
-    });
-
-    document.getElementById('talking-point-cancel').addEventListener('click', () => {
-      this.hideModal('talking-point-modal');
-    });
-
-    document.getElementById('talking-point-save').addEventListener('click', () => {
-      this.saveTalkingPoint();
-    });
 
     // Link modal
     document.getElementById('add-link-btn').addEventListener('click', () => {
@@ -792,38 +751,6 @@ class GlossiDashboard {
       this.deleteInvestor();
     });
 
-    // Pipeline update modal
-    document.getElementById('pipeline-update-btn').addEventListener('click', () => {
-      this.openPipelineUpdate();
-    });
-
-    document.getElementById('pipeline-modal-close').addEventListener('click', () => {
-      this.hideModal('pipeline-update-modal');
-    });
-
-    document.getElementById('pipeline-cancel').addEventListener('click', () => {
-      this.hideModal('pipeline-update-modal');
-    });
-
-    document.getElementById('pipeline-extract').addEventListener('click', () => {
-      this.processPipelineUpdate();
-    });
-
-    // Curation modal
-    document.getElementById('curation-modal-close').addEventListener('click', () => {
-      this.hideModal('curation-modal');
-      this.pendingCuration = null;
-    });
-
-    document.getElementById('curation-cancel').addEventListener('click', () => {
-      this.hideModal('curation-modal');
-      this.pendingCuration = null;
-    });
-
-    document.getElementById('curation-apply').addEventListener('click', () => {
-      this.applyCuration();
-    });
-
     // Color picker
     document.querySelectorAll('.color-option').forEach(option => {
       option.addEventListener('click', () => {
@@ -855,10 +782,6 @@ class GlossiDashboard {
       this.pendingExtractedData = null;
     });
 
-    // Image preview modal
-    document.getElementById('image-preview-close').addEventListener('click', () => {
-      this.hideModal('image-preview-modal');
-    });
 
     // Meeting selector
     document.getElementById('meeting-select').addEventListener('change', (e) => {
