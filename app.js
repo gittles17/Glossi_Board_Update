@@ -1870,26 +1870,58 @@ RULES:
     const section = sections.find(s => s.id === sectionId);
     if (!section) return;
     
-    const newName = prompt('Edit section name:', section.name);
-    if (newName === null) return; // Cancelled
+    // Find the section name element and make it editable
+    const nameEl = document.querySelector(`.link-section-name[data-section-id="${sectionId}"]`);
+    if (!nameEl) return;
     
-    if (!newName.trim()) {
-      // Delete section if name is empty
-      if (sections.length > 1) {
-        if (confirm('Delete this section? Links will be moved to the first section.')) {
-          storage.deleteLinkSection(sectionId);
-          this.data = storage.getData();
-          this.renderQuickLinks();
-        }
-      } else {
-        alert('Cannot delete the last section.');
+    // Store original name
+    const originalName = section.name;
+    
+    // Make editable
+    nameEl.contentEditable = 'true';
+    nameEl.focus();
+    
+    // Select all text
+    const range = document.createRange();
+    range.selectNodeContents(nameEl);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    
+    // Add editing styles
+    nameEl.classList.add('editing');
+    
+    // Handle blur (save)
+    const handleBlur = () => {
+      const newName = nameEl.textContent.trim();
+      nameEl.contentEditable = 'false';
+      nameEl.classList.remove('editing');
+      
+      if (!newName) {
+        // Restore original name if empty
+        nameEl.textContent = originalName;
+        return;
       }
-      return;
-    }
+      
+      if (newName !== originalName) {
+        storage.updateLinkSection(sectionId, { name: newName });
+        this.data = storage.getData();
+      }
+    };
     
-    storage.updateLinkSection(sectionId, { name: newName.trim() });
-    this.data = storage.getData();
-    this.renderQuickLinks();
+    // Handle keydown
+    const handleKeydown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        nameEl.blur();
+      } else if (e.key === 'Escape') {
+        nameEl.textContent = originalName;
+        nameEl.blur();
+      }
+    };
+    
+    nameEl.addEventListener('blur', handleBlur, { once: true });
+    nameEl.addEventListener('keydown', handleKeydown);
   }
   
   /**
