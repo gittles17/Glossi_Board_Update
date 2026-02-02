@@ -101,7 +101,6 @@ class KnowledgeBase {
     this.currentConversation.messages = [];
     this.saveData();
     this.renderMessages();
-    this.showToast('Chat cleared', 'info');
   }
 
   /**
@@ -394,7 +393,6 @@ class KnowledgeBase {
       this.sources.push(source);
       this.saveData();
       this.renderSources();
-      this.showToast(`Added: ${title}`, 'success');
       
     } catch (error) {
       this.showToast(`Failed to process file: ${error.message}`, 'error');
@@ -449,7 +447,6 @@ class KnowledgeBase {
     this.render();
     this.hideModal('kb-source-modal');
     this.clearSourceModal();
-    this.showToast('Source added successfully', 'success');
     
     if (this.onUpdate) this.onUpdate();
   }
@@ -684,7 +681,6 @@ Respond with ONLY the category name (lowercase).`;
     }
     
     if (this.sources.length === 0) {
-      this.showToast('Add sources first', 'info');
       return;
     }
     
@@ -1145,7 +1141,6 @@ Guidelines:
       
       // Show report in modal
       this.showReportViewModal(report);
-      this.showToast('Report generated successfully', 'success');
     } catch (error) {
       this.showToast('Failed to generate report: ' + error.message, 'error');
       // Go back to step 1
@@ -1444,7 +1439,6 @@ Guidelines:
     source.enabled = enabled;
     this.saveData();
     this.renderSources();
-    this.showToast(`Source "${source.title}" ${enabled ? 'enabled' : 'disabled'}`, 'info');
   }
 
   /**
@@ -1461,7 +1455,6 @@ Guidelines:
     this.sources = this.sources.filter(s => s.id !== sourceId);
     this.saveData();
     this.renderSources();
-    this.showToast(`Deleted "${source.title}"`, 'success');
   }
 
   /**
@@ -1501,7 +1494,6 @@ Guidelines:
       source.title = newName.trim();
       this.saveData();
       this.renderSources();
-      this.showToast('Source renamed', 'success');
     }
   }
 
@@ -1515,7 +1507,6 @@ Guidelines:
       this.expandedFolders[name.trim()] = true;
       this.saveData();
       this.renderSources();
-      this.showToast(`Folder "${name.trim()}" created`, 'success');
     }
   }
 
@@ -1529,7 +1520,6 @@ Guidelines:
     source.folder = folderName || null;
     this.saveData();
     this.renderSources();
-    this.showToast(folderName ? `Moved to "${folderName}"` : 'Moved out of folder', 'success');
   }
 
   /**
@@ -1776,7 +1766,6 @@ Guidelines:
       report.title = newName.trim();
       this.saveData();
       this.renderReports();
-      this.showToast('Report renamed', 'success');
     }
   }
 
@@ -1798,7 +1787,6 @@ Guidelines:
       this.storage.save();
     }
     this.renderReports();
-    this.showToast('Report deleted', 'success');
   }
 
   /**
@@ -1844,11 +1832,7 @@ Guidelines:
     // Setup copy handler
     if (copyBtn) {
       copyBtn.onclick = () => {
-        navigator.clipboard.writeText(contentEl.value).then(() => {
-          this.showToast('Report copied to clipboard', 'success');
-        }).catch(() => {
-          this.showToast('Failed to copy', 'error');
-        });
+        navigator.clipboard.writeText(contentEl.value);
       };
     }
     
@@ -1889,7 +1873,6 @@ Guidelines:
     this.saveData();
     this.renderReports();
     this.hideModal('kb-report-view-modal');
-    this.showToast('Report saved', 'success');
   }
 
   /**

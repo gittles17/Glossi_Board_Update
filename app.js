@@ -637,8 +637,6 @@ class GlossiDashboard {
       const meeting = meetingsManager.getCurrentMeeting();
       if (meeting) {
         this.addNewTodo(meeting.id);
-      } else {
-        this.showToast('Add meeting notes first', 'info');
       }
     });
 
@@ -648,8 +646,6 @@ class GlossiDashboard {
         this.showModal('decision-modal');
         document.getElementById('decision-text').value = '';
         document.getElementById('decision-text').focus();
-      } else {
-        this.showToast('Add meeting notes first', 'info');
       }
     });
 
@@ -737,7 +733,6 @@ class GlossiDashboard {
     document.getElementById('review-reject').addEventListener('click', () => {
       this.hideModal('review-modal');
       this.pendingReview = null;
-      this.showToast('Changes rejected', 'info');
     });
 
     document.getElementById('review-accept').addEventListener('click', () => {
@@ -1261,12 +1256,6 @@ class GlossiDashboard {
       this.hideModal('pipeline-edit-modal');
       this.renderPipelineSection();
       
-      // Show summary toast
-      const parts = [];
-      if (changes.newDeals > 0) parts.push(`${changes.newDeals} new`);
-      if (changes.stageChanges > 0) parts.push(`${changes.stageChanges} moved`);
-      if (changes.stalled > 0) parts.push(`${changes.stalled} stalled`);
-      this.showToast(parts.length > 0 ? `Pipeline updated: ${parts.join(', ')}` : 'Pipeline updated', 'success');
     } catch (error) {
       this.showToast('Failed to parse pipeline: ' + error.message, 'error');
     } finally {
@@ -1474,7 +1463,6 @@ RULES:
       testimonials: 'Customer Validation'
     };
     
-    this.showToast(`Moved to ${categoryLabels[newCategory]}`, 'success');
   }
 
   /**
@@ -1621,10 +1609,8 @@ RULES:
 
     if (this.editingLinkId) {
       storage.updateQuickLink(this.editingLinkId, linkData);
-      this.showToast('Link updated', 'success');
     } else {
       storage.addQuickLink(linkData);
-      this.showToast('Link added', 'success');
     }
 
     this.data = storage.getData();
@@ -1651,8 +1637,6 @@ RULES:
       link.style.transform = 'scale(0.9)';
       link.style.transition = 'all 0.15s ease-out';
     }
-    
-    this.showToast('Link deleted', 'success');
     
     // Persist and re-render after animation
     setTimeout(() => {
@@ -1824,7 +1808,6 @@ RULES:
     
     // Delayed re-render to update totals and sync state
     setTimeout(() => this.renderSeedRaise(), 150);
-    this.showToast(`Moved to ${this.formatStageName(newStage)}`, 'success');
   }
 
   /**
@@ -1919,7 +1902,6 @@ RULES:
     
     // Delayed re-render to ensure data consistency
     setTimeout(() => this.renderMeeting(meeting), 150);
-    this.showToast(`Moved to ${newOwner}`, 'success');
   }
 
   /**
@@ -2031,11 +2013,9 @@ RULES:
     if (this.editingInvestorId) {
       // Update existing
       storage.updateInvestor(this.editingInvestorId, { name, amount: amount || '$TBD', stage, notes });
-      this.showToast('Investor updated', 'success');
     } else {
       // Add new
       storage.addInvestor({ name, amount: amount || '$TBD', stage, notes });
-      this.showToast('Investor added', 'success');
     }
     
     this.data = storage.getData();
@@ -2061,8 +2041,6 @@ RULES:
       card.style.transform = 'scale(0.9)';
       card.style.transition = 'all 0.15s ease-out';
     }
-    
-    this.showToast('Investor deleted', 'success');
     
     // Persist and re-render after animation
     setTimeout(() => {
@@ -2154,7 +2132,6 @@ RULES:
       this.openMailto(polishedEmail);
       
       this.hideModal('share-email-modal');
-      this.showToast('Email opened in your email client', 'success');
     } catch (error) {
       this.showToast('Failed to generate email: ' + error.message, 'error');
     } finally {
@@ -2483,7 +2460,6 @@ Format this into a clean, professional weekly update email.`;
     const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     
     window.location.href = mailtoLink;
-    this.showToast('Opening email...', 'success');
   }
 
   /**
@@ -2827,7 +2803,6 @@ Format this into a clean, professional weekly update email.`;
       meetingsManager.updateMeeting(meeting);
       this.renderMeeting(meeting);
     }, 150);
-    this.showToast('Summary item deleted', 'success');
   }
 
   /**
@@ -2852,7 +2827,6 @@ Format this into a clean, professional weekly update email.`;
       meetingsManager.updateMeeting(meeting);
       this.renderMeeting(meeting);
     }, 150);
-    this.showToast('Decision deleted', 'success');
   }
 
   /**
@@ -2891,7 +2865,6 @@ Format this into a clean, professional weekly update email.`;
       meetingsManager.updateMeeting(meeting);
       this.renderMeeting(meeting);
     }, 150);
-    this.showToast('Action item deleted', 'success');
   }
 
   /**
@@ -2915,7 +2888,6 @@ Format this into a clean, professional weekly update email.`;
     
     this.hideModal('decision-modal');
     this.renderMeeting(meeting);
-    this.showToast('Decision added', 'success');
   }
 
   /**
@@ -2942,7 +2914,6 @@ Format this into a clean, professional weekly update email.`;
     this.data = storage.getData();
     this.hideModal('pipeline-edit-modal');
     this.renderPipelineSection();
-    this.showToast('Pipeline deal added', 'success');
   }
 
   /**
@@ -2985,10 +2956,8 @@ Format this into a clean, professional weekly update email.`;
 
     if (this.editingTalkingPointIndex !== null) {
       storage.updateTalkingPoint(this.editingTalkingPointIndex, title, content);
-      this.showToast('Talking point updated', 'success');
     } else {
       storage.addTalkingPoint(title, content);
-      this.showToast('Talking point added', 'success');
     }
 
     this.data = storage.getData();
@@ -3009,8 +2978,6 @@ Format this into a clean, professional weekly update email.`;
       card.style.transition = 'all 0.15s ease-out';
     }
     
-    this.showToast('Talking point deleted', 'success');
-    
     // Persist and re-render after animation
     setTimeout(() => {
       storage.deleteTalkingPoint(index);
@@ -3025,7 +2992,6 @@ Format this into a clean, professional weekly update email.`;
   addNewSummaryItem() {
     const meeting = meetingsManager.getCurrentMeeting();
     if (!meeting) {
-      this.showToast('Add meeting notes first', 'info');
       return;
     }
 
@@ -3144,9 +3110,6 @@ Format this into a clean, professional weekly update email.`;
         // Persist in background
         meetingsManager.updateMeeting(meeting);
         
-        if (progress.completed === progress.total && progress.total > 0) {
-          this.showToast('All tasks complete!', 'success');
-        }
       }
     }
   }
@@ -3240,7 +3203,6 @@ Format this into a clean, professional weekly update email.`;
     this.hideModal('notes-modal');
     this.renderMeetingSelector();
     this.renderMeeting(meeting);
-    this.showToast('Meeting saved!', 'success');
   }
 
   /**
@@ -3420,12 +3382,6 @@ Format this into a clean, professional weekly update email.`;
       if (counts.quotes) parts.push(`${counts.quotes} quotes`);
       if (counts.notes) parts.push(`${counts.notes} notes`);
       
-      if (parts.length > 0) {
-        this.showToast(`Added: ${parts.join(', ')}`, 'success');
-      } else {
-        this.showToast('No items extracted', 'info');
-      }
-      
       this.pendingDroppedContent = null;
       
     } catch (error) {
@@ -3554,13 +3510,10 @@ TONE RULES:
       return;
     }
     
-    this.showToast('Extracting deals...', 'info');
-    
     try {
       const deals = await this.extractPipelineDeals(text);
       
       if (deals.length === 0) {
-        this.showToast('No deals found in text', 'info');
         return;
       }
       
@@ -3584,7 +3537,6 @@ TONE RULES:
       this.data = storage.getData();
       this.render();
       this.hideModal('pipeline-update-modal');
-      this.showToast(`Pipeline updated: ${deals.length} deals`, 'success');
       
     } catch (error) {
       console.error('Pipeline update error:', error);
@@ -4031,7 +3983,6 @@ Return JSON:
     if (promotedCount) parts.push(`${promotedCount} promoted`);
     if (archivedCount) parts.push(`${archivedCount} archived`);
     
-    this.showToast(parts.length > 0 ? `Curated: ${parts.join(', ')}` : 'No changes made', 'success');
   }
 
   /**
@@ -4137,7 +4088,6 @@ Return JSON (only include items that need action):
         if (autoAppliedCount > 0) parts.push(`${autoAppliedCount} auto-archived`);
         if (needsReviewCount > 0) parts.push(`${needsReviewCount} need review`);
         
-        this.showToast(parts.join(', ') + ' - Click Curate to review', 'info');
       }
       
     } catch (error) {
@@ -4152,11 +4102,8 @@ Return JSON (only include items that need action):
     const talkingPoints = this.data?.talkingPoints || [];
     
     if (talkingPoints.length === 0) {
-      this.showToast('No talking points to analyze', 'info');
       return;
     }
-    
-    this.showToast('Analyzing talking points...', 'info');
     
     try {
       const prompt = `Analyze these talking points for an investor cheat sheet. Find and fix:
@@ -4224,7 +4171,6 @@ RULES:
       const analysis = JSON.parse(jsonMatch[0]);
       
       if (!analysis.fixes || analysis.fixes.length === 0) {
-        this.showToast('No issues found - talking points look good!', 'success');
         return;
       }
       
@@ -4255,13 +4201,7 @@ RULES:
       this.renderTalkingPoints();
       
       const parts = [];
-      if (deleted) parts.push(`${deleted} removed`);
-      if (moved) parts.push(`${moved} moved`);
-      if (rewritten) parts.push(`${rewritten} improved`);
-      
-      this.showToast(`Fixed: ${parts.join(', ')}`, 'success');
-      
-    } catch (error) {
+      if (deleted)     } catch (error) {
       console.error('Fix redundancies error:', error);
       this.showToast('Analysis failed: ' + error.message, 'error');
     }
@@ -4618,7 +4558,6 @@ RULES:
     if (addedCounts.fixes) parts.push(`${addedCounts.fixes} fixes`);
     
     this.hideModal('content-action-modal');
-    this.showToast(`Added: ${parts.join(', ')}`, 'success');
     
     this.pendingDroppedContent = null;
     this.pendingExtraction = null;
@@ -4928,8 +4867,6 @@ RULES:
     this.renderQuotes();
     this.hideModal('content-action-modal');
     
-    this.showToast(`Added ${addedCount} quotes to library`, 'success');
-    
     this.pendingDroppedContent = null;
     this.pendingExtractedData = null;
   }
@@ -5200,7 +5137,6 @@ RULES:
     this.render();
     
     this.hideModal('content-action-modal');
-    this.showToast(`Applied ${appliedCount} updates`, 'success');
     
     this.pendingDroppedContent = null;
     this.pendingExtractedData = null;
@@ -6002,7 +5938,6 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
     
     this.hideModal('content-action-modal');
     this.renderScratchpad();
-    this.showToast(`Saved ${items.length} items from ${source.fileName || 'document'}`, 'success');
     
     this.pendingGroupedItems = null;
     this.pendingGroupedSource = null;
@@ -6104,14 +6039,12 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
       };
       storage.addThought(thought);
       this.savedItems.thoughts.push(item);
-      this.showToast('Saved to Thoughts', 'success');
     } else if (action === 'talking_point') {
       // Add to talking points under testimonials category
       const title = item.source || 'Customer Quote';
       const content = item.quote + (item.context ? ` (${item.context})` : '');
       storage.addTalkingPoint(title, content, 'testimonials');
       this.savedItems.talkingPoints.push(item);
-      this.showToast('Added to Talking Points', 'success');
     }
     
     // Move to next item
@@ -6221,7 +6154,6 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
     
     this.hideModal('content-action-modal');
     this.renderTalkingPoints();
-    this.showToast('Added to Key Talking Points', 'success');
     
     this.pendingAnalysis = null;
     this.pendingDroppedContent = null;
@@ -6265,7 +6197,6 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
     
     this.hideModal('content-action-modal');
     this.renderScratchpad();
-    this.showToast('Saved to Thoughts', 'success');
     
     this.pendingAnalysis = null;
     this.pendingDroppedContent = null;
@@ -6340,11 +6271,6 @@ Content: "${content.substring(0, 300)}"`
     this.data = storage.getData();
     this.renderQuotes();
     
-    if (result?.featured) {
-      this.showToast('Quote will appear in email', 'success');
-    } else {
-      this.showToast('Quote removed from email', 'info');
-    }
   }
 
   /**
@@ -6364,8 +6290,6 @@ Content: "${content.substring(0, 300)}"`
       this.data = storage.getData();
       this.renderQuotes();
     }, 150);
-    
-    this.showToast('Quote deleted', 'success');
   }
 
   /**
@@ -6439,7 +6363,6 @@ Content: "${content.substring(0, 300)}"`
   restoreArchivedItem(id) {
     storage.restoreArchivedItem(id);
     this.renderScratchpad();
-    this.showToast('Item restored', 'success');
   }
 
   /**
@@ -6448,7 +6371,6 @@ Content: "${content.substring(0, 300)}"`
   deleteArchivedItem(id) {
     storage.deleteArchivedItem(id);
     this.renderScratchpad();
-    this.showToast('Item permanently deleted', 'success');
   }
 
   /**
@@ -6479,7 +6401,6 @@ Content: "${content.substring(0, 300)}"`
     }
     
     this.renderScratchpad();
-    this.showToast('Item archived', 'success');
   }
 
   /**
@@ -6545,7 +6466,6 @@ Content: "${content.substring(0, 300)}"`
       }
       this.renderScratchpad();
     }, 150);
-    this.showToast('Item deleted', 'success');
   }
 
   /**
@@ -6554,7 +6474,6 @@ Content: "${content.substring(0, 300)}"`
   viewSource(thoughtId) {
     const result = this.findScratchpadItem(thoughtId);
     if (!result || !result.item.originalSource) {
-      this.showToast('Source not available', 'info');
       return;
     }
     const thought = result.item;
@@ -6768,7 +6687,6 @@ Respond with just the category name (core, traction, market, or testimonials) an
     this.hideModal('content-action-modal');
     this.renderScratchpad();
     this.renderTalkingPoints();
-    this.showToast(`Added to ${category === 'testimonials' ? 'Customer Validation' : category} talking points`, 'success');
     
     this.promotingThought = null;
   }
@@ -6820,7 +6738,6 @@ Respond with just the category name (core, traction, market, or testimonials) an
       market: 'Market & Timing',
       testimonials: 'Customer Validation'
     };
-    this.showToast(`Added to ${categoryLabels[category]}`, 'success');
   }
 
   /**
@@ -6879,8 +6796,6 @@ Respond with just the category name (core, traction, market, or testimonials) an
       this.renderScratchpad();
       this.renderTalkingPoints();
     }, 200);
-    
-    this.showToast('Added to Customer Validation', 'success');
   }
 
   /**
@@ -6915,7 +6830,6 @@ Respond with just the category name (core, traction, market, or testimonials) an
           thoughts.splice(result.index, 1);
           storage.scheduleSave();
         }
-        this.showToast('All items deleted', 'success');
       } else {
         // Update the thought using proper method
         if (actualId) {
@@ -6926,7 +6840,6 @@ Respond with just the category name (core, traction, market, or testimonials) an
         } else {
           storage.scheduleSave();
         }
-        this.showToast('Item deleted', 'success');
       }
       
       this.renderScratchpad();
@@ -7195,7 +7108,6 @@ Respond with just the category name (core, traction, market, or testimonials) an
       this.renderMeetingSelector();
       this.renderMeeting(meeting);
       this.renderPipelineSection();
-      this.showToast('Meeting saved successfully', 'success');
     } else if (this.pendingReview.type === 'content') {
       // Apply content updates
       const updates = this.pendingReview.aiData.suggestedUpdates || [];
@@ -7232,7 +7144,6 @@ Respond with just the category name (core, traction, market, or testimonials) an
       }
 
       this.render();
-      this.showToast('Updates applied successfully', 'success');
     }
 
     this.hideModal('review-modal');
@@ -7306,16 +7217,7 @@ Respond with just the category name (core, traction, market, or testimonials) an
 
     // Test connection if key provided
     if (apiKey) {
-      this.showToast('Testing API connection...', 'info');
       const connected = await aiProcessor.testConnection();
-      
-      if (connected) {
-        this.showToast('API connected successfully', 'success');
-      } else {
-        this.showToast('API connection failed. Please check your key.', 'error');
-      }
-    } else {
-      this.showToast('Settings saved', 'success');
     }
 
     // Update UI status
@@ -7429,7 +7331,6 @@ Respond with just the category name (core, traction, market, or testimonials) an
     a.click();
     
     URL.revokeObjectURL(url);
-    this.showToast('Data exported successfully', 'success');
   }
 
   /**
@@ -7450,9 +7351,6 @@ Respond with just the category name (core, traction, market, or testimonials) an
         if (success) {
           this.data = storage.getData();
           this.render();
-          this.showToast('Data imported successfully', 'success');
-        } else {
-          this.showToast('Failed to import data', 'error');
         }
       };
       reader.readAsText(file);
