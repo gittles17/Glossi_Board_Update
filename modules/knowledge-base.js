@@ -90,6 +90,37 @@ class KnowledgeBase {
       });
     }
 
+    // Sources drop zone
+    const dropZone = document.getElementById('kb-sources-list');
+    if (dropZone) {
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add('drag-over');
+      });
+      
+      dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!dropZone.contains(e.relatedTarget)) {
+          dropZone.classList.remove('drag-over');
+        }
+      });
+      
+      dropZone.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('drag-over');
+        
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0) {
+          for (const file of files) {
+            await this.handleDroppedFile(file);
+          }
+        }
+      });
+    }
+
     // Toggle reports panel
     const toggleReports = document.getElementById('kb-toggle-reports');
     if (toggleReports) {
@@ -274,6 +305,62 @@ class KnowledgeBase {
     };
     
     promptInput.value = prompts[this.selectedTemplate] || '';
+  }
+
+  /**
+   * Handle a dropped file
+   */
+  async handleDroppedFile(file) {
+    const supportedTypes = ['text/plain', 'application/pdf', 'text/markdown', 'text/csv'];
+    const supportedExtensions = ['.txt', '.md', '.pdf', '.csv', '.json'];
+    
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    const isSupported = supportedTypes.includes(file.type) || supportedExtensions.includes(ext);
+    
+    if (!isSupported) {
+      this.showToast(`Unsupported file type: ${file.name}`, 'error');
+      return;
+    }
+    
+    try {
+      let content = '';
+      
+      if (file.type === 'application/pdf' || ext === '.pdf') {
+        this.showToast('Processing PDF...', 'info');
+        content = `[PDF content from: ${file.name}]`;
+      } else {
+        content = await file.text();
+      }
+      
+      // Determine category
+      let category = 'other';
+      if (this.aiProcessor && this.aiProcessor.isConfigured()) {
+        category = await this.categorizeSource(content.substring(0, 1000));
+      }
+      
+      // Create source object
+      const source = {
+        id: 'src_' + Date.now(),
+        type: 'file',
+        title: file.name,
+        content: content.substring(0, 50000),
+        category,
+        metadata: {
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type
+        },
+        createdAt: new Date().toISOString()
+      };
+      
+      this.sources.push(source);
+      this.saveData();
+      this.renderSources();
+      this.showToast(`Added: ${file.name}`, 'success');
+      
+    } catch (error) {
+      this.showToast(`Failed to read file: ${error.message}`, 'error');
+    }
   }
 
   /**
