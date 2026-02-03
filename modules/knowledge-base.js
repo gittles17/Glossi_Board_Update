@@ -63,6 +63,9 @@ class KnowledgeBase {
     
     // Auto-fetch content for enabled quick links that don't have cached content
     setTimeout(() => this.fetchMissingQuickLinkContent(), 1000);
+    
+    // Pre-generate AI summary in background (keep warm)
+    setTimeout(() => this.generateSourceSummary(), 1500);
   }
 
   /**
@@ -94,6 +97,12 @@ class KnowledgeBase {
       this.quickLinkContent = kbData.quickLinkContent;
     }
     
+    // Load cached AI summary
+    if (kbData.sourceSummary) {
+      this.sourceSummary = kbData.sourceSummary;
+      this.summaryHash = kbData.summaryHash;
+    }
+    
     // Create a new conversation if none exists
     if (this.conversations.length === 0) {
       this.currentConversation = this.createConversation();
@@ -119,7 +128,9 @@ class KnowledgeBase {
       folders: this.folders,
       dashboardSources: dashboardSourcePrefs,
       enabledQuickLinks: this.enabledQuickLinks,
-      quickLinkContent: this.quickLinkContent
+      quickLinkContent: this.quickLinkContent,
+      sourceSummary: this.sourceSummary,
+      summaryHash: this.summaryHash
     });
   }
 
@@ -2461,11 +2472,13 @@ Guidelines:
   /**
    * Generate AI summary of source content
    */
-  async generateSourceSummary() {
+  async generateSourceSummary(background = false) {
     if (this.summaryLoading) return;
     if (!this.aiProcessor || !this.aiProcessor.isConfigured()) {
-      this.sourceSummary = 'AI not configured. Enable Claude API in settings.';
-      this.renderMessages();
+      if (!background) {
+        this.sourceSummary = 'AI not configured. Enable Claude API in settings.';
+        this.renderMessages();
+      }
       return;
     }
     
@@ -2476,7 +2489,7 @@ Guidelines:
     if (contextHash === this.summaryHash && this.sourceSummary) return;
     
     this.summaryLoading = true;
-    this.renderMessages();
+    if (!background) this.renderMessages();
     
     try {
       const systemPrompt = `You are summarizing available data for an investor dashboard. Be concise and specific.`;
@@ -2488,8 +2501,11 @@ ${context.substring(0, 4000)}`;
       const response = await this.aiProcessor.chat(systemPrompt, prompt);
       this.sourceSummary = response;
       this.summaryHash = contextHash;
+      this.saveData();
     } catch (error) {
-      this.sourceSummary = 'Unable to generate summary. Try refreshing.';
+      if (!background) {
+        this.sourceSummary = 'Unable to generate summary. Try refreshing.';
+      }
     }
     
     this.summaryLoading = false;
@@ -2510,11 +2526,12 @@ ${context.substring(0, 4000)}`;
   }
 
   /**
-   * Invalidate summary cache (call when sources change)
+   * Invalidate summary cache and regenerate in background
    */
   invalidateSummary() {
-    this.sourceSummary = null;
     this.summaryHash = null;
+    // Regenerate in background (keep warm)
+    setTimeout(() => this.generateSourceSummary(true), 500);
   }
 
   /**
