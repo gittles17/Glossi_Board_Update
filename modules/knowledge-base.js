@@ -1649,7 +1649,6 @@ Guidelines:
     if (allFolderNames.size > 0) {
       sourcesHtml += `
         <div class="kb-ungrouped-zone">
-          <span class="kb-ungrouped-label">Ungrouped</span>
           ${ungrouped.map(source => this.renderSourceItem(source)).join('')}
         </div>
       `;
