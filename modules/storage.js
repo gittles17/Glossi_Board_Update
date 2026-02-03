@@ -105,7 +105,6 @@ class Storage {
       if (response.ok) {
         const result = await response.json();
         this.serverAvailable = true;
-        console.log('Server available, loading from files...');
         
         if (result.data) {
           if (result.data.dashboard_data) {
@@ -124,14 +123,12 @@ class Storage {
             this.statHistory = result.data.stat_history;
           }
           
-          console.log('Loaded from server files:', {
             meetings: this.meetings?.length || 0,
             pipelineHistory: this.pipelineHistory?.length || 0
           });
         }
       }
     } catch (e) {
-      console.log('Server not available, using localStorage');
       this.serverAvailable = false;
     }
 
@@ -179,7 +176,6 @@ class Storage {
       if (migratedTodos.length > 0) {
         this.todos = migratedTodos;
         this.saveTodos();
-        console.log(`Migrated ${migratedTodos.length} todos from meetings to independent storage`);
       }
     }
     if (!this.pipelineHistory || this.pipelineHistory.length === 0) {
@@ -189,8 +185,6 @@ class Storage {
       this.statHistory = safeJsonParse('glossi_stat_history', []);
     }
 
-    console.log('Final loaded data:');
-    console.log('- Meetings:', this.meetings?.length || 0);
 
     // Ensure all required fields exist
     this.data = { ...DEFAULT_DATA, ...this.data };
@@ -1180,13 +1174,11 @@ class Storage {
    * Update settings
    */
   updateSettings(updates) {
-    console.log('Updating settings with:', updates);
     this.settings = {
       ...this.settings,
       ...updates
     };
     const saved = this.saveSettings();
-    console.log('Settings saved:', saved, this.settings);
     return this.settings;
   }
 
@@ -1205,21 +1197,16 @@ class Storage {
 
     if (existingIndex !== -1) {
       this.meetings[existingIndex] = meetingData;
-      console.log('Updated existing meeting:', id);
     } else {
       this.meetings.push(meetingData);
-      console.log('Added new meeting:', id);
     }
 
-    console.log('Total meetings in memory:', this.meetings.length);
 
     // Save immediately for meetings (no debounce)
     const saved = this.save();
-    console.log('Save result:', saved);
     
     // Verify it was saved
     const verify = localStorage.getItem('glossi_meetings');
-    console.log('Verified in localStorage:', verify ? JSON.parse(verify).length : 0, 'meetings');
     
     return meetingData;
   }
@@ -1780,7 +1767,6 @@ class Storage {
       localStorage.setItem('glossi_data', JSON.stringify(this.data));
       localStorage.setItem('glossi_meetings', JSON.stringify(this.meetings));
       localStorage.setItem('glossi_todos', JSON.stringify(this.todos));
-      console.log('Data saved to localStorage');
       
       // Sync to server
       this.syncToServer();
@@ -1798,7 +1784,6 @@ class Storage {
   saveSettings() {
     try {
       localStorage.setItem('glossi_settings', JSON.stringify(this.settings));
-      console.log('Settings written to localStorage:', this.settings);
       
       // Sync to server
       this.syncToServer();
@@ -1832,7 +1817,6 @@ class Storage {
       });
 
       if (response.ok) {
-        console.log('Data synced to server files');
       } else {
         console.warn('Failed to sync to server');
       }

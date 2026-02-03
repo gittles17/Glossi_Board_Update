@@ -25,9 +25,7 @@ if (useDatabase) {
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
   });
-  console.log('Using PostgreSQL database');
 } else {
-  console.log('Using local file storage');
 }
 
 // Data directory for local development
@@ -50,7 +48,6 @@ async function initDatabase() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    console.log('Database initialized');
   } catch (error) {
     console.error('Error initializing database:', error);
   }
@@ -123,7 +120,6 @@ app.post('/api/data', async (req, res) => {
       await saveData('pipeline_history', pipelineHistory);
       await saveData('stat_history', statHistory);
       
-      console.log('Data saved to database');
     } else {
       // Save to files
       if (data) {
@@ -161,7 +157,6 @@ app.post('/api/data', async (req, res) => {
         );
       }
       
-      console.log('Data saved to files');
     }
     
     res.json({ success: true });
@@ -187,7 +182,6 @@ app.post('/api/clear-quotes', async (req, res) => {
           WHERE key = 'dashboard_data'
         `, [JSON.stringify(data)]);
         
-        console.log('Quotes cleared from database');
         res.json({ success: true, message: 'Quotes cleared from PostgreSQL' });
       } else {
         res.json({ success: true, message: 'No dashboard data found' });
@@ -200,7 +194,6 @@ app.post('/api/clear-quotes', async (req, res) => {
           const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
           data.quotes = [];
           fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-          console.log('Quotes cleared from local file');
           res.json({ success: true, message: 'Quotes cleared from local storage' });
         } catch (e) {
           console.error('Failed to parse dashboard file:', e.message);
@@ -263,12 +256,10 @@ app.post('/api/reset', async (req, res) => {
         VALUES ('meetings', $1, NOW())
         ON CONFLICT (key) DO UPDATE SET data = $1, updated_at = NOW()
       `, [JSON.stringify([])]);
-      console.log('Database reset to defaults');
     } else {
       // Reset files
       fs.writeFileSync(path.join(DATA_DIR, 'dashboard-data.json'), JSON.stringify(defaultData, null, 2));
       fs.writeFileSync(path.join(DATA_DIR, 'meetings.json'), '[]');
-      console.log('Files reset to defaults');
     }
     
     res.json({ success: true, message: 'Data reset to defaults' });
@@ -417,20 +408,9 @@ async function start() {
   const host = useDatabase ? '0.0.0.0' : '127.0.0.1';
   
   app.listen(PORT, host, () => {
-    console.log('');
-    console.log('╔════════════════════════════════════════════╗');
-    console.log('║      Glossi Dashboard Server Running       ║');
-    console.log('╠════════════════════════════════════════════╣');
     if (useDatabase) {
-      console.log(`║  Running on port ${PORT} (production)         ║`);
-      console.log('║  Data saves to: PostgreSQL                 ║');
     } else {
-      console.log(`║  http://127.0.0.1:${PORT}                     ║`);
-      console.log('║  Data saves to: ./data/                    ║');
     }
-    console.log('║  Press Ctrl+C to stop                      ║');
-    console.log('╚════════════════════════════════════════════╝');
-    console.log('');
   });
 }
 

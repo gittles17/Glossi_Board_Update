@@ -47,7 +47,6 @@ class MeetingsManager {
    * Create a new meeting from processed AI data
    */
   createMeeting(title, date, rawNotes, aiProcessedData) {
-    console.log('Creating meeting:', { title, date, aiProcessedData });
     
     const meeting = {
       id: `meeting-${Date.now()}`,
@@ -67,10 +66,8 @@ class MeetingsManager {
       createdAt: new Date().toISOString()
     };
 
-    console.log('Meeting object created:', meeting);
     
     const savedMeeting = this.storage.saveMeeting(meeting);
-    console.log('Meeting saved to storage:', savedMeeting);
     
     this.currentMeeting = meeting;
     

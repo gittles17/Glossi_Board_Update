@@ -1,0 +1,1 @@
+Production push. Strip all console logs, debugger statements, commented-out code, unused imports, and TODO comments. Verify no secrets or API keys are exposed. Then commit with message "production cleanup" and push to origin.

@@ -103,7 +103,6 @@ class GlossiDashboard {
       this.animateStatsOnLoad();
     });
 
-    console.log('Glossi Dashboard initialized');
   }
 
   /**
@@ -509,9 +508,7 @@ class GlossiDashboard {
    * Process a dropped or selected file
    */
   async processDroppedFile(file) {
-    console.log('Processing file:', file.name, 'MIME type:', file.type);
     const fileType = this.getFileType(file);
-    console.log('Detected as:', fileType);
     
     if (!fileType) {
       this.showToast('Unsupported file type: ' + (file.type || file.name), 'error');
@@ -539,7 +536,6 @@ class GlossiDashboard {
         
         // Check file size (Whisper limit is 25MB)
         const fileSizeMB = file.size / (1024 * 1024);
-        console.log('Audio file size:', fileSizeMB.toFixed(2), 'MB');
         
         if (fileSizeMB > 25) {
           this.showToast(`Audio file too large (${fileSizeMB.toFixed(1)}MB). Max is 25MB. Try a shorter clip or compress the file.`, 'error');
@@ -549,9 +545,7 @@ class GlossiDashboard {
         // Show progress overlay
         this.showProgress('Processing Audio');
         
-        console.log('Starting audio transcription...');
         content = await this.processAudioFile(file);
-        console.log('Transcription result:', content);
       }
 
       content.type = fileType;
@@ -678,8 +672,6 @@ class GlossiDashboard {
             const result = JSON.parse(xhr.responseText);
             const transcript = result.text;
             
-            console.log('Audio duration:', result.duration, 'seconds');
-            console.log('Audio transcription length:', transcript?.length, 'chars');
             
             if (!transcript || transcript.trim().length === 0) {
               reject(new Error('No speech detected in audio'));
@@ -3283,7 +3275,6 @@ Format this into a clean, professional weekly update email. Return as JSON with 
     const select = document.getElementById('meeting-select');
     const meetings = meetingsManager.getAllMeetings();
     
-    console.log('Rendering meeting selector, meetings:', meetings.length);
 
     // Get current week range
     const thisWeekRange = this.getWeekRange(new Date());
@@ -3867,9 +3858,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
     `;
 
     try {
-      console.log('Processing meeting notes with AI...');
       const result = await aiProcessor.processMeetingNotes(notes, title, date);
-      console.log('AI result:', result);
       
       // Store pending data
       this.pendingReview = {
@@ -4008,19 +3997,16 @@ Format this into a clean, professional weekly update email. Return as JSON with 
    * Handle dropped content - analyze with AI then show destination options
    */
   async handleDroppedContent(droppedContent) {
-    console.log('handleDroppedContent called with:', droppedContent.type, droppedContent.fileName);
     
     // Store the pending content
     this.pendingDroppedContent = droppedContent;
     
     // Check for API key
     if (!aiProcessor.isConfigured()) {
-      console.log('Anthropic API key not configured');
       this.showToast('Please configure your Anthropic API key in Settings', 'error');
       return;
     }
     
-    console.log('Starting AI analysis...');
     // Analyze immediately with AI
     await this.analyzeAndShowOptions();
   }
@@ -4039,7 +4025,6 @@ Format this into a clean, professional weekly update email. Return as JSON with 
     try {
       // Single Opus call to extract everything
       const result = await this.extractForCheatSheet(content);
-      console.log('Extraction result:', result);
       
       // Compress source for linking
       const compressedSource = {
@@ -6089,7 +6074,6 @@ RULES:
             tps[tpIndex].content = tps[tpIndex].content.replace(fix.currentText, fix.suggestedFix);
           }
           storage.updateTalkingPoint(tpIndex, tps[tpIndex].title, tps[tpIndex].content, tps[tpIndex].category);
-          console.log('Fixed talking point:', tpIndex);
         }
         break;
         
@@ -6101,13 +6085,11 @@ RULES:
                         fix.issue?.toLowerCase().includes('partner') ? 'partnerships' : null;
           if (statId) {
             this.updateStat(statId, fix.suggestedFix);
-            console.log('Fixed stat:', statId);
           }
         }
         break;
         
       default:
-        console.log('Unknown section for fix:', fix.section);
     }
   }
 
@@ -6546,7 +6528,6 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
     
     try {
       const parsed = JSON.parse(jsonMatch[0]);
-      console.log('Parsed testimonials:', parsed.items?.length, 'items');
       return parsed.items || [];
     } catch (e) {
       console.error('Failed to parse JSON:', e);
@@ -7703,7 +7684,6 @@ Respond with just the category name (core, traction, market, or testimonials) an
       return;
     }
 
-    console.log('Applying pending changes:', this.pendingReview);
     let pipelineChanged = false;
 
     if (this.pendingReview.type === 'meeting') {
@@ -7716,14 +7696,12 @@ Respond with just the category name (core, traction, market, or testimonials) an
         todos: [] // Todos go through review modal
       };
       
-      console.log('Creating meeting with data:', meetingData);
       const meeting = meetingsManager.createMeeting(
         this.pendingReview.title,
         this.pendingReview.date,
         this.pendingReview.rawNotes,
         meetingData
       );
-      console.log('Meeting created:', meeting);
 
       // Apply any pipeline updates
       if (this.pendingReview.aiData.pipelineUpdates && this.pendingReview.aiData.pipelineUpdates.length > 0) {

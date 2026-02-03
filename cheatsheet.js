@@ -207,7 +207,6 @@ function addDeal(category, deal) {
   CheatSheetData.pipeline[category].push(deal);
   CheatSheetData.lastUpdated = new Date().toISOString();
   
-  console.log(`Added deal: ${deal.name} to ${category}`);
   return true;
 }
 
@@ -229,7 +228,6 @@ function updateDeal(category, dealName, updates) {
   };
   CheatSheetData.lastUpdated = new Date().toISOString();
   
-  console.log(`Updated deal: ${dealName}`);
   return true;
 }
 
@@ -249,7 +247,6 @@ function moveDeal(dealName, fromCategory, toCategory) {
   CheatSheetData.pipeline[toCategory].push(deal);
   CheatSheetData.lastUpdated = new Date().toISOString();
   
-  console.log(`Moved deal: ${dealName} from ${fromCategory} to ${toCategory}`);
   return true;
 }
 
@@ -267,7 +264,6 @@ function updatePipelineTotal(newTotal) {
 function addTalkingPoint(title, content) {
   CheatSheetData.talkingPoints.push({ title, content });
   CheatSheetData.lastUpdated = new Date().toISOString();
-  console.log(`Added talking point: ${title}`);
 }
 
 /**
@@ -388,8 +384,6 @@ function updateLastModified() {
  */
 function exportData() {
   const dataStr = JSON.stringify(CheatSheetData, null, 2);
-  console.log('Current CheatSheet Data:');
-  console.log(dataStr);
   return dataStr;
 }
 
@@ -408,7 +402,6 @@ function importData(jsonData) {
     renderTalkingPoints();
     updateLastModified();
     
-    console.log('Data imported successfully');
     return true;
   } catch (e) {
     console.error('Failed to import data:', e);
@@ -435,15 +428,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  console.log('Glossi Investor Cheat Sheet loaded');
-  console.log('Available functions:');
-  console.log('- addDeal(category, deal)');
-  console.log('- updateDeal(category, dealName, updates)');
-  console.log('- moveDeal(dealName, fromCategory, toCategory)');
-  console.log('- addTalkingPoint(title, content)');
-  console.log('- updateStat(index, updates)');
-  console.log('- exportData()');
-  console.log('- importData(jsonData)');
 });
 
 // Make functions globally available
