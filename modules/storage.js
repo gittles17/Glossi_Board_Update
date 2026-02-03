@@ -122,10 +122,6 @@ class Storage {
           if (result.data.stat_history) {
             this.statHistory = result.data.stat_history;
           }
-          
-            meetings: this.meetings?.length || 0,
-            pipelineHistory: this.pipelineHistory?.length || 0
-          });
         }
       }
     } catch (e) {
