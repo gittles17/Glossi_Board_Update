@@ -8850,9 +8850,9 @@ body.sidebar-open .top-nav {
 
 .kb-clear-btn {
   position: sticky;
-  top: var(--space-2);
+  top: 4px;
   float: right;
-  margin-right: 0;
+  margin-right: -12px;
   width: 28px;
   height: 28px;
   display: flex;
