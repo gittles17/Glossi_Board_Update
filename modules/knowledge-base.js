@@ -1575,12 +1575,7 @@ Guidelines:
     messagesContainer.appendChild(indicator);
     
     // Auto-scroll chat area to show typing indicator
-    const chatArea = document.getElementById('kb-chat-area');
-    if (chatArea) {
-      requestAnimationFrame(() => {
-        chatArea.scrollTop = chatArea.scrollHeight;
-      });
-    }
+    this.scrollChatToBottom();
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
 
@@ -2413,12 +2408,20 @@ Guidelines:
       `;
     }).join('');
     
-    // Auto-scroll chat area to bottom
+    // Auto-scroll chat area to bottom (with delay to ensure DOM is fully rendered)
+    this.scrollChatToBottom();
+  }
+
+  /**
+   * Scroll chat area to bottom
+   */
+  scrollChatToBottom() {
     const chatArea = document.getElementById('kb-chat-area');
     if (chatArea) {
-      requestAnimationFrame(() => {
+      // Use setTimeout to ensure content is fully rendered
+      setTimeout(() => {
         chatArea.scrollTop = chatArea.scrollHeight;
-      });
+      }, 50);
     }
   }
 
