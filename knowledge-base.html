@@ -188,11 +188,11 @@
     </div>
   </main>
 
-  <!-- Add Text Modal -->
+  <!-- Add Source Modal -->
   <div class="modal-overlay" id="kb-source-modal">
     <div class="modal">
       <div class="modal-header">
-        <h2>Add Text</h2>
+        <h2>Add Source</h2>
         <button class="btn-icon modal-close" id="kb-source-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -201,10 +201,27 @@
         </button>
       </div>
       <div class="modal-body">
-        <div class="notes-input-section">
-          <textarea id="kb-source-text" class="input textarea" rows="8" placeholder="Paste or type your text here..."></textarea>
+        <!-- File Upload Zone -->
+        <div class="kb-modal-dropzone" id="kb-modal-dropzone">
+          <input type="file" id="kb-modal-file-input" accept=".txt,.md,.csv,.json,.pdf,.png,.jpg,.jpeg,.gif,.webp,.mp3,.wav,.m4a" style="display:none">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span class="kb-dropzone-text">Drop file here or click to browse</span>
+          <span class="kb-dropzone-hint">PDF, text, images, or audio</span>
         </div>
-        <p class="kb-text-hint">A title will be auto-generated from the content.</p>
+        
+        <!-- Divider -->
+        <div class="kb-modal-divider">
+          <span>or paste text</span>
+        </div>
+        
+        <!-- Text Input -->
+        <div class="notes-input-section">
+          <textarea id="kb-source-text" class="input textarea" rows="6" placeholder="Paste or type your text here..."></textarea>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="kb-source-cancel">Cancel</button>

@@ -325,6 +325,9 @@ class KnowledgeBase {
     if (sourceSave) {
       sourceSave.addEventListener('click', () => this.addSource());
     }
+    
+    // Modal dropzone handlers
+    this.setupModalDropzone();
 
     // Quick actions
     document.querySelectorAll('.kb-action-btn').forEach(btn => {
@@ -473,7 +476,78 @@ class KnowledgeBase {
   showSourceModal() {
     const textInput = document.getElementById('kb-source-text');
     if (textInput) textInput.value = '';
+    this.pendingModalFile = null;
+    this.updateDropzoneUI();
     this.showModal('kb-source-modal');
+  }
+  
+  /**
+   * Setup modal dropzone handlers
+   */
+  setupModalDropzone() {
+    const dropzone = document.getElementById('kb-modal-dropzone');
+    const fileInput = document.getElementById('kb-modal-file-input');
+    
+    if (!dropzone || !fileInput) return;
+    
+    // Click to browse
+    dropzone.addEventListener('click', () => fileInput.click());
+    
+    // File selected
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        this.pendingModalFile = e.target.files[0];
+        this.updateDropzoneUI();
+      }
+    });
+    
+    // Drag events
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('drag-over');
+    });
+    
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('drag-over');
+    });
+    
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('drag-over');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        this.pendingModalFile = e.dataTransfer.files[0];
+        this.updateDropzoneUI();
+      }
+    });
+  }
+  
+  /**
+   * Update dropzone UI to show selected file
+   */
+  updateDropzoneUI() {
+    const dropzone = document.getElementById('kb-modal-dropzone');
+    if (!dropzone) return;
+    
+    if (this.pendingModalFile) {
+      dropzone.innerHTML = `
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+        </svg>
+        <span class="kb-dropzone-filename">${this.pendingModalFile.name}</span>
+        <span class="kb-dropzone-hint">Click to change file</span>
+      `;
+    } else {
+      dropzone.innerHTML = `
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <span class="kb-dropzone-text">Drop file here or click to browse</span>
+        <span class="kb-dropzone-hint">PDF, text, images, or audio</span>
+      `;
+    }
   }
 
   /**
@@ -663,9 +737,17 @@ KEY INFORMATION:
   }
 
   /**
-   * Add a new source from text
+   * Add a new source from file or text
    */
   async addSource() {
+    // Check if there's a pending file first
+    if (this.pendingModalFile) {
+      await this.handleDroppedFile(this.pendingModalFile);
+      this.pendingModalFile = null;
+      this.hideModal('kb-source-modal');
+      return;
+    }
+    
     const content = document.getElementById('kb-source-text')?.value?.trim() || '';
     
     if (!content) {
