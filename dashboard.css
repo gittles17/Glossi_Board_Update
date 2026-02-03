@@ -8832,6 +8832,11 @@ body.sidebar-open .top-nav {
   resize: none;
   min-height: 40px;
   max-height: 120px;
+  overflow: hidden;
+}
+
+.kb-chat-input::-webkit-scrollbar {
+  display: none;
 }
 
 .kb-chat-input:focus {
