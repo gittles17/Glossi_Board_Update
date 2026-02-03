@@ -8852,7 +8852,7 @@ body.sidebar-open .top-nav {
   position: sticky;
   top: var(--space-2);
   float: right;
-  margin-right: var(--space-2);
+  margin-right: 0;
   width: 28px;
   height: 28px;
   display: flex;
