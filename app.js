@@ -2550,7 +2550,7 @@ RULES:
     // Save and re-render
     meetingsManager.updateMeeting(meeting);
     this.renderMeeting(meeting);
-    this.renderMasterTodoList();
+    this.renderActionItems();
   }
 
   /**
@@ -3403,96 +3403,6 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       summaryContainer.innerHTML = '<li class="empty-state">No summary yet.</li>';
     }
 
-    // Todos (grouped by owner, editable) - separate active and completed
-    const todoContainer = document.getElementById('todo-list');
-    if (meeting.todos && meeting.todos.length > 0) {
-      // Separate active and completed todos
-      const activeTodos = meeting.todos.filter(t => !t.completed);
-      const completedTodos = meeting.todos.filter(t => t.completed);
-      
-      // Helper to render todo item HTML
-      const renderTodoItem = (todo) => `
-        <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}" draggable="true">
-          <div class="todo-checkbox ${todo.completed ? 'checked' : ''}" onclick="window.dashboard.toggleTodo('${meeting.id}', '${todo.id}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          </div>
-          <div class="todo-content">
-            <span class="todo-text editable-item" contenteditable="true" data-type="todo-text" data-todo-id="${todo.id}">${todo.text}</span>
-            <span class="todo-owner-edit editable-item" contenteditable="true" data-type="todo-owner" data-todo-id="${todo.id}" title="Click to change assignee">${this.resolveOwnerName(todo.owner)}</span>
-          </div>
-          <button class="delete-btn" onclick="window.dashboard.deleteTodo('${meeting.id}', '${todo.id}')" title="Delete">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-      `;
-      
-      // Helper to group todos by owner
-      const groupByOwner = (todos) => {
-        const grouped = {};
-        todos.forEach(todo => {
-          const owner = this.resolveOwnerName(todo.owner);
-          if (!grouped[owner]) grouped[owner] = [];
-          grouped[owner].push(todo);
-        });
-        return grouped;
-      };
-      
-      let html = '';
-      
-      // Render active todos grouped by owner
-      if (activeTodos.length > 0) {
-        const activeByOwner = groupByOwner(activeTodos);
-        Object.entries(activeByOwner).forEach(([owner, todos]) => {
-          html += `
-            <div class="todo-group" data-owner="${owner}">
-              <div class="todo-group-header">${owner}</div>
-              <div class="todo-group-items">
-                ${todos.map(renderTodoItem).join('')}
-              </div>
-            </div>
-          `;
-        });
-      } else {
-        html += '<div class="empty-state">No active action items.</div>';
-      }
-      
-      // Render completed todos in collapsible section
-      if (completedTodos.length > 0) {
-        const completedByOwner = groupByOwner(completedTodos);
-        html += `
-          <div class="todo-completed-section">
-            <button class="todo-completed-toggle" onclick="this.parentElement.classList.toggle('expanded')">
-              <svg class="toggle-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-              <span>Completed (${completedTodos.length})</span>
-            </button>
-            <div class="todo-completed-content">
-              ${Object.entries(completedByOwner).map(([owner, todos]) => `
-                <div class="todo-group" data-owner="${owner}">
-                  <div class="todo-group-header">${owner}</div>
-                  <div class="todo-group-items">
-                    ${todos.map(renderTodoItem).join('')}
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      }
-      
-      todoContainer.innerHTML = html;
-      this.setupTodoEditListeners(todoContainer, meeting.id);
-      this.setupTodoDragDrop(meeting.id);
-    } else {
-      todoContainer.innerHTML = '<div class="empty-state">No action items yet.</div>';
-    }
-
     // Decisions (editable with delete)
     const decisionsContainer = document.getElementById('decisions-list');
     const decisionsCount = meeting.decisions?.length || 0;
@@ -3617,7 +3527,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
     if (todo) {
       todo.text = newText;
       meetingsManager.updateMeeting(meeting);
-      this.renderMasterTodoList();
+      this.renderActionItems();
     }
   }
 
@@ -3646,7 +3556,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       
       todo.owner = resolvedOwner;
       meetingsManager.updateMeeting(meeting);
-      this.renderMasterTodoList();
+      this.renderActionItems();
     }
   }
 
@@ -3695,45 +3605,6 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       meeting.decisions.splice(index, 1);
       meetingsManager.updateMeeting(meeting);
       this.renderMeeting(meeting);
-    }, 150);
-  }
-
-  /**
-   * Delete a todo item with optimistic UI update
-   */
-  deleteTodo(meetingId, todoId) {
-    const meeting = meetingsManager.getMeeting(meetingId);
-    if (!meeting || !meeting.todos) return;
-
-    const index = meeting.todos.findIndex(t => t.id === todoId);
-    if (index === -1) return;
-
-    // Optimistic: Animate removal immediately
-    const todoEl = document.querySelector(`[data-todo-id="${todoId}"]`);
-    if (todoEl) {
-      todoEl.style.opacity = '0';
-      todoEl.style.transform = 'translateX(-10px)';
-      todoEl.style.transition = 'all 0.15s ease-out';
-    }
-
-    // Update progress immediately
-    const todo = meeting.todos[index];
-    const totalBefore = meeting.todos.length;
-    const completedBefore = meeting.todos.filter(t => t.completed).length;
-    const newTotal = totalBefore - 1;
-    const newCompleted = todo.completed ? completedBefore - 1 : completedBefore;
-    
-    document.getElementById('todo-progress').textContent = 
-      `${newCompleted}/${newTotal} complete`;
-    const percentage = newTotal > 0 ? (newCompleted / newTotal) * 100 : 0;
-    document.getElementById('action-progress-fill').style.width = `${percentage}%`;
-
-    // Persist and re-render after animation
-    setTimeout(() => {
-      meeting.todos.splice(index, 1);
-      meetingsManager.updateMeeting(meeting);
-      this.renderMeeting(meeting);
-      this.renderMasterTodoList();
     }, 150);
   }
 
@@ -3914,7 +3785,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
     
     // Re-render and focus the new item
     this.renderMeeting(meeting);
-    this.renderMasterTodoList();
+    this.renderActionItems();
     
     // Focus the new todo text for immediate editing
     setTimeout(() => {
@@ -3944,47 +3815,6 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       '<div class="empty-state">No action items yet.</div>';
     document.getElementById('decisions-list').innerHTML = 
       '<li class="empty-state">No decisions recorded.</li>';
-  }
-
-  /**
-   * Toggle a todo item with optimistic UI update
-   */
-  toggleTodo(meetingId, todoId) {
-    const todoItem = document.querySelector(`[data-todo-id="${todoId}"]`);
-    const checkbox = todoItem?.querySelector('.todo-checkbox');
-    
-    if (!todoItem || !checkbox) return;
-
-    // Optimistic: Update UI immediately
-    const isCompleting = !todoItem.classList.contains('completed');
-    todoItem.classList.toggle('completed', isCompleting);
-    checkbox.classList.toggle('checked', isCompleting);
-    
-    // Add satisfying click feedback
-    checkbox.style.transform = 'scale(0.85)';
-    requestAnimationFrame(() => {
-      checkbox.style.transform = '';
-    });
-
-    // Update progress bar immediately
-    const meeting = meetingsManager.getMeeting(meetingId);
-    if (meeting) {
-      const todo = meeting.todos.find(t => t.id === todoId);
-      if (todo) {
-        todo.completed = isCompleting;
-        const progress = meetingsManager.getTodoProgress(meeting);
-        document.getElementById('todo-progress').textContent = 
-          `${progress.completed}/${progress.total} complete`;
-        const percentage = progress.total > 0 ? (progress.completed / progress.total) * 100 : 0;
-        document.getElementById('action-progress-fill').style.width = `${percentage}%`;
-        
-        // Persist in background
-        meetingsManager.updateMeeting(meeting);
-        
-        // Sync master todo list
-        this.renderMasterTodoList();
-      }
-    }
   }
 
   /**
@@ -4076,7 +3906,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
     this.hideModal('notes-modal');
     this.renderMeetingSelector();
     this.renderMeeting(meeting);
-    this.renderMasterTodoList();
+    this.renderActionItems();
   }
 
   /**
@@ -6211,7 +6041,7 @@ RULES:
       completed: false
     });
     meetingsManager.updateMeeting(meeting);
-    this.renderMasterTodoList();
+    this.renderActionItems();
   }
 
   /**
@@ -7988,7 +7818,7 @@ Respond with just the category name (core, traction, market, or testimonials) an
 
       this.renderMeetingSelector();
       this.renderMeeting(meeting);
-      this.renderMasterTodoList();
+      this.renderActionItems();
       this.renderPipelineSection();
       
       // Show todo review modal if there are extracted todos
