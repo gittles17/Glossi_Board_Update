@@ -8037,17 +8037,6 @@ body.sidebar-open .top-nav {
   border-color: var(--accent-blue);
 }
 
-/* Ungrouped zone */
-.kb-ungrouped-zone {
-  margin-top: var(--space-2);
-  min-height: 24px;
-}
-
-.kb-ungrouped-zone.drag-over {
-  background: var(--accent-blue-dim);
-  border-radius: var(--radius-sm);
-}
-
 /* New folder input */
 .kb-new-folder-input-wrap {
   display: flex;

@@ -155,7 +155,7 @@ class KnowledgeBase {
       createFolderBtn.addEventListener('click', () => this.createFolder());
     }
 
-    // Sources drop zone (only for external file drops)
+    // Sources drop zone
     const dropZone = document.getElementById('kb-sources-list');
     if (dropZone) {
       dropZone.addEventListener('dragover', (e) => {
@@ -180,8 +180,18 @@ class KnowledgeBase {
         e.stopPropagation();
         dropZone.classList.remove('drag-over');
         
-        // Only process file drops, not internal source moves
-        if (this.isDraggingSource) return;
+        // Handle internal source moves - drop outside folder = ungrouped
+        if (this.isDraggingSource) {
+          const sourceId = e.dataTransfer.getData('text/plain');
+          // Only move to ungrouped if not dropped on a folder header
+          if (sourceId && !e.target.closest('.kb-folder-header')) {
+            const source = this.sources.find(s => s.id === sourceId);
+            if (source && source.folder) {
+              this.moveSourceToFolder(sourceId, null);
+            }
+          }
+          return;
+        }
         
         const files = Array.from(e.dataTransfer.files);
         if (files.length > 0) {
@@ -1645,17 +1655,8 @@ Guidelines:
       `;
     });
     
-    // Render ungrouped zone (shows when there are folders)
-    if (allFolderNames.size > 0) {
-      sourcesHtml += `
-        <div class="kb-ungrouped-zone">
-          ${ungrouped.map(source => this.renderSourceItem(source)).join('')}
-        </div>
-      `;
-    } else {
-      // No folders, just render sources directly
-      sourcesHtml += ungrouped.map(source => this.renderSourceItem(source)).join('');
-    }
+    // Render ungrouped sources
+    sourcesHtml += ungrouped.map(source => this.renderSourceItem(source)).join('');
     
     container.innerHTML = sourcesHtml + dropIndicator;
     
@@ -1744,32 +1745,7 @@ Guidelines:
       });
     });
     
-    // Ungrouped drop zone
-    const ungroupedZone = container.querySelector('.kb-ungrouped-zone');
-    if (ungroupedZone) {
-      ungroupedZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        ungroupedZone.classList.add('drag-over');
-      });
-      
-      ungroupedZone.addEventListener('dragleave', (e) => {
-        if (!ungroupedZone.contains(e.relatedTarget)) {
-          ungroupedZone.classList.remove('drag-over');
-        }
-      });
-      
-      ungroupedZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        ungroupedZone.classList.remove('drag-over');
-        const sourceId = e.dataTransfer.getData('text/plain');
-        if (sourceId && this.sources.find(s => s.id === sourceId)) {
-          this.moveSourceToFolder(sourceId, null);
-        }
-      });
-    }
-    
+
     // Add toggle handlers
     container.querySelectorAll('.kb-source-toggle').forEach(toggle => {
       toggle.addEventListener('change', (e) => {
