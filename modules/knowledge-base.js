@@ -25,6 +25,7 @@ class KnowledgeBase {
     this.expandedFolders = {};
     this.folders = [];
     this.dashboardExpanded = true;
+    this.isDraggingSource = false;
     // Dashboard data sources (live data from main app)
     this.dashboardSources = {
       weekAtGlance: { enabled: true, title: 'Week at a Glance', icon: 'calendar' },
@@ -154,13 +155,16 @@ class KnowledgeBase {
       createFolderBtn.addEventListener('click', () => this.createFolder());
     }
 
-    // Sources drop zone
+    // Sources drop zone (only for external file drops)
     const dropZone = document.getElementById('kb-sources-list');
     if (dropZone) {
       dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        dropZone.classList.add('drag-over');
+        // Only show drag-over for external files, not internal source moves
+        if (!this.isDraggingSource) {
+          dropZone.classList.add('drag-over');
+        }
       });
       
       dropZone.addEventListener('dragleave', (e) => {
@@ -175,6 +179,9 @@ class KnowledgeBase {
         e.preventDefault();
         e.stopPropagation();
         dropZone.classList.remove('drag-over');
+        
+        // Only process file drops, not internal source moves
+        if (this.isDraggingSource) return;
         
         const files = Array.from(e.dataTransfer.files);
         if (files.length > 0) {
@@ -1638,8 +1645,18 @@ Guidelines:
       `;
     });
     
-    // Render ungrouped sources
-    sourcesHtml += ungrouped.map(source => this.renderSourceItem(source)).join('');
+    // Render ungrouped zone (shows when there are folders)
+    if (allFolderNames.size > 0) {
+      sourcesHtml += `
+        <div class="kb-ungrouped-zone">
+          <span class="kb-ungrouped-label">Ungrouped</span>
+          ${ungrouped.map(source => this.renderSourceItem(source)).join('')}
+        </div>
+      `;
+    } else {
+      // No folders, just render sources directly
+      sourcesHtml += ungrouped.map(source => this.renderSourceItem(source)).join('');
+    }
     
     container.innerHTML = sourcesHtml + dropIndicator;
     
@@ -1689,34 +1706,70 @@ Guidelines:
       item.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', item.dataset.id);
         item.classList.add('dragging');
+        this.isDraggingSource = true;
       });
       
       item.addEventListener('dragend', () => {
         item.classList.remove('dragging');
+        this.isDraggingSource = false;
+        // Clean up any lingering drag-over states
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
       });
     });
     
-    // Folder drop zones
+    // Folder drop zones (header only for subtle indicator)
     container.querySelectorAll('.kb-folder').forEach(folder => {
-      folder.addEventListener('dragover', (e) => {
+      const header = folder.querySelector('.kb-folder-header');
+      
+      header.addEventListener('dragover', (e) => {
         e.preventDefault();
-        folder.classList.add('drag-over');
+        e.stopPropagation();
+        header.classList.add('drag-over');
       });
       
-      folder.addEventListener('dragleave', () => {
-        folder.classList.remove('drag-over');
+      header.addEventListener('dragleave', (e) => {
+        if (!header.contains(e.relatedTarget)) {
+          header.classList.remove('drag-over');
+        }
       });
       
-      folder.addEventListener('drop', (e) => {
+      header.addEventListener('drop', (e) => {
         e.preventDefault();
-        folder.classList.remove('drag-over');
+        e.stopPropagation();
+        header.classList.remove('drag-over');
         const sourceId = e.dataTransfer.getData('text/plain');
         const folderName = folder.dataset.folder;
-        if (sourceId) {
+        if (sourceId && this.sources.find(s => s.id === sourceId)) {
           this.moveSourceToFolder(sourceId, folderName);
         }
       });
     });
+    
+    // Ungrouped drop zone
+    const ungroupedZone = container.querySelector('.kb-ungrouped-zone');
+    if (ungroupedZone) {
+      ungroupedZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ungroupedZone.classList.add('drag-over');
+      });
+      
+      ungroupedZone.addEventListener('dragleave', (e) => {
+        if (!ungroupedZone.contains(e.relatedTarget)) {
+          ungroupedZone.classList.remove('drag-over');
+        }
+      });
+      
+      ungroupedZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ungroupedZone.classList.remove('drag-over');
+        const sourceId = e.dataTransfer.getData('text/plain');
+        if (sourceId && this.sources.find(s => s.id === sourceId)) {
+          this.moveSourceToFolder(sourceId, null);
+        }
+      });
+    }
     
     // Add toggle handlers
     container.querySelectorAll('.kb-source-toggle').forEach(toggle => {
