@@ -2672,8 +2672,8 @@ Guidelines:
         <div class="kb-message ${roleClass}">
           <div class="kb-message-content">
             ${this.formatMessageContent(msg.content)}
+            ${copyButton}
           </div>
-          ${copyButton}
         </div>
       `;
     }).join('');

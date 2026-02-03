@@ -8754,13 +8754,14 @@ body.sidebar-open .top-nav {
 .kb-message-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: var(--space-2);
+  margin-top: var(--space-3);
   padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
   opacity: 0;
   transition: opacity var(--duration-fast);
 }
 
-.kb-message:hover .kb-message-actions {
+.kb-message-content:hover .kb-message-actions {
   opacity: 1;
 }
 
