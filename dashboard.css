@@ -8482,6 +8482,7 @@ body.sidebar-open .top-nav {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  min-height: 100%;
 }
 
 /* Suggested Questions (bottom of chat) */
