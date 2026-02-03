@@ -26,13 +26,15 @@ class KnowledgeBase {
     this.folders = [];
     this.dashboardExpanded = true;
     this.isDraggingSource = false;
+    this.quickLinksExpanded = false;
+    this.enabledQuickLinks = {};
     // Dashboard data sources (live data from main app)
     this.dashboardSources = {
       weekAtGlance: { enabled: true, title: 'Week at a Glance', icon: 'calendar' },
       seedRaise: { enabled: true, title: 'Seed Raise', icon: 'trending-up' },
       pipeline: { enabled: true, title: 'Pipeline', icon: 'bar-chart' },
       meetings: { enabled: true, title: 'Meetings', icon: 'users' },
-      quickLinks: { enabled: false, title: 'Quick Links', icon: 'link' }
+      quickLinks: { title: 'Quick Links', icon: 'link', expandable: true }
     };
   }
 
@@ -73,6 +75,11 @@ class KnowledgeBase {
       });
     }
     
+    // Load enabled quick links state
+    if (kbData.enabledQuickLinks) {
+      this.enabledQuickLinks = kbData.enabledQuickLinks;
+    }
+    
     // Create a new conversation if none exists
     if (this.conversations.length === 0) {
       this.currentConversation = this.createConversation();
@@ -96,7 +103,8 @@ class KnowledgeBase {
       conversations: this.conversations,
       reports: this.reports,
       folders: this.folders,
-      dashboardSources: dashboardSourcePrefs
+      dashboardSources: dashboardSourcePrefs,
+      enabledQuickLinks: this.enabledQuickLinks
     });
   }
 
@@ -832,14 +840,12 @@ ${meetingsData}
       }
     }
     
-    // Quick Links
-    if (this.dashboardSources.quickLinks.enabled) {
-      const linksData = this.getQuickLinksData();
-      if (linksData) {
-        parts.push(`--- Dashboard Source: Quick Links (Live) ---
+    // Quick Links (uses individual link toggles)
+    const linksData = this.getQuickLinksData();
+    if (linksData) {
+      parts.push(`--- Dashboard Source: Quick Links (Live) ---
 ${linksData}
 ---`);
-      }
     }
     
     return parts.join('\n\n');
@@ -1093,11 +1099,18 @@ ${linksData}
   }
   
   /**
-   * Get Quick Links data from storage
+   * Get Quick Links data from storage (only enabled links)
    */
   getQuickLinksData() {
     const data = this.storage.getData();
     if (!data || !data.quickLinks) return null;
+    
+    // Filter to only enabled links
+    const enabledLinks = (data.quickLinks || []).filter(link => 
+      this.enabledQuickLinks[link.id] !== false
+    );
+    
+    if (enabledLinks.length === 0) return null;
     
     const lines = ['Available Resources:'];
     
@@ -1105,7 +1118,7 @@ ${linksData}
     const sections = data.linkSections || [];
     const linksBySection = {};
     
-    (data.quickLinks || []).forEach(link => {
+    enabledLinks.forEach(link => {
       const section = link.section || 'other';
       if (!linksBySection[section]) linksBySection[section] = [];
       linksBySection[section].push(link);
@@ -1563,15 +1576,45 @@ Guidelines:
     `;
     
     Object.entries(this.dashboardSources).forEach(([key, source]) => {
-      dashboardHtml += `
-        <div class="kb-dashboard-source ${source.enabled ? '' : 'disabled'}" data-source-key="${key}">
-          <label class="kb-source-toggle-wrap" onclick="event.stopPropagation()">
-            <input type="checkbox" class="kb-dashboard-toggle" data-key="${key}" ${source.enabled ? 'checked' : ''}>
-          </label>
-          <div class="kb-dashboard-source-icon">${dashboardIcons[key]}</div>
-          <span class="kb-dashboard-source-title">${source.title}</span>
-        </div>
-      `;
+      if (key === 'quickLinks') {
+        // Quick Links is expandable with individual link toggles
+        const quickLinks = this.storage.getQuickLinks();
+        const enabledCount = quickLinks.filter(l => this.enabledQuickLinks[l.id] !== false).length;
+        const isExpanded = this.quickLinksExpanded;
+        
+        dashboardHtml += `
+          <div class="kb-dashboard-source kb-dashboard-expandable ${isExpanded ? 'expanded' : ''}" data-source-key="${key}">
+            <div class="kb-dashboard-source-header" data-key="${key}">
+              <svg class="kb-dashboard-source-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              <div class="kb-dashboard-source-icon">${dashboardIcons[key]}</div>
+              <span class="kb-dashboard-source-title">${source.title}</span>
+              <span class="kb-dashboard-source-count">${enabledCount}/${quickLinks.length}</span>
+            </div>
+            <div class="kb-dashboard-source-children">
+              ${quickLinks.map(link => `
+                <div class="kb-dashboard-link-item ${this.enabledQuickLinks[link.id] === false ? 'disabled' : ''}" data-link-id="${link.id}">
+                  <label class="kb-source-toggle-wrap" onclick="event.stopPropagation()">
+                    <input type="checkbox" class="kb-quicklink-toggle" data-link-id="${link.id}" ${this.enabledQuickLinks[link.id] !== false ? 'checked' : ''}>
+                  </label>
+                  <span class="kb-dashboard-link-name">${this.escapeHtml(link.name)}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } else {
+        dashboardHtml += `
+          <div class="kb-dashboard-source ${source.enabled ? '' : 'disabled'}" data-source-key="${key}">
+            <label class="kb-source-toggle-wrap" onclick="event.stopPropagation()">
+              <input type="checkbox" class="kb-dashboard-toggle" data-key="${key}" ${source.enabled ? 'checked' : ''}>
+            </label>
+            <div class="kb-dashboard-source-icon">${dashboardIcons[key]}</div>
+            <span class="kb-dashboard-source-title">${source.title}</span>
+          </div>
+        `;
+      }
     });
     
     dashboardHtml += `
@@ -1784,6 +1827,39 @@ Guidelines:
             const enabledDashboardCount = Object.values(this.dashboardSources).filter(s => s.enabled).length;
             countEl.textContent = this.sources.length + enabledDashboardCount;
           }
+        }
+      });
+    });
+    
+    // Quick Links header click to expand/collapse
+    container.querySelectorAll('.kb-dashboard-source-header').forEach(header => {
+      header.addEventListener('click', (e) => {
+        if (e.target.closest('.kb-source-toggle-wrap')) return;
+        const key = header.dataset.key;
+        if (key === 'quickLinks') {
+          this.quickLinksExpanded = !this.quickLinksExpanded;
+          this.renderSources();
+        }
+      });
+    });
+    
+    // Individual quick link toggles
+    container.querySelectorAll('.kb-quicklink-toggle').forEach(toggle => {
+      toggle.addEventListener('change', (e) => {
+        const linkId = e.target.dataset.linkId;
+        this.enabledQuickLinks[linkId] = e.target.checked;
+        this.saveData();
+        // Update visual state
+        const linkEl = e.target.closest('.kb-dashboard-link-item');
+        if (linkEl) {
+          linkEl.classList.toggle('disabled', !e.target.checked);
+        }
+        // Update count display
+        const countEl = e.target.closest('.kb-dashboard-expandable')?.querySelector('.kb-dashboard-source-count');
+        if (countEl) {
+          const quickLinks = this.storage.getQuickLinks();
+          const enabledCount = quickLinks.filter(l => this.enabledQuickLinks[l.id] !== false).length;
+          countEl.textContent = `${enabledCount}/${quickLinks.length}`;
         }
       });
     });
