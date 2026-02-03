@@ -9399,44 +9399,52 @@ body.sidebar-open .top-nav {
 }
 
 /* Responsive adjustments - Mobile */
-/* Mobile Tab-Based Layout (NotebookLM style) */
+/* Mobile Tab-Based Layout */
 @media (max-width: 768px) {
-  /* Tab Bar */
+  /* Remove main padding on mobile */
+  .kb-main {
+    padding: 0;
+    padding-top: var(--nav-height);
+  }
+  
+  /* Tab Bar - matches site nav style */
   .kb-mobile-tabs {
     display: flex;
-    position: sticky;
-    top: 56px;
-    z-index: 100;
-    background: var(--bg-card);
+    background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
   }
   
   .kb-mobile-tab {
     flex: 1;
-    padding: var(--space-3) var(--space-2);
+    padding: var(--space-3) var(--space-4);
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;
     color: var(--text-muted);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.15s ease;
   }
   
+  .kb-mobile-tab:hover {
+    color: var(--text-secondary);
+  }
+  
   .kb-mobile-tab.active {
-    color: var(--accent-primary);
+    color: var(--text-primary);
     border-bottom-color: var(--accent-primary);
   }
   
   /* Full-page container */
   .knowledge-base-fullpage {
     position: relative;
-    height: calc(100vh - 56px - 46px); /* nav + tabs */
+    height: calc(100vh - var(--nav-height) - 46px);
     overflow: hidden;
+    background: var(--bg-primary);
   }
   
-  /* Full-screen panels */
+  /* Full-screen panels - only show active */
   .kb-sources-sidebar,
   .kb-workspace,
   .kb-reports-panel {
@@ -9451,14 +9459,15 @@ body.sidebar-open .top-nav {
     max-height: none;
     border-radius: 0;
     border: none;
-    display: none;
+    display: none !important;
     z-index: 1;
+    background: var(--bg-primary);
   }
   
   .kb-sources-sidebar.mobile-active,
   .kb-workspace.mobile-active,
   .kb-reports-panel.mobile-active {
-    display: flex;
+    display: flex !important;
   }
   
   /* Hide resize handles */
