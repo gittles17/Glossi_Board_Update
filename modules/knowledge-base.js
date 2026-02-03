@@ -30,6 +30,10 @@ class KnowledgeBase {
     this.enabledQuickLinks = {};
     this.quickLinkContent = {};
     this.fetchingLinks = new Set();
+    // AI summary state
+    this.sourceSummary = null;
+    this.summaryLoading = false;
+    this.summaryHash = null;
     // Dashboard data sources (live data from main app)
     this.dashboardSources = {
       weekAtGlance: { enabled: true, title: 'Week at a Glance', icon: 'calendar' },
@@ -1908,6 +1912,7 @@ Guidelines:
         const key = e.target.dataset.key;
         if (this.dashboardSources[key]) {
           this.dashboardSources[key].enabled = e.target.checked;
+          this.invalidateSummary();
           this.saveData();
           // Update visual state without full re-render
           const sourceEl = e.target.closest('.kb-dashboard-source');
@@ -1942,6 +1947,7 @@ Guidelines:
         const linkId = e.target.dataset.linkId;
         const isEnabled = e.target.checked;
         this.enabledQuickLinks[linkId] = isEnabled;
+        this.invalidateSummary();
         this.saveData();
         
         // Update visual state
@@ -2064,6 +2070,7 @@ Guidelines:
     if (!source) return;
     
     source.enabled = enabled;
+    this.invalidateSummary();
     this.saveData();
     this.renderSources();
   }
@@ -2089,6 +2096,7 @@ Guidelines:
       this.dashboardSources[key].enabled = newState;
     });
     
+    this.invalidateSummary();
     this.saveData();
     this.renderSources();
   }
@@ -2429,38 +2437,84 @@ Guidelines:
    * Get a brief summary of available data sources
    */
   getDataSummary() {
-    const parts = [];
-    
-    // Count enabled dashboard sources
-    const enabledDashboard = Object.entries(this.dashboardSources)
-      .filter(([key, source]) => key !== 'quickLinks' && source.enabled)
-      .map(([key, source]) => source.title);
-    
-    // Count quick links
-    const quickLinks = this.storage.getQuickLinks?.() || [];
-    const enabledLinks = quickLinks.filter(l => this.enabledQuickLinks[l.id] !== false);
-    
-    // Count file sources
-    const enabledFiles = this.sources.filter(s => s.enabled !== false);
-    
-    // Build summary
-    if (enabledDashboard.length > 0) {
-      parts.push(`Live dashboard data: ${enabledDashboard.join(', ')}.`);
-    }
-    
-    if (enabledLinks.length > 0) {
-      parts.push(`${enabledLinks.length} quick link${enabledLinks.length > 1 ? 's' : ''} available.`);
-    }
-    
-    if (enabledFiles.length > 0) {
-      parts.push(`${enabledFiles.length} file source${enabledFiles.length > 1 ? 's' : ''} loaded.`);
-    }
-    
-    if (parts.length === 0) {
+    // Check if we have any sources
+    const context = this.buildSourceContext();
+    if (!context || context.trim().length < 50) {
       return '<p class="kb-summary-text">No sources enabled. Enable sources in the sidebar to get started.</p>';
     }
     
-    return `<p class="kb-summary-text">${parts.join(' ')}</p>`;
+    // Show loading state
+    if (this.summaryLoading) {
+      return '<span class="kb-summary-loading">Analyzing your sources...</span>';
+    }
+    
+    // Show cached AI summary if available
+    if (this.sourceSummary) {
+      return `<p class="kb-summary-text">${this.escapeHtml(this.sourceSummary)}</p>`;
+    }
+    
+    // Trigger summary generation (will re-render when complete)
+    this.generateSourceSummary();
+    return '<span class="kb-summary-loading">Analyzing your sources...</span>';
+  }
+
+  /**
+   * Generate AI summary of source content
+   */
+  async generateSourceSummary() {
+    if (this.summaryLoading) return;
+    if (!this.aiProcessor || !this.aiProcessor.isConfigured()) {
+      this.sourceSummary = 'AI not configured. Enable Claude API in settings.';
+      this.renderMessages();
+      return;
+    }
+    
+    const context = this.buildSourceContext();
+    const contextHash = this.hashString(context);
+    
+    // Skip if same content and we have a cached summary
+    if (contextHash === this.summaryHash && this.sourceSummary) return;
+    
+    this.summaryLoading = true;
+    this.renderMessages();
+    
+    try {
+      const systemPrompt = `You are summarizing available data for an investor dashboard. Be concise and specific.`;
+      const prompt = `Based on this data, write a 3-4 sentence summary of what information is available. Mention specific numbers, dates, or key items. Be direct and informative.
+
+DATA:
+${context.substring(0, 4000)}`;
+      
+      const response = await this.aiProcessor.chat(systemPrompt, prompt);
+      this.sourceSummary = response;
+      this.summaryHash = contextHash;
+    } catch (error) {
+      this.sourceSummary = 'Unable to generate summary. Try refreshing.';
+    }
+    
+    this.summaryLoading = false;
+    this.renderMessages();
+  }
+
+  /**
+   * Simple string hash for cache invalidation
+   */
+  hashString(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return hash.toString();
+  }
+
+  /**
+   * Invalidate summary cache (call when sources change)
+   */
+  invalidateSummary() {
+    this.sourceSummary = null;
+    this.summaryHash = null;
   }
 
   /**
