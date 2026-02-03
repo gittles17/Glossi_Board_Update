@@ -56,6 +56,9 @@ class KnowledgeBase {
     
     // Render initial state
     this.render();
+    
+    // Auto-fetch content for enabled quick links that don't have cached content
+    setTimeout(() => this.fetchMissingQuickLinkContent(), 1000);
   }
 
   /**
@@ -157,6 +160,20 @@ class KnowledgeBase {
     
     for (const link of enabledLinks) {
       await this.fetchQuickLinkContent(link.id);
+    }
+  }
+
+  /**
+   * Fetch content for enabled links that don't have cached content
+   */
+  async fetchMissingQuickLinkContent() {
+    const quickLinks = this.storage.getQuickLinks();
+    const enabledLinks = quickLinks.filter(l => this.enabledQuickLinks[l.id] !== false);
+    
+    for (const link of enabledLinks) {
+      if (!this.quickLinkContent[link.id]) {
+        await this.fetchQuickLinkContent(link.id);
+      }
     }
   }
 
@@ -1655,6 +1672,13 @@ Guidelines:
               <div class="kb-dashboard-source-icon">${dashboardIcons[key]}</div>
               <span class="kb-dashboard-source-title">${source.title}</span>
               <span class="kb-dashboard-source-count">${enabledCount}/${quickLinks.length}</span>
+              <button class="kb-quicklinks-fetch-all" title="Fetch all content" onclick="event.stopPropagation()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              </button>
             </div>
             <div class="kb-dashboard-source-children">
               ${quickLinks.map(link => {
@@ -1956,6 +1980,14 @@ Guidelines:
         e.stopPropagation();
         const linkId = e.target.closest('.kb-dashboard-link-item').dataset.linkId;
         await this.fetchQuickLinkContent(linkId);
+      });
+    });
+    
+    // Fetch all quick links button
+    container.querySelectorAll('.kb-quicklinks-fetch-all').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await this.fetchMissingQuickLinkContent();
       });
     });
   }

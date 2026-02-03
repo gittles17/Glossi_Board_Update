@@ -7870,6 +7870,29 @@ body.sidebar-open .top-nav {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.kb-quicklinks-fetch-all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  opacity: 0.6;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.kb-quicklinks-fetch-all:hover {
+  opacity: 1;
+  color: var(--accent-blue);
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .kb-dashboard-source-icon {
   display: flex;
   align-items: center;
