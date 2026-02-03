@@ -24,6 +24,7 @@ class KnowledgeBase {
     // Folder state
     this.expandedFolders = {};
     this.folders = [];
+    this.dashboardExpanded = true;
     // Dashboard data sources (live data from main app)
     this.dashboardSources = {
       weekAtGlance: { enabled: true, title: 'Week at a Glance', icon: 'calendar' },
@@ -1531,9 +1532,13 @@ Guidelines:
     };
     
     // Render dashboard sources section
+    const dashboardExpandedClass = this.dashboardExpanded ? 'expanded' : '';
     let dashboardHtml = `
-      <div class="kb-dashboard-sources">
-        <div class="kb-dashboard-sources-header">
+      <div class="kb-dashboard-sources ${dashboardExpandedClass}">
+        <div class="kb-dashboard-sources-header" id="kb-dashboard-header">
+          <svg class="kb-dashboard-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
           <span class="kb-dashboard-sources-title">Dashboard Data</span>
           <span class="kb-dashboard-sources-badge">Live</span>
         </div>
@@ -1640,6 +1645,16 @@ Guidelines:
     
     // Setup dashboard toggle handlers
     this.setupDashboardToggleHandlers(container);
+    
+    // Dashboard header collapse toggle
+    const dashboardHeader = container.querySelector('#kb-dashboard-header');
+    if (dashboardHeader) {
+      dashboardHeader.addEventListener('click', (e) => {
+        if (e.target.closest('.kb-dashboard-toggle') || e.target.closest('.kb-source-toggle-wrap')) return;
+        this.dashboardExpanded = !this.dashboardExpanded;
+        this.renderSources();
+      });
+    }
     
     // Add folder click handlers
     container.querySelectorAll('.kb-folder-header').forEach(header => {

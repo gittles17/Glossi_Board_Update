@@ -7679,7 +7679,24 @@ body.sidebar-open .top-nav {
   align-items: center;
   gap: var(--space-2);
   margin-bottom: var(--space-2);
-  padding: 0 var(--space-1);
+  padding: var(--space-1);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease;
+}
+
+.kb-dashboard-sources-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.kb-dashboard-chevron {
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.kb-dashboard-sources.expanded .kb-dashboard-chevron {
+  transform: rotate(90deg);
 }
 
 .kb-dashboard-sources-title {
@@ -7702,9 +7719,13 @@ body.sidebar-open .top-nav {
 }
 
 .kb-dashboard-sources-list {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 2px;
+}
+
+.kb-dashboard-sources.expanded .kb-dashboard-sources-list {
+  display: flex;
 }
 
 .kb-dashboard-source {
