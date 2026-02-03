@@ -502,6 +502,16 @@ class GlossiDashboard {
       this.showModal('settings-modal');
     });
 
+    // Desktop nav button handlers
+    document.getElementById('desktop-share-btn')?.addEventListener('click', () => {
+      this.openShareEmailModal();
+    });
+    
+    document.getElementById('desktop-settings-btn')?.addEventListener('click', () => {
+      this.renderSettingsStatus();
+      this.showModal('settings-modal');
+    });
+
   }
 
   /**
