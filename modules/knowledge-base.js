@@ -604,34 +604,34 @@ class KnowledgeBase {
         content = await file.text();
         
       } else if (isPdf) {
-        // Send to server for PDF extraction
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        const response = await fetch('/api/process-pdf', {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Server error: ${response.status}`);
+        // Process PDF client-side using pdf.js (more reliable on mobile)
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          
+          metadata.pageCount = pdf.numPages;
+          const textParts = [];
+          
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            if (pageText.trim()) {
+              textParts.push(`-- ${i} of ${pdf.numPages} --\n\n${pageText}`);
+            }
+          }
+          
+          content = textParts.join('\n\n');
+          
+          if (!content || content.trim().length < 10) {
+            throw new Error('PDF appears to be empty or contains only images. Try a text-based PDF.');
+          }
+          
+          metadata.extractedChars = content.length;
+          type = 'pdf';
+        } catch (pdfError) {
+          throw new Error(`PDF processing failed: ${pdfError.message}`);
         }
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-          throw new Error(result.error || 'PDF processing failed');
-        }
-        
-        content = result.content;
-        
-        if (!content || content.trim().length < 10) {
-          throw new Error('PDF appears to be empty or contains only images. Try a text-based PDF.');
-        }
-        
-        metadata.pageCount = result.pageCount;
-        metadata.extractedChars = content.length;
-        type = 'pdf';
         
       } else if (isAudio) {
         // Send to server for Whisper transcription
