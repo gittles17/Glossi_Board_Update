@@ -613,6 +613,10 @@ class KnowledgeBase {
           body: formData
         });
         
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.status}`);
+        }
+        
         const result = await response.json();
         
         if (!result.success) {
@@ -620,7 +624,13 @@ class KnowledgeBase {
         }
         
         content = result.content;
+        
+        if (!content || content.trim().length < 10) {
+          throw new Error('PDF appears to be empty or contains only images. Try a text-based PDF.');
+        }
+        
         metadata.pageCount = result.pageCount;
+        metadata.extractedChars = content.length;
         type = 'pdf';
         
       } else if (isAudio) {
@@ -685,6 +695,11 @@ KEY INFORMATION:
         category = await this.categorizeSource(content.substring(0, 1000));
       }
       
+      // Validate content exists
+      if (!content || content.trim().length === 0) {
+        throw new Error('No content could be extracted from the file');
+      }
+      
       // Update the source with actual content
       const source = this.sources.find(s => s.id === sourceId);
       if (source) {
@@ -701,6 +716,9 @@ KEY INFORMATION:
       this.saveData();
       this.renderSources();
       
+      // Show success with content info
+      this.showToast(`Added "${title}" (${this.formatBytes(content.length)} of content)`, 'success');
+      
     } catch (error) {
       // Stop progress animation
       clearInterval(progressInterval);
@@ -708,6 +726,9 @@ KEY INFORMATION:
       // Remove failed source
       this.sources = this.sources.filter(s => s.id !== sourceId);
       this.renderSources();
+      
+      // Show error notification
+      this.showToast(`Failed to process file: ${error.message}`, 'error');
     }
   }
   
@@ -2228,21 +2249,56 @@ Guidelines:
    * Toggle all sources on or off
    */
   toggleAllSources() {
-    if (this.sources.length === 0) return;
+    // Check if any sources are currently enabled (including quick links)
+    const quickLinks = this.storage.getQuickLinks();
+    const anySourcesEnabled = this.sources.some(s => s.enabled !== false);
+    const anyDashboardEnabled = Object.entries(this.dashboardSources)
+      .filter(([key]) => key !== 'quickLinks')
+      .some(([, source]) => source.enabled !== false);
+    const anyQuickLinksEnabled = quickLinks.some(l => this.enabledQuickLinks[l.id] !== false);
     
-    // Check if any sources are currently enabled
-    const anyEnabled = this.sources.some(s => s.enabled !== false);
+    const anyEnabled = anySourcesEnabled || anyDashboardEnabled || anyQuickLinksEnabled;
     
     // If any are enabled, turn all off. Otherwise, turn all on.
     const newState = !anyEnabled;
     
+    // Toggle uploaded sources
     this.sources.forEach(source => {
       source.enabled = newState;
     });
     
-    // Also toggle dashboard sources
+    // Toggle dashboard sources (except quickLinks which is handled separately)
     Object.keys(this.dashboardSources).forEach(key => {
-      this.dashboardSources[key].enabled = newState;
+      if (key !== 'quickLinks') {
+        this.dashboardSources[key].enabled = newState;
+      }
+    });
+    
+    // Toggle all quick links
+    quickLinks.forEach(link => {
+      this.enabledQuickLinks[link.id] = newState;
+    });
+    
+    this.invalidateSummary();
+    this.saveData();
+    this.renderSources();
+  }
+  
+  /**
+   * Toggle all quick links on or off
+   */
+  toggleAllQuickLinks() {
+    const quickLinks = this.storage.getQuickLinks();
+    if (quickLinks.length === 0) return;
+    
+    // Check if any quick links are currently enabled
+    const anyEnabled = quickLinks.some(l => this.enabledQuickLinks[l.id] !== false);
+    
+    // If any are enabled, turn all off. Otherwise, turn all on.
+    const newState = !anyEnabled;
+    
+    quickLinks.forEach(link => {
+      this.enabledQuickLinks[link.id] = newState;
     });
     
     this.invalidateSummary();
@@ -3063,6 +3119,15 @@ ${context.substring(0, 4000)}`;
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  /**
+   * Format bytes to human readable string
+   */
+  formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' chars';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
   /**
