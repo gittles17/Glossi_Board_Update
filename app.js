@@ -103,6 +103,14 @@ class GlossiDashboard {
       this.animateStatsOnLoad();
     });
 
+    // Check for URL actions (e.g., redirected from notebook page)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('action') === 'share') {
+      // Clean URL and open share modal
+      window.history.replaceState({}, '', window.location.pathname);
+      this.openShareEmailModal();
+    }
+
   }
 
   /**
