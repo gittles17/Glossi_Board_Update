@@ -398,45 +398,55 @@ class KnowledgeBase {
   }
 
   /**
-   * Setup mobile toggle handlers for sidebars
+   * Setup mobile tab navigation (NotebookLM style)
    */
   setupMobileToggles() {
-    const sourcesToggle = document.getElementById('kb-mobile-sources-toggle');
-    const reportsToggle = document.getElementById('kb-mobile-reports-toggle');
-    const overlay = document.getElementById('kb-mobile-overlay');
+    const tabs = document.querySelectorAll('.kb-mobile-tab');
     const sourcesSidebar = document.getElementById('kb-sources-sidebar');
+    const workspace = document.getElementById('kb-workspace');
     const reportsPanel = document.querySelector('.kb-reports-panel');
     
-    const closeMobileSidebars = () => {
-      sourcesSidebar?.classList.remove('mobile-open');
-      reportsPanel?.classList.remove('mobile-open');
-      overlay?.classList.remove('active');
-    };
+    // Set initial state - sources tab active by default on mobile
+    this.showMobilePanel('sources');
     
-    if (sourcesToggle) {
-      sourcesToggle.addEventListener('click', () => {
-        const isOpen = sourcesSidebar?.classList.contains('mobile-open');
-        closeMobileSidebars();
-        if (!isOpen) {
-          sourcesSidebar?.classList.add('mobile-open');
-          overlay?.classList.add('active');
-        }
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const targetTab = tab.dataset.tab;
+        
+        // Update active tab
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // Show corresponding panel
+        this.showMobilePanel(targetTab);
       });
-    }
+    });
+  }
+  
+  /**
+   * Show a specific panel on mobile
+   */
+  showMobilePanel(panelName) {
+    const sourcesSidebar = document.getElementById('kb-sources-sidebar');
+    const workspace = document.getElementById('kb-workspace');
+    const reportsPanel = document.querySelector('.kb-reports-panel');
     
-    if (reportsToggle) {
-      reportsToggle.addEventListener('click', () => {
-        const isOpen = reportsPanel?.classList.contains('mobile-open');
-        closeMobileSidebars();
-        if (!isOpen) {
-          reportsPanel?.classList.add('mobile-open');
-          overlay?.classList.add('active');
-        }
-      });
-    }
+    // Remove active class from all panels
+    sourcesSidebar?.classList.remove('mobile-active');
+    workspace?.classList.remove('mobile-active');
+    reportsPanel?.classList.remove('mobile-active');
     
-    if (overlay) {
-      overlay.addEventListener('click', closeMobileSidebars);
+    // Add active class to target panel
+    switch (panelName) {
+      case 'sources':
+        sourcesSidebar?.classList.add('mobile-active');
+        break;
+      case 'chat':
+        workspace?.classList.add('mobile-active');
+        break;
+      case 'reports':
+        reportsPanel?.classList.add('mobile-active');
+        break;
     }
   }
 
