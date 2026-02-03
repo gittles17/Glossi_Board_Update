@@ -139,6 +139,12 @@ class KnowledgeBase {
       });
     }
 
+    // Toggle all sources on/off
+    const toggleAllBtn = document.getElementById('kb-toggle-all-btn');
+    if (toggleAllBtn) {
+      toggleAllBtn.addEventListener('click', () => this.toggleAllSources());
+    }
+
     // Sources drop zone
     const dropZone = document.getElementById('kb-sources-list');
     if (dropZone) {
@@ -1801,6 +1807,33 @@ Guidelines:
     source.enabled = enabled;
     this.saveData();
     this.renderSources();
+  }
+
+  /**
+   * Toggle all sources on or off
+   */
+  toggleAllSources() {
+    if (this.sources.length === 0) return;
+    
+    // Check if any sources are currently enabled
+    const anyEnabled = this.sources.some(s => s.enabled !== false);
+    
+    // If any are enabled, turn all off. Otherwise, turn all on.
+    const newState = !anyEnabled;
+    
+    this.sources.forEach(source => {
+      source.enabled = newState;
+    });
+    
+    // Also toggle dashboard sources
+    Object.keys(this.dashboardSources).forEach(key => {
+      this.dashboardSources[key].enabled = newState;
+    });
+    
+    this.saveData();
+    this.renderSources();
+    
+    this.showToast(newState ? 'All sources enabled' : 'All sources disabled', 'success');
   }
 
   /**
