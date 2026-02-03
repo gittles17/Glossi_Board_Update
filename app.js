@@ -1236,7 +1236,8 @@ class GlossiDashboard {
    */
   async fetchPipelineFromSheet() {
     const settings = storage.getSettings();
-    const sheetUrl = settings.pipelineSheetUrl;
+    // Use saved URL or default
+    const sheetUrl = settings.pipelineSheetUrl || 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQO6VSxW3EngXb-xa15zVxPA45zt34rjNcpAIpYqfx3iiywuPkE0jseDN0al-UsH6Xqkxt5eI6Y0L4w/pub?output=csv&gid=0';
     
     if (!sheetUrl) {
       return null;
