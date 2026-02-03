@@ -96,6 +96,9 @@ class GlossiDashboard {
     // Render initial state
     this.render();
 
+    // Setup pipeline auto-refresh from Google Sheets
+    this.setupPipelineAutoRefresh();
+
     // Render independent action items
     this.renderActionItems();
 
@@ -1060,17 +1063,9 @@ class GlossiDashboard {
       }
     });
 
-    // Pipeline week selector
-    document.getElementById('pipeline-week-select')?.addEventListener('change', (e) => {
-      const value = e.target.value;
-      if (value === 'current') {
-        this.selectedPipelineWeek = null;
-        this.renderPipelineSection();
-      } else {
-        const index = parseInt(value, 10);
-        this.selectedPipelineWeek = index;
-        this.renderPipelineSection();
-      }
+    // Pipeline refresh button
+    document.getElementById('pipeline-refresh-btn')?.addEventListener('click', () => {
+      this.fetchPipelineFromSheet();
     });
 
     // Close modals on overlay click
@@ -1135,209 +1130,265 @@ class GlossiDashboard {
   }
 
   /**
-   * Render the pipeline section from parsed data
+   * Render the pipeline section from Google Sheet or stored data
    */
   renderPipelineSection() {
-    const currentPipelineData = this.data?.pipelineEmail || storage.getPipelineEmail?.() || null;
-    const history = this.data?.pipelineHistory || storage.getPipelineHistory?.() || [];
+    const pipelineData = this.pipelineDeals || [];
+    const container = document.getElementById('pipeline-stages-container');
+    const totalEl = document.getElementById('pipeline-total-value');
+    const countEl = document.getElementById('pipeline-deal-count');
+    const emptyEl = document.getElementById('pipeline-empty');
     
-    // Populate week selector
-    this.populatePipelineWeekSelector(currentPipelineData, history);
+    if (!container) return;
     
-    // Determine which data to show based on selection
-    let pipelineData, previousData;
-    if (this.selectedPipelineWeek !== null && this.selectedPipelineWeek !== undefined) {
-      // Showing historical data
-      pipelineData = history[this.selectedPipelineWeek] || null;
-      previousData = history[this.selectedPipelineWeek + 1] || null;
-    } else {
-      // Showing current data
-      pipelineData = currentPipelineData;
-      previousData = history.length > 0 ? history[0] : null;
+    // If no data, show empty state
+    if (pipelineData.length === 0) {
+      if (emptyEl) emptyEl.style.display = 'block';
+      if (totalEl) totalEl.textContent = '$0';
+      if (countEl) countEl.textContent = '';
+      return;
     }
     
-    const deals = pipelineData?.deals || [];
-    const highlights = pipelineData?.highlights || {};
-    const previousDeals = previousData?.deals || [];
+    if (emptyEl) emptyEl.style.display = 'none';
     
-    // Map old stage names to new ones
-    const stageMap = {
-      'discovery': 'discovery',
-      'proposal': 'demo',
-      'demo': 'demo',
-      'negotiation': 'pilot',
-      'pilot': 'pilot',
-      'closing': 'closing'
-    };
-    
-    // Normalize deal stages
-    const normalizedDeals = deals.map(d => ({
-      ...d,
-      stage: stageMap[d.stage] || d.stage
-    }));
-    
-    const normalizedPrevDeals = previousDeals.map(d => ({
-      ...d,
-      stage: stageMap[d.stage] || d.stage
-    }));
-    
-    // Calculate totals by stage (current)
-    const stages = ['discovery', 'demo', 'pilot'];
-    const stageTotals = {};
+    // Group deals by stage
+    const stageGroups = {};
     let grandTotal = 0;
     
-    stages.forEach(stage => {
-      const stageDeals = normalizedDeals.filter(d => d.stage === stage);
-      let stageTotal = 0;
-      stageDeals.forEach(d => { stageTotal += this.parseMoneyValue(d.value); });
-      stageTotals[stage] = { deals: stageDeals, total: stageTotal, count: stageDeals.length };
-      grandTotal += stageTotal;
+    pipelineData.forEach(deal => {
+      const stage = deal.stage || 'Unknown';
+      if (!stageGroups[stage]) {
+        stageGroups[stage] = { deals: [], total: 0 };
+      }
+      stageGroups[stage].deals.push(deal);
+      const value = this.parseMoneyValue(deal.value);
+      stageGroups[stage].total += value;
+      grandTotal += value;
     });
     
-    // Calculate totals by stage (previous week)
-    const prevStageTotals = {};
-    let prevGrandTotal = 0;
-    
-    stages.forEach(stage => {
-      const stageDeals = normalizedPrevDeals.filter(d => d.stage === stage);
-      let stageTotal = 0;
-      stageDeals.forEach(d => { stageTotal += this.parseMoneyValue(d.value); });
-      prevStageTotals[stage] = { total: stageTotal, count: stageDeals.length };
-      prevGrandTotal += stageTotal;
-    });
-    
-    // Get closed deals from old pipeline data
-    const allClients = storage.getAllPipelineClients?.() || [];
-    const closedDeals = allClients.filter(c => c.stage === 'closed' || c.category === 'closed');
-    let closedTotal = 0;
-    closedDeals.forEach(d => { closedTotal += this.parseMoneyValue(d.value); });
-    
-    // Render header totals (total pipeline / closed)
-    const totalEl = document.getElementById('pipeline-total-value');
-    const closedEl = document.getElementById('pipeline-closed-value');
+    // Update header
     if (totalEl) totalEl.textContent = this.formatMoney(grandTotal);
-    if (closedEl) closedEl.textContent = this.formatMoney(closedTotal);
+    if (countEl) countEl.textContent = `(${pipelineData.length} deals)`;
     
-    // Render each stage card
-    stages.forEach(stage => {
-      const data = stageTotals[stage];
-      const prevData = prevStageTotals[stage];
-      const diff = data.total - prevData.total;
-      
-      // Value
-      const valueEl = document.getElementById(`${stage}-value`);
-      if (valueEl) valueEl.textContent = this.formatMoney(data.total);
-      
-      // Count
-      const countEl = document.getElementById(`${stage}-count`);
-      if (countEl) countEl.textContent = data.count > 0 ? `(${data.count})` : '';
-      
-      // Trend
-      const trendEl = document.getElementById(`${stage}-trend`);
-      if (trendEl) {
-        if (previousData) {
-          if (diff > 0) {
-            trendEl.textContent = `+${this.formatMoney(diff)}`;
-            trendEl.className = 'stage-card-trend trend-positive';
-          } else if (diff < 0) {
-            trendEl.textContent = this.formatMoney(diff);
-            trendEl.className = 'stage-card-trend trend-negative';
-          } else {
-            trendEl.textContent = 'No change';
-            trendEl.className = 'stage-card-trend trend-neutral';
-          }
-        } else {
-          trendEl.textContent = '';
-          trendEl.className = 'stage-card-trend';
-        }
-      }
-      
-      // Deals list (expandable)
-      const dealsEl = document.getElementById(`${stage}-deals`);
-      if (dealsEl) {
-        if (data.deals.length === 0) {
-          dealsEl.innerHTML = '<div class="empty-state">No deals</div>';
-        } else {
-          dealsEl.innerHTML = data.deals.map(deal => `
-            <div class="deal-item">
-              <span class="deal-name">${this.escapeHtml(deal.name)}</span>
-              <span class="deal-value">${this.escapeHtml(deal.value || 'TBD')}</span>
-            </div>
-          `).join('');
-        }
-      }
+    // Define stage order (customize as needed)
+    const stageOrder = ['Connected', 'Discovery Call', 'Demo', 'Proposal', 'POC', 'Stalled'];
+    const sortedStages = Object.keys(stageGroups).sort((a, b) => {
+      const aIdx = stageOrder.indexOf(a);
+      const bIdx = stageOrder.indexOf(b);
+      if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
+      if (aIdx === -1) return 1;
+      if (bIdx === -1) return -1;
+      return aIdx - bIdx;
     });
+    
+    // Render stage cards
+    container.innerHTML = sortedStages.map(stage => {
+      const data = stageGroups[stage];
+      const stageId = stage.toLowerCase().replace(/\s+/g, '-');
+      
+      return `
+        <div class="stage-card" data-stage="${stageId}">
+          <div class="stage-card-header">
+            <span class="stage-card-title">${this.escapeHtml(stage)}</span>
+            <span class="stage-card-count">(${data.deals.length})</span>
+          </div>
+          <div class="stage-card-value">${this.formatMoney(data.total)}</div>
+          <div class="stage-card-deals collapsed" id="${stageId}-deals">
+            ${data.deals.map(deal => this.renderDealCard(deal)).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
     
     // Add click handlers for stage cards
-    document.querySelectorAll('.stage-card').forEach(card => {
+    container.querySelectorAll('.stage-card').forEach(card => {
       card.onclick = () => {
-        const stage = card.dataset.stage;
-        const dealsEl = document.getElementById(`${stage}-deals`);
+        const dealsEl = card.querySelector('.stage-card-deals');
         if (dealsEl) dealsEl.classList.toggle('collapsed');
       };
     });
+  }
+  
+  /**
+   * Render a single deal card with all fields
+   */
+  renderDealCard(deal) {
+    const hasBlocker = deal.blockers && deal.blockers.toLowerCase() !== 'none' && deal.blockers.trim() !== '';
     
-    // Render highlights with full details in cards
-    const hotEl = document.getElementById('highlight-hot');
-    const updatesEl = document.getElementById('highlight-updates');
-    const marketingEl = document.getElementById('highlight-marketing');
+    return `
+      <div class="deal-card">
+        <div class="deal-card-header">
+          <span class="deal-card-name">${this.escapeHtml(deal.name)}</span>
+          <span class="deal-card-value">${this.escapeHtml(deal.value || 'TBD')}</span>
+        </div>
+        <div class="deal-card-meta">
+          <span><span class="label">Owner:</span> ${this.escapeHtml(deal.owner || 'Unassigned')}</span>
+          <span><span class="label">Close:</span> ${this.escapeHtml(deal.closeDate || 'TBD')}</span>
+        </div>
+        ${deal.nextTask ? `<div class="deal-card-next"><span class="label">Next:</span> ${this.escapeHtml(deal.nextTask)}</div>` : ''}
+        ${hasBlocker ? `<div class="deal-card-blocker"><span class="blocker-label">Blocker:</span> ${this.escapeHtml(deal.blockers)}</div>` : ''}
+      </div>
+    `;
+  }
+  
+  /**
+   * Fetch pipeline data from Google Sheet
+   */
+  async fetchPipelineFromSheet() {
+    const settings = storage.getSettings();
+    const sheetUrl = settings.pipelineSheetUrl;
     
-    // Hot deals (pilot stage with blockers)
-    const pilotDeals = stageTotals['pilot']?.deals || [];
-    if (hotEl) {
-      if (pilotDeals.length > 0) {
-        const hotItems = pilotDeals.map(d => {
-          const blocker = d.nextSteps ? `<span class="highlight-detail">${this.escapeHtml(d.nextSteps)}</span>` : '';
-          return `<div class="highlight-item"><strong>${this.escapeHtml(d.name)}</strong> <span class="highlight-value">${this.escapeHtml(d.value || '')}</span>${blocker}</div>`;
-        }).join('');
-        hotEl.innerHTML = `
-          <div class="highlight-card">
-            <div class="highlight-card-header">
-              <span class="highlight-card-title title-hot">Hot Deals</span>
-              <span class="highlight-card-count">${pilotDeals.length}</span>
-            </div>
-            <div class="highlight-card-content">${hotItems}</div>
-          </div>`;
-      } else {
-        hotEl.innerHTML = '';
+    if (!sheetUrl) {
+      return null;
+    }
+    
+    // Show loading state
+    const refreshBtn = document.getElementById('pipeline-refresh-btn');
+    if (refreshBtn) refreshBtn.classList.add('refreshing');
+    
+    try {
+      const response = await fetch(sheetUrl);
+      if (!response.ok) throw new Error('Failed to fetch sheet');
+      
+      const csv = await response.text();
+      const deals = this.parseCSVPipeline(csv);
+      
+      // Store the data
+      this.pipelineDeals = deals;
+      this.pipelineLastSync = new Date();
+      
+      // Update sync time display
+      this.updatePipelineSyncTime();
+      
+      // Render
+      this.renderPipelineSection();
+      
+      return deals;
+    } catch (error) {
+      this.showToast('Failed to sync pipeline: ' + error.message, 'error');
+      return null;
+    } finally {
+      if (refreshBtn) refreshBtn.classList.remove('refreshing');
+    }
+  }
+  
+  /**
+   * Parse CSV from Google Sheet into deal objects
+   */
+  parseCSVPipeline(csv) {
+    const lines = csv.split('\n');
+    if (lines.length < 2) return [];
+    
+    // Parse header
+    const headers = this.parseCSVLine(lines[0]);
+    
+    // Map expected columns (flexible matching)
+    const colMap = {};
+    headers.forEach((h, i) => {
+      const lower = h.toLowerCase().trim();
+      if (lower.includes('opportunity') || lower.includes('name') || lower.includes('company')) colMap.name = i;
+      if (lower.includes('close') && lower.includes('date')) colMap.closeDate = i;
+      if (lower.includes('owner')) colMap.owner = i;
+      if (lower.includes('value') || lower.includes('amount')) colMap.value = i;
+      if (lower.includes('stage')) colMap.stage = i;
+      if (lower.includes('next') || lower.includes('task')) colMap.nextTask = i;
+      if (lower.includes('blocker')) colMap.blockers = i;
+    });
+    
+    // Parse data rows
+    const deals = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const cols = this.parseCSVLine(line);
+      
+      const deal = {
+        name: cols[colMap.name] || '',
+        closeDate: cols[colMap.closeDate] || '',
+        owner: cols[colMap.owner] || '',
+        value: cols[colMap.value] || '',
+        stage: cols[colMap.stage] || '',
+        nextTask: cols[colMap.nextTask] || '',
+        blockers: cols[colMap.blockers] || ''
+      };
+      
+      // Skip empty rows
+      if (deal.name) {
+        deals.push(deal);
       }
     }
     
-    // Key updates
-    const keyUpdates = highlights?.keyUpdates || [];
-    if (updatesEl) {
-      if (keyUpdates.length > 0) {
-        const updateItems = keyUpdates.map(u => `<div class="highlight-item">${this.escapeHtml(u)}</div>`).join('');
-        updatesEl.innerHTML = `
-          <div class="highlight-card">
-            <div class="highlight-card-header">
-              <span class="highlight-card-title title-updates">Key Updates</span>
-              <span class="highlight-card-count">${keyUpdates.length}</span>
-            </div>
-            <div class="highlight-card-content">${updateItems}</div>
-          </div>`;
+    return deals;
+  }
+  
+  /**
+   * Parse a single CSV line (handles quoted fields)
+   */
+  parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
       } else {
-        updatesEl.innerHTML = '';
+        current += char;
       }
     }
     
-    // Marketing
-    const marketing = highlights?.marketing || [];
-    if (marketingEl) {
-      if (marketing.length > 0) {
-        const marketingItems = marketing.map(m => `<div class="highlight-item">${this.escapeHtml(m)}</div>`).join('');
-        marketingEl.innerHTML = `
-          <div class="highlight-card">
-            <div class="highlight-card-header">
-              <span class="highlight-card-title title-marketing">Marketing</span>
-              <span class="highlight-card-count">${marketing.length}</span>
-            </div>
-            <div class="highlight-card-content">${marketingItems}</div>
-          </div>`;
-      } else {
-        marketingEl.innerHTML = '';
-      }
+    result.push(current.trim());
+    return result;
+  }
+  
+  /**
+   * Update pipeline sync time display
+   */
+  updatePipelineSyncTime() {
+    const el = document.getElementById('pipeline-sync-time');
+    if (!el || !this.pipelineLastSync) return;
+    
+    const now = new Date();
+    const diff = Math.floor((now - this.pipelineLastSync) / 1000 / 60);
+    
+    if (diff < 1) {
+      el.textContent = 'Just synced';
+    } else if (diff === 1) {
+      el.textContent = '1 min ago';
+    } else if (diff < 60) {
+      el.textContent = `${diff} min ago`;
+    } else {
+      el.textContent = this.pipelineLastSync.toLocaleTimeString();
     }
+  }
+  
+  /**
+   * Setup pipeline auto-refresh (every 5 minutes)
+   */
+  setupPipelineAutoRefresh() {
+    // Initial fetch
+    this.fetchPipelineFromSheet();
+    
+    // Auto-refresh every 5 minutes
+    setInterval(() => {
+      this.fetchPipelineFromSheet();
+    }, 5 * 60 * 1000);
+    
+    // Update sync time display every minute
+    setInterval(() => {
+      this.updatePipelineSyncTime();
+    }, 60 * 1000);
   }
 
   /**
@@ -7797,6 +7848,7 @@ Respond with just the category name (core, traction, market, or testimonials) an
   async saveSettings() {
     const apiKey = document.getElementById('api-key').value.trim();
     const openaiApiKey = document.getElementById('openai-api-key').value.trim();
+    const pipelineSheetUrl = document.getElementById('pipeline-sheet-url')?.value.trim() || '';
 
     // Update seed raise target
     const seedRaiseTarget = document.getElementById('seed-raise-target').value.trim();
@@ -7815,6 +7867,7 @@ Respond with just the category name (core, traction, market, or testimonials) an
     this.settings = storage.updateSettings({ 
       apiKey, 
       openaiApiKey,
+      pipelineSheetUrl,
       autoCurate,
       staleThresholdWeeks
     });
@@ -7832,6 +7885,11 @@ Respond with just the category name (core, traction, market, or testimonials) an
     // Update UI status
     this.renderSettingsStatus();
     this.renderSeedRaise();
+    
+    // Refresh pipeline if URL changed
+    if (pipelineSheetUrl) {
+      this.fetchPipelineFromSheet();
+    }
   }
 
   /**
@@ -7864,6 +7922,12 @@ Respond with just the category name (core, traction, market, or testimonials) an
     } else {
       openaiStatusEl.classList.remove('connected');
       openaiStatusEl.querySelector('.status-text').textContent = 'Not configured';
+    }
+
+    // Pipeline sheet URL
+    const pipelineSheetUrlEl = document.getElementById('pipeline-sheet-url');
+    if (pipelineSheetUrlEl) {
+      pipelineSheetUrlEl.value = this.settings.pipelineSheetUrl || '';
     }
 
     // Smart curation settings

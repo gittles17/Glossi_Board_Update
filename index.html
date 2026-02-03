@@ -154,61 +154,29 @@
   <!-- Pipeline Section -->
   <section class="pipeline-section">
     <div class="pipeline-header">
-      <h2>Pipeline</h2>
+      <h2>Sales Pipeline</h2>
       <div class="pipeline-progress">
         <span class="pipeline-total" id="pipeline-total-value">$0</span>
-        <span class="progress-divider">/</span>
-        <span class="pipeline-closed" id="pipeline-closed-value">$0</span>
-        <span class="pipeline-closed-label">closed</span>
+        <span class="pipeline-deal-count" id="pipeline-deal-count"></span>
       </div>
-      <select id="pipeline-week-select" class="time-filter">
-        <option value="current">Current</option>
-        <!-- Populated by JS with past weeks -->
-      </select>
-      <button class="add-btn-small" id="edit-pipeline-btn" title="Update Pipeline">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-      </button>
+      <div class="pipeline-sync-status">
+        <span class="sync-time" id="pipeline-sync-time">Not synced</span>
+        <button class="btn-icon btn-icon-sm" id="pipeline-refresh-btn" title="Refresh Pipeline">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+      </div>
     </div>
     
-    <!-- 3 Horizontal Stage Cards -->
-    <div class="pipeline-stage-cards">
-      <div class="stage-card" data-stage="discovery">
-        <div class="stage-card-header">
-          <span class="stage-card-title">Discovery</span>
-          <span class="stage-card-count" id="discovery-count"></span>
-        </div>
-        <div class="stage-card-value" id="discovery-value">$0</div>
-        <div class="stage-card-trend" id="discovery-trend"></div>
-        <div class="stage-card-deals collapsed" id="discovery-deals"></div>
+    <!-- Dynamic Stage Columns -->
+    <div class="pipeline-stage-cards" id="pipeline-stages-container">
+      <!-- Stages rendered dynamically from Google Sheet -->
+      <div class="pipeline-empty-state" id="pipeline-empty">
+        <p>No pipeline data. Configure Google Sheet URL in Settings or drop a CSV file.</p>
       </div>
-      <div class="stage-card" data-stage="demo">
-        <div class="stage-card-header">
-          <span class="stage-card-title">Demo</span>
-          <span class="stage-card-count" id="demo-count"></span>
-        </div>
-        <div class="stage-card-value" id="demo-value">$0</div>
-        <div class="stage-card-trend" id="demo-trend"></div>
-        <div class="stage-card-deals collapsed" id="demo-deals"></div>
-      </div>
-      <div class="stage-card" data-stage="pilot">
-        <div class="stage-card-header">
-          <span class="stage-card-title">Pilot</span>
-          <span class="stage-card-count" id="pilot-count"></span>
-        </div>
-        <div class="stage-card-value" id="pilot-value">$0</div>
-        <div class="stage-card-trend" id="pilot-trend"></div>
-        <div class="stage-card-deals collapsed" id="pilot-deals"></div>
-      </div>
-    </div>
-
-    <!-- Minimal Highlights -->
-    <div class="pipeline-highlights-minimal" id="pipeline-highlights">
-      <div class="highlight-row" id="highlight-hot"></div>
-      <div class="highlight-row" id="highlight-updates"></div>
-      <div class="highlight-row" id="highlight-marketing"></div>
     </div>
   </section>
 
@@ -491,6 +459,15 @@
             <label for="seed-raise-target">Target Amount</label>
             <input type="text" id="seed-raise-target" class="input input-sm" placeholder="e.g., $500K" value="$500K">
           </div>
+        </div>
+        <div class="settings-section">
+          <h3>Sales Pipeline</h3>
+          <p class="settings-description">Connect a Google Sheet to sync your sales pipeline. Publish your sheet to web as CSV first.</p>
+          <div class="input-group">
+            <label for="pipeline-sheet-url">Google Sheet CSV URL</label>
+            <input type="text" id="pipeline-sheet-url" class="input" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+          </div>
+          <p class="settings-hint">Auto-refreshes every 5 minutes when configured.</p>
         </div>
         <div class="settings-section">
           <h3>Data Storage</h3>
