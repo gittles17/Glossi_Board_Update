@@ -8522,8 +8522,15 @@ body.sidebar-open .top-nav {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--text-muted);
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.kb-summary-text {
+  color: var(--text-secondary);
   font-size: 13px;
+  line-height: 1.6;
+  max-width: 400px;
 }
 
 .kb-message {

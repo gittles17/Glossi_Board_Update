@@ -2393,7 +2393,7 @@ Guidelines:
     if (!container) return;
     
     if (!this.currentConversation || this.currentConversation.messages.length === 0) {
-      container.innerHTML = '<div class="kb-empty-chat"><p>Ask a question or click a suggestion below</p></div>';
+      container.innerHTML = `<div class="kb-empty-chat">${this.getDataSummary()}</div>`;
       return;
     }
     
@@ -2423,6 +2423,44 @@ Guidelines:
         chatArea.scrollTop = chatArea.scrollHeight;
       }, 50);
     }
+  }
+
+  /**
+   * Get a brief summary of available data sources
+   */
+  getDataSummary() {
+    const parts = [];
+    
+    // Count enabled dashboard sources
+    const enabledDashboard = Object.entries(this.dashboardSources)
+      .filter(([key, source]) => key !== 'quickLinks' && source.enabled)
+      .map(([key, source]) => source.title);
+    
+    // Count quick links
+    const quickLinks = this.storage.getQuickLinks?.() || [];
+    const enabledLinks = quickLinks.filter(l => this.enabledQuickLinks[l.id] !== false);
+    
+    // Count file sources
+    const enabledFiles = this.sources.filter(s => s.enabled !== false);
+    
+    // Build summary
+    if (enabledDashboard.length > 0) {
+      parts.push(`Live dashboard data: ${enabledDashboard.join(', ')}.`);
+    }
+    
+    if (enabledLinks.length > 0) {
+      parts.push(`${enabledLinks.length} quick link${enabledLinks.length > 1 ? 's' : ''} available.`);
+    }
+    
+    if (enabledFiles.length > 0) {
+      parts.push(`${enabledFiles.length} file source${enabledFiles.length > 1 ? 's' : ''} loaded.`);
+    }
+    
+    if (parts.length === 0) {
+      return '<p class="kb-summary-text">No sources enabled. Enable sources in the sidebar to get started.</p>';
+    }
+    
+    return `<p class="kb-summary-text">${parts.join(' ')}</p>`;
   }
 
   /**
