@@ -1064,8 +1064,13 @@ class Storage {
       this.data.knowledgeBase = {
         sources: [],
         conversations: [],
-        reports: []
+        reports: [],
+        folders: []
       };
+    }
+    // Ensure folders array exists (migration for older data)
+    if (!this.data.knowledgeBase.folders) {
+      this.data.knowledgeBase.folders = [];
     }
     return this.data.knowledgeBase;
   }
@@ -1078,7 +1083,8 @@ class Storage {
       this.data.knowledgeBase = {
         sources: [],
         conversations: [],
-        reports: []
+        reports: [],
+        folders: []
       };
     }
     this.data.knowledgeBase = {

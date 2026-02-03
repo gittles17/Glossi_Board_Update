@@ -1915,16 +1915,65 @@ Guidelines:
   }
 
   /**
-   * Create a new folder
+   * Create a new folder - shows inline input
    */
   createFolder() {
-    const name = prompt('Folder name:');
-    if (name && name.trim()) {
-      this.folders.push(name.trim());
-      this.expandedFolders[name.trim()] = true;
-      this.saveData();
-      this.renderSources();
-    }
+    // Check if input already exists
+    if (document.getElementById('kb-new-folder-input')) return;
+    
+    const container = document.getElementById('kb-sources-list');
+    if (!container) return;
+    
+    // Insert input at top of file sources section
+    const fileHeader = container.querySelector('.kb-file-sources-header');
+    if (!fileHeader) return;
+    
+    const inputHtml = `
+      <div class="kb-new-folder-input-wrap" id="kb-new-folder-wrap">
+        <input type="text" id="kb-new-folder-input" class="kb-new-folder-input" placeholder="Folder name..." autofocus>
+        <button class="kb-new-folder-save" id="kb-new-folder-save" title="Create">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </button>
+        <button class="kb-new-folder-cancel" id="kb-new-folder-cancel" title="Cancel">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    `;
+    
+    fileHeader.insertAdjacentHTML('afterend', inputHtml);
+    
+    const input = document.getElementById('kb-new-folder-input');
+    const saveBtn = document.getElementById('kb-new-folder-save');
+    const cancelBtn = document.getElementById('kb-new-folder-cancel');
+    const wrap = document.getElementById('kb-new-folder-wrap');
+    
+    const saveFolder = () => {
+      const name = input.value.trim();
+      if (name) {
+        this.folders.push(name);
+        this.expandedFolders[name] = true;
+        this.saveData();
+        this.renderSources();
+        this.showToast(`Folder "${name}" created`, 'success');
+      } else {
+        wrap.remove();
+      }
+    };
+    
+    const cancel = () => wrap.remove();
+    
+    input.focus();
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') saveFolder();
+      if (e.key === 'Escape') cancel();
+    });
+    saveBtn.addEventListener('click', saveFolder);
+    cancelBtn.addEventListener('click', cancel);
   }
 
   /**

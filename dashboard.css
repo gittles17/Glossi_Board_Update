@@ -8005,6 +8005,58 @@ body.sidebar-open .top-nav {
   border-radius: var(--radius-sm);
 }
 
+/* New folder input */
+.kb-new-folder-input-wrap {
+  display: flex;
+  gap: 4px;
+  padding: var(--space-2);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  margin: var(--space-2) var(--space-2) 0;
+}
+
+.kb-new-folder-input {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.kb-new-folder-input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+
+.kb-new-folder-save,
+.kb-new-folder-cancel {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kb-new-folder-save:hover {
+  background: var(--accent-green-dim);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.kb-new-folder-cancel:hover {
+  background: rgba(255, 100, 100, 0.1);
+  border-color: #ff6464;
+  color: #ff6464;
+}
+
 /* Toggle all sources button */
 .kb-toggle-all-btn {
   background: none;
