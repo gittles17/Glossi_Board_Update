@@ -8453,6 +8453,8 @@ body.sidebar-open .top-nav {
 /* Chat Area */
 .kb-chat-area {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--space-3);
@@ -8482,7 +8484,7 @@ body.sidebar-open .top-nav {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  min-height: 100%;
+  flex: 1;
 }
 
 /* Suggested Questions (bottom of chat) */
