@@ -83,6 +83,11 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Safe area handling for notched devices */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 /* Noise texture overlay */
@@ -1166,5 +1171,45 @@ h4 {
 
   .kpi-highlight {
     text-align: left;
+  }
+}
+
+/* ============================================
+   IPHONE PRO MAX SAFE AREA HANDLING
+   (430x932 logical pixels)
+   ============================================ */
+@media screen and (max-width: 430px) {
+  /* Hero section respects safe areas */
+  .hero {
+    padding-top: calc(var(--space-3xl) + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(var(--space-3xl) + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Sections with proper bottom padding for home indicator */
+  .section {
+    padding-bottom: calc(var(--space-4xl) + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Footer above home indicator */
+  .footer {
+    padding-bottom: calc(var(--space-3xl) + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Container padding adjustments */
+  .container {
+    padding-left: max(var(--space-md), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--space-md), env(safe-area-inset-right, 0px));
+  }
+
+  /* Scroll hint positioned above home indicator */
+  .scroll-hint {
+    bottom: calc(var(--space-xl) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Fallback for all devices with notches/Dynamic Island */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .hero {
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
 }
