@@ -3761,47 +3761,6 @@ Format this into a clean, professional weekly update email. Return as JSON with 
   }
 
   /**
-   * Add a new todo item
-   */
-  addNewTodo(meetingId) {
-    const meeting = meetingsManager.getMeeting(meetingId);
-    if (!meeting) return;
-
-    if (!meeting.todos) {
-      meeting.todos = [];
-    }
-
-    // Create new todo
-    const newTodo = {
-      id: `todo-${Date.now()}`,
-      text: 'New action item',
-      owner: 'Unassigned',
-      completed: false
-    };
-
-    meeting.todos.push(newTodo);
-    meetingsManager.updateMeeting(meeting);
-    
-    // Re-render and focus the new item
-    this.renderMeeting(meeting);
-    this.renderActionItems();
-    
-    // Focus the new todo text for immediate editing
-    setTimeout(() => {
-      const newTodoEl = document.querySelector(`[data-todo-id="${newTodo.id}"] .todo-text`);
-      if (newTodoEl) {
-        newTodoEl.focus();
-        // Select all text for easy replacement
-        const range = document.createRange();
-        range.selectNodeContents(newTodoEl);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-      }
-    }, 50);
-  }
-
-  /**
    * Render empty meeting state
    */
   renderEmptyMeeting() {
