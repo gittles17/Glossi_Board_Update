@@ -1574,10 +1574,13 @@ Guidelines:
     `;
     messagesContainer.appendChild(indicator);
     
-    // Auto-scroll to show typing indicator
-    requestAnimationFrame(() => {
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    });
+    // Auto-scroll chat area to show typing indicator
+    const chatArea = document.getElementById('kb-chat-area');
+    if (chatArea) {
+      requestAnimationFrame(() => {
+        chatArea.scrollTop = chatArea.scrollHeight;
+      });
+    }
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
 
@@ -2410,10 +2413,13 @@ Guidelines:
       `;
     }).join('');
     
-    // Auto-scroll to bottom with small delay to ensure DOM updated
-    requestAnimationFrame(() => {
-      container.scrollTop = container.scrollHeight;
-    });
+    // Auto-scroll chat area to bottom
+    const chatArea = document.getElementById('kb-chat-area');
+    if (chatArea) {
+      requestAnimationFrame(() => {
+        chatArea.scrollTop = chatArea.scrollHeight;
+      });
+    }
   }
 
   /**
