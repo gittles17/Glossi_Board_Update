@@ -23,6 +23,21 @@ class GlossiDashboard {
     this.editingLinkId = null;
     this.editingInvestorId = null;
     
+    // Pipeline state
+    this.selectedPipelineWeek = null;
+    
+    // Thought promotion state
+    this.promotingThought = null;
+    
+    // Grouped items review state
+    this.pendingGroupedItems = null;
+    this.pendingGroupedSource = null;
+    
+    // Item review flow state
+    this.pendingItems = [];
+    this.currentItemIndex = 0;
+    this.savedItems = { thoughts: [], talking_points: [] };
+    
     // Name aliases for display
     this.nameAliases = {
       'rs': 'Ricky',
@@ -1106,13 +1121,6 @@ class GlossiDashboard {
    */
   renderStats() {
     // Stats section was removed
-  }
-
-  /**
-   * Render pipeline (deprecated - using renderPipelineSection instead)
-   */
-  renderPipeline() {
-    // Use renderPipelineSection() instead
   }
 
   /**
@@ -7001,63 +7009,6 @@ Content: "${content.substring(0, 300)}"`
   renderScratchpad() {
     // Scratchpad section was removed - using Knowledge Base instead
     return;
-  }
-
-  /**
-   * Render archived scratchpad items (deprecated)
-   */
-  renderArchivedScratchpad() {
-    const archived = storage.getArchivedScratchpad();
-    const container = document.getElementById('scratchpad-list');
-    if (!container) return;
-    
-    // Remove existing archived section
-    const existingArchived = container.querySelector('.archived-section');
-    if (existingArchived) existingArchived.remove();
-    
-    if (archived.length === 0) return;
-    
-    const archivedHtml = `
-      <div class="archived-section">
-        <div class="archived-header" onclick="this.parentElement.classList.toggle('expanded')">
-          <svg class="archived-expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="9 18 15 12 9 6"></polyline>
-          </svg>
-          <span>Archived (${archived.length})</span>
-        </div>
-        <div class="archived-items">
-          ${archived.map(item => {
-            const content = item.content || '';
-            const titleMatch = content.match(/^TITLE:\s*(.+?)(?:\n|$)/i);
-            const title = titleMatch ? titleMatch[1].trim() : (item.fileName || 'Untitled');
-            const archivedDate = new Date(item.archivedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            
-            return `
-              <div class="archived-item" data-archived-id="${item.id}">
-                <span class="archived-item-title">${this.escapeHtml(title)}</span>
-                <span class="archived-item-date">${archivedDate}</span>
-                <div class="archived-item-actions">
-                  <button class="restore-btn" onclick="window.dashboard.restoreArchivedItem('${item.id}')" title="Restore">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="1 4 1 10 7 10"></polyline>
-                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-                    </svg>
-                  </button>
-                  <button class="delete-btn" onclick="window.dashboard.deleteArchivedItem('${item.id}')" title="Delete permanently">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-    `;
-    
-    container.insertAdjacentHTML('beforeend', archivedHtml);
   }
 
   /**

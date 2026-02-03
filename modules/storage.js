@@ -42,6 +42,8 @@ const DEFAULT_DATA = {
       { id: 'inv_8', name: 'Josh Stern', amount: '15k', stage: 'committed', notes: '' }
     ]
   },
+  pipeline: {},
+  pipelineHistory: [],
   lastUpdated: '2026-02-01T00:00:00.000Z'
 };
 
@@ -89,8 +91,6 @@ class Storage {
     this.todos = []; // Independent action items storage
     this.pipelineHistory = [];
     this.statHistory = [];
-    this.fileHandle = null;
-    this.settingsHandle = null;
     this.saveTimeout = null;
     this.serverAvailable = false;
   }
@@ -1026,13 +1026,6 @@ class Storage {
    */
   getPipelineEmail() {
     return this.data.pipelineEmail || null;
-  }
-
-  /**
-   * Get pipeline history from data object (legacy)
-   */
-  getDataPipelineHistory() {
-    return this.data.pipelineHistory || [];
   }
 
   /**

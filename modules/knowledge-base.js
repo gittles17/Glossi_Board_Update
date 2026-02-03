@@ -2320,18 +2320,6 @@ Guidelines:
   }
 
   /**
-   * Delete a source
-   */
-  deleteSource(sourceId) {
-    const index = this.sources.findIndex(s => s.id === sourceId);
-    if (index !== -1) {
-      this.sources.splice(index, 1);
-      this.saveData();
-      this.render();
-    }
-  }
-
-  /**
    * Update source freshness
    */
   updateSourceFreshness(sourceId, freshness) {
