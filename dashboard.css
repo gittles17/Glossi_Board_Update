@@ -9524,7 +9524,7 @@ body.sidebar-open .top-nav {
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    bottom: 0 !important;
+    bottom: env(safe-area-inset-bottom, 34px) !important;
     width: 100% !important;
     max-width: none !important;
     min-width: 0 !important;
