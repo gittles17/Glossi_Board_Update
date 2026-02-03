@@ -45,11 +45,12 @@ class GlossiDashboard {
       'adam': 'Adam',
       'ricky': 'Ricky',
       'jonathan': 'Jonathan',
-      'will': 'Will'
+      'will': 'Will',
+      'david': 'David'
     };
     
     // Available team members for quick assignment
-    this.teamMembers = ['Ricky', 'Jonathan', 'Adam', 'Will', 'Unassigned'];
+    this.teamMembers = ['Ricky', 'Jonathan', 'Adam', 'Will', 'David', 'Unassigned'];
   }
 
   /**
