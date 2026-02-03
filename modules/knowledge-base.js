@@ -28,6 +28,8 @@ class KnowledgeBase {
     this.isDraggingSource = false;
     this.quickLinksExpanded = false;
     this.enabledQuickLinks = {};
+    this.quickLinkContent = {};
+    this.fetchingLinks = new Set();
     // Dashboard data sources (live data from main app)
     this.dashboardSources = {
       weekAtGlance: { enabled: true, title: 'Week at a Glance', icon: 'calendar' },
@@ -80,6 +82,11 @@ class KnowledgeBase {
       this.enabledQuickLinks = kbData.enabledQuickLinks;
     }
     
+    // Load cached quick link content
+    if (kbData.quickLinkContent) {
+      this.quickLinkContent = kbData.quickLinkContent;
+    }
+    
     // Create a new conversation if none exists
     if (this.conversations.length === 0) {
       this.currentConversation = this.createConversation();
@@ -104,8 +111,53 @@ class KnowledgeBase {
       reports: this.reports,
       folders: this.folders,
       dashboardSources: dashboardSourcePrefs,
-      enabledQuickLinks: this.enabledQuickLinks
+      enabledQuickLinks: this.enabledQuickLinks,
+      quickLinkContent: this.quickLinkContent
     });
+  }
+
+  /**
+   * Fetch and cache content for a quick link
+   */
+  async fetchQuickLinkContent(linkId) {
+    const quickLinks = this.storage.getQuickLinks();
+    const link = quickLinks.find(l => l.id === linkId);
+    if (!link || !link.url) return;
+    
+    // Skip if already fetching
+    if (this.fetchingLinks.has(linkId)) return;
+    
+    this.fetchingLinks.add(linkId);
+    this.renderSources(); // Update UI to show fetching state
+    
+    try {
+      const result = await this.fetchUrl(link.url);
+      this.quickLinkContent[linkId] = {
+        content: result.content,
+        title: result.title || link.name,
+        fetchedAt: new Date().toISOString(),
+        url: link.url
+      };
+      this.saveData();
+      this.showToast(`Fetched content from ${link.name}`, 'success');
+    } catch (error) {
+      this.showToast(`Failed to fetch ${link.name}: ${error.message}`, 'error');
+    } finally {
+      this.fetchingLinks.delete(linkId);
+      this.renderSources();
+    }
+  }
+
+  /**
+   * Refresh all enabled quick link content
+   */
+  async refreshAllQuickLinks() {
+    const quickLinks = this.storage.getQuickLinks();
+    const enabledLinks = quickLinks.filter(l => this.enabledQuickLinks[l.id] !== false);
+    
+    for (const link of enabledLinks) {
+      await this.fetchQuickLinkContent(link.id);
+    }
   }
 
   /**
@@ -1099,7 +1151,7 @@ ${linksData}
   }
   
   /**
-   * Get Quick Links data from storage (only enabled links)
+   * Get Quick Links data from storage (only enabled links with cached content)
    */
   getQuickLinksData() {
     const data = this.storage.getData();
@@ -1112,9 +1164,9 @@ ${linksData}
     
     if (enabledLinks.length === 0) return null;
     
-    const lines = ['Available Resources:'];
+    const parts = [];
     
-    // Group by section
+    // Group by section for summary
     const sections = data.linkSections || [];
     const linksBySection = {};
     
@@ -1124,17 +1176,29 @@ ${linksData}
       linksBySection[section].push(link);
     });
     
+    // Summary of available resources
+    const summaryLines = ['Available Resources:'];
     sections.forEach(section => {
       const links = linksBySection[section.id] || [];
       if (links.length > 0) {
-        lines.push(`\n${section.name}:`);
+        summaryLines.push(`\n${section.name}:`);
         links.forEach(link => {
-          lines.push(`- ${link.name}: ${link.url}`);
+          const hasCached = this.quickLinkContent[link.id];
+          summaryLines.push(`- ${link.name}: ${link.url}${hasCached ? ' [content cached]' : ''}`);
         });
       }
     });
+    parts.push(summaryLines.join('\n'));
     
-    return lines.join('\n');
+    // Include cached content for each link
+    enabledLinks.forEach(link => {
+      const cached = this.quickLinkContent[link.id];
+      if (cached && cached.content) {
+        parts.push(`\n--- Content from "${link.name}" (${link.url}) ---\n${cached.content}\n---`);
+      }
+    });
+    
+    return parts.join('\n');
   }
 
   /**
@@ -1593,14 +1657,28 @@ Guidelines:
               <span class="kb-dashboard-source-count">${enabledCount}/${quickLinks.length}</span>
             </div>
             <div class="kb-dashboard-source-children">
-              ${quickLinks.map(link => `
-                <div class="kb-dashboard-link-item ${this.enabledQuickLinks[link.id] === false ? 'disabled' : ''}" data-link-id="${link.id}">
+              ${quickLinks.map(link => {
+                const isEnabled = this.enabledQuickLinks[link.id] !== false;
+                const isFetching = this.fetchingLinks.has(link.id);
+                const hasCachedContent = !!this.quickLinkContent[link.id];
+                const statusClass = isFetching ? 'fetching' : (hasCachedContent ? 'cached' : '');
+                return `
+                <div class="kb-dashboard-link-item ${isEnabled ? '' : 'disabled'} ${statusClass}" data-link-id="${link.id}">
                   <label class="kb-source-toggle-wrap" onclick="event.stopPropagation()">
-                    <input type="checkbox" class="kb-quicklink-toggle" data-link-id="${link.id}" ${this.enabledQuickLinks[link.id] !== false ? 'checked' : ''}>
+                    <input type="checkbox" class="kb-quicklink-toggle" data-link-id="${link.id}" ${isEnabled ? 'checked' : ''}>
                   </label>
                   <span class="kb-dashboard-link-name">${this.escapeHtml(link.name)}</span>
+                  ${isFetching ? '<span class="kb-link-status fetching">...</span>' : ''}
+                  ${hasCachedContent && !isFetching ? `
+                    <button class="kb-quicklink-refresh" title="Refresh content" onclick="event.stopPropagation()">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6M1 20v-6h6"></path>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                      </svg>
+                    </button>
+                  ` : ''}
                 </div>
-              `).join('')}
+              `}).join('')}
             </div>
           </div>
         `;
@@ -1845,15 +1923,18 @@ Guidelines:
     
     // Individual quick link toggles
     container.querySelectorAll('.kb-quicklink-toggle').forEach(toggle => {
-      toggle.addEventListener('change', (e) => {
+      toggle.addEventListener('change', async (e) => {
         const linkId = e.target.dataset.linkId;
-        this.enabledQuickLinks[linkId] = e.target.checked;
+        const isEnabled = e.target.checked;
+        this.enabledQuickLinks[linkId] = isEnabled;
         this.saveData();
+        
         // Update visual state
         const linkEl = e.target.closest('.kb-dashboard-link-item');
         if (linkEl) {
-          linkEl.classList.toggle('disabled', !e.target.checked);
+          linkEl.classList.toggle('disabled', !isEnabled);
         }
+        
         // Update count display
         const countEl = e.target.closest('.kb-dashboard-expandable')?.querySelector('.kb-dashboard-source-count');
         if (countEl) {
@@ -1861,6 +1942,20 @@ Guidelines:
           const enabledCount = quickLinks.filter(l => this.enabledQuickLinks[l.id] !== false).length;
           countEl.textContent = `${enabledCount}/${quickLinks.length}`;
         }
+        
+        // Fetch content when enabled (if not already cached)
+        if (isEnabled && !this.quickLinkContent[linkId]) {
+          await this.fetchQuickLinkContent(linkId);
+        }
+      });
+    });
+    
+    // Quick link refresh buttons
+    container.querySelectorAll('.kb-quicklink-refresh').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const linkId = e.target.closest('.kb-dashboard-link-item').dataset.linkId;
+        await this.fetchQuickLinkContent(linkId);
       });
     });
   }
