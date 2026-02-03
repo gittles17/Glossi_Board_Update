@@ -60,6 +60,7 @@ class KnowledgeBase {
     this.sources = kbData.sources || [];
     this.conversations = kbData.conversations || [];
     this.reports = kbData.reports || [];
+    this.folders = kbData.folders || [];
     
     // Load dashboard source preferences
     if (kbData.dashboardSources) {
@@ -92,6 +93,7 @@ class KnowledgeBase {
       sources: this.sources,
       conversations: this.conversations,
       reports: this.reports,
+      folders: this.folders,
       dashboardSources: dashboardSourcePrefs
     });
   }
@@ -143,6 +145,12 @@ class KnowledgeBase {
     const toggleAllBtn = document.getElementById('kb-toggle-all-btn');
     if (toggleAllBtn) {
       toggleAllBtn.addEventListener('click', () => this.toggleAllSources());
+    }
+
+    // Create folder button
+    const createFolderBtn = document.getElementById('kb-create-folder-btn');
+    if (createFolderBtn) {
+      createFolderBtn.addEventListener('click', () => this.createFolder());
     }
 
     // Sources drop zone
