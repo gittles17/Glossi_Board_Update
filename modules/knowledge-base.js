@@ -1647,6 +1647,14 @@ Guidelines:
         const folderName = header.closest('.kb-folder').dataset.folder;
         this.toggleFolder(folderName);
       });
+      
+      // Right-click context menu for folder
+      header.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const folderName = header.closest('.kb-folder').dataset.folder;
+        this.showFolderContextMenu(e, folderName);
+      });
     });
     
     // Add click handlers for sources
@@ -1994,6 +2002,155 @@ Guidelines:
   toggleFolder(folderName) {
     this.expandedFolders[folderName] = !this.expandedFolders[folderName];
     this.renderSources();
+  }
+
+  /**
+   * Show context menu for folder
+   */
+  showFolderContextMenu(e, folderName) {
+    // Remove any existing menus
+    document.querySelectorAll('.kb-context-menu').forEach(m => m.remove());
+    
+    const menu = document.createElement('div');
+    menu.className = 'kb-context-menu';
+    menu.style.left = e.clientX + 'px';
+    menu.style.top = e.clientY + 'px';
+    
+    menu.innerHTML = `
+      <button class="kb-context-item" data-action="rename">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+        Rename
+      </button>
+      <button class="kb-context-item kb-context-danger" data-action="delete">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+        </svg>
+        Delete
+      </button>
+    `;
+    
+    document.body.appendChild(menu);
+    
+    // Handle menu item clicks
+    menu.querySelectorAll('.kb-context-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const action = item.dataset.action;
+        if (action === 'rename') {
+          this.renameFolder(folderName);
+        } else if (action === 'delete') {
+          this.deleteFolder(folderName);
+        }
+        menu.remove();
+      });
+    });
+    
+    // Close menu on click outside
+    setTimeout(() => {
+      document.addEventListener('click', function closeMenu() {
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
+      });
+    }, 10);
+  }
+
+  /**
+   * Rename a folder
+   */
+  renameFolder(oldName) {
+    const container = document.getElementById('kb-sources-list');
+    const folderEl = container?.querySelector(`.kb-folder[data-folder="${oldName}"]`);
+    if (!folderEl) return;
+    
+    const header = folderEl.querySelector('.kb-folder-header');
+    const nameEl = header.querySelector('.kb-folder-name');
+    if (!nameEl) return;
+    
+    // Replace name with input
+    const currentName = oldName;
+    const inputHtml = `
+      <input type="text" class="kb-folder-rename-input" value="${this.escapeHtml(currentName)}" />
+    `;
+    nameEl.outerHTML = inputHtml;
+    
+    const input = header.querySelector('.kb-folder-rename-input');
+    input.focus();
+    input.select();
+    
+    const save = () => {
+      const newName = input.value.trim();
+      if (newName && newName !== oldName) {
+        // Update folders array
+        const index = this.folders.indexOf(oldName);
+        if (index !== -1) {
+          this.folders[index] = newName;
+        }
+        
+        // Update sources that reference this folder
+        this.sources.forEach(source => {
+          if (source.folder === oldName) {
+            source.folder = newName;
+          }
+        });
+        
+        // Update expanded state
+        if (this.expandedFolders[oldName]) {
+          this.expandedFolders[newName] = this.expandedFolders[oldName];
+          delete this.expandedFolders[oldName];
+        }
+        
+        this.saveData();
+        this.showToast(`Folder renamed to "${newName}"`, 'success');
+      }
+      this.renderSources();
+    };
+    
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        input.blur();
+      }
+      if (e.key === 'Escape') {
+        this.renderSources();
+      }
+    });
+    
+    // Prevent folder toggle when clicking input
+    input.addEventListener('click', (e) => e.stopPropagation());
+  }
+
+  /**
+   * Delete a folder
+   */
+  deleteFolder(folderName) {
+    const sourcesInFolder = this.sources.filter(s => s.folder === folderName);
+    
+    if (sourcesInFolder.length > 0) {
+      if (!confirm(`Delete folder "${folderName}"? The ${sourcesInFolder.length} source(s) inside will be moved to ungrouped.`)) {
+        return;
+      }
+    }
+    
+    // Remove from folders array
+    const index = this.folders.indexOf(folderName);
+    if (index !== -1) {
+      this.folders.splice(index, 1);
+    }
+    
+    // Move sources to ungrouped
+    sourcesInFolder.forEach(source => {
+      source.folder = null;
+    });
+    
+    // Clean up expanded state
+    delete this.expandedFolders[folderName];
+    
+    this.saveData();
+    this.renderSources();
+    this.showToast(`Folder "${folderName}" deleted`, 'success');
   }
 
   /**
