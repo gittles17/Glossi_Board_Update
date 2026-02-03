@@ -790,9 +790,11 @@ KEY INFORMATION:
   async addSource() {
     // Check if there's a pending file first
     if (this.pendingModalFile) {
-      await this.handleDroppedFile(this.pendingModalFile);
+      const file = this.pendingModalFile;
       this.pendingModalFile = null;
       this.hideModal('kb-source-modal');
+      // Process file in background (don't await)
+      this.handleDroppedFile(file);
       return;
     }
     
