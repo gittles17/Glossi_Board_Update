@@ -1604,9 +1604,15 @@ Guidelines:
       </div>
     `;
     
+    // Merge folders from this.folders with folders that have sources
+    const allFolderNames = new Set([
+      ...Object.keys(folders),
+      ...(this.folders || [])
+    ]);
+    
     // Render folders
-    Object.keys(folders).sort().forEach(folderName => {
-      const folderSources = folders[folderName];
+    Array.from(allFolderNames).sort().forEach(folderName => {
+      const folderSources = folders[folderName] || [];
       const isExpanded = this.expandedFolders && this.expandedFolders[folderName];
       sourcesHtml += `
         <div class="kb-folder ${isExpanded ? 'expanded' : ''}" data-folder="${this.escapeHtml(folderName)}">
