@@ -226,13 +226,16 @@ class KnowledgeBase {
    * Setup event listeners
    */
   setupEventListeners() {
-    // Toggle sidebar
+    // Toggle sidebar (desktop)
     const toggleSidebar = document.getElementById('kb-toggle-sidebar');
     if (toggleSidebar) {
       toggleSidebar.addEventListener('click', () => {
         document.getElementById('kb-sources-sidebar')?.classList.toggle('collapsed');
       });
     }
+    
+    // Mobile toggle handlers
+    this.setupMobileToggles();
 
     // Toggle all sources on/off
     const toggleAllBtn = document.getElementById('kb-toggle-all-btn');
@@ -392,6 +395,49 @@ class KnowledgeBase {
         }
       });
     });
+  }
+
+  /**
+   * Setup mobile toggle handlers for sidebars
+   */
+  setupMobileToggles() {
+    const sourcesToggle = document.getElementById('kb-mobile-sources-toggle');
+    const reportsToggle = document.getElementById('kb-mobile-reports-toggle');
+    const overlay = document.getElementById('kb-mobile-overlay');
+    const sourcesSidebar = document.getElementById('kb-sources-sidebar');
+    const reportsPanel = document.querySelector('.kb-reports-panel');
+    
+    const closeMobileSidebars = () => {
+      sourcesSidebar?.classList.remove('mobile-open');
+      reportsPanel?.classList.remove('mobile-open');
+      overlay?.classList.remove('active');
+    };
+    
+    if (sourcesToggle) {
+      sourcesToggle.addEventListener('click', () => {
+        const isOpen = sourcesSidebar?.classList.contains('mobile-open');
+        closeMobileSidebars();
+        if (!isOpen) {
+          sourcesSidebar?.classList.add('mobile-open');
+          overlay?.classList.add('active');
+        }
+      });
+    }
+    
+    if (reportsToggle) {
+      reportsToggle.addEventListener('click', () => {
+        const isOpen = reportsPanel?.classList.contains('mobile-open');
+        closeMobileSidebars();
+        if (!isOpen) {
+          reportsPanel?.classList.add('mobile-open');
+          overlay?.classList.add('active');
+        }
+      });
+    }
+    
+    if (overlay) {
+      overlay.addEventListener('click', closeMobileSidebars);
+    }
   }
 
   /**
