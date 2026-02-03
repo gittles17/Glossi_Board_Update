@@ -7616,10 +7616,10 @@ body.sidebar-open .top-nav {
 }
 
 /* =================================================================
-   KNOWLEDGE BASE STYLES
+   NOTEBOOK STYLES
    ================================================================= */
 
-.knowledge-base {
+.notebook {
   display: flex;
   gap: var(--space-3);
   height: 70vh;
@@ -7628,7 +7628,7 @@ body.sidebar-open .top-nav {
 }
 
 /* Fullpage override removes all height constraints */
-.knowledge-base.knowledge-base-fullpage {
+.notebook.notebook-fullpage {
   height: 100%;
   min-height: 0;
   max-height: none;
@@ -9504,7 +9504,7 @@ body.sidebar-open .top-nav {
 
 /* Responsive adjustments - Tablet */
 @media (max-width: 900px) {
-  .knowledge-base {
+  .notebook {
     gap: var(--space-2);
   }
   
@@ -9551,7 +9551,7 @@ body.sidebar-open .top-nav {
   }
   
   /* ---- FULL-PAGE CONTAINER ---- */
-  .knowledge-base-fullpage {
+  .notebook-fullpage {
     position: relative;
     height: calc(100vh - var(--nav-height) - 46px);
     overflow: hidden;
@@ -10277,7 +10277,7 @@ body.sidebar-open .top-nav {
   overflow: hidden;
 }
 
-.knowledge-base-fullpage {
+.notebook-fullpage {
   flex: 1;
   height: 100%;
   max-height: none;
@@ -10502,7 +10502,7 @@ a.dropdown-item {
     max-height: calc(100vh - var(--nav-height) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--space-8));
   }
 
-  /* Knowledge Base sources list - extra bottom padding for home indicator */
+  /* Notebook sources list - extra bottom padding for home indicator */
   .kb-sources-list {
     padding-bottom: calc(120px + env(safe-area-inset-bottom, 34px)) !important;
   }

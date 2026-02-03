@@ -329,7 +329,7 @@ Please analyze this update and identify all pipeline changes.`;
   }
 
   /**
-   * General chat method for Knowledge Base
+   * General chat method for Notebook
    */
   async chat(systemPrompt, userMessage) {
     return await this.callClaude(systemPrompt, userMessage);

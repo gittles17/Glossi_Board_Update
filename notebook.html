@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Knowledge Base - Glossi</title>
+  <title>Notebook - Glossi</title>
   <meta name="theme-color" content="#0a0d12">
   <link rel="icon" type="image/svg+xml" href="Asset 3.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,7 +22,7 @@
         </svg>
       </a>
       <img src="Asset 3.svg" alt="Glossi" class="logo-img">
-      <span class="nav-page-title">Knowledge Base</span>
+      <span class="nav-page-title">Notebook</span>
     </div>
     <div class="nav-right">
       <div class="dropdown-wrapper">
@@ -54,7 +54,7 @@
     </div>
   </header>
 
-  <!-- Main Knowledge Base Content -->
+  <!-- Main Notebook Content -->
   <main class="kb-main">
     <!-- Mobile Tab Bar (NotebookLM style) -->
     <div class="kb-mobile-tabs" id="kb-mobile-tabs">
@@ -63,7 +63,7 @@
       <button class="kb-mobile-tab" data-tab="reports">Reports</button>
     </div>
     
-    <div class="knowledge-base knowledge-base-fullpage" id="knowledge-base">
+    <div class="notebook notebook-fullpage" id="notebook">
       <!-- Sources Sidebar (Collapsible) -->
       <div class="kb-sources-sidebar" id="kb-sources-sidebar">
         <div class="kb-sources-header">
@@ -349,9 +349,9 @@
   <script type="module">
     import { Storage } from './modules/storage.js';
     import { AIProcessor } from './modules/ai-processor.js';
-    import { KnowledgeBase } from './modules/knowledge-base.js';
+    import { Notebook } from './modules/notebook.js';
 
-    // Initialize Knowledge Base page
+    // Initialize Notebook page
     document.addEventListener('DOMContentLoaded', async () => {
       const storage = new Storage();
       await storage.init();
@@ -362,8 +362,8 @@
         aiProcessor.setApiKey(settings.apiKey);
       }
       
-      const knowledgeBase = new KnowledgeBase();
-      knowledgeBase.init(storage, aiProcessor, () => {
+      const notebook = new Notebook();
+      notebook.init(storage, aiProcessor, () => {
         storage.save();
       });
       
@@ -371,7 +371,7 @@
       const addReportBtn = document.getElementById('kb-add-report-btn');
       if (addReportBtn) {
         addReportBtn.addEventListener('click', () => {
-          knowledgeBase.showReportModal();
+          notebook.showReportModal();
         });
       }
       
@@ -383,7 +383,7 @@
           if (chatInput && prompt) {
             chatInput.value = prompt;
             chatInput.focus();
-            knowledgeBase.sendMessage();
+            notebook.sendMessage();
           }
         });
       });
@@ -392,7 +392,7 @@
       const createFolderBtn = document.getElementById('kb-create-folder-btn');
       if (createFolderBtn) {
         createFolderBtn.addEventListener('click', () => {
-          knowledgeBase.createFolder();
+          notebook.createFolder();
         });
       }
       
@@ -448,7 +448,7 @@
           storage.updateSettings({ apiKey: key });
           aiProcessor.setApiKey(key);
           settingsModal.classList.remove('visible');
-          knowledgeBase.showToast('Settings saved', 'success');
+          notebook.showToast('Settings saved', 'success');
         });
       }
       

@@ -1057,11 +1057,16 @@ class Storage {
   // =====================================================
 
   /**
-   * Get Knowledge Base data
+   * Get Notebook data
    */
-  getKnowledgeBase() {
-    if (!this.data.knowledgeBase) {
-      this.data.knowledgeBase = {
+  getNotebook() {
+    // Backward compatibility: migrate old knowledgeBase key to notebook
+    if (this.data.knowledgeBase && !this.data.notebook) {
+      this.data.notebook = this.data.knowledgeBase;
+      delete this.data.knowledgeBase;
+    }
+    if (!this.data.notebook) {
+      this.data.notebook = {
         sources: [],
         conversations: [],
         reports: [],
@@ -1069,107 +1074,107 @@ class Storage {
       };
     }
     // Ensure folders array exists (migration for older data)
-    if (!this.data.knowledgeBase.folders) {
-      this.data.knowledgeBase.folders = [];
+    if (!this.data.notebook.folders) {
+      this.data.notebook.folders = [];
     }
-    return this.data.knowledgeBase;
+    return this.data.notebook;
   }
 
   /**
-   * Update Knowledge Base data
+   * Update Notebook data
    */
-  updateKnowledgeBase(updates) {
-    if (!this.data.knowledgeBase) {
-      this.data.knowledgeBase = {
+  updateNotebook(updates) {
+    if (!this.data.notebook) {
+      this.data.notebook = {
         sources: [],
         conversations: [],
         reports: [],
         folders: []
       };
     }
-    this.data.knowledgeBase = {
-      ...this.data.knowledgeBase,
+    this.data.notebook = {
+      ...this.data.notebook,
       ...updates
     };
     this.data.lastUpdated = new Date().toISOString();
     this.scheduleSave();
-    return this.data.knowledgeBase;
+    return this.data.notebook;
   }
 
   /**
-   * Add a source to Knowledge Base
+   * Add a source to Notebook
    */
-  addKBSource(source) {
-    const kb = this.getKnowledgeBase();
+  addNBSource(source) {
+    const nb = this.getNotebook();
     const newSource = {
       ...source,
       id: source.id || 'src_' + Date.now(),
       addedAt: source.addedAt || new Date().toISOString(),
       freshness: source.freshness || 'current'
     };
-    kb.sources.push(newSource);
+    nb.sources.push(newSource);
     this.data.lastUpdated = new Date().toISOString();
     this.scheduleSave();
     return newSource;
   }
 
   /**
-   * Update a Knowledge Base source
+   * Update a Notebook source
    */
-  updateKBSource(sourceId, updates) {
-    const kb = this.getKnowledgeBase();
-    const index = kb.sources.findIndex(s => s.id === sourceId);
+  updateNBSource(sourceId, updates) {
+    const nb = this.getNotebook();
+    const index = nb.sources.findIndex(s => s.id === sourceId);
     if (index !== -1) {
-      kb.sources[index] = { ...kb.sources[index], ...updates };
+      nb.sources[index] = { ...nb.sources[index], ...updates };
       this.data.lastUpdated = new Date().toISOString();
       this.scheduleSave();
-      return kb.sources[index];
+      return nb.sources[index];
     }
     return null;
   }
 
   /**
-   * Delete a Knowledge Base source
+   * Delete a Notebook source
    */
-  deleteKBSource(sourceId) {
-    const kb = this.getKnowledgeBase();
-    const index = kb.sources.findIndex(s => s.id === sourceId);
+  deleteNBSource(sourceId) {
+    const nb = this.getNotebook();
+    const index = nb.sources.findIndex(s => s.id === sourceId);
     if (index !== -1) {
-      kb.sources.splice(index, 1);
+      nb.sources.splice(index, 1);
       this.data.lastUpdated = new Date().toISOString();
       this.scheduleSave();
     }
-    return this.data.knowledgeBase;
+    return this.data.notebook;
   }
 
   /**
-   * Add a report to Knowledge Base
+   * Add a report to Notebook
    */
-  addKBReport(report) {
-    const kb = this.getKnowledgeBase();
+  addNBReport(report) {
+    const nb = this.getNotebook();
     const newReport = {
       ...report,
       id: report.id || 'rpt_' + Date.now(),
       createdAt: report.createdAt || new Date().toISOString()
     };
-    kb.reports.push(newReport);
+    nb.reports.push(newReport);
     this.data.lastUpdated = new Date().toISOString();
     this.scheduleSave();
     return newReport;
   }
 
   /**
-   * Delete a Knowledge Base report
+   * Delete a Notebook report
    */
-  deleteKBReport(reportId) {
-    const kb = this.getKnowledgeBase();
-    const index = kb.reports.findIndex(r => r.id === reportId);
+  deleteNBReport(reportId) {
+    const nb = this.getNotebook();
+    const index = nb.reports.findIndex(r => r.id === reportId);
     if (index !== -1) {
-      kb.reports.splice(index, 1);
+      nb.reports.splice(index, 1);
       this.data.lastUpdated = new Date().toISOString();
       this.scheduleSave();
     }
-    return this.data.knowledgeBase;
+    return this.data.notebook;
   }
 
   /**

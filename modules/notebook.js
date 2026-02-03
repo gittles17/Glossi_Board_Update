@@ -1,9 +1,9 @@
 /**
- * Knowledge Base Module
+ * Notebook Module
  * Handles source management, AI chat, and report generation
  */
 
-class KnowledgeBase {
+class Notebook {
   constructor() {
     this.sources = [];
     this.conversations = [];
@@ -45,7 +45,7 @@ class KnowledgeBase {
   }
 
   /**
-   * Initialize the Knowledge Base
+   * Initialize the Notebook
    */
   init(storage, aiProcessor, onUpdate) {
     this.storage = storage;
@@ -72,35 +72,35 @@ class KnowledgeBase {
    * Load data from storage
    */
   loadData() {
-    const kbData = this.storage.getKnowledgeBase();
-    this.sources = kbData.sources || [];
-    this.conversations = kbData.conversations || [];
-    this.reports = kbData.reports || [];
-    this.folders = kbData.folders || [];
+    const nbData = this.storage.getNotebook();
+    this.sources = nbData.sources || [];
+    this.conversations = nbData.conversations || [];
+    this.reports = nbData.reports || [];
+    this.folders = nbData.folders || [];
     
     // Load dashboard source preferences
-    if (kbData.dashboardSources) {
-      Object.keys(kbData.dashboardSources).forEach(key => {
+    if (nbData.dashboardSources) {
+      Object.keys(nbData.dashboardSources).forEach(key => {
         if (this.dashboardSources[key]) {
-          this.dashboardSources[key].enabled = kbData.dashboardSources[key].enabled;
+          this.dashboardSources[key].enabled = nbData.dashboardSources[key].enabled;
         }
       });
     }
     
     // Load enabled quick links state
-    if (kbData.enabledQuickLinks) {
-      this.enabledQuickLinks = kbData.enabledQuickLinks;
+    if (nbData.enabledQuickLinks) {
+      this.enabledQuickLinks = nbData.enabledQuickLinks;
     }
     
     // Load cached quick link content
-    if (kbData.quickLinkContent) {
-      this.quickLinkContent = kbData.quickLinkContent;
+    if (nbData.quickLinkContent) {
+      this.quickLinkContent = nbData.quickLinkContent;
     }
     
     // Load cached AI summary
-    if (kbData.sourceSummary) {
-      this.sourceSummary = kbData.sourceSummary;
-      this.summaryHash = kbData.summaryHash;
+    if (nbData.sourceSummary) {
+      this.sourceSummary = nbData.sourceSummary;
+      this.summaryHash = nbData.summaryHash;
     }
     
     // Create a new conversation if none exists
@@ -121,7 +121,7 @@ class KnowledgeBase {
       dashboardSourcePrefs[key] = { enabled: this.dashboardSources[key].enabled };
     });
     
-    this.storage.updateKnowledgeBase({
+    this.storage.updateNotebook({
       sources: this.sources,
       conversations: this.conversations,
       reports: this.reports,
@@ -1793,7 +1793,7 @@ Guidelines:
   }
 
   /**
-   * Render the Knowledge Base
+   * Render the Notebook
    */
   render() {
     this.renderSources();
@@ -3190,6 +3190,6 @@ ${context.substring(0, 4000)}`;
 }
 
 // Export class and singleton instance
-export { KnowledgeBase };
-export const knowledgeBase = new KnowledgeBase();
-export default knowledgeBase;
+export { Notebook };
+export const notebook = new Notebook();
+export default notebook;

@@ -6,7 +6,7 @@
 import { storage } from './modules/storage.js';
 import { aiProcessor } from './modules/ai-processor.js';
 import { meetingsManager } from './modules/meetings.js';
-import { knowledgeBase } from './modules/knowledge-base.js';
+import { notebook } from './modules/notebook.js';
 
 // OpenAI API key for Whisper transcription (set in settings)
 let OPENAI_API_KEY = null;
@@ -83,8 +83,8 @@ class GlossiDashboard {
     // Initialize meetings manager
     meetingsManager.init(storage, (meeting) => this.renderMeeting(meeting));
 
-    // Initialize Knowledge Base
-    knowledgeBase.init(storage, aiProcessor, () => this.render());
+    // Initialize Notebook
+    notebook.init(storage, aiProcessor, () => this.render());
 
     // Setup UI event listeners
     this.setupEventListeners();
@@ -1658,10 +1658,10 @@ RULES:
   }
 
   /**
-   * Render talking points (deprecated - section removed, using Knowledge Base instead)
+   * Render talking points (deprecated - section removed, using Notebook instead)
    */
   renderTalkingPoints() {
-    // Talking points section was removed - using Knowledge Base instead
+    // Talking points section was removed - using Notebook instead
     return;
   }
 
@@ -2004,8 +2004,8 @@ RULES:
       this.renderQuickLinks();
       
       // Update KB sources panel if it exists
-      if (knowledgeBase && typeof knowledgeBase.renderSources === 'function') {
-        knowledgeBase.renderSources();
+      if (notebook && typeof notebook.renderSources === 'function') {
+        notebook.renderSources();
       }
     }, 150);
   }
@@ -2216,8 +2216,8 @@ RULES:
     this.renderQuickLinks();
     
     // Update KB sources panel if it exists
-    if (knowledgeBase && typeof knowledgeBase.renderSources === 'function') {
-      knowledgeBase.renderSources();
+    if (notebook && typeof notebook.renderSources === 'function') {
+      notebook.renderSources();
     }
   }
 
@@ -2248,8 +2248,8 @@ RULES:
       this.renderSettingsStatus();
       
       // Update KB sources panel if it exists
-      if (knowledgeBase && typeof knowledgeBase.renderSources === 'function') {
-        knowledgeBase.renderSources();
+      if (notebook && typeof notebook.renderSources === 'function') {
+        notebook.renderSources();
       }
     }, 150);
   }
@@ -2750,7 +2750,7 @@ RULES:
    * Open share email modal with section options
    */
   openShareEmailModal() {
-    const kb = storage.getKnowledgeBase();
+    const nb = storage.getNotebook();
     const reports = kb?.reports || [];
     const reportsHint = document.getElementById('share-reports-hint');
     const reportsCheckbox = document.getElementById('share-reports');
@@ -2953,7 +2953,7 @@ RULES:
     
     // KB Reports (only selected ones)
     if (sections.reports) {
-      const kb = storage.getKnowledgeBase();
+      const nb = storage.getNotebook();
       const allReports = kb?.reports || [];
       const reportsList = document.getElementById('share-reports-list');
       const selectedIds = new Set();
@@ -6914,7 +6914,7 @@ Content: "${content.substring(0, 300)}"`
    * Render quotes library (deprecated - section removed)
    */
   renderQuotes() {
-    // Quotes section was removed - using Knowledge Base instead
+    // Quotes section was removed - using Notebook instead
     return;
   }
 
@@ -6962,7 +6962,7 @@ Content: "${content.substring(0, 300)}"`
    * Render scratchpad list (deprecated - section removed)
    */
   renderScratchpad() {
-    // Scratchpad section was removed - using Knowledge Base instead
+    // Scratchpad section was removed - using Notebook instead
     return;
   }
 
