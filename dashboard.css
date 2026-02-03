@@ -9615,7 +9615,7 @@ body.sidebar-open .top-nav {
   .kb-sources-list {
     flex: 1;
     overflow-y: auto;
-    padding: 0 var(--space-3) calc(var(--space-6) + env(safe-area-inset-bottom, 34px));
+    padding: 0 var(--space-3) calc(100px + env(safe-area-inset-bottom, 34px));
     -webkit-overflow-scrolling: touch;
   }
   
@@ -10461,7 +10461,7 @@ a.dropdown-item {
 
   /* Knowledge Base sources list - extra bottom padding for home indicator */
   .kb-sources-list {
-    padding-bottom: calc(var(--space-8) + env(safe-area-inset-bottom, 34px)) !important;
+    padding-bottom: calc(120px + env(safe-area-inset-bottom, 34px)) !important;
   }
 
   /* KB page with safe area */
