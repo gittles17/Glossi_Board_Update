@@ -197,10 +197,6 @@
       <div class="panel-header">
         <h2>Week at a Glance</h2>
         <div class="header-controls">
-          <select id="meeting-select" class="time-filter">
-            <option value="latest">This Week</option>
-            <!-- Populated by JS with past weeks -->
-          </select>
           <button class="btn btn-icon btn-secondary" id="add-notes-btn" title="Add Notes">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -228,12 +224,18 @@
                     <h4>Summary</h4>
                     <span class="item-count" id="summary-count"></span>
                   </div>
-                  <button class="add-btn-small" id="add-summary-btn" title="Add summary point">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                  </button>
+                  <div class="section-header-right">
+                    <select id="meeting-select" class="time-filter time-filter-small">
+                      <option value="latest">This Week</option>
+                      <!-- Populated by JS with past weeks -->
+                    </select>
+                    <button class="add-btn-small" id="add-summary-btn" title="Add summary point">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <div class="section-content" id="summary-content">
                   <ul class="summary-list" id="meeting-summary">
@@ -269,9 +271,8 @@
               </div>
             </div>
 
-            <!-- Right Column: Action Items -->
+            <!-- Right Column: Action Items (Independent) -->
             <div class="meeting-column-right">
-              <!-- Action Items -->
               <div class="meeting-section collapsible" id="actions-section">
                 <div class="section-header-row clickable" data-toggle="actions-content">
                   <div class="section-header-left">
@@ -393,6 +394,31 @@
           </svg>
           Process with AI
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Todo Review Modal -->
+  <div class="modal-overlay" id="todo-review-modal">
+    <div class="modal modal-medium">
+      <div class="modal-header">
+        <h2>Review Action Items</h2>
+        <button class="btn-icon modal-close" id="todo-review-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description">Select which action items to add to your todo list. You can edit the text and assignee.</p>
+        <div class="todo-review-list" id="todo-review-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="todo-review-skip">Skip All</button>
+        <button class="btn btn-primary" id="todo-review-add">Add Selected</button>
       </div>
     </div>
   </div>

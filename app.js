@@ -80,12 +80,304 @@ class GlossiDashboard {
     // Render initial state
     this.render();
 
+    // Render independent action items
+    this.renderActionItems();
+
     // Trigger entrance animations
     requestAnimationFrame(() => {
       this.animateStatsOnLoad();
     });
 
     console.log('Glossi Dashboard initialized');
+  }
+
+  /**
+   * Render independent action items in the meeting panel
+   */
+  renderActionItems() {
+    const container = document.getElementById('todo-list');
+    const progressEl = document.getElementById('todo-progress');
+    const progressBar = document.getElementById('action-progress-fill');
+    const allTodos = storage.getAllTodos();
+    
+    // Update progress
+    const progress = storage.getTodoProgress();
+    progressEl.textContent = `${progress.completed}/${progress.total} complete`;
+    const percentage = progress.total > 0 ? (progress.completed / progress.total) * 100 : 0;
+    progressBar.style.width = `${percentage}%`;
+    
+    if (allTodos.length === 0) {
+      container.innerHTML = '<div class="empty-state">No action items yet.</div>';
+      return;
+    }
+    
+    // Separate active and completed
+    const activeTodos = allTodos.filter(t => !t.completed);
+    const completedTodos = allTodos.filter(t => t.completed);
+    
+    // Group by owner
+    const groupByOwner = (todos) => {
+      const grouped = {};
+      todos.forEach(todo => {
+        const owner = this.resolveOwnerName(todo.owner);
+        if (!grouped[owner]) grouped[owner] = [];
+        grouped[owner].push(todo);
+      });
+      return grouped;
+    };
+    
+    // Render todo item HTML
+    const renderTodoItem = (todo) => `
+      <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}" draggable="true">
+        <div class="todo-checkbox ${todo.completed ? 'checked' : ''}" onclick="window.dashboard.toggleTodo('${todo.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <div class="todo-content">
+          <span class="todo-text editable-item" contenteditable="true" data-type="todo-text" data-todo-id="${todo.id}">${todo.text}</span>
+          <span class="todo-owner-edit editable-item" contenteditable="true" data-type="todo-owner" data-todo-id="${todo.id}" title="Click to change assignee">${this.resolveOwnerName(todo.owner)}</span>
+        </div>
+        <button class="delete-btn" onclick="window.dashboard.deleteTodo('${todo.id}')" title="Delete">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    `;
+    
+    let html = '';
+    
+    // Render active todos grouped by owner
+    if (activeTodos.length > 0) {
+      const activeByOwner = groupByOwner(activeTodos);
+      Object.entries(activeByOwner).forEach(([owner, todos]) => {
+        html += `
+          <div class="todo-group" data-owner="${owner}">
+            <div class="todo-group-header">${owner}</div>
+            <div class="todo-group-items">
+              ${todos.map(renderTodoItem).join('')}
+            </div>
+          </div>
+        `;
+      });
+    } else {
+      html += '<div class="empty-state">All caught up!</div>';
+    }
+    
+    // Render completed section
+    if (completedTodos.length > 0) {
+      const completedByOwner = groupByOwner(completedTodos);
+      html += `
+        <div class="todo-completed-section">
+          <button class="todo-completed-toggle" onclick="this.parentElement.classList.toggle('expanded')">
+            <svg class="toggle-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+            <span>Completed (${completedTodos.length})</span>
+          </button>
+          <div class="todo-completed-content">
+            ${Object.entries(completedByOwner).map(([owner, todos]) => `
+              <div class="todo-group" data-owner="${owner}">
+                <div class="todo-group-header">${owner}</div>
+                <div class="todo-group-items">
+                  ${todos.map(renderTodoItem).join('')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+    
+    container.innerHTML = html;
+    this.setupTodoEditListeners(container);
+    this.setupTodoDragDrop();
+  }
+
+  /**
+   * Setup editable listeners for todo items
+   */
+  setupTodoEditListeners(container) {
+    container.querySelectorAll('.editable-item').forEach(item => {
+      item.addEventListener('blur', (e) => {
+        const todoId = e.target.dataset.todoId;
+        const type = e.target.dataset.type;
+        const newValue = e.target.textContent.trim();
+        
+        if (type === 'todo-text' && newValue) {
+          storage.updateTodo(todoId, { text: newValue });
+        } else if (type === 'todo-owner' && newValue) {
+          storage.updateTodo(todoId, { owner: this.resolveOwnerName(newValue) });
+          this.renderActionItems(); // Re-render to regroup by owner
+        }
+      });
+      
+      item.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.target.blur();
+        }
+      });
+    });
+  }
+
+  /**
+   * Toggle a todo completion
+   */
+  toggleTodo(todoId) {
+    const todo = storage.getAllTodos().find(t => t.id === todoId);
+    if (todo) {
+      storage.updateTodo(todoId, { completed: !todo.completed });
+      this.renderActionItems();
+    }
+  }
+
+  /**
+   * Delete a todo
+   */
+  deleteTodo(todoId) {
+    storage.deleteTodo(todoId);
+    this.renderActionItems();
+  }
+
+  /**
+   * Add a new todo
+   */
+  addNewTodo() {
+    const newTodo = storage.addTodo({
+      text: 'New action item',
+      owner: 'Unassigned'
+    });
+    
+    this.renderActionItems();
+    
+    // Focus the new todo for editing
+    setTimeout(() => {
+      const newEl = document.querySelector(`[data-todo-id="${newTodo.id}"] .todo-text`);
+      if (newEl) {
+        newEl.focus();
+        const range = document.createRange();
+        range.selectNodeContents(newEl);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+      }
+    }, 50);
+  }
+
+  /**
+   * Setup drag and drop for todo reordering
+   */
+  setupTodoDragDrop() {
+    // Simplified drag-drop for independent todos (reorder only)
+    const todoItems = document.querySelectorAll('.todo-item[draggable="true"]');
+    const todoGroups = document.querySelectorAll('.todo-group-items');
+
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (isTouchDevice) {
+      todoItems.forEach(item => item.removeAttribute('draggable'));
+      return;
+    }
+
+    let draggedId = null;
+
+    todoItems.forEach(item => {
+      item.addEventListener('dragstart', (e) => {
+        draggedId = item.dataset.todoId;
+        e.dataTransfer.setData('text/plain', draggedId);
+        item.classList.add('dragging');
+      });
+
+      item.addEventListener('dragend', () => {
+        item.classList.remove('dragging');
+        draggedId = null;
+        todoGroups.forEach(group => group.classList.remove('drag-over'));
+      });
+    });
+
+    todoGroups.forEach(group => {
+      group.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        group.classList.add('drag-over');
+      });
+
+      group.addEventListener('dragleave', (e) => {
+        if (!group.contains(e.relatedTarget)) {
+          group.classList.remove('drag-over');
+        }
+      });
+
+      group.addEventListener('drop', (e) => {
+        e.preventDefault();
+        group.classList.remove('drag-over');
+        
+        const todoId = e.dataTransfer.getData('text/plain');
+        const newOwner = group.closest('.todo-group').dataset.owner;
+        
+        if (todoId && newOwner) {
+          storage.updateTodo(todoId, { owner: newOwner });
+          this.renderActionItems();
+        }
+      });
+    });
+  }
+
+  /**
+   * Show todo review modal for imported action items
+   */
+  showTodoReviewModal(todos) {
+    if (!todos || todos.length === 0) return;
+    
+    this.pendingTodos = todos.map((t, i) => ({
+      id: `pending-${i}`,
+      text: t.text,
+      owner: t.owner || 'Unassigned',
+      selected: true
+    }));
+    
+    const container = document.getElementById('todo-review-list');
+    container.innerHTML = this.pendingTodos.map(todo => `
+      <div class="todo-review-item" data-id="${todo.id}">
+        <input type="checkbox" class="todo-review-checkbox" ${todo.selected ? 'checked' : ''} data-id="${todo.id}">
+        <div class="todo-review-content">
+          <input type="text" class="todo-review-text" value="${todo.text}" data-id="${todo.id}">
+          <input type="text" class="todo-review-owner" value="${todo.owner}" data-id="${todo.id}" placeholder="Assignee">
+        </div>
+      </div>
+    `).join('');
+    
+    this.showModal('todo-review-modal');
+  }
+
+  /**
+   * Add selected todos from review modal
+   */
+  addSelectedTodos() {
+    const items = document.querySelectorAll('.todo-review-item');
+    let addedCount = 0;
+    
+    items.forEach(item => {
+      const checkbox = item.querySelector('.todo-review-checkbox');
+      const textInput = item.querySelector('.todo-review-text');
+      const ownerInput = item.querySelector('.todo-review-owner');
+      
+      if (checkbox.checked && textInput.value.trim()) {
+        storage.addTodo({
+          text: textInput.value.trim(),
+          owner: this.resolveOwnerName(ownerInput.value.trim() || 'Unassigned')
+        });
+        addedCount++;
+      }
+    });
+    
+    this.hideModal('todo-review-modal');
+    this.pendingTodos = [];
+    this.renderActionItems();
+    
+    if (addedCount > 0) {
+      this.showToast(`Added ${addedCount} action item${addedCount > 1 ? 's' : ''}`, 'success');
+    }
   }
 
   /**
@@ -536,6 +828,19 @@ class GlossiDashboard {
       this.hideModal('settings-modal');
     });
 
+    // Todo review modal
+    document.getElementById('todo-review-close')?.addEventListener('click', () => {
+      this.hideModal('todo-review-modal');
+      this.pendingTodos = [];
+    });
+    document.getElementById('todo-review-skip')?.addEventListener('click', () => {
+      this.hideModal('todo-review-modal');
+      this.pendingTodos = [];
+    });
+    document.getElementById('todo-review-add')?.addEventListener('click', () => {
+      this.addSelectedTodos();
+    });
+
     document.getElementById('toggle-api-key').addEventListener('click', (e) => {
       const input = document.getElementById('api-key');
       if (input.type === 'password') {
@@ -577,10 +882,7 @@ class GlossiDashboard {
     });
 
     document.getElementById('add-todo-btn').addEventListener('click', () => {
-      const meeting = meetingsManager.getCurrentMeeting();
-      if (meeting) {
-        this.addNewTodo(meeting.id);
-      }
+      this.addNewTodo();
     });
 
     document.getElementById('add-decision-btn').addEventListener('click', () => {
@@ -2248,6 +2550,7 @@ RULES:
     // Save and re-render
     meetingsManager.updateMeeting(meeting);
     this.renderMeeting(meeting);
+    this.renderMasterTodoList();
   }
 
   /**
@@ -3305,6 +3608,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
     if (todo) {
       todo.text = newText;
       meetingsManager.updateMeeting(meeting);
+      this.renderMasterTodoList();
     }
   }
 
@@ -3333,6 +3637,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       
       todo.owner = resolvedOwner;
       meetingsManager.updateMeeting(meeting);
+      this.renderMasterTodoList();
     }
   }
 
@@ -3419,6 +3724,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       meeting.todos.splice(index, 1);
       meetingsManager.updateMeeting(meeting);
       this.renderMeeting(meeting);
+      this.renderMasterTodoList();
     }, 150);
   }
 
@@ -3599,6 +3905,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
     
     // Re-render and focus the new item
     this.renderMeeting(meeting);
+    this.renderMasterTodoList();
     
     // Focus the new todo text for immediate editing
     setTimeout(() => {
@@ -3665,6 +3972,8 @@ Format this into a clean, professional weekly update email. Return as JSON with 
         // Persist in background
         meetingsManager.updateMeeting(meeting);
         
+        // Sync master todo list
+        this.renderMasterTodoList();
       }
     }
   }
@@ -3758,6 +4067,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
     this.hideModal('notes-modal');
     this.renderMeetingSelector();
     this.renderMeeting(meeting);
+    this.renderMasterTodoList();
   }
 
   /**
@@ -5892,6 +6202,7 @@ RULES:
       completed: false
     });
     meetingsManager.updateMeeting(meeting);
+    this.renderMasterTodoList();
   }
 
   /**
@@ -7606,13 +7917,21 @@ Respond with just the category name (core, traction, market, or testimonials) an
     let pipelineChanged = false;
 
     if (this.pendingReview.type === 'meeting') {
-      // Create the meeting
-      console.log('Creating meeting with data:', this.pendingReview.aiData);
+      // Extract todos for review (don't auto-add them to meeting)
+      const extractedTodos = this.pendingReview.aiData.todos || [];
+      
+      // Create the meeting WITHOUT todos (summary and decisions auto-save)
+      const meetingData = {
+        ...this.pendingReview.aiData,
+        todos: [] // Todos go through review modal
+      };
+      
+      console.log('Creating meeting with data:', meetingData);
       const meeting = meetingsManager.createMeeting(
         this.pendingReview.title,
         this.pendingReview.date,
         this.pendingReview.rawNotes,
-        this.pendingReview.aiData
+        meetingData
       );
       console.log('Meeting created:', meeting);
 
@@ -7660,7 +7979,15 @@ Respond with just the category name (core, traction, market, or testimonials) an
 
       this.renderMeetingSelector();
       this.renderMeeting(meeting);
+      this.renderMasterTodoList();
       this.renderPipelineSection();
+      
+      // Show todo review modal if there are extracted todos
+      if (extractedTodos.length > 0) {
+        setTimeout(() => {
+          this.showTodoReviewModal(extractedTodos);
+        }, 300);
+      }
     } else if (this.pendingReview.type === 'content') {
       // Apply content updates
       const updates = this.pendingReview.aiData.suggestedUpdates || [];

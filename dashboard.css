@@ -768,6 +768,292 @@ body::after {
 }
 
 /* ============================================
+   MASTER TODO SIDEBAR
+   ============================================ */
+.master-todo-sidebar {
+  position: fixed;
+  left: 0;
+  top: var(--nav-height);
+  bottom: 0;
+  width: 280px;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border-color);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(0);
+  transition: transform var(--duration-normal) var(--ease-out-expo);
+}
+
+.master-todo-sidebar.collapsed {
+  transform: translateX(-280px);
+}
+
+.sidebar-toggle {
+  position: absolute;
+  right: -32px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 48px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-left: none;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: all var(--duration-fast);
+}
+
+.sidebar-toggle:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.master-todo-sidebar.collapsed .sidebar-toggle svg {
+  transform: rotate(180deg);
+}
+
+.sidebar-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-4);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.sidebar-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.todo-total-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.master-todo-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+}
+
+.master-todo-list .empty-state {
+  text-align: center;
+  padding: var(--space-6);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* Master todo groups by owner */
+.master-todo-group {
+  margin-bottom: var(--space-4);
+}
+
+.master-todo-group-header {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-blue);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: var(--space-2);
+}
+
+.master-todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+
+.master-todo-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.master-todo-item.completed {
+  opacity: 0.5;
+}
+
+.master-todo-item.completed .master-todo-text {
+  text-decoration: line-through;
+}
+
+.master-todo-checkbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-color-light);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast);
+  margin-top: 2px;
+}
+
+.master-todo-checkbox.checked {
+  background: var(--accent-green);
+  border-color: var(--accent-green);
+}
+
+.master-todo-checkbox svg {
+  opacity: 0;
+  color: white;
+  transition: opacity var(--duration-fast);
+}
+
+.master-todo-checkbox.checked svg {
+  opacity: 1;
+}
+
+.master-todo-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.master-todo-text {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.4;
+  word-break: break-word;
+  display: block;
+  outline: none;
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+  margin: -2px -4px;
+  transition: background var(--duration-fast);
+}
+
+.master-todo-text:focus {
+  background: var(--bg-elevated);
+}
+
+.master-todo-owner {
+  font-size: 11px;
+  color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  margin-top: var(--space-1);
+  display: inline-block;
+  outline: none;
+  transition: all var(--duration-fast);
+}
+
+.master-todo-owner:focus {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.master-todo-delete {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: all var(--duration-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+
+.master-todo-item:hover .master-todo-delete {
+  opacity: 0.5;
+}
+
+.master-todo-delete:hover {
+  opacity: 1 !important;
+  color: var(--accent-red);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Completed section in sidebar */
+.master-completed-section {
+  border-top: 1px solid var(--border-color);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+}
+
+.master-completed-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: var(--space-2);
+  width: 100%;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast);
+}
+
+.master-completed-toggle:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+}
+
+.master-completed-toggle .toggle-chevron {
+  transition: transform var(--duration-fast);
+}
+
+.master-completed-section.expanded .toggle-chevron {
+  transform: rotate(90deg);
+}
+
+.master-completed-content {
+  display: none;
+  padding-top: var(--space-2);
+}
+
+.master-completed-section.expanded .master-completed-content {
+  display: block;
+}
+
+/* Body offset when sidebar is open */
+body.sidebar-open {
+  padding-left: 280px;
+}
+
+body.sidebar-open .top-nav {
+  left: 280px;
+  width: calc(100% - 280px);
+}
+
+/* ============================================
    DASHBOARD LAYOUT
    ============================================ */
 .dashboard-container {
@@ -847,6 +1133,13 @@ body::after {
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 2px rgba(91, 176, 154, 0.15);
+}
+
+.time-filter-small {
+  padding: 4px 8px;
+  font-size: 11px;
+  padding-right: 22px;
+  background-position: right 6px center;
 }
 
 .btn-icon.btn-secondary {
@@ -4045,6 +4338,78 @@ body::after {
   background: rgba(255, 255, 255, 0.01);
 }
 
+.modal-description {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: var(--space-4);
+}
+
+/* ============================================
+   TODO REVIEW MODAL
+   ============================================ */
+.todo-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.todo-review-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.todo-review-checkbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--accent-green);
+}
+
+.todo-review-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.todo-review-text {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-base);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--duration-fast);
+}
+
+.todo-review-text:focus {
+  border-color: var(--accent-blue);
+}
+
+.todo-review-owner {
+  width: 120px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-base);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  outline: none;
+  transition: border-color var(--duration-fast);
+}
+
+.todo-review-owner:focus {
+  border-color: var(--accent-blue);
+}
+
 /* ============================================
    REVIEW MODAL
    ============================================ */
@@ -5098,6 +5463,33 @@ body::after {
   }
 }
 
+/* Mobile: Hide sidebar by default, show as overlay when toggled */
+@media (max-width: 1024px) {
+  .master-todo-sidebar {
+    transform: translateX(-280px);
+    box-shadow: var(--shadow-xl);
+  }
+  
+  .master-todo-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  
+  body.sidebar-open {
+    padding-left: 0;
+  }
+  
+  body.sidebar-open .top-nav {
+    left: 0;
+    width: 100%;
+  }
+  
+  .sidebar-toggle {
+    right: -40px;
+    width: 40px;
+    height: 56px;
+  }
+}
+
 @media (max-width: 768px) {
   html, body {
     touch-action: pan-y;
@@ -5110,6 +5502,15 @@ body::after {
 
   .nav-center {
     display: none;
+  }
+  
+  .master-todo-sidebar {
+    width: 100%;
+    max-width: 320px;
+  }
+  
+  .sidebar-toggle {
+    right: -44px;
   }
 
   .dashboard-container {

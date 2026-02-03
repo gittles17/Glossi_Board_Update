@@ -86,6 +86,7 @@ class Storage {
     this.data = null;
     this.settings = null;
     this.meetings = [];
+    this.todos = []; // Independent action items storage
     this.pipelineHistory = [];
     this.statHistory = [];
     this.fileHandle = null;
@@ -154,6 +155,32 @@ class Storage {
     }
     if (!this.meetings || this.meetings.length === 0) {
       this.meetings = safeJsonParse('glossi_meetings', []);
+    }
+    if (!this.todos || this.todos.length === 0) {
+      this.todos = safeJsonParse('glossi_todos', []);
+    }
+    
+    // Migration: Copy todos from meetings to independent storage (one-time)
+    if (this.todos.length === 0 && this.meetings && this.meetings.length > 0) {
+      const migratedTodos = [];
+      this.meetings.forEach(meeting => {
+        if (meeting.todos && meeting.todos.length > 0) {
+          meeting.todos.forEach(todo => {
+            migratedTodos.push({
+              id: todo.id || `todo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              text: todo.text,
+              owner: todo.owner || 'Unassigned',
+              completed: todo.completed || false,
+              createdAt: meeting.date || new Date().toISOString()
+            });
+          });
+        }
+      });
+      if (migratedTodos.length > 0) {
+        this.todos = migratedTodos;
+        this.saveTodos();
+        console.log(`Migrated ${migratedTodos.length} todos from meetings to independent storage`);
+      }
     }
     if (!this.pipelineHistory || this.pipelineHistory.length === 0) {
       this.pipelineHistory = safeJsonParse('glossi_pipeline_history', []);
@@ -260,6 +287,77 @@ class Storage {
    */
   getMeetingById(id) {
     return this.meetings.find(m => m.id === id);
+  }
+
+  /**
+   * Get all independent todos
+   */
+  getAllTodos() {
+    return this.todos || [];
+  }
+
+  /**
+   * Add a new todo
+   */
+  addTodo(todo) {
+    if (!this.todos) this.todos = [];
+    const newTodo = {
+      id: todo.id || `todo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      text: todo.text,
+      owner: todo.owner || 'Unassigned',
+      completed: todo.completed || false,
+      createdAt: new Date().toISOString()
+    };
+    this.todos.push(newTodo);
+    this.saveTodos();
+    return newTodo;
+  }
+
+  /**
+   * Update a todo
+   */
+  updateTodo(todoId, updates) {
+    const todo = this.todos.find(t => t.id === todoId);
+    if (todo) {
+      Object.assign(todo, updates);
+      this.saveTodos();
+    }
+    return todo;
+  }
+
+  /**
+   * Delete a todo
+   */
+  deleteTodo(todoId) {
+    const index = this.todos.findIndex(t => t.id === todoId);
+    if (index !== -1) {
+      this.todos.splice(index, 1);
+      this.saveTodos();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Save todos to localStorage
+   */
+  saveTodos() {
+    try {
+      localStorage.setItem('glossi_todos', JSON.stringify(this.todos));
+      this.syncToServer();
+    } catch (e) {
+      console.error('Failed to save todos:', e);
+    }
+  }
+
+  /**
+   * Get todo progress stats
+   */
+  getTodoProgress() {
+    const todos = this.todos || [];
+    const completed = todos.filter(t => t.completed).length;
+    const total = todos.length;
+    return { completed, total };
   }
 
   /**
@@ -1688,6 +1786,7 @@ class Storage {
     try {
       localStorage.setItem('glossi_data', JSON.stringify(this.data));
       localStorage.setItem('glossi_meetings', JSON.stringify(this.meetings));
+      localStorage.setItem('glossi_todos', JSON.stringify(this.todos));
       console.log('Data saved to localStorage');
       
       // Sync to server
