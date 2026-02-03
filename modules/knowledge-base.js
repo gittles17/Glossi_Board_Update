@@ -604,27 +604,54 @@ class KnowledgeBase {
         content = await file.text();
         
       } else if (isPdf) {
-        // Process PDF client-side using pdf.js (more reliable on mobile)
+        // Use Claude Vision OCR for reliable PDF processing on all devices
+        if (!this.aiProcessor || !this.aiProcessor.isConfigured()) {
+          throw new Error('Please add your Anthropic API key in Settings to process PDFs.');
+        }
+        
         try {
           const arrayBuffer = await file.arrayBuffer();
           const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-          
           metadata.pageCount = pdf.numPages;
+          
           const textParts = [];
+          const scale = 1.5;
           
           for (let i = 1; i <= pdf.numPages; i++) {
+            // Update progress
+            const source = this.sources.find(s => s.id === sourceId);
+            if (source) {
+              source.progress = Math.round((i / pdf.numPages) * 90);
+              this.renderSources();
+            }
+            
             const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join(' ');
-            if (pageText.trim()) {
-              textParts.push(`-- ${i} of ${pdf.numPages} --\n\n${pageText}`);
+            const viewport = page.getViewport({ scale });
+            
+            // Render page to canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const ctx = canvas.getContext('2d');
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            
+            // Convert to base64 and OCR with Claude Vision
+            const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+            const pageText = await this.aiProcessor.analyzeImageWithVision(
+              base64,
+              'image/jpeg',
+              'Extract ALL text from this PDF page exactly as written. Return only the text content, preserving structure. No descriptions.'
+            );
+            
+            if (pageText && pageText.trim()) {
+              textParts.push(`-- Page ${i} of ${pdf.numPages} --\n\n${pageText}`);
             }
           }
           
           content = textParts.join('\n\n');
           
           if (!content || content.trim().length < 10) {
-            throw new Error('PDF appears to be empty or contains only images. Try a text-based PDF.');
+            throw new Error('Could not extract text from PDF.');
           }
           
           metadata.extractedChars = content.length;
