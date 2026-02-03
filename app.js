@@ -2002,6 +2002,11 @@ RULES:
       storage.deleteQuickLink(linkId);
       this.data = storage.getData();
       this.renderQuickLinks();
+      
+      // Update KB sources panel if it exists
+      if (knowledgeBase && typeof knowledgeBase.renderSources === 'function') {
+        knowledgeBase.renderSources();
+      }
     }, 150);
   }
 
@@ -2209,6 +2214,11 @@ RULES:
     this.data = storage.getData();
     this.hideModal('link-modal');
     this.renderQuickLinks();
+    
+    // Update KB sources panel if it exists
+    if (knowledgeBase && typeof knowledgeBase.renderSources === 'function') {
+      knowledgeBase.renderSources();
+    }
   }
 
   /**
@@ -2236,6 +2246,11 @@ RULES:
       this.data = storage.getData();
       this.renderQuickLinks();
       this.renderSettingsStatus();
+      
+      // Update KB sources panel if it exists
+      if (knowledgeBase && typeof knowledgeBase.renderSources === 'function') {
+        knowledgeBase.renderSources();
+      }
     }, 150);
   }
 
