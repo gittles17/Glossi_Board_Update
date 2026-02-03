@@ -1573,6 +1573,11 @@ Guidelines:
       </div>
     `;
     messagesContainer.appendChild(indicator);
+    
+    // Auto-scroll to show typing indicator
+    requestAnimationFrame(() => {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    });
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
 
@@ -2405,7 +2410,10 @@ Guidelines:
       `;
     }).join('');
     
-    container.scrollTop = container.scrollHeight;
+    // Auto-scroll to bottom with small delay to ensure DOM updated
+    requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+    });
   }
 
   /**
