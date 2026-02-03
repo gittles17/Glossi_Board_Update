@@ -142,9 +142,8 @@ class KnowledgeBase {
         url: link.url
       };
       this.saveData();
-      this.showToast(`Fetched content from ${link.name}`, 'success');
     } catch (error) {
-      this.showToast(`Failed to fetch ${link.name}: ${error.message}`, 'error');
+      // Silently fail - content will be missing but link still works
     } finally {
       this.fetchingLinks.delete(linkId);
       this.renderSources();
@@ -422,7 +421,6 @@ class KnowledgeBase {
     const isImage = imageExtensions.includes(ext);
     
     if (!isText && !isPdf && !isAudio && !isImage) {
-      this.showToast(`Unsupported file type: ${file.name}`, 'error');
       return;
     }
     
@@ -565,7 +563,6 @@ KEY INFORMATION:
       // Remove failed source
       this.sources = this.sources.filter(s => s.id !== sourceId);
       this.renderSources();
-      this.showToast(`Failed to process file: ${error.message}`, 'error');
     }
   }
   
@@ -601,7 +598,6 @@ KEY INFORMATION:
     const content = document.getElementById('kb-source-text')?.value?.trim() || '';
     
     if (!content) {
-      this.showToast('Please enter some content', 'error');
       return;
     }
     
@@ -755,7 +751,6 @@ Respond with ONLY the category name (lowercase).`;
     if (!message) return;
     
     if (!this.aiProcessor || !this.aiProcessor.isConfigured()) {
-      this.showToast('Please configure your API key in settings', 'error');
       return;
     }
     
@@ -1264,19 +1259,16 @@ ${linksData}
     const prompt = promptInput?.value?.trim() || '';
     
     if (!prompt) {
-      this.showToast('Please describe what report you need', 'error');
       return;
     }
     
     if (!this.aiProcessor || !this.aiProcessor.isConfigured()) {
-      this.showToast('Please configure your API key in settings', 'error');
       return;
     }
     
     // Get enabled sources
     const enabledSources = this.sources.filter(s => s.enabled !== false);
     if (enabledSources.length === 0) {
-      this.showToast('Please add at least one source first', 'error');
       return;
     }
     
@@ -1343,7 +1335,6 @@ Only ask questions that would meaningfully improve the report. If the prompt is 
         this.generateReport();
       }
     } catch (error) {
-      this.showToast('Failed to evaluate request: ' + error.message, 'error');
       // Fall back to step 1
       const step1El = document.getElementById('kb-report-step-1');
       const loadingEl = document.getElementById('kb-report-loading');
@@ -1464,14 +1455,12 @@ Only ask questions that would meaningfully improve the report. If the prompt is 
    */
   async generateReport() {
     if (!this.aiProcessor || !this.aiProcessor.isConfigured()) {
-      this.showToast('Please configure your API key in settings', 'error');
       return;
     }
     
     // Get all enabled sources
     const enabledSources = this.sources.filter(s => s.enabled !== false);
     if (enabledSources.length === 0) {
-      this.showToast('Please add at least one source first', 'error');
       return;
     }
     
@@ -1559,7 +1548,6 @@ Guidelines:
       // Show report in modal
       this.showReportViewModal(report);
     } catch (error) {
-      this.showToast('Failed to generate report: ' + error.message, 'error');
       // Go back to step 1
       this.resetReportModal();
     }
@@ -2100,8 +2088,6 @@ Guidelines:
     
     this.saveData();
     this.renderSources();
-    
-    this.showToast(newState ? 'All sources enabled' : 'All sources disabled', 'success');
   }
 
   /**
@@ -2213,7 +2199,6 @@ Guidelines:
         this.expandedFolders[name] = true;
         this.saveData();
         this.renderSources();
-        this.showToast(`Folder "${name}" created`, 'success');
       } else {
         wrap.remove();
       }
@@ -2348,7 +2333,6 @@ Guidelines:
         }
         
         this.saveData();
-        this.showToast(`Folder renamed to "${newName}"`, 'success');
       }
       this.renderSources();
     };
@@ -2396,7 +2380,6 @@ Guidelines:
     
     this.saveData();
     this.renderSources();
-    this.showToast(`Folder "${folderName}" deleted`, 'success');
   }
 
   /**
