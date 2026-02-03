@@ -2656,19 +2656,54 @@ Guidelines:
       return;
     }
     
-    container.innerHTML = this.currentConversation.messages.map(msg => {
+    container.innerHTML = this.currentConversation.messages.map((msg, index) => {
       const roleClass = msg.role === 'user' ? 'kb-message-user' : 'kb-message-assistant';
+      const copyButton = msg.role === 'assistant' ? `
+        <div class="kb-message-actions">
+          <button class="kb-copy-btn" data-message-index="${index}" title="Copy to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+        </div>
+      ` : '';
       return `
         <div class="kb-message ${roleClass}">
           <div class="kb-message-content">
             ${this.formatMessageContent(msg.content)}
           </div>
+          ${copyButton}
         </div>
       `;
     }).join('');
     
+    // Add copy button event listeners
+    container.querySelectorAll('.kb-copy-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const index = parseInt(btn.dataset.messageIndex);
+        this.copyMessageToClipboard(index);
+      });
+    });
+    
     // Auto-scroll chat area to bottom (with delay to ensure DOM is fully rendered)
     this.scrollChatToBottom();
+  }
+  
+  /**
+   * Copy message content to clipboard
+   */
+  copyMessageToClipboard(messageIndex) {
+    if (!this.currentConversation || !this.currentConversation.messages[messageIndex]) return;
+    
+    const message = this.currentConversation.messages[messageIndex];
+    const text = message.content;
+    
+    navigator.clipboard.writeText(text).then(() => {
+      this.showToast('Copied to clipboard', 'success');
+    }).catch(() => {
+      this.showToast('Failed to copy', 'error');
+    });
   }
 
   /**

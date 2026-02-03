@@ -8750,6 +8750,45 @@ body.sidebar-open .top-nav {
   max-width: 100%;
 }
 
+/* Message copy button */
+.kb-message-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.kb-message:hover .kb-message-actions {
+  opacity: 1;
+}
+
+.kb-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.kb-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-hover);
+  color: var(--text-secondary);
+}
+
+.kb-copy-btn:active {
+  transform: scale(0.95);
+}
+
 .kb-message-content p {
   margin: 0;
   font-size: 14px;
