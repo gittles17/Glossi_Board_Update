@@ -9615,7 +9615,7 @@ body.sidebar-open .top-nav {
   .kb-sources-list {
     flex: 1;
     overflow-y: auto;
-    padding: 0 var(--space-3) var(--space-3);
+    padding: 0 var(--space-3) calc(var(--space-6) + env(safe-area-inset-bottom, 34px));
     -webkit-overflow-scrolling: touch;
   }
   
@@ -10186,10 +10186,13 @@ body.sidebar-open .top-nav {
    ============================================ */
 .kb-page {
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
   max-height: 100vh;
+  max-height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .kb-page .top-nav {
@@ -10454,6 +10457,16 @@ a.dropdown-item {
   /* Dropdown menus respect safe areas */
   .dropdown-menu {
     max-height: calc(100vh - var(--nav-height) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--space-8));
+  }
+
+  /* Knowledge Base sources list - extra bottom padding for home indicator */
+  .kb-sources-list {
+    padding-bottom: calc(var(--space-8) + env(safe-area-inset-bottom, 34px)) !important;
+  }
+
+  /* KB page with safe area */
+  .kb-page {
+    padding-bottom: env(safe-area-inset-bottom, 34px);
   }
 }
 
