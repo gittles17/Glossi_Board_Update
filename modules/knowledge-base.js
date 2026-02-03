@@ -1827,10 +1827,15 @@ Guidelines:
         const quickLinks = this.storage.getQuickLinks();
         const enabledCount = quickLinks.filter(l => this.enabledQuickLinks[l.id] !== false).length;
         const isExpanded = this.quickLinksExpanded;
+        const allEnabled = quickLinks.length > 0 && enabledCount === quickLinks.length;
+        const someEnabled = enabledCount > 0 && enabledCount < quickLinks.length;
         
         dashboardHtml += `
-          <div class="kb-dashboard-source kb-dashboard-expandable ${isExpanded ? 'expanded' : ''}" data-source-key="${key}">
+          <div class="kb-dashboard-source kb-dashboard-expandable ${isExpanded ? 'expanded' : ''} ${enabledCount === 0 ? 'disabled' : ''}" data-source-key="${key}">
             <div class="kb-dashboard-source-header" data-key="${key}">
+              <label class="kb-source-toggle-wrap" onclick="event.stopPropagation()" title="Toggle all quick links">
+                <input type="checkbox" class="kb-quicklinks-toggle-all" ${allEnabled ? 'checked' : ''} ${someEnabled ? 'data-indeterminate="true"' : ''}>
+              </label>
               <svg class="kb-dashboard-source-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
@@ -2108,6 +2113,18 @@ Guidelines:
           this.quickLinksExpanded = !this.quickLinksExpanded;
           this.renderSources();
         }
+      });
+    });
+    
+    // Toggle all quick links checkbox
+    container.querySelectorAll('.kb-quicklinks-toggle-all').forEach(toggle => {
+      // Set indeterminate state if needed
+      if (toggle.dataset.indeterminate === 'true') {
+        toggle.indeterminate = true;
+      }
+      
+      toggle.addEventListener('change', () => {
+        this.toggleAllQuickLinks();
       });
     });
     

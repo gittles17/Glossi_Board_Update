@@ -7910,6 +7910,14 @@ body.sidebar-open .top-nav {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* Toggle all quick links checkbox */
+.kb-quicklinks-toggle-all {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent-green);
+  cursor: pointer;
+}
+
 .kb-quicklinks-fetch-all {
   display: flex;
   align-items: center;
@@ -7917,7 +7925,7 @@ body.sidebar-open .top-nav {
   width: 20px;
   height: 20px;
   padding: 0;
-  margin-left: auto;
+  margin-left: var(--space-1);
   background: none;
   border: none;
   color: var(--text-muted);
@@ -9809,6 +9817,7 @@ body.sidebar-open .top-nav {
   
   /* Checkbox styling - normal size with proper accent */
   .kb-quicklink-toggle,
+  .kb-quicklinks-toggle-all,
   .kb-dashboard-toggle,
   .kb-source-toggle {
     width: 18px;
