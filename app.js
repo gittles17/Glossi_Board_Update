@@ -3288,9 +3288,6 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       const weekKey = this.getWeekKey(meetingDate);
       const weekRange = this.getWeekRange(meetingDate);
       
-      // Skip if this is the current week (handled separately)
-      if (weekKey === thisWeekKey) return;
-      
       // Keep only the most recent meeting per week
       if (!weekMap.has(weekKey) || new Date(meeting.date) > new Date(weekMap.get(weekKey).date)) {
         weekMap.set(weekKey, { meeting, weekRange });
@@ -3300,16 +3297,28 @@ Format this into a clean, professional weekly update email. Return as JSON with 
     // Check if there's a meeting this week
     const thisWeekMeeting = meetings.find(m => this.getWeekKey(new Date(m.date)) === thisWeekKey);
     
-    // Build select options
-    select.innerHTML = `<option value="latest">${thisWeekRange}${thisWeekMeeting ? '' : ' (empty)'}</option>`;
-
-    // Add past weeks (sorted by date, most recent first)
+    // Sort weeks by date (most recent first)
     const sortedWeeks = Array.from(weekMap.entries())
       .sort((a, b) => new Date(b[1].meeting.date) - new Date(a[1].meeting.date));
     
+    // Build select options - only show current week if it has a meeting
+    select.innerHTML = '';
+    
+    if (thisWeekMeeting) {
+      select.innerHTML += `<option value="latest">${thisWeekRange}</option>`;
+    }
+
+    // Add all weeks with meetings
     sortedWeeks.forEach(([weekKey, { meeting, weekRange }]) => {
+      // Skip current week (already added above if it has a meeting)
+      if (weekKey === thisWeekKey) return;
       select.innerHTML += `<option value="${meeting.id}">${weekRange}</option>`;
     });
+    
+    // If no meetings at all, show empty state
+    if (select.innerHTML === '') {
+      select.innerHTML = `<option value="latest">${thisWeekRange} (no notes)</option>`;
+    }
   }
 
   /**
