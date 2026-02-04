@@ -1158,6 +1158,7 @@ class GlossiDashboard {
     // Group deals by stage
     this.pipelineStageGroups = {};
     let grandTotal = 0;
+    let closedTotal = 0;
     
     pipelineData.forEach(deal => {
       const stage = deal.stage || 'Unknown';
@@ -1168,10 +1169,19 @@ class GlossiDashboard {
       const value = this.parseMoneyValue(deal.value);
       this.pipelineStageGroups[stage].total += value;
       grandTotal += value;
+      
+      // Track closed deals separately
+      if (stage.toLowerCase() === 'closed') {
+        closedTotal += value;
+      }
     });
     
     // Update header
     if (totalEl) totalEl.textContent = this.formatMoney(grandTotal);
+    const closedEl = document.getElementById('pipeline-closed-info');
+    if (closedEl) {
+      closedEl.textContent = closedTotal > 0 ? `/ ${this.formatMoney(closedTotal)} closed` : '';
+    }
     if (countEl) countEl.textContent = `(${pipelineData.length} deals)`;
     
     // Define stage order
