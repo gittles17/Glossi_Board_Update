@@ -313,17 +313,7 @@ class GlossiDashboard {
       return grouped;
     };
     
-    // Render owner dropdown options
-    const renderOwnerOptions = (currentOwner) => {
-      const resolved = this.resolveOwnerName(currentOwner);
-      let options = this.teamMembers.map(member => 
-        `<option value="${member}" ${member === resolved ? 'selected' : ''}>${member}</option>`
-      ).join('');
-      options += '<option value="__new__">+ New Owner...</option>';
-      return options;
-    };
-    
-    // Render todo item HTML - draggable is on the whole item
+    // Render todo item HTML - no owner tag, just text
     const renderTodoItem = (todo) => `
       <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}" draggable="true">
         <div class="todo-drag-handle" title="Drag to move">
@@ -343,9 +333,6 @@ class GlossiDashboard {
         </div>
         <div class="todo-content">
           <span class="todo-text editable-item" contenteditable="true" data-type="todo-text" data-todo-id="${todo.id}" draggable="false">${todo.text}</span>
-          <select class="todo-owner-select" data-todo-id="${todo.id}" title="Change assignee">
-            ${renderOwnerOptions(todo.owner)}
-          </select>
         </div>
         <button class="delete-btn" onclick="window.dashboard.deleteTodo('${todo.id}')" title="Delete">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -358,17 +345,26 @@ class GlossiDashboard {
     
     let html = '';
     
-    // Render active todos as flat list (no owner grouping)
+    // Render active todos grouped by owner
     if (activeTodos.length > 0) {
-      html += '<div class="todo-flat-list">';
-      html += activeTodos.map(renderTodoItem).join('');
-      html += '</div>';
+      const activeByOwner = groupByOwner(activeTodos);
+      Object.entries(activeByOwner).forEach(([owner, todos]) => {
+        html += `
+          <div class="todo-group" data-owner="${owner}">
+            <div class="todo-group-header">${owner}</div>
+            <div class="todo-group-items">
+              ${todos.map(renderTodoItem).join('')}
+            </div>
+          </div>
+        `;
+      });
     } else {
       html += '<div class="empty-state">All caught up!</div>';
     }
     
-    // Render completed section as flat list
+    // Render completed section grouped by owner
     if (completedTodos.length > 0) {
+      const completedByOwner = groupByOwner(completedTodos);
       html += `
         <div class="todo-completed-section">
           <button class="todo-completed-toggle" onclick="this.parentElement.classList.toggle('expanded')">
@@ -378,9 +374,14 @@ class GlossiDashboard {
             <span>Completed (${completedTodos.length})</span>
           </button>
           <div class="todo-completed-content">
-            <div class="todo-flat-list">
-              ${completedTodos.map(renderTodoItem).join('')}
-            </div>
+            ${Object.entries(completedByOwner).map(([owner, todos]) => `
+              <div class="todo-group" data-owner="${owner}">
+                <div class="todo-group-header">${owner}</div>
+                <div class="todo-group-items">
+                  ${todos.map(renderTodoItem).join('')}
+                </div>
+              </div>
+            `).join('')}
           </div>
         </div>
       `;
@@ -414,29 +415,6 @@ class GlossiDashboard {
         if (e.key === 'Enter') {
           e.preventDefault();
           e.target.blur();
-        }
-      });
-    });
-    
-    // Owner dropdown
-    container.querySelectorAll('.todo-owner-select').forEach(select => {
-      select.addEventListener('change', async (e) => {
-        const todoId = e.target.dataset.todoId;
-        const newValue = e.target.value;
-        
-        if (newValue === '__new__') {
-          // Prompt for new owner name
-          const newOwner = await this.showPrompt('New Owner Name', '');
-          if (newOwner && newOwner.trim()) {
-            const added = await this.addTeamMember(newOwner);
-            if (added) {
-              storage.updateTodo(todoId, { owner: newOwner.trim() });
-            }
-          }
-          this.renderActionItems();
-        } else {
-          storage.updateTodo(todoId, { owner: newValue });
-          this.renderActionItems();
         }
       });
     });
@@ -1232,7 +1210,8 @@ class GlossiDashboard {
     });
 
     document.getElementById('add-todo-btn').addEventListener('click', (e) => {
-      this.showTodoAddMenu(e.target);
+      e.stopPropagation();
+      this.showTodoAddMenu(e.currentTarget);
     });
 
     document.getElementById('add-decision-btn').addEventListener('click', () => {
