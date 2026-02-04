@@ -282,10 +282,10 @@ class GlossiDashboard {
       return grouped;
     };
     
-    // Render todo item HTML
+    // Render todo item HTML - draggable is on the whole item
     const renderTodoItem = (todo) => `
-      <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}">
-        <div class="todo-drag-handle" draggable="true" title="Drag to move">
+      <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}" draggable="true">
+        <div class="todo-drag-handle" title="Drag to move">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="9" cy="5" r="1.5"></circle>
             <circle cx="15" cy="5" r="1.5"></circle>
@@ -301,8 +301,8 @@ class GlossiDashboard {
           </svg>
         </div>
         <div class="todo-content">
-          <span class="todo-text editable-item" contenteditable="true" data-type="todo-text" data-todo-id="${todo.id}">${todo.text}</span>
-          <span class="todo-owner-edit editable-item" contenteditable="true" data-type="todo-owner" data-todo-id="${todo.id}" title="Click to change assignee">${this.resolveOwnerName(todo.owner)}</span>
+          <span class="todo-text editable-item" contenteditable="true" data-type="todo-text" data-todo-id="${todo.id}" draggable="false">${todo.text}</span>
+          <span class="todo-owner-edit editable-item" contenteditable="true" data-type="todo-owner" data-todo-id="${todo.id}" title="Click to change assignee" draggable="false">${this.resolveOwnerName(todo.owner)}</span>
         </div>
         <button class="delete-btn" onclick="window.dashboard.deleteTodo('${todo.id}')" title="Delete">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -443,12 +443,15 @@ class GlossiDashboard {
     container.dataset.dragSetup = 'true';
     const self = this;
     
-    // Dragstart - when user starts dragging a handle
+    // Dragstart - when user starts dragging a todo item
     container.addEventListener('dragstart', function(e) {
-      const handle = e.target.closest('.todo-drag-handle');
-      if (!handle) return;
+      // Don't drag if starting from contenteditable
+      if (e.target.closest('[contenteditable="true"]')) {
+        e.preventDefault();
+        return;
+      }
       
-      const todoItem = handle.closest('.todo-item');
+      const todoItem = e.target.closest('.todo-item');
       if (!todoItem) return;
       
       _draggedTodoId = todoItem.dataset.todoId;
