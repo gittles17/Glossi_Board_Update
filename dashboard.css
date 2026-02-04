@@ -4042,6 +4042,40 @@ body.sidebar-open .top-nav {
   margin: var(--space-2) 0;
 }
 
+.todo-empty-owners {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-color);
+}
+
+.todo-group-empty {
+  flex: 0 0 auto;
+  min-width: 100px;
+  opacity: 0.5;
+  transition: opacity var(--duration-fast);
+}
+
+.todo-group-empty:hover,
+.todo-group-empty:has(.drag-over) {
+  opacity: 1;
+}
+
+.todo-group-empty .todo-group-items {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.todo-empty-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 .todo-drag-handle {
   display: flex;
   align-items: center;

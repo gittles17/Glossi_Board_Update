@@ -319,19 +319,40 @@ class GlossiDashboard {
     let html = '';
     
     // Render active todos grouped by owner
-    if (activeTodos.length > 0) {
-      const activeByOwner = groupByOwner(activeTodos);
-      Object.entries(activeByOwner).forEach(([owner, todos]) => {
+    const activeByOwner = groupByOwner(activeTodos);
+    const ownersWithTodos = Object.keys(activeByOwner);
+    
+    // Render groups for owners with todos
+    ownersWithTodos.forEach(owner => {
+      const todos = activeByOwner[owner];
+      html += `
+        <div class="todo-group" data-owner="${owner}">
+          <div class="todo-group-header">${owner}</div>
+          <div class="todo-group-items">
+            ${todos.map(renderTodoItem).join('')}
+          </div>
+        </div>
+      `;
+    });
+    
+    // Add empty drop zones for team members without todos (for drag targets)
+    const emptyOwners = this.teamMembers.filter(m => !ownersWithTodos.includes(m));
+    if (emptyOwners.length > 0 && activeTodos.length > 0) {
+      html += '<div class="todo-empty-owners">';
+      emptyOwners.forEach(owner => {
         html += `
-          <div class="todo-group" data-owner="${owner}">
+          <div class="todo-group todo-group-empty" data-owner="${owner}">
             <div class="todo-group-header">${owner}</div>
             <div class="todo-group-items">
-              ${todos.map(renderTodoItem).join('')}
+              <span class="todo-empty-hint">Drop here</span>
             </div>
           </div>
         `;
       });
-    } else {
+      html += '</div>';
+    }
+    
+    if (activeTodos.length === 0) {
       html += '<div class="empty-state">All caught up!</div>';
     }
     
