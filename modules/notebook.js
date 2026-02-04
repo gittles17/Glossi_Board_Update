@@ -1227,8 +1227,30 @@ ${linksData}
     }
     
     if (googleSheetPipeline && googleSheetPipeline.deals && googleSheetPipeline.deals.length > 0) {
-      const deals = googleSheetPipeline.deals;
+      const allDeals = googleSheetPipeline.deals;
       const syncedAt = googleSheetPipeline.syncedAt;
+      
+      // Helper to check if a deal has a real monetary value
+      const hasMonetaryValue = (deal) => {
+        const value = deal.value || deal.amount || '';
+        if (!value || value === 'TBD' || value === 'tbd' || value === '-' || value === '') return false;
+        const parsed = this.parseMoneyValue(value);
+        return parsed > 0;
+      };
+      
+      // Helper to check if this is a real deal vs a task/follow-up
+      const isRealDeal = (deal) => {
+        const stage = (deal.stage || '').toLowerCase();
+        // Items with "unknown" stage and no monetary value are tasks, not deals
+        if (stage === 'unknown' || stage === '') {
+          return hasMonetaryValue(deal);
+        }
+        return true;
+      };
+      
+      // Separate real deals from tasks/follow-ups
+      const realDeals = allDeals.filter(isRealDeal);
+      const taskItems = allDeals.filter(d => !isRealDeal(d));
       
       if (syncedAt) {
         lines.push(`Sales Pipeline (synced ${new Date(syncedAt).toLocaleDateString()} ${new Date(syncedAt).toLocaleTimeString()}):`);
@@ -1236,12 +1258,19 @@ ${linksData}
         lines.push('Sales Pipeline:');
       }
       
-      // Calculate totals by stage
+      // Format value helper
+      const formatValue = (val) => {
+        if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+        if (val >= 1000) return `$${(val / 1000).toFixed(0)}K`;
+        return `$${val}`;
+      };
+      
+      // Calculate totals by stage (only for real deals)
       let totalPipeline = 0;
       let closedTotal = 0;
       const stageBreakdown = {};
       
-      deals.forEach(deal => {
+      realDeals.forEach(deal => {
         const value = this.parseMoneyValue(deal.value || deal.amount || '0');
         totalPipeline += value;
         const stage = deal.stage || 'unknown';
@@ -1257,19 +1286,13 @@ ${linksData}
         }
       });
       
-      // Format totals
-      const formatValue = (val) => {
-        if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
-        if (val >= 1000) return `$${(val / 1000).toFixed(0)}K`;
-        return `$${val}`;
-      };
-      
-      lines.push(`Total Pipeline Value: ${formatValue(totalPipeline)}`);
+      // Summary (only counts real deals with monetary values)
+      lines.push(`Total Pipeline Value: ${formatValue(totalPipeline)} (${realDeals.length} deals)`);
       lines.push(`Closed: ${formatValue(closedTotal)}`);
       lines.push(`Open Pipeline: ${formatValue(totalPipeline - closedTotal)}`);
       lines.push('');
       
-      // Stage breakdown
+      // Stage breakdown (only real deals)
       if (Object.keys(stageBreakdown).length > 0) {
         lines.push('Pipeline by Stage:');
         Object.entries(stageBreakdown).forEach(([stage, data]) => {
@@ -1278,8 +1301,8 @@ ${linksData}
         lines.push('');
       }
       
-      // All deals grouped by stage
-      lines.push('All Deals:');
+      // All real deals grouped by stage
+      lines.push('Active Deals:');
       Object.entries(stageBreakdown).forEach(([stage, data]) => {
         data.deals.forEach(deal => {
           const name = deal.name || deal.company || 'Unknown';
@@ -1289,6 +1312,17 @@ ${linksData}
           lines.push(`- [${stage}] ${name}: ${value}${contact}${notes}`);
         });
       });
+      
+      // List task/follow-up items separately (if any)
+      if (taskItems.length > 0) {
+        lines.push('');
+        lines.push(`Tasks/Follow-ups (${taskItems.length} items, not included in pipeline totals):`);
+        taskItems.forEach(item => {
+          const name = item.name || item.company || 'Unknown';
+          const notes = item.notes ? ` - ${item.notes}` : '';
+          lines.push(`- ${name}${notes}`);
+        });
+      }
       
       return lines.join('\n');
     }
