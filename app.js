@@ -466,10 +466,18 @@ class GlossiDashboard {
         group.classList.remove('drag-over');
         
         const todoId = e.dataTransfer.getData('text/plain');
-        const newOwner = group.closest('.todo-group').dataset.owner;
+        const targetGroup = group.closest('.todo-group');
+        const newOwner = targetGroup ? targetGroup.dataset.owner : null;
         
         if (todoId && newOwner) {
-          storage.updateTodo(todoId, { owner: newOwner });
+          // Get the todo to check if owner is actually changing
+          const todo = storage.getAllTodos().find(t => t.id === todoId);
+          const currentOwner = todo ? this.resolveOwnerName(todo.owner) : null;
+          
+          // Only update if moving to a different owner
+          if (currentOwner !== newOwner) {
+            storage.updateTodo(todoId, { owner: newOwner });
+          }
           this.renderActionItems();
         }
       });
