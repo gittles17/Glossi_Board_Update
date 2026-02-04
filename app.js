@@ -1175,7 +1175,7 @@ class GlossiDashboard {
     if (countEl) countEl.textContent = `(${pipelineData.length} deals)`;
     
     // Define stage order
-    const stageOrder = ['Connected', 'Discovery Call', 'Demo', 'Proposal', 'POC', 'Stalled'];
+    const stageOrder = ['Connected', 'Discovery Call', 'Demo', 'Proposal', 'POC', 'Closed', 'Stalled'];
     this.sortedPipelineStages = Object.keys(this.pipelineStageGroups).sort((a, b) => {
       const aIdx = stageOrder.indexOf(a);
       const bIdx = stageOrder.indexOf(b);
