@@ -371,6 +371,9 @@ class GlossiDashboard {
   setupTodoEditListeners(container) {
     container.querySelectorAll('.editable-item').forEach(item => {
       item.addEventListener('blur', (e) => {
+        // Don't save during drag operations
+        if (_draggedTodoId) return;
+        
         const todoId = e.target.dataset.todoId;
         const type = e.target.dataset.type;
         const newValue = e.target.textContent.trim();
