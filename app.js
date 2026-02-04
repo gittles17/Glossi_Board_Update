@@ -436,7 +436,7 @@ class GlossiDashboard {
    * Setup drag and drop for todo items - rebuilt with direct listeners
    */
   setupTodoDragDrop() {
-    const container = document.getElementById('action-items-content');
+    const container = document.getElementById('todo-list');
     if (!container) return;
     
     const self = this;
