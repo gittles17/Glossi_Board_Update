@@ -52,8 +52,36 @@ class GlossiDashboard {
       'david': 'David'
     };
     
-    // Available team members for quick assignment
-    this.teamMembers = ['Ricky', 'Jonathan', 'Adam', 'Will', 'David', 'Unassigned'];
+    // Available team members for quick assignment (load from storage or use defaults)
+    const savedTeamMembers = localStorage.getItem('glossi_team_members');
+    this.teamMembers = savedTeamMembers 
+      ? JSON.parse(savedTeamMembers) 
+      : ['Ricky', 'Jonathan', 'Adam', 'Will', 'David', 'Unassigned'];
+  }
+  
+  /**
+   * Save team members to localStorage
+   */
+  saveTeamMembers() {
+    localStorage.setItem('glossi_team_members', JSON.stringify(this.teamMembers));
+  }
+  
+  /**
+   * Add a new team member
+   */
+  async addTeamMember(name) {
+    const trimmed = name.trim();
+    if (!trimmed || this.teamMembers.includes(trimmed)) return false;
+    
+    // Add before "Unassigned" if it exists, otherwise at end
+    const unassignedIndex = this.teamMembers.indexOf('Unassigned');
+    if (unassignedIndex !== -1) {
+      this.teamMembers.splice(unassignedIndex, 0, trimmed);
+    } else {
+      this.teamMembers.push(trimmed);
+    }
+    this.saveTeamMembers();
+    return true;
   }
 
   /**
@@ -285,6 +313,16 @@ class GlossiDashboard {
       return grouped;
     };
     
+    // Render owner dropdown options
+    const renderOwnerOptions = (currentOwner) => {
+      const resolved = this.resolveOwnerName(currentOwner);
+      let options = this.teamMembers.map(member => 
+        `<option value="${member}" ${member === resolved ? 'selected' : ''}>${member}</option>`
+      ).join('');
+      options += '<option value="__new__">+ New Owner...</option>';
+      return options;
+    };
+    
     // Render todo item HTML - draggable is on the whole item
     const renderTodoItem = (todo) => `
       <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}" draggable="true">
@@ -305,7 +343,9 @@ class GlossiDashboard {
         </div>
         <div class="todo-content">
           <span class="todo-text editable-item" contenteditable="true" data-type="todo-text" data-todo-id="${todo.id}" draggable="false">${todo.text}</span>
-          <span class="todo-owner-edit editable-item" contenteditable="true" data-type="todo-owner" data-todo-id="${todo.id}" title="Click to change assignee" draggable="false">${this.resolveOwnerName(todo.owner)}</span>
+          <select class="todo-owner-select" data-todo-id="${todo.id}" title="Change assignee">
+            ${renderOwnerOptions(todo.owner)}
+          </select>
         </div>
         <button class="delete-btn" onclick="window.dashboard.deleteTodo('${todo.id}')" title="Delete">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -390,6 +430,7 @@ class GlossiDashboard {
    * Setup editable listeners for todo items
    */
   setupTodoEditListeners(container) {
+    // Text editing (contenteditable)
     container.querySelectorAll('.editable-item').forEach(item => {
       item.addEventListener('blur', (e) => {
         // Don't save during drag operations
@@ -401,9 +442,6 @@ class GlossiDashboard {
         
         if (type === 'todo-text' && newValue) {
           storage.updateTodo(todoId, { text: newValue });
-        } else if (type === 'todo-owner' && newValue) {
-          storage.updateTodo(todoId, { owner: this.resolveOwnerName(newValue) });
-          this.renderActionItems(); // Re-render to regroup by owner
         }
       });
       
@@ -411,6 +449,29 @@ class GlossiDashboard {
         if (e.key === 'Enter') {
           e.preventDefault();
           e.target.blur();
+        }
+      });
+    });
+    
+    // Owner dropdown
+    container.querySelectorAll('.todo-owner-select').forEach(select => {
+      select.addEventListener('change', async (e) => {
+        const todoId = e.target.dataset.todoId;
+        const newValue = e.target.value;
+        
+        if (newValue === '__new__') {
+          // Prompt for new owner name
+          const newOwner = await this.showPrompt('New Owner Name', '');
+          if (newOwner && newOwner.trim()) {
+            const added = await this.addTeamMember(newOwner);
+            if (added) {
+              storage.updateTodo(todoId, { owner: newOwner.trim() });
+            }
+          }
+          this.renderActionItems();
+        } else {
+          storage.updateTodo(todoId, { owner: newValue });
+          this.renderActionItems();
         }
       });
     });
