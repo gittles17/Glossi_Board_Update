@@ -1463,18 +1463,20 @@ class GlossiDashboard {
   
   /**
    * Parse CSV from Google Sheet into deal objects
+   * Handles multi-line quoted fields correctly
    */
   parseCSVPipeline(csv) {
-    const lines = csv.split('\n');
-    if (lines.length < 2) return [];
+    // Parse all rows handling multi-line quoted fields
+    const rows = this.parseCSVRows(csv);
+    if (rows.length < 2) return [];
     
     // Parse header
-    const headers = this.parseCSVLine(lines[0]);
+    const headers = rows[0];
     
     // Map expected columns (flexible matching)
     const colMap = {};
     headers.forEach((h, i) => {
-      const lower = h.toLowerCase().trim();
+      const lower = (h || '').toLowerCase().trim();
       if (lower.includes('opportunity') || lower.includes('name') || lower.includes('company')) colMap.name = i;
       if (lower.includes('close') && lower.includes('date')) colMap.closeDate = i;
       if (lower.includes('owner')) colMap.owner = i;
@@ -1486,11 +1488,9 @@ class GlossiDashboard {
     
     // Parse data rows
     const deals = [];
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      
-      const cols = this.parseCSVLine(line);
+    for (let i = 1; i < rows.length; i++) {
+      const cols = rows[i];
+      if (!cols || cols.length === 0) continue;
       
       const deal = {
         name: cols[colMap.name] || '',
@@ -1512,33 +1512,63 @@ class GlossiDashboard {
   }
   
   /**
-   * Parse a single CSV line (handles quoted fields)
+   * Parse CSV into rows, properly handling multi-line quoted fields
    */
-  parseCSVLine(line) {
-    const result = [];
-    let current = '';
+  parseCSVRows(csv) {
+    const rows = [];
+    let currentRow = [];
+    let currentField = '';
     let inQuotes = false;
     
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
+    for (let i = 0; i < csv.length; i++) {
+      const char = csv[i];
+      const nextChar = csv[i + 1];
       
       if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
+        if (inQuotes && nextChar === '"') {
+          // Escaped quote inside quoted field
+          currentField += '"';
           i++;
         } else {
+          // Toggle quote state
           inQuotes = !inQuotes;
         }
       } else if (char === ',' && !inQuotes) {
-        result.push(current.trim());
-        current = '';
+        // End of field
+        currentRow.push(currentField.trim());
+        currentField = '';
+      } else if ((char === '\n' || (char === '\r' && nextChar === '\n')) && !inQuotes) {
+        // End of row (not inside quotes)
+        if (char === '\r') i++; // Skip \n in \r\n
+        currentRow.push(currentField.trim());
+        if (currentRow.some(f => f)) { // Only add non-empty rows
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentField = '';
+      } else if (char === '\r' && !inQuotes) {
+        // Handle standalone \r as line ending
+        currentRow.push(currentField.trim());
+        if (currentRow.some(f => f)) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentField = '';
       } else {
-        current += char;
+        // Regular character (including newlines inside quotes)
+        currentField += char;
       }
     }
     
-    result.push(current.trim());
-    return result;
+    // Don't forget the last field and row
+    if (currentField || currentRow.length > 0) {
+      currentRow.push(currentField.trim());
+      if (currentRow.some(f => f)) {
+        rows.push(currentRow);
+      }
+    }
+    
+    return rows;
   }
   
   /**
