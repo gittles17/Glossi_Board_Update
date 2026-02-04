@@ -45,6 +45,58 @@ class Notebook {
   }
 
   /**
+   * Show a custom confirmation dialog (replaces browser confirm())
+   * @returns {Promise<boolean>} - Resolves to true if confirmed, false if cancelled
+   */
+  showConfirm(message, title = 'Confirm') {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('confirm-modal');
+      const titleEl = document.getElementById('confirm-modal-title');
+      const messageEl = document.getElementById('confirm-modal-message');
+      const cancelBtn = document.getElementById('confirm-modal-cancel');
+      const okBtn = document.getElementById('confirm-modal-ok');
+      
+      if (!modal) {
+        // Fallback to native confirm if modal not found
+        resolve(confirm(message));
+        return;
+      }
+      
+      titleEl.textContent = title;
+      messageEl.textContent = message;
+      modal.classList.add('visible');
+      
+      const cleanup = () => {
+        modal.classList.remove('visible');
+        cancelBtn.removeEventListener('click', onCancel);
+        okBtn.removeEventListener('click', onOk);
+        modal.removeEventListener('click', onOverlayClick);
+      };
+      
+      const onCancel = () => {
+        cleanup();
+        resolve(false);
+      };
+      
+      const onOk = () => {
+        cleanup();
+        resolve(true);
+      };
+      
+      const onOverlayClick = (e) => {
+        if (e.target === modal) {
+          cleanup();
+          resolve(false);
+        }
+      };
+      
+      cancelBtn.addEventListener('click', onCancel);
+      okBtn.addEventListener('click', onOk);
+      modal.addEventListener('click', onOverlayClick);
+    });
+  }
+
+  /**
    * Initialize the Notebook
    */
   init(storage, aiProcessor, onUpdate) {
@@ -208,12 +260,13 @@ class Notebook {
   /**
    * Clear the current chat
    */
-  clearChat() {
+  async clearChat() {
     if (!this.currentConversation || this.currentConversation.messages.length === 0) {
       return;
     }
     
-    if (!confirm('Clear chat history? This cannot be undone.')) {
+    const confirmed = await this.showConfirm('Clear chat history? This cannot be undone.', 'Clear Chat');
+    if (!confirmed) {
       return;
     }
     
@@ -2463,11 +2516,12 @@ Guidelines:
   /**
    * Delete a source
    */
-  deleteSource(sourceId) {
+  async deleteSource(sourceId) {
     const source = this.sources.find(s => s.id === sourceId);
     if (!source) return;
     
-    if (!confirm(`Delete "${source.title}"? This cannot be undone.`)) {
+    const confirmed = await this.showConfirm(`Delete "${source.title}"? This cannot be undone.`, 'Delete Source');
+    if (!confirmed) {
       return;
     }
     
@@ -2725,11 +2779,15 @@ Guidelines:
   /**
    * Delete a folder
    */
-  deleteFolder(folderName) {
+  async deleteFolder(folderName) {
     const sourcesInFolder = this.sources.filter(s => s.folder === folderName);
     
     if (sourcesInFolder.length > 0) {
-      if (!confirm(`Delete folder "${folderName}"? The ${sourcesInFolder.length} source(s) inside will be moved to ungrouped.`)) {
+      const confirmed = await this.showConfirm(
+        `Delete folder "${folderName}"? The ${sourcesInFolder.length} source(s) inside will be moved to ungrouped.`,
+        'Delete Folder'
+      );
+      if (!confirmed) {
         return;
       }
     }
@@ -3143,11 +3201,12 @@ ${context.substring(0, 4000)}`;
   /**
    * Delete a report
    */
-  deleteReport(reportId) {
+  async deleteReport(reportId) {
     const report = this.reports.find(r => r.id === reportId);
     if (!report) return;
     
-    if (!confirm(`Delete "${report.title}"? This cannot be undone.`)) {
+    const confirmed = await this.showConfirm(`Delete "${report.title}"? This cannot be undone.`, 'Delete Report');
+    if (!confirmed) {
       return;
     }
     

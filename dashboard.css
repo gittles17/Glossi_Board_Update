@@ -738,6 +738,44 @@ body::after {
   box-shadow: var(--shadow-xs);
 }
 
+.btn-danger {
+  background: var(--accent-red, #ef4444);
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-danger:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Confirmation modal */
+.modal-confirm {
+  max-width: 400px;
+}
+
+.modal-confirm .modal-header {
+  padding-bottom: var(--space-2);
+}
+
+.modal-confirm .modal-body {
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-4);
+}
+
+.modal-confirm .modal-body p {
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
