@@ -420,67 +420,80 @@ class GlossiDashboard {
   }
 
   /**
-   * Setup drag and drop for todo reordering
+   * Setup drag and drop for todo reordering between owner sections
    */
   setupTodoDragDrop() {
-    // Simplified drag-drop for independent todos (reorder only)
-    const todoItems = document.querySelectorAll('.todo-item[draggable="true"]');
-    const todoGroups = document.querySelectorAll('.todo-group-items');
-
-    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    if (isTouchDevice) {
-      todoItems.forEach(item => item.removeAttribute('draggable'));
-      return;
-    }
-
-    let draggedId = null;
-
-    todoItems.forEach(item => {
-      item.addEventListener('dragstart', (e) => {
-        draggedId = item.dataset.todoId;
-        e.dataTransfer.setData('text/plain', draggedId);
-        item.classList.add('dragging');
-      });
-
-      item.addEventListener('dragend', () => {
-        item.classList.remove('dragging');
-        draggedId = null;
-        todoGroups.forEach(group => group.classList.remove('drag-over'));
-      });
+    const container = document.getElementById('action-items-content');
+    if (!container) return;
+    
+    // Use event delegation on the container for better reliability
+    let draggedTodoId = null;
+    
+    // Handle drag start on todo items
+    container.addEventListener('dragstart', (e) => {
+      const todoItem = e.target.closest('.todo-item');
+      if (!todoItem) return;
+      
+      draggedTodoId = todoItem.dataset.todoId;
+      e.dataTransfer.setData('text/plain', draggedTodoId);
+      e.dataTransfer.effectAllowed = 'move';
+      todoItem.classList.add('dragging');
+      
+      // Set drag image to the whole todo item
+      if (e.dataTransfer.setDragImage) {
+        e.dataTransfer.setDragImage(todoItem, 10, 10);
+      }
     });
-
-    todoGroups.forEach(group => {
-      group.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        group.classList.add('drag-over');
-      });
-
-      group.addEventListener('dragleave', (e) => {
-        if (!group.contains(e.relatedTarget)) {
-          group.classList.remove('drag-over');
-        }
-      });
-
-      group.addEventListener('drop', (e) => {
-        e.preventDefault();
-        group.classList.remove('drag-over');
-        
-        const todoId = e.dataTransfer.getData('text/plain');
-        const targetGroup = group.closest('.todo-group');
-        const newOwner = targetGroup ? targetGroup.dataset.owner : null;
-        
-        if (todoId && newOwner) {
-          // Get the todo to check if owner is actually changing
-          const todo = storage.getAllTodos().find(t => t.id === todoId);
-          const currentOwner = todo ? this.resolveOwnerName(todo.owner) : null;
-          
-          // Only update if moving to a different owner
-          if (currentOwner !== newOwner) {
-            storage.updateTodo(todoId, { owner: newOwner });
-          }
-          this.renderActionItems();
-        }
-      });
+    
+    // Handle drag end
+    container.addEventListener('dragend', (e) => {
+      const todoItem = e.target.closest('.todo-item');
+      if (todoItem) {
+        todoItem.classList.remove('dragging');
+      }
+      draggedTodoId = null;
+      container.querySelectorAll('.todo-group-items').forEach(g => g.classList.remove('drag-over'));
+    });
+    
+    // Handle drag over on group items (drop zones)
+    container.addEventListener('dragover', (e) => {
+      const dropZone = e.target.closest('.todo-group-items');
+      if (!dropZone) return;
+      
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      
+      // Highlight the drop zone
+      container.querySelectorAll('.todo-group-items').forEach(g => g.classList.remove('drag-over'));
+      dropZone.classList.add('drag-over');
+    });
+    
+    // Handle drag leave
+    container.addEventListener('dragleave', (e) => {
+      const dropZone = e.target.closest('.todo-group-items');
+      if (dropZone && !dropZone.contains(e.relatedTarget)) {
+        dropZone.classList.remove('drag-over');
+      }
+    });
+    
+    // Handle drop
+    container.addEventListener('drop', (e) => {
+      e.preventDefault();
+      
+      const dropZone = e.target.closest('.todo-group-items');
+      if (!dropZone) return;
+      
+      dropZone.classList.remove('drag-over');
+      
+      const todoId = e.dataTransfer.getData('text/plain');
+      const targetGroup = dropZone.closest('.todo-group');
+      const newOwner = targetGroup ? targetGroup.dataset.owner : null;
+      
+      if (todoId && newOwner) {
+        // Update the todo's owner
+        storage.updateTodo(todoId, { owner: newOwner });
+        this.renderActionItems();
+      }
     });
   }
 

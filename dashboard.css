@@ -4018,7 +4018,14 @@ body.sidebar-open .top-nav {
 }
 
 .todo-group-items.drag-over {
-  background: rgba(74, 222, 128, 0.08);
+  background: rgba(74, 222, 128, 0.15);
+  border: 1px dashed var(--accent-green);
+  border-radius: var(--radius-md);
+}
+
+.todo-item.dragging {
+  opacity: 0.5;
+  background: rgba(74, 222, 128, 0.1);
 }
 
 .todo-group-header {
