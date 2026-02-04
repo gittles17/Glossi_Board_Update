@@ -776,6 +776,44 @@ body::after {
   line-height: 1.5;
 }
 
+/* Prompt modal */
+.modal-prompt {
+  max-width: 420px;
+}
+
+.modal-prompt .modal-header {
+  padding-bottom: var(--space-2);
+}
+
+.modal-prompt .modal-body {
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-4);
+}
+
+.modal-prompt .modal-body .input {
+  width: 100%;
+}
+
+/* Alert modal */
+.modal-alert {
+  max-width: 400px;
+}
+
+.modal-alert .modal-header {
+  padding-bottom: var(--space-2);
+}
+
+.modal-alert .modal-body {
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-4);
+}
+
+.modal-alert .modal-body p {
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);

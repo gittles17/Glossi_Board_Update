@@ -54,6 +54,124 @@ class GlossiDashboard {
   }
 
   /**
+   * Show a custom confirmation dialog (replaces browser confirm())
+   * @returns {Promise<boolean>}
+   */
+  showConfirm(message, title = 'Confirm') {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('confirm-modal');
+      const titleEl = document.getElementById('confirm-modal-title');
+      const messageEl = document.getElementById('confirm-modal-message');
+      const cancelBtn = document.getElementById('confirm-modal-cancel');
+      const okBtn = document.getElementById('confirm-modal-ok');
+      
+      if (!modal) {
+        resolve(confirm(message));
+        return;
+      }
+      
+      titleEl.textContent = title;
+      messageEl.textContent = message;
+      modal.classList.add('visible');
+      
+      const cleanup = () => {
+        modal.classList.remove('visible');
+        cancelBtn.removeEventListener('click', onCancel);
+        okBtn.removeEventListener('click', onOk);
+        modal.removeEventListener('click', onOverlayClick);
+      };
+      
+      const onCancel = () => { cleanup(); resolve(false); };
+      const onOk = () => { cleanup(); resolve(true); };
+      const onOverlayClick = (e) => { if (e.target === modal) { cleanup(); resolve(false); } };
+      
+      cancelBtn.addEventListener('click', onCancel);
+      okBtn.addEventListener('click', onOk);
+      modal.addEventListener('click', onOverlayClick);
+    });
+  }
+
+  /**
+   * Show a custom prompt dialog (replaces browser prompt())
+   * @returns {Promise<string|null>}
+   */
+  showPrompt(title = 'Enter Value', defaultValue = '') {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('prompt-modal');
+      const titleEl = document.getElementById('prompt-modal-title');
+      const input = document.getElementById('prompt-modal-input');
+      const cancelBtn = document.getElementById('prompt-modal-cancel');
+      const okBtn = document.getElementById('prompt-modal-ok');
+      
+      if (!modal) {
+        resolve(prompt(title, defaultValue));
+        return;
+      }
+      
+      titleEl.textContent = title;
+      input.value = defaultValue;
+      modal.classList.add('visible');
+      setTimeout(() => { input.focus(); input.select(); }, 50);
+      
+      const cleanup = () => {
+        modal.classList.remove('visible');
+        cancelBtn.removeEventListener('click', onCancel);
+        okBtn.removeEventListener('click', onOk);
+        input.removeEventListener('keydown', onKeydown);
+        modal.removeEventListener('click', onOverlayClick);
+      };
+      
+      const onCancel = () => { cleanup(); resolve(null); };
+      const onOk = () => { cleanup(); resolve(input.value); };
+      const onKeydown = (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); onOk(); }
+        else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+      };
+      const onOverlayClick = (e) => { if (e.target === modal) { cleanup(); resolve(null); } };
+      
+      cancelBtn.addEventListener('click', onCancel);
+      okBtn.addEventListener('click', onOk);
+      input.addEventListener('keydown', onKeydown);
+      modal.addEventListener('click', onOverlayClick);
+    });
+  }
+
+  /**
+   * Show a custom alert dialog (replaces browser alert())
+   * @returns {Promise<void>}
+   */
+  showAlert(message, title = 'Notice') {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('alert-modal');
+      const titleEl = document.getElementById('alert-modal-title');
+      const messageEl = document.getElementById('alert-modal-message');
+      const okBtn = document.getElementById('alert-modal-ok');
+      
+      if (!modal) {
+        alert(message);
+        resolve();
+        return;
+      }
+      
+      titleEl.textContent = title;
+      messageEl.textContent = message;
+      modal.classList.add('visible');
+      
+      const cleanup = () => {
+        modal.classList.remove('visible');
+        okBtn.removeEventListener('click', onOk);
+        modal.removeEventListener('click', onOverlayClick);
+      };
+      
+      const onOk = () => { cleanup(); resolve(); };
+      const onOverlayClick = (e) => { if (e.target === modal) { cleanup(); resolve(); } };
+      
+      okBtn.addEventListener('click', onOk);
+      modal.addEventListener('click', onOverlayClick);
+    });
+  }
+
+  /**
    * Resolve name alias to full name
    */
   resolveOwnerName(name) {
@@ -2341,8 +2459,8 @@ RULES:
   /**
    * Add a new link section
    */
-  addLinkSection() {
-    const name = prompt('Enter section name:');
+  async addLinkSection() {
+    const name = await this.showPrompt('Enter section name');
     if (!name || !name.trim()) return;
     
     storage.addLinkSection(name.trim());
@@ -2415,14 +2533,15 @@ RULES:
   /**
    * Delete a link section
    */
-  deleteLinkSection(sectionId) {
+  async deleteLinkSection(sectionId) {
     const sections = storage.getLinkSections();
     if (sections.length <= 1) {
-      alert('Cannot delete the last section.');
+      await this.showAlert('Cannot delete the last section.');
       return;
     }
     
-    if (confirm('Delete this section? Links will be moved to another section.')) {
+    const confirmed = await this.showConfirm('Delete this section? Links will be moved to another section.', 'Delete Section');
+    if (confirmed) {
       storage.deleteLinkSection(sectionId);
       this.data = storage.getData();
       this.renderQuickLinks();

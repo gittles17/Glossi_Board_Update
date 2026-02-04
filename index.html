@@ -1004,6 +1004,53 @@
   </div>
 
 
+  <!-- Confirmation Modal -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal modal-confirm">
+      <div class="modal-header">
+        <h2 id="confirm-modal-title">Confirm</h2>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-modal-message">Are you sure?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="confirm-modal-cancel">Cancel</button>
+        <button class="btn btn-danger" id="confirm-modal-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prompt Modal -->
+  <div class="modal-overlay" id="prompt-modal">
+    <div class="modal modal-prompt">
+      <div class="modal-header">
+        <h2 id="prompt-modal-title">Enter Value</h2>
+      </div>
+      <div class="modal-body">
+        <input type="text" class="input" id="prompt-modal-input" placeholder="">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="prompt-modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="prompt-modal-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert Modal -->
+  <div class="modal-overlay" id="alert-modal">
+    <div class="modal modal-alert">
+      <div class="modal-header">
+        <h2 id="alert-modal-title">Notice</h2>
+      </div>
+      <div class="modal-body">
+        <p id="alert-modal-message"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="alert-modal-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notifications -->
   <div class="toast-container" id="toast-container"></div>
 

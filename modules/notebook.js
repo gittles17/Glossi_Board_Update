@@ -97,6 +97,76 @@ class Notebook {
   }
 
   /**
+   * Show a custom prompt dialog (replaces browser prompt())
+   * @returns {Promise<string|null>} - Resolves to the input value or null if cancelled
+   */
+  showPrompt(title = 'Enter Value', defaultValue = '') {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('prompt-modal');
+      const titleEl = document.getElementById('prompt-modal-title');
+      const input = document.getElementById('prompt-modal-input');
+      const cancelBtn = document.getElementById('prompt-modal-cancel');
+      const okBtn = document.getElementById('prompt-modal-ok');
+      
+      if (!modal) {
+        // Fallback to native prompt if modal not found
+        resolve(prompt(title, defaultValue));
+        return;
+      }
+      
+      titleEl.textContent = title;
+      input.value = defaultValue;
+      modal.classList.add('visible');
+      
+      // Focus and select the input
+      setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 50);
+      
+      const cleanup = () => {
+        modal.classList.remove('visible');
+        cancelBtn.removeEventListener('click', onCancel);
+        okBtn.removeEventListener('click', onOk);
+        input.removeEventListener('keydown', onKeydown);
+        modal.removeEventListener('click', onOverlayClick);
+      };
+      
+      const onCancel = () => {
+        cleanup();
+        resolve(null);
+      };
+      
+      const onOk = () => {
+        cleanup();
+        resolve(input.value);
+      };
+      
+      const onKeydown = (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          onOk();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          onCancel();
+        }
+      };
+      
+      const onOverlayClick = (e) => {
+        if (e.target === modal) {
+          cleanup();
+          resolve(null);
+        }
+      };
+      
+      cancelBtn.addEventListener('click', onCancel);
+      okBtn.addEventListener('click', onOk);
+      input.addEventListener('keydown', onKeydown);
+      modal.addEventListener('click', onOverlayClick);
+    });
+  }
+
+  /**
    * Initialize the Notebook
    */
   init(storage, aiProcessor, onUpdate) {
@@ -2566,11 +2636,11 @@ Guidelines:
   /**
    * Rename a source
    */
-  renameSource(sourceId) {
+  async renameSource(sourceId) {
     const source = this.sources.find(s => s.id === sourceId);
     if (!source) return;
     
-    const newName = prompt('Rename source:', source.title);
+    const newName = await this.showPrompt('Rename source', source.title);
     if (newName && newName.trim() && newName.trim() !== source.title) {
       source.title = newName.trim();
       this.saveData();
@@ -3186,11 +3256,11 @@ ${context.substring(0, 4000)}`;
   /**
    * Rename a report
    */
-  renameReport(reportId) {
+  async renameReport(reportId) {
     const report = this.reports.find(r => r.id === reportId);
     if (!report) return;
     
-    const newName = prompt('Rename report:', report.title);
+    const newName = await this.showPrompt('Rename report', report.title);
     if (newName && newName.trim() && newName.trim() !== report.title) {
       report.title = newName.trim();
       this.saveData();
