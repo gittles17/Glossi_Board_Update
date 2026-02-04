@@ -569,7 +569,17 @@ class GlossiDashboard {
         return;
       }
       
-      _draggedTodoId = todoItem.dataset.todoId;
+      // Save any pending text edits BEFORE starting drag
+      const todoId = todoItem.dataset.todoId;
+      const textEl = todoItem.querySelector('.todo-text');
+      if (textEl) {
+        const currentText = textEl.textContent.trim();
+        if (currentText) {
+          storage.updateTodo(todoId, { text: currentText });
+        }
+      }
+      
+      _draggedTodoId = todoId;
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', _draggedTodoId);
       
