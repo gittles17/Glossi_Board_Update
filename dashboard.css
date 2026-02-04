@@ -6445,6 +6445,7 @@ body.sidebar-open .top-nav {
 /* Pipeline Stages Row (Horizontal Pills) */
 .pipeline-stages-row {
   display: flex;
+  justify-content: space-between;
   gap: var(--space-2);
   padding: var(--space-3) 0;
   overflow-x: auto;
@@ -6478,7 +6479,7 @@ body.sidebar-open .top-nav {
   cursor: pointer;
   transition: all 0.2s ease;
   min-width: 100px;
-  flex-shrink: 0;
+  flex: 1;
 }
 
 .stage-pill:hover {
