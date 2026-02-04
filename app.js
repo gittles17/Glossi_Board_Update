@@ -475,7 +475,7 @@ class GlossiDashboard {
     }
     
     const menu = document.createElement('div');
-    menu.className = 'todo-add-menu dropdown-menu';
+    menu.className = 'todo-add-menu dropdown-menu active';
     menu.innerHTML = `
       <button class="dropdown-item" data-action="add-todo">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
