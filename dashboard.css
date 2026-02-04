@@ -4018,14 +4018,28 @@ body.sidebar-open .top-nav {
 }
 
 .todo-group-items.drag-over {
-  background: rgba(74, 222, 128, 0.15);
-  border: 1px dashed var(--accent-green);
+  background: rgba(74, 222, 128, 0.1);
+  border: 2px dashed var(--accent-green);
   border-radius: var(--radius-md);
+  min-height: 60px;
 }
 
 .todo-item.dragging {
-  opacity: 0.5;
+  opacity: 0.4;
   background: rgba(74, 222, 128, 0.1);
+  transform: scale(0.98);
+}
+
+.todo-drop-placeholder {
+  padding: var(--space-3);
+  border: 2px dashed var(--accent-green);
+  border-radius: var(--radius-md);
+  background: rgba(74, 222, 128, 0.15);
+  color: var(--accent-green);
+  text-align: center;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  margin: var(--space-2) 0;
 }
 
 .todo-drag-handle {
