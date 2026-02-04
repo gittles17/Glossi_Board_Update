@@ -51,6 +51,9 @@ class GlossiDashboard {
     
     // Available team members for quick assignment
     this.teamMembers = ['Ricky', 'Jonathan', 'Adam', 'Will', 'David', 'Unassigned'];
+    
+    // Drag and drop state for todos
+    this.draggedTodoId = null;
   }
 
   /**
@@ -443,6 +446,11 @@ class GlossiDashboard {
         if (!todoItem) return;
         
         const todoId = todoItem.dataset.todoId;
+        
+        // Store in class property (more reliable than dataTransfer)
+        this.draggedTodoId = todoId;
+        
+        // Also set dataTransfer for browser compatibility
         e.dataTransfer.setData('text/plain', todoId);
         e.dataTransfer.effectAllowed = 'move';
         
@@ -460,6 +468,8 @@ class GlossiDashboard {
         if (todoItem) {
           todoItem.classList.remove('dragging');
         }
+        // Clear the dragged todo ID
+        this.draggedTodoId = null;
         container.querySelectorAll('.todo-group-items').forEach(g => g.classList.remove('drag-over'));
       });
     });
@@ -482,12 +492,14 @@ class GlossiDashboard {
         e.preventDefault();
         dropZone.classList.remove('drag-over');
         
-        const todoId = e.dataTransfer.getData('text/plain');
+        // Use class property instead of dataTransfer (more reliable)
+        const todoId = this.draggedTodoId;
         const targetGroup = dropZone.closest('.todo-group');
         const newOwner = targetGroup ? targetGroup.dataset.owner : null;
         
         if (todoId && newOwner) {
           storage.updateTodo(todoId, { owner: newOwner });
+          this.draggedTodoId = null;
           this.renderActionItems();
         }
       });
