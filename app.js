@@ -440,9 +440,28 @@ class GlossiDashboard {
   }
 
   /**
+   * Save all pending todo text edits before re-rendering
+   */
+  savePendingTodoEdits() {
+    const todoList = document.getElementById('todo-list');
+    if (!todoList) return;
+    
+    todoList.querySelectorAll('.todo-text').forEach(textEl => {
+      const todoId = textEl.dataset.todoId;
+      const currentText = textEl.textContent.trim();
+      if (todoId && currentText) {
+        storage.updateTodo(todoId, { text: currentText });
+      }
+    });
+  }
+  
+  /**
    * Add a new todo
    */
   addNewTodo() {
+    // Save any pending edits first
+    this.savePendingTodoEdits();
+    
     const newTodo = storage.addTodo({
       text: 'New action item',
       owner: 'Unassigned'
@@ -510,6 +529,9 @@ class GlossiDashboard {
       if (action === 'add-todo') {
         this.addNewTodo();
       } else if (action === 'add-owner') {
+        // Save pending edits before showing prompt
+        this.savePendingTodoEdits();
+        
         const newOwner = await this.showPrompt('New Owner Name', '');
         if (newOwner && newOwner.trim()) {
           const ownerName = newOwner.trim();
