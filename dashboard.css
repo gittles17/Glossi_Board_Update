@@ -6352,7 +6352,7 @@ body.sidebar-open .top-nav {
   min-width: 200px;
 }
 
-.pipeline-progress .pipeline-total {
+.pipeline-progress .pipeline-closed {
   font-family: var(--font-sans);
   font-size: 36px;
   font-weight: 300;
@@ -6366,7 +6366,7 @@ body.sidebar-open .top-nav {
   font-weight: 300;
 }
 
-.pipeline-progress .pipeline-closed {
+.pipeline-progress .pipeline-target {
   font-family: var(--font-sans);
   font-size: 24px;
   font-weight: 300;
@@ -7238,11 +7238,11 @@ body.sidebar-open .top-nav {
     font-size: 16px;
   }
 
-  .pipeline-progress .pipeline-total {
+  .pipeline-progress .pipeline-closed {
     font-size: 24px;
   }
 
-  .pipeline-progress .pipeline-closed {
+  .pipeline-progress .pipeline-target {
     font-size: 18px;
   }
 }

@@ -156,8 +156,9 @@
     <div class="pipeline-header">
       <h2>Sales Pipeline</h2>
       <div class="pipeline-progress">
-        <span class="pipeline-total" id="pipeline-total-value">$0</span>
-        <span class="pipeline-closed-info" id="pipeline-closed-info"></span>
+        <span class="pipeline-closed" id="pipeline-closed-value">$0</span>
+        <span class="progress-divider">/</span>
+        <span class="pipeline-target" id="pipeline-target">$900K</span>
         <span class="pipeline-deal-count" id="pipeline-deal-count"></span>
       </div>
       <div class="pipeline-sync-status">
@@ -473,7 +474,11 @@
         </div>
         <div class="settings-section">
           <h3>Sales Pipeline</h3>
-          <p class="settings-description">Connect a Google Sheet to sync your sales pipeline. Publish your sheet to web as CSV first.</p>
+          <p class="settings-description">Set your pipeline target and connect a Google Sheet to sync deals.</p>
+          <div class="input-group input-group-inline">
+            <label for="pipeline-target-setting">Target Amount</label>
+            <input type="text" id="pipeline-target-setting" class="input input-sm" placeholder="e.g., $900K" value="$900K">
+          </div>
           <div class="input-group">
             <label for="pipeline-sheet-url">Google Sheet CSV URL</label>
             <input type="text" id="pipeline-sheet-url" class="input" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" value="https://docs.google.com/spreadsheets/d/e/2PACX-1vQO6VSxW3EngXb-xa15zVxPA45zt34rjNcpAIpYqfx3iiywuPkE0jseDN0al-UsH6Xqkxt5eI6Y0L4w/pub?output=csv&gid=0">

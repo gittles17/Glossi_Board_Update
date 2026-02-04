@@ -87,6 +87,15 @@ class GlossiDashboard {
     // Initialize Notebook
     notebook.init(storage, aiProcessor, () => this.render());
 
+    // Load saved Google Sheet pipeline data from storage
+    const savedPipeline = storage.getGoogleSheetPipeline();
+    if (savedPipeline && savedPipeline.deals) {
+      this.pipelineDeals = savedPipeline.deals;
+      if (savedPipeline.syncedAt) {
+        this.pipelineLastSync = new Date(savedPipeline.syncedAt);
+      }
+    }
+
     // Setup UI event listeners
     this.setupEventListeners();
 
@@ -1138,16 +1147,22 @@ class GlossiDashboard {
     const dealsSection = document.getElementById('pipeline-deals-section');
     const dealsHeader = document.getElementById('pipeline-deals-header');
     const dealsGrid = document.getElementById('pipeline-deals-grid');
-    const totalEl = document.getElementById('pipeline-total-value');
+    const closedEl = document.getElementById('pipeline-closed-value');
+    const targetEl = document.getElementById('pipeline-target');
     const countEl = document.getElementById('pipeline-deal-count');
     const emptyEl = document.getElementById('pipeline-empty');
+    
+    // Get pipeline target from settings
+    const settings = this.data?.settings || {};
+    const pipelineTarget = settings.pipelineTarget || '$900K';
+    if (targetEl) targetEl.textContent = pipelineTarget;
     
     // If no data, show empty state
     if (pipelineData.length === 0) {
       if (emptyEl) emptyEl.style.display = 'block';
       if (stagesRow) stagesRow.style.display = 'none';
       if (dealsSection) dealsSection.classList.remove('visible');
-      if (totalEl) totalEl.textContent = '$0';
+      if (closedEl) closedEl.textContent = '$0';
       if (countEl) countEl.textContent = '';
       return;
     }
@@ -1184,12 +1199,8 @@ class GlossiDashboard {
     // Count deals with valid stages
     const totalDeals = Object.values(this.pipelineStageGroups).reduce((sum, g) => sum + g.deals.length, 0);
     
-    // Update header
-    if (totalEl) totalEl.textContent = this.formatMoney(grandTotal);
-    const closedEl = document.getElementById('pipeline-closed-info');
-    if (closedEl) {
-      closedEl.textContent = closedTotal > 0 ? `/ ${this.formatMoney(closedTotal)} closed` : '';
-    }
+    // Update header with closed amount (like Seed Raise format)
+    if (closedEl) closedEl.textContent = this.formatMoney(closedTotal);
     if (countEl) countEl.textContent = `(${totalDeals} deals)`;
     
     // Define stage order (matches typical sales funnel)
@@ -1428,9 +1439,12 @@ class GlossiDashboard {
       const csv = await response.text();
       const deals = this.parseCSVPipeline(csv);
       
-      // Store the data
+      // Store the data in memory
       this.pipelineDeals = deals;
       this.pipelineLastSync = new Date();
+      
+      // Save to persistent storage for notebook access
+      storage.saveGoogleSheetPipeline(deals, this.pipelineLastSync.toISOString());
       
       // Update sync time display
       this.updatePipelineSyncTime();
@@ -8033,6 +8047,12 @@ Respond with just the category name (core, traction, market, or testimonials) an
     if (seedRaiseTarget) {
       storage.updateSeedTarget(seedRaiseTarget);
     }
+    
+    // Update pipeline target
+    const pipelineTarget = document.getElementById('pipeline-target-setting')?.value.trim();
+    if (pipelineTarget) {
+      storage.updatePipelineTarget(pipelineTarget);
+    }
 
     // Smart curation settings
     const autoCurateEl = document.getElementById('auto-curate-toggle');
@@ -8121,6 +8141,12 @@ Respond with just the category name (core, traction, market, or testimonials) an
     // Seed raise target
     const seedRaise = storage.getSeedRaise();
     document.getElementById('seed-raise-target').value = seedRaise.target || '$500K';
+    
+    // Pipeline target
+    const pipelineTargetEl = document.getElementById('pipeline-target-setting');
+    if (pipelineTargetEl) {
+      pipelineTargetEl.value = this.data?.settings?.pipelineTarget || '$900K';
+    }
   }
 
   /**

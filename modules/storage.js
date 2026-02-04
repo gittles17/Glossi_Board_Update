@@ -1001,6 +1001,54 @@ class Storage {
   }
 
   /**
+   * Update pipeline target
+   */
+  updatePipelineTarget(target) {
+    if (!this.data.settings) {
+      this.data.settings = {};
+    }
+    this.data.settings.pipelineTarget = target;
+    this.data.lastUpdated = new Date().toISOString();
+    this.scheduleSave();
+    return this.data.settings;
+  }
+
+  /**
+   * Save Google Sheet pipeline deals (saves immediately, not debounced)
+   */
+  saveGoogleSheetPipeline(deals, syncTime) {
+    this.data.googleSheetPipeline = {
+      deals: deals || [],
+      syncedAt: syncTime || new Date().toISOString()
+    };
+    this.data.lastUpdated = new Date().toISOString();
+    // Save immediately to localStorage for cross-page access
+    this.save();
+    return this.data.googleSheetPipeline;
+  }
+
+  /**
+   * Get Google Sheet pipeline deals (reads fresh from localStorage for cross-page sync)
+   */
+  getGoogleSheetPipeline() {
+    // Try to get fresh data from localStorage in case another page updated it
+    try {
+      const freshData = localStorage.getItem('glossi_data');
+      if (freshData) {
+        const parsed = JSON.parse(freshData);
+        if (parsed.googleSheetPipeline) {
+          // Update in-memory cache with fresh data
+          this.data.googleSheetPipeline = parsed.googleSheetPipeline;
+          return parsed.googleSheetPipeline;
+        }
+      }
+    } catch (e) {
+      // Fall back to in-memory data
+    }
+    return this.data.googleSheetPipeline || null;
+  }
+
+  /**
    * Get seed raise stages constant
    */
   getSeedRaiseStages() {

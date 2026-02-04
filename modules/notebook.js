@@ -1213,18 +1213,96 @@ ${linksData}
   getPipelineData() {
     const lines = [];
     
-    // Primary source: Current pipeline email data (this is where the main pipeline data lives)
+    // Primary source: Google Sheet pipeline data (synced from spreadsheet)
+    // Force fresh read from localStorage
+    let googleSheetPipeline = null;
+    try {
+      const freshData = localStorage.getItem('glossi_data');
+      if (freshData) {
+        const parsed = JSON.parse(freshData);
+        googleSheetPipeline = parsed.googleSheetPipeline;
+      }
+    } catch (e) {
+      googleSheetPipeline = this.storage.getGoogleSheetPipeline?.() || this.storage.getData()?.googleSheetPipeline;
+    }
+    
+    if (googleSheetPipeline && googleSheetPipeline.deals && googleSheetPipeline.deals.length > 0) {
+      const deals = googleSheetPipeline.deals;
+      const syncedAt = googleSheetPipeline.syncedAt;
+      
+      if (syncedAt) {
+        lines.push(`Sales Pipeline (synced ${new Date(syncedAt).toLocaleDateString()} ${new Date(syncedAt).toLocaleTimeString()}):`);
+      } else {
+        lines.push('Sales Pipeline:');
+      }
+      
+      // Calculate totals by stage
+      let totalPipeline = 0;
+      let closedTotal = 0;
+      const stageBreakdown = {};
+      
+      deals.forEach(deal => {
+        const value = this.parseMoneyValue(deal.value || deal.amount || '0');
+        totalPipeline += value;
+        const stage = deal.stage || 'unknown';
+        if (!stageBreakdown[stage]) {
+          stageBreakdown[stage] = { total: 0, count: 0, deals: [] };
+        }
+        stageBreakdown[stage].total += value;
+        stageBreakdown[stage].count++;
+        stageBreakdown[stage].deals.push(deal);
+        
+        if (stage.toLowerCase() === 'closed') {
+          closedTotal += value;
+        }
+      });
+      
+      // Format totals
+      const formatValue = (val) => {
+        if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+        if (val >= 1000) return `$${(val / 1000).toFixed(0)}K`;
+        return `$${val}`;
+      };
+      
+      lines.push(`Total Pipeline Value: ${formatValue(totalPipeline)}`);
+      lines.push(`Closed: ${formatValue(closedTotal)}`);
+      lines.push(`Open Pipeline: ${formatValue(totalPipeline - closedTotal)}`);
+      lines.push('');
+      
+      // Stage breakdown
+      if (Object.keys(stageBreakdown).length > 0) {
+        lines.push('Pipeline by Stage:');
+        Object.entries(stageBreakdown).forEach(([stage, data]) => {
+          lines.push(`- ${stage}: ${formatValue(data.total)} (${data.count} deal${data.count !== 1 ? 's' : ''})`);
+        });
+        lines.push('');
+      }
+      
+      // All deals grouped by stage
+      lines.push('All Deals:');
+      Object.entries(stageBreakdown).forEach(([stage, data]) => {
+        data.deals.forEach(deal => {
+          const name = deal.name || deal.company || 'Unknown';
+          const value = deal.value || 'TBD';
+          const contact = deal.contact ? ` (${deal.contact})` : '';
+          const notes = deal.notes ? ` - ${deal.notes}` : '';
+          lines.push(`- [${stage}] ${name}: ${value}${contact}${notes}`);
+        });
+      });
+      
+      return lines.join('\n');
+    }
+    
+    // Secondary source: Pipeline email data (manually entered)
     const pipelineEmail = this.storage.getPipelineEmail?.() || this.storage.getData()?.pipelineEmail;
     
-    if (pipelineEmail) {
-      // Get update date
+    if (pipelineEmail && pipelineEmail.deals && pipelineEmail.deals.length > 0) {
       if (pipelineEmail.updatedAt) {
         lines.push(`Pipeline Data (as of ${new Date(pipelineEmail.updatedAt).toLocaleDateString()}):`);
       } else {
         lines.push('Current Pipeline:');
       }
       
-      // Calculate total from deals
       const deals = pipelineEmail.deals || [];
       let totalPipeline = 0;
       const stageBreakdown = {};
@@ -1244,7 +1322,6 @@ ${linksData}
       lines.push(`Total Pipeline: $${(totalPipeline / 1000).toFixed(0)}K`);
       lines.push('');
       
-      // Stage breakdown
       if (Object.keys(stageBreakdown).length > 0) {
         lines.push('Pipeline by Stage:');
         Object.entries(stageBreakdown).forEach(([stage, data]) => {
@@ -1252,7 +1329,6 @@ ${linksData}
         });
       }
       
-      // All deals
       if (deals.length > 0) {
         lines.push('\nAll Active Deals:');
         deals.forEach(deal => {
@@ -1265,10 +1341,8 @@ ${linksData}
         });
       }
       
-      // Highlights section
       const highlights = pipelineEmail.highlights || {};
       
-      // Hot deals
       if (highlights.hotDeals && highlights.hotDeals.length > 0) {
         lines.push('\nHot Deals (Closest to Close):');
         highlights.hotDeals.forEach(item => {
@@ -1280,22 +1354,22 @@ ${linksData}
         });
       }
       
-      // Key updates
       if (highlights.keyUpdates && highlights.keyUpdates.length > 0) {
         lines.push('\nKey Updates:');
         highlights.keyUpdates.forEach(update => lines.push(`- ${update}`));
       }
       
-      // Marketing
       if (highlights.marketing && highlights.marketing.length > 0) {
         lines.push('\nMarketing Updates:');
         highlights.marketing.forEach(item => lines.push(`- ${item}`));
       }
+      
+      return lines.join('\n');
     }
     
-    // Secondary source: Pipeline history (for historical context)
+    // Tertiary source: Pipeline history
     const history = this.storage.getPipelineHistory?.() || [];
-    if (history && history.length > 0 && lines.length === 0) {
+    if (history && history.length > 0) {
       const latest = history[0];
       if (latest.deals && latest.deals.length > 0) {
         lines.push('Historical Pipeline Data:');
@@ -1304,21 +1378,21 @@ ${linksData}
           const value = deal.value || deal.amount || 'TBD';
           lines.push(`- ${name}: ${value} (${deal.stage || 'unknown'})`);
         });
+        return lines.join('\n');
       }
     }
     
     // Fallback: Basic stats
-    if (lines.length === 0) {
-      const data = this.storage.getData();
-      if (data && data.stats) {
-        const pipelineStat = data.stats.find(s => s.id === 'pipeline' || s.label?.toLowerCase().includes('pipeline'));
-        if (pipelineStat && pipelineStat.value) {
-          lines.push(`Pipeline Value: ${pipelineStat.value}`);
-        }
+    const data = this.storage.getData();
+    if (data && data.stats) {
+      const pipelineStat = data.stats.find(s => s.id === 'pipeline' || s.label?.toLowerCase().includes('pipeline'));
+      if (pipelineStat && pipelineStat.value) {
+        lines.push(`Pipeline Value: ${pipelineStat.value}`);
+        return lines.join('\n');
       }
     }
     
-    return lines.length > 0 ? lines.join('\n') : null;
+    return null;
   }
   
   /**
