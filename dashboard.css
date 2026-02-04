@@ -4028,6 +4028,32 @@ body.sidebar-open .top-nav {
   background: rgba(74, 222, 128, 0.1);
 }
 
+.todo-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  cursor: grab;
+  color: var(--text-muted);
+  opacity: 0.4;
+  transition: opacity var(--duration-fast), color var(--duration-fast);
+  flex-shrink: 0;
+}
+
+.todo-drag-handle:hover {
+  opacity: 1;
+  color: var(--text-secondary);
+}
+
+.todo-drag-handle:active {
+  cursor: grabbing;
+}
+
+.todo-item:hover .todo-drag-handle {
+  opacity: 0.7;
+}
+
 .todo-group-header {
   font-size: 11px;
   font-weight: 600;
@@ -4127,17 +4153,12 @@ body.sidebar-open .top-nav {
 .todo-item {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-4);
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   transition: all var(--duration-normal) var(--ease-out-expo);
-  cursor: grab;
-}
-
-.todo-item:active {
-  cursor: grabbing;
 }
 
 .todo-item.dragging {

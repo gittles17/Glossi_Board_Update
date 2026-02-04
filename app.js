@@ -281,7 +281,17 @@ class GlossiDashboard {
     
     // Render todo item HTML
     const renderTodoItem = (todo) => `
-      <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}" draggable="true">
+      <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}">
+        <div class="todo-drag-handle" draggable="true" title="Drag to move">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="9" cy="5" r="1.5"></circle>
+            <circle cx="15" cy="5" r="1.5"></circle>
+            <circle cx="9" cy="12" r="1.5"></circle>
+            <circle cx="15" cy="12" r="1.5"></circle>
+            <circle cx="9" cy="19" r="1.5"></circle>
+            <circle cx="15" cy="19" r="1.5"></circle>
+          </svg>
+        </div>
         <div class="todo-checkbox ${todo.completed ? 'checked' : ''}" onclick="window.dashboard.toggleTodo('${todo.id}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
             <polyline points="20 6 9 17 4 12"></polyline>
@@ -426,74 +436,61 @@ class GlossiDashboard {
     const container = document.getElementById('action-items-content');
     if (!container) return;
     
-    // Use event delegation on the container for better reliability
-    let draggedTodoId = null;
-    
-    // Handle drag start on todo items
-    container.addEventListener('dragstart', (e) => {
-      const todoItem = e.target.closest('.todo-item');
-      if (!todoItem) return;
+    // Handle drag start on drag handles
+    container.querySelectorAll('.todo-drag-handle').forEach(handle => {
+      handle.addEventListener('dragstart', (e) => {
+        const todoItem = handle.closest('.todo-item');
+        if (!todoItem) return;
+        
+        const todoId = todoItem.dataset.todoId;
+        e.dataTransfer.setData('text/plain', todoId);
+        e.dataTransfer.effectAllowed = 'move';
+        
+        // Set drag image to the whole todo item
+        if (e.dataTransfer.setDragImage) {
+          e.dataTransfer.setDragImage(todoItem, 10, 10);
+        }
+        
+        // Add visual feedback
+        setTimeout(() => todoItem.classList.add('dragging'), 0);
+      });
       
-      draggedTodoId = todoItem.dataset.todoId;
-      e.dataTransfer.setData('text/plain', draggedTodoId);
-      e.dataTransfer.effectAllowed = 'move';
-      todoItem.classList.add('dragging');
-      
-      // Set drag image to the whole todo item
-      if (e.dataTransfer.setDragImage) {
-        e.dataTransfer.setDragImage(todoItem, 10, 10);
-      }
-    });
-    
-    // Handle drag end
-    container.addEventListener('dragend', (e) => {
-      const todoItem = e.target.closest('.todo-item');
-      if (todoItem) {
-        todoItem.classList.remove('dragging');
-      }
-      draggedTodoId = null;
-      container.querySelectorAll('.todo-group-items').forEach(g => g.classList.remove('drag-over'));
+      handle.addEventListener('dragend', (e) => {
+        const todoItem = handle.closest('.todo-item');
+        if (todoItem) {
+          todoItem.classList.remove('dragging');
+        }
+        container.querySelectorAll('.todo-group-items').forEach(g => g.classList.remove('drag-over'));
+      });
     });
     
     // Handle drag over on group items (drop zones)
-    container.addEventListener('dragover', (e) => {
-      const dropZone = e.target.closest('.todo-group-items');
-      if (!dropZone) return;
+    container.querySelectorAll('.todo-group-items').forEach(dropZone => {
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        dropZone.classList.add('drag-over');
+      });
       
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
+      dropZone.addEventListener('dragleave', (e) => {
+        if (!dropZone.contains(e.relatedTarget)) {
+          dropZone.classList.remove('drag-over');
+        }
+      });
       
-      // Highlight the drop zone
-      container.querySelectorAll('.todo-group-items').forEach(g => g.classList.remove('drag-over'));
-      dropZone.classList.add('drag-over');
-    });
-    
-    // Handle drag leave
-    container.addEventListener('dragleave', (e) => {
-      const dropZone = e.target.closest('.todo-group-items');
-      if (dropZone && !dropZone.contains(e.relatedTarget)) {
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
         dropZone.classList.remove('drag-over');
-      }
-    });
-    
-    // Handle drop
-    container.addEventListener('drop', (e) => {
-      e.preventDefault();
-      
-      const dropZone = e.target.closest('.todo-group-items');
-      if (!dropZone) return;
-      
-      dropZone.classList.remove('drag-over');
-      
-      const todoId = e.dataTransfer.getData('text/plain');
-      const targetGroup = dropZone.closest('.todo-group');
-      const newOwner = targetGroup ? targetGroup.dataset.owner : null;
-      
-      if (todoId && newOwner) {
-        // Update the todo's owner
-        storage.updateTodo(todoId, { owner: newOwner });
-        this.renderActionItems();
-      }
+        
+        const todoId = e.dataTransfer.getData('text/plain');
+        const targetGroup = dropZone.closest('.todo-group');
+        const newOwner = targetGroup ? targetGroup.dataset.owner : null;
+        
+        if (todoId && newOwner) {
+          storage.updateTodo(todoId, { owner: newOwner });
+          this.renderActionItems();
+        }
+      });
     });
   }
 
