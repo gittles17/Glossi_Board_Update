@@ -512,8 +512,25 @@ class GlossiDashboard {
       } else if (action === 'add-owner') {
         const newOwner = await this.showPrompt('New Owner Name', '');
         if (newOwner && newOwner.trim()) {
-          await this.addTeamMember(newOwner);
+          const ownerName = newOwner.trim();
+          await this.addTeamMember(ownerName);
+          // Create a new todo for this owner so their section appears
+          const newTodo = storage.addTodo({
+            text: 'New action item',
+            owner: ownerName
+          });
           this.renderActionItems();
+          // Focus the new todo for editing
+          setTimeout(() => {
+            const newEl = document.querySelector(`[data-todo-id="${newTodo.id}"] .todo-text`);
+            if (newEl) {
+              newEl.focus();
+              const range = document.createRange();
+              range.selectNodeContents(newEl);
+              window.getSelection().removeAllRanges();
+              window.getSelection().addRange(range);
+            }
+          }, 50);
         }
       }
     });
