@@ -4042,38 +4042,38 @@ body.sidebar-open .top-nav {
   margin: var(--space-2) 0;
 }
 
-.todo-empty-owners {
+.todo-flat-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border-color);
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
-.todo-group-empty {
-  flex: 0 0 auto;
-  min-width: 100px;
-  opacity: 0.5;
-  transition: opacity var(--duration-fast);
+.todo-add-menu {
+  min-width: 160px;
+  z-index: 1000;
 }
 
-.todo-group-empty:hover,
-.todo-group-empty:has(.drag-over) {
-  opacity: 1;
-}
-
-.todo-group-empty .todo-group-items {
-  min-height: 40px;
+.todo-add-menu .dropdown-item {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--duration-fast);
 }
 
-.todo-empty-hint {
-  font-size: 11px;
+.todo-add-menu .dropdown-item:hover {
+  background: var(--bg-hover);
+}
+
+.todo-add-menu .dropdown-item svg {
   color: var(--text-muted);
-  font-style: italic;
 }
 
 .todo-owner-select {

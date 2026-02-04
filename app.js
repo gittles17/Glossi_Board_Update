@@ -358,47 +358,17 @@ class GlossiDashboard {
     
     let html = '';
     
-    // Render active todos grouped by owner
-    const activeByOwner = groupByOwner(activeTodos);
-    const ownersWithTodos = Object.keys(activeByOwner);
-    
-    // Render groups for owners with todos
-    ownersWithTodos.forEach(owner => {
-      const todos = activeByOwner[owner];
-      html += `
-        <div class="todo-group" data-owner="${owner}">
-          <div class="todo-group-header">${owner}</div>
-          <div class="todo-group-items">
-            ${todos.map(renderTodoItem).join('')}
-          </div>
-        </div>
-      `;
-    });
-    
-    // Add empty drop zones for team members without todos (for drag targets)
-    const emptyOwners = this.teamMembers.filter(m => !ownersWithTodos.includes(m));
-    if (emptyOwners.length > 0 && activeTodos.length > 0) {
-      html += '<div class="todo-empty-owners">';
-      emptyOwners.forEach(owner => {
-        html += `
-          <div class="todo-group todo-group-empty" data-owner="${owner}">
-            <div class="todo-group-header">${owner}</div>
-            <div class="todo-group-items">
-              <span class="todo-empty-hint">Drop here</span>
-            </div>
-          </div>
-        `;
-      });
+    // Render active todos as flat list (no owner grouping)
+    if (activeTodos.length > 0) {
+      html += '<div class="todo-flat-list">';
+      html += activeTodos.map(renderTodoItem).join('');
       html += '</div>';
-    }
-    
-    if (activeTodos.length === 0) {
+    } else {
       html += '<div class="empty-state">All caught up!</div>';
     }
     
-    // Render completed section
+    // Render completed section as flat list
     if (completedTodos.length > 0) {
-      const completedByOwner = groupByOwner(completedTodos);
       html += `
         <div class="todo-completed-section">
           <button class="todo-completed-toggle" onclick="this.parentElement.classList.toggle('expanded')">
@@ -408,14 +378,9 @@ class GlossiDashboard {
             <span>Completed (${completedTodos.length})</span>
           </button>
           <div class="todo-completed-content">
-            ${Object.entries(completedByOwner).map(([owner, todos]) => `
-              <div class="todo-group" data-owner="${owner}">
-                <div class="todo-group-header">${owner}</div>
-                <div class="todo-group-items">
-                  ${todos.map(renderTodoItem).join('')}
-                </div>
-              </div>
-            `).join('')}
+            <div class="todo-flat-list">
+              ${completedTodos.map(renderTodoItem).join('')}
+            </div>
           </div>
         </div>
       `;
@@ -518,6 +483,73 @@ class GlossiDashboard {
         window.getSelection().addRange(range);
       }
     }, 50);
+  }
+  
+  /**
+   * Show menu for adding todo or owner
+   */
+  showTodoAddMenu(button) {
+    // Remove any existing menu
+    const existingMenu = document.querySelector('.todo-add-menu');
+    if (existingMenu) {
+      existingMenu.remove();
+      return;
+    }
+    
+    const menu = document.createElement('div');
+    menu.className = 'todo-add-menu dropdown-menu';
+    menu.innerHTML = `
+      <button class="dropdown-item" data-action="add-todo">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"></path>
+        </svg>
+        New Action Item
+      </button>
+      <button class="dropdown-item" data-action="add-owner">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <line x1="19" y1="8" x2="19" y2="14"></line>
+          <line x1="22" y1="11" x2="16" y2="11"></line>
+        </svg>
+        New Owner
+      </button>
+    `;
+    
+    // Position menu below button
+    const rect = button.getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.top = `${rect.bottom + 4}px`;
+    menu.style.right = `${window.innerWidth - rect.right}px`;
+    
+    document.body.appendChild(menu);
+    
+    // Handle clicks
+    menu.addEventListener('click', async (e) => {
+      const action = e.target.closest('[data-action]')?.dataset.action;
+      menu.remove();
+      
+      if (action === 'add-todo') {
+        this.addNewTodo();
+      } else if (action === 'add-owner') {
+        const newOwner = await this.showPrompt('New Owner Name', '');
+        if (newOwner && newOwner.trim()) {
+          await this.addTeamMember(newOwner);
+          this.renderActionItems();
+        }
+      }
+    });
+    
+    // Close on click outside
+    setTimeout(() => {
+      const closeHandler = (e) => {
+        if (!menu.contains(e.target) && e.target !== button) {
+          menu.remove();
+          document.removeEventListener('click', closeHandler);
+        }
+      };
+      document.addEventListener('click', closeHandler);
+    }, 0);
   }
 
   /**
@@ -1199,8 +1231,8 @@ class GlossiDashboard {
       this.addNewSummaryItem();
     });
 
-    document.getElementById('add-todo-btn').addEventListener('click', () => {
-      this.addNewTodo();
+    document.getElementById('add-todo-btn').addEventListener('click', (e) => {
+      this.showTodoAddMenu(e.target);
     });
 
     document.getElementById('add-decision-btn').addEventListener('click', () => {
