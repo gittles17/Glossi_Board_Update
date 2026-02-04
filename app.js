@@ -1161,7 +1161,10 @@ class GlossiDashboard {
     let closedTotal = 0;
     
     pipelineData.forEach(deal => {
-      const stage = deal.stage || 'Unknown';
+      // Use exact stage from spreadsheet, skip empty stages
+      const stage = (deal.stage || '').trim();
+      if (!stage) return; // Skip deals with no stage
+      
       if (!this.pipelineStageGroups[stage]) {
         this.pipelineStageGroups[stage] = { deals: [], total: 0 };
       }
@@ -1176,15 +1179,18 @@ class GlossiDashboard {
       }
     });
     
+    // Count deals with valid stages
+    const totalDeals = Object.values(this.pipelineStageGroups).reduce((sum, g) => sum + g.deals.length, 0);
+    
     // Update header
     if (totalEl) totalEl.textContent = this.formatMoney(grandTotal);
     const closedEl = document.getElementById('pipeline-closed-info');
     if (closedEl) {
       closedEl.textContent = closedTotal > 0 ? `/ ${this.formatMoney(closedTotal)} closed` : '';
     }
-    if (countEl) countEl.textContent = `(${pipelineData.length} deals)`;
+    if (countEl) countEl.textContent = `(${totalDeals} deals)`;
     
-    // Define stage order
+    // Define stage order (matches typical sales funnel)
     const stageOrder = ['Connected', 'Discovery Call', 'Demo', 'Proposal', 'POC', 'Closed', 'Stalled'];
     this.sortedPipelineStages = Object.keys(this.pipelineStageGroups).sort((a, b) => {
       const aIdx = stageOrder.indexOf(a);
