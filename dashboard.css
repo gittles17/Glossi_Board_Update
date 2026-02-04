@@ -6627,6 +6627,7 @@ body.sidebar-open .top-nav {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: var(--space-3);
+  align-items: start;
 }
 
 /* Compact Deal Card */
