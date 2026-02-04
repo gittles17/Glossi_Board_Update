@@ -3432,6 +3432,7 @@ ${context.substring(0, 4000)}`;
     const copyBtn = document.getElementById('kb-report-copy');
     const closeBtn = document.getElementById('kb-report-view-close');
     const saveBtn = document.getElementById('kb-report-save');
+    const deleteBtn = document.getElementById('kb-report-delete');
     
     if (!modal || !contentEl) return;
     
@@ -3456,6 +3457,14 @@ ${context.substring(0, 4000)}`;
     if (saveBtn) {
       saveBtn.onclick = () => {
         this.saveReportChanges();
+      };
+    }
+    
+    // Setup delete handler
+    if (deleteBtn) {
+      deleteBtn.onclick = async () => {
+        this.hideModal('kb-report-view-modal');
+        await this.deleteReport(report.id);
       };
     }
     
