@@ -220,6 +220,9 @@ class GlossiDashboard {
     // Setup UI event listeners
     this.setupEventListeners();
 
+    // Setup global todo drag-drop (once, uses document-level delegation)
+    this.setupGlobalTodoDragDrop();
+
     // Setup intersection observer for animations
     this.setupAnimationObserver();
 
@@ -433,107 +436,121 @@ class GlossiDashboard {
   }
 
   /**
-   * Setup drag and drop for todo items - rebuilt with direct listeners
+   * Setup global drag and drop listeners (called once in constructor)
    */
-  setupTodoDragDrop() {
-    const container = document.getElementById('todo-list');
-    if (!container) return;
-    
+  setupGlobalTodoDragDrop() {
     const self = this;
     
-    // Create placeholder element
-    let placeholder = document.createElement('div');
+    // Create reusable placeholder
+    const placeholder = document.createElement('div');
     placeholder.className = 'todo-drop-placeholder';
     placeholder.textContent = 'Drop here to reassign';
     
-    // Attach dragstart/dragend to each todo item directly
-    container.querySelectorAll('.todo-item').forEach(item => {
-      item.addEventListener('dragstart', function(e) {
-        // Block drag if clicking on editable content
-        if (e.target.closest('[contenteditable="true"]')) {
-          e.preventDefault();
-          return;
-        }
-        
-        _draggedTodoId = item.dataset.todoId;
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', _draggedTodoId);
-        
-        setTimeout(() => item.classList.add('dragging'), 0);
-      });
+    // DRAGSTART - Document level delegation
+    document.addEventListener('dragstart', function(e) {
+      const todoItem = e.target.closest('.todo-item');
+      if (!todoItem) return;
       
-      item.addEventListener('dragend', function() {
-        item.classList.remove('dragging');
-        _draggedTodoId = null;
-        // Remove placeholder from DOM
-        if (placeholder.parentNode) {
-          placeholder.parentNode.removeChild(placeholder);
-        }
-        // Clear any drag-over states
-        container.querySelectorAll('.todo-group-items.drag-over').forEach(z => z.classList.remove('drag-over'));
+      // Don't drag from contenteditable
+      if (e.target.closest('[contenteditable="true"]')) {
+        e.preventDefault();
+        return;
+      }
+      
+      _draggedTodoId = todoItem.dataset.todoId;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', _draggedTodoId);
+      
+      requestAnimationFrame(() => todoItem.classList.add('dragging'));
+    });
+    
+    // DRAGEND - Cleanup
+    document.addEventListener('dragend', function(e) {
+      const todoItem = e.target.closest('.todo-item');
+      if (todoItem) {
+        todoItem.classList.remove('dragging');
+      }
+      _draggedTodoId = null;
+      
+      // Remove placeholder
+      if (placeholder.parentNode) {
+        placeholder.remove();
+      }
+      
+      // Clear all drag-over states
+      document.querySelectorAll('.todo-group-items.drag-over').forEach(el => {
+        el.classList.remove('drag-over');
       });
     });
     
-    // Attach drop zone listeners to each group
-    container.querySelectorAll('.todo-group-items').forEach(dropZone => {
-      dropZone.addEventListener('dragover', function(e) {
-        if (!_draggedTodoId) return;
-        
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        
-        // Add visual feedback
-        dropZone.classList.add('drag-over');
-        
-        // Insert placeholder if not already there
-        if (!dropZone.contains(placeholder)) {
-          // Remove from previous location
-          if (placeholder.parentNode) {
-            placeholder.parentNode.removeChild(placeholder);
-          }
-          dropZone.appendChild(placeholder);
-        }
-      });
+    // DRAGOVER - Show feedback
+    document.addEventListener('dragover', function(e) {
+      if (!_draggedTodoId) return;
       
-      dropZone.addEventListener('dragleave', function(e) {
-        // Only remove if actually leaving the drop zone
-        if (!dropZone.contains(e.relatedTarget)) {
-          dropZone.classList.remove('drag-over');
-          if (dropZone.contains(placeholder)) {
-            dropZone.removeChild(placeholder);
-          }
-        }
-      });
+      const dropZone = e.target.closest('.todo-group-items');
+      if (!dropZone) return;
       
-      dropZone.addEventListener('drop', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        dropZone.classList.remove('drag-over');
-        
-        // Remove placeholder
-        if (placeholder.parentNode) {
-          placeholder.parentNode.removeChild(placeholder);
-        }
-        
-        const todoId = _draggedTodoId;
-        const targetGroup = dropZone.closest('.todo-group');
-        const newOwner = targetGroup ? targetGroup.dataset.owner : null;
-        
-        if (todoId && newOwner) {
-          const todo = storage.getAllTodos().find(t => t.id === todoId);
-          const currentOwner = todo ? self.resolveOwnerName(todo.owner) : null;
-          
-          // Only update if owner actually changed
-          if (currentOwner !== newOwner) {
-            storage.updateTodo(todoId, { owner: newOwner });
-          }
-          
-          _draggedTodoId = null;
-          self.renderActionItems();
-        }
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      
+      // Highlight drop zone
+      document.querySelectorAll('.todo-group-items.drag-over').forEach(el => {
+        if (el !== dropZone) el.classList.remove('drag-over');
       });
+      dropZone.classList.add('drag-over');
+      
+      // Add placeholder
+      if (!dropZone.contains(placeholder)) {
+        if (placeholder.parentNode) placeholder.remove();
+        dropZone.appendChild(placeholder);
+      }
     });
+    
+    // DRAGLEAVE - Remove feedback when leaving
+    document.addEventListener('dragleave', function(e) {
+      const dropZone = e.target.closest('.todo-group-items');
+      if (!dropZone) return;
+      
+      // Check if we're really leaving the dropzone
+      const relatedTarget = e.relatedTarget;
+      if (relatedTarget && dropZone.contains(relatedTarget)) return;
+      
+      dropZone.classList.remove('drag-over');
+      if (dropZone.contains(placeholder)) {
+        placeholder.remove();
+      }
+    });
+    
+    // DROP - Handle the actual move
+    document.addEventListener('drop', function(e) {
+      const dropZone = e.target.closest('.todo-group-items');
+      if (!dropZone || !_draggedTodoId) return;
+      
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Cleanup UI
+      dropZone.classList.remove('drag-over');
+      if (placeholder.parentNode) placeholder.remove();
+      
+      // Get new owner from target group
+      const targetGroup = dropZone.closest('.todo-group');
+      const newOwner = targetGroup ? targetGroup.dataset.owner : null;
+      
+      if (_draggedTodoId && newOwner) {
+        // Update the todo
+        storage.updateTodo(_draggedTodoId, { owner: newOwner });
+        _draggedTodoId = null;
+        self.renderActionItems();
+      }
+    });
+  }
+  
+  /**
+   * Setup drag and drop (no-op, global listeners handle it)
+   */
+  setupTodoDragDrop() {
+    // Global listeners already set up in constructor
   }
 
   /**
