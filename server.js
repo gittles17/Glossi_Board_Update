@@ -298,7 +298,7 @@ app.post('/api/process-pdf', upload.single('file'), async (req, res) => {
 // Fetch URL content
 app.post('/api/fetch-url', async (req, res) => {
   try {
-    const { url } = req.body;
+    const { url, type } = req.body;
     
     if (!url) {
       return res.status(400).json({ success: false, error: 'No URL provided' });
@@ -307,36 +307,92 @@ app.post('/api/fetch-url', async (req, res) => {
     // Fetch the URL using axios
     const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; GlossiBot/1.0)'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       },
       timeout: 30000
     });
     
     const html = response.data;
     
-    // Simple HTML to text extraction (no cheerio needed)
-    // Remove script and style tags
-    let text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-    text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-    text = text.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '');
-    text = text.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
-    text = text.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '');
-    
     // Extract title
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
     let title = titleMatch ? titleMatch[1].trim() : new URL(url).hostname;
     
-    // Remove all HTML tags and decode entities
-    text = text.replace(/<[^>]+>/g, ' ');
+    // Check if it's a Google Doc (published)
+    const isGoogleDoc = url.includes('docs.google.com/document') || type === 'google-doc';
+    
+    let text;
+    
+    if (isGoogleDoc) {
+      // Special handling for Google Docs to preserve structure
+      // Extract the main content div
+      const contentMatch = html.match(/<div[^>]*id="contents"[^>]*>([\s\S]*?)<\/div>\s*<div[^>]*id="footer"/i) ||
+                          html.match(/<div[^>]*class="doc-content"[^>]*>([\s\S]*)/i) ||
+                          [null, html];
+      
+      text = contentMatch[1] || html;
+      
+      // Remove script and style tags
+      text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+      text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+      
+      // Convert headings to markdown-style
+      text = text.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '\n\n# $1\n\n');
+      text = text.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '\n\n## $1\n\n');
+      text = text.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '\n\n### $1\n\n');
+      text = text.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, '\n\n#### $1\n\n');
+      
+      // Convert list items
+      text = text.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '\n* $1');
+      
+      // Convert paragraphs
+      text = text.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '\n$1\n');
+      
+      // Convert line breaks
+      text = text.replace(/<br\s*\/?>/gi, '\n');
+      
+      // Convert horizontal rules
+      text = text.replace(/<hr[^>]*>/gi, '\n---\n');
+      
+      // Handle bold and italic
+      text = text.replace(/<(b|strong)[^>]*>([\s\S]*?)<\/(b|strong)>/gi, '**$2**');
+      text = text.replace(/<(i|em)[^>]*>([\s\S]*?)<\/(i|em)>/gi, '*$2*');
+      
+      // Remove remaining HTML tags
+      text = text.replace(/<[^>]+>/g, '');
+      
+      // Clean title (remove " - Google Docs")
+      title = title.replace(/\s*-\s*Google Docs$/i, '').trim();
+    } else {
+      // Standard HTML processing
+      text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+      text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+      text = text.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '');
+      text = text.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
+      text = text.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '');
+      text = text.replace(/<[^>]+>/g, ' ');
+    }
+    
+    // Decode HTML entities
     text = text.replace(/&nbsp;/g, ' ');
     text = text.replace(/&amp;/g, '&');
     text = text.replace(/&lt;/g, '<');
     text = text.replace(/&gt;/g, '>');
     text = text.replace(/&quot;/g, '"');
     text = text.replace(/&#39;/g, "'");
+    text = text.replace(/&rsquo;/g, "'");
+    text = text.replace(/&lsquo;/g, "'");
+    text = text.replace(/&rdquo;/g, '"');
+    text = text.replace(/&ldquo;/g, '"');
+    text = text.replace(/&mdash;/g, ', ');
+    text = text.replace(/&ndash;/g, '-');
+    text = text.replace(/&hellip;/g, '...');
+    text = text.replace(/&#\d+;/g, '');
     
     // Clean up whitespace
-    text = text.replace(/\s+/g, ' ').trim().substring(0, 100000);
+    text = text.replace(/[ \t]+/g, ' ');
+    text = text.replace(/\n\s*\n\s*\n/g, '\n\n');
+    text = text.trim().substring(0, 200000);
     
     res.json({
       success: true,

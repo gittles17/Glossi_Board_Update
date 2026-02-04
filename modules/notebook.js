@@ -921,9 +921,17 @@ KEY INFORMATION:
       return;
     }
     
-    const content = document.getElementById('kb-source-text')?.value?.trim() || '';
+    const urlInput = document.getElementById('kb-source-url')?.value?.trim() || '';
+    const textInput = document.getElementById('kb-source-text')?.value?.trim() || '';
     
-    if (!content) {
+    // Handle URL input
+    if (urlInput) {
+      await this.addSourceFromUrl(urlInput);
+      return;
+    }
+    
+    // Handle text input
+    if (!textInput) {
       return;
     }
     
@@ -933,17 +941,17 @@ KEY INFORMATION:
       try {
         const response = await this.aiProcessor.chat(
           'Generate a brief, descriptive title (max 6 words) for this text. Return ONLY the title, no quotes or explanation.',
-          content.substring(0, 1000)
+          textInput.substring(0, 1000)
         );
         title = response.trim().replace(/^["']|["']$/g, '');
         if (title.length > 60) {
           title = title.substring(0, 57) + '...';
         }
       } catch (e) {
-        title = content.split('\n')[0].substring(0, 50) || 'Untitled';
+        title = textInput.split('\n')[0].substring(0, 50) || 'Untitled';
       }
     } else {
-      title = content.split('\n')[0].substring(0, 50) || 'Untitled';
+      title = textInput.split('\n')[0].substring(0, 50) || 'Untitled';
     }
     
     // Create source object
@@ -951,7 +959,7 @@ KEY INFORMATION:
       id: 'src_' + Date.now(),
       type: 'text',
       title,
-      content,
+      content: textInput,
       category: 'other',
       tags: [],
       addedAt: new Date().toISOString(),
@@ -966,6 +974,114 @@ KEY INFORMATION:
     this.clearSourceModal();
     
     if (this.onUpdate) this.onUpdate();
+  }
+
+  /**
+   * Add source from URL (Google Docs, web pages)
+   */
+  async addSourceFromUrl(url) {
+    this.hideModal('kb-source-modal');
+    
+    // Create placeholder source
+    const sourceId = 'src_' + Date.now();
+    const source = {
+      id: sourceId,
+      type: 'url',
+      title: 'Loading...',
+      content: '',
+      category: 'other',
+      tags: [],
+      addedAt: new Date().toISOString(),
+      freshness: 'current',
+      metadata: { url },
+      processing: true,
+      progress: 10
+    };
+    
+    this.sources.push(source);
+    this.saveData();
+    this.render();
+    this.clearSourceModal();
+    
+    try {
+      // Check if it's a Google Doc
+      const isGoogleDoc = url.includes('docs.google.com/document');
+      
+      let title, content;
+      
+      if (isGoogleDoc) {
+        // Convert to published URL format if needed
+        let pubUrl = url;
+        if (!url.includes('/pub')) {
+          // Try to convert edit URL to published URL
+          pubUrl = url.replace(/\/edit.*$/, '/pub').replace(/\/d\/([^/]+)\/.*$/, '/d/$1/pub');
+        }
+        
+        const result = await this.fetchGoogleDoc(pubUrl);
+        title = result.title;
+        content = result.content;
+      } else {
+        // Use generic URL fetcher
+        const result = await this.fetchUrl(url);
+        title = result.title;
+        content = result.content;
+      }
+      
+      // Update source
+      const src = this.sources.find(s => s.id === sourceId);
+      if (src) {
+        src.title = title || new URL(url).hostname;
+        src.content = content;
+        src.processing = false;
+        src.progress = 100;
+        delete src.processing;
+        delete src.progress;
+      }
+      
+      this.saveData();
+      this.render();
+      
+    } catch (error) {
+      // Update source with error
+      const src = this.sources.find(s => s.id === sourceId);
+      if (src) {
+        src.title = 'Failed to load';
+        src.content = `Error loading URL: ${error.message}\n\nURL: ${url}`;
+        src.processing = false;
+        delete src.processing;
+        delete src.progress;
+      }
+      this.saveData();
+      this.render();
+    }
+    
+    if (this.onUpdate) this.onUpdate();
+  }
+
+  /**
+   * Fetch and parse Google Doc content
+   */
+  async fetchGoogleDoc(url) {
+    try {
+      const response = await fetch('/api/fetch-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, type: 'google-doc' })
+      });
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch Google Doc');
+      }
+      
+      return {
+        title: result.title || 'Google Doc',
+        content: result.content
+      };
+    } catch (error) {
+      throw new Error(`Could not fetch Google Doc: ${error.message}`);
+    }
   }
 
   /**

@@ -4625,6 +4625,13 @@ body.sidebar-open .top-nav {
   margin-bottom: 0;
 }
 
+.input-hint {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: var(--space-1);
+}
+
 .input {
   width: 100%;
   background: rgba(255, 255, 255, 0.03);
