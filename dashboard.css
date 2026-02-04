@@ -6442,78 +6442,249 @@ body.sidebar-open .top-nav {
   margin-top: var(--space-2);
 }
 
-/* Pipeline Stage Cards (dynamic columns) */
-.pipeline-stage-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--space-3);
+/* Pipeline Stages Row (Horizontal Pills) */
+.pipeline-stages-row {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
   margin-bottom: var(--space-4);
 }
 
-.stage-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
+.pipeline-stages-row::-webkit-scrollbar {
+  height: 4px;
+}
+
+.pipeline-stages-row::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pipeline-stages-row::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}
+
+/* Stage Pill */
+.stage-pill {
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all 0.15s ease;
-  position: relative;
+  transition: all 0.2s ease;
+  min-width: 100px;
+  flex-shrink: 0;
 }
 
-.stage-card:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.02);
+.stage-pill:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+  transform: translateY(-1px);
 }
 
-.stage-card-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
+.stage-pill.active {
+  border-color: var(--accent-blue);
+  background: rgba(59, 130, 246, 0.1);
 }
 
-.stage-card-title {
-  font-size: 12px;
+.stage-pill-name {
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
+  margin-bottom: var(--space-1);
+  white-space: nowrap;
 }
 
-.stage-card-count {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-dim);
+.stage-pill.active .stage-pill-name {
+  color: var(--accent-blue);
 }
 
-.stage-card-value {
+.stage-pill-value {
   font-family: var(--font-sans);
-  font-size: 32px;
-  font-weight: 300;
+  font-size: 20px;
+  font-weight: 400;
   color: var(--text-primary);
-  line-height: 1;
+  line-height: 1.2;
+}
+
+.stage-pill-count {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* Pipeline Deals Section */
+.pipeline-deals-section {
+  display: none;
+  animation: fadeIn 0.2s ease;
+}
+
+.pipeline-deals-section.visible {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pipeline-deals-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.pipeline-deals-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.pipeline-deals-header .stage-total {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent-green);
+}
+
+/* Pipeline Deals Grid */
+.pipeline-deals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-3);
+}
+
+/* Compact Deal Card */
+.deal-card-compact {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.deal-card-compact:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.deal-card-compact.expanded {
+  border-color: var(--accent-blue);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.deal-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: var(--space-2);
 }
 
-.stage-card-trend {
-  font-size: 12px;
+.deal-card-name {
+  font-size: 14px;
   font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.3;
+  flex: 1;
+  margin-right: var(--space-2);
 }
 
-.stage-card-trend.trend-positive {
-  color: #10b981;
+.deal-card-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-green);
+  white-space: nowrap;
 }
 
-.stage-card-trend.trend-negative {
-  color: #ef4444;
-}
-
-.stage-card-trend.trend-neutral {
+.deal-card-meta {
+  display: flex;
+  gap: var(--space-3);
+  font-size: 12px;
   color: var(--text-muted);
+}
+
+.deal-card-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.deal-card-blocker-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--space-2);
+  padding: 4px 8px;
+  background: rgba(239, 68, 68, 0.15);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  color: #f87171;
+}
+
+.deal-card-blocker-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Expanded Deal Details */
+.deal-card-details {
+  display: none;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-color);
+  animation: slideDown 0.15s ease;
+}
+
+.deal-card-compact.expanded .deal-card-details {
+  display: block;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 200px; }
+}
+
+.deal-card-detail-row {
+  display: flex;
+  margin-bottom: var(--space-2);
+  font-size: 12px;
+}
+
+.deal-card-detail-row:last-child {
+  margin-bottom: 0;
+}
+
+.deal-card-detail-label {
+  color: var(--text-dim);
+  min-width: 60px;
+  flex-shrink: 0;
+}
+
+.deal-card-detail-value {
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.deal-card-detail-value.blocker {
+  color: #f87171;
+}
+
+/* Legacy stage-card styles (keeping for compatibility) */
+.stage-card {
+  display: none;
 }
 
 /* Expandable deals list */

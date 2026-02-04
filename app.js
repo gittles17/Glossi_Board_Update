@@ -1130,39 +1130,43 @@ class GlossiDashboard {
   }
 
   /**
-   * Render the pipeline section from Google Sheet or stored data
+   * Render the pipeline section with two-tier layout
    */
   renderPipelineSection() {
     const pipelineData = this.pipelineDeals || [];
-    const container = document.getElementById('pipeline-stages-container');
+    const stagesRow = document.getElementById('pipeline-stages-row');
+    const dealsSection = document.getElementById('pipeline-deals-section');
+    const dealsHeader = document.getElementById('pipeline-deals-header');
+    const dealsGrid = document.getElementById('pipeline-deals-grid');
     const totalEl = document.getElementById('pipeline-total-value');
     const countEl = document.getElementById('pipeline-deal-count');
     const emptyEl = document.getElementById('pipeline-empty');
     
-    if (!container) return;
-    
     // If no data, show empty state
     if (pipelineData.length === 0) {
       if (emptyEl) emptyEl.style.display = 'block';
+      if (stagesRow) stagesRow.style.display = 'none';
+      if (dealsSection) dealsSection.classList.remove('visible');
       if (totalEl) totalEl.textContent = '$0';
       if (countEl) countEl.textContent = '';
       return;
     }
     
     if (emptyEl) emptyEl.style.display = 'none';
+    if (stagesRow) stagesRow.style.display = 'flex';
     
     // Group deals by stage
-    const stageGroups = {};
+    this.pipelineStageGroups = {};
     let grandTotal = 0;
     
     pipelineData.forEach(deal => {
       const stage = deal.stage || 'Unknown';
-      if (!stageGroups[stage]) {
-        stageGroups[stage] = { deals: [], total: 0 };
+      if (!this.pipelineStageGroups[stage]) {
+        this.pipelineStageGroups[stage] = { deals: [], total: 0 };
       }
-      stageGroups[stage].deals.push(deal);
+      this.pipelineStageGroups[stage].deals.push(deal);
       const value = this.parseMoneyValue(deal.value);
-      stageGroups[stage].total += value;
+      this.pipelineStageGroups[stage].total += value;
       grandTotal += value;
     });
     
@@ -1170,9 +1174,9 @@ class GlossiDashboard {
     if (totalEl) totalEl.textContent = this.formatMoney(grandTotal);
     if (countEl) countEl.textContent = `(${pipelineData.length} deals)`;
     
-    // Define stage order (customize as needed)
+    // Define stage order
     const stageOrder = ['Connected', 'Discovery Call', 'Demo', 'Proposal', 'POC', 'Stalled'];
-    const sortedStages = Object.keys(stageGroups).sort((a, b) => {
+    this.sortedPipelineStages = Object.keys(this.pipelineStageGroups).sort((a, b) => {
       const aIdx = stageOrder.indexOf(a);
       const bIdx = stageOrder.indexOf(b);
       if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
@@ -1181,54 +1185,162 @@ class GlossiDashboard {
       return aIdx - bIdx;
     });
     
-    // Render stage cards
-    container.innerHTML = sortedStages.map(stage => {
-      const data = stageGroups[stage];
-      const stageId = stage.toLowerCase().replace(/\s+/g, '-');
+    // Render stage pills
+    if (stagesRow) {
+      stagesRow.innerHTML = this.sortedPipelineStages.map(stage => {
+        const data = this.pipelineStageGroups[stage];
+        const isActive = this.selectedPipelineStage === stage;
+        
+        return `
+          <div class="stage-pill ${isActive ? 'active' : ''}" data-stage="${this.escapeHtml(stage)}">
+            <span class="stage-pill-name">${this.escapeHtml(stage)}</span>
+            <span class="stage-pill-value">${this.formatMoney(data.total)}</span>
+            <span class="stage-pill-count">${data.deals.length} deal${data.deals.length !== 1 ? 's' : ''}</span>
+          </div>
+        `;
+      }).join('');
       
-      return `
-        <div class="stage-card" data-stage="${stageId}">
-          <div class="stage-card-header">
-            <span class="stage-card-title">${this.escapeHtml(stage)}</span>
-            <span class="stage-card-count">(${data.deals.length})</span>
-          </div>
-          <div class="stage-card-value">${this.formatMoney(data.total)}</div>
-          <div class="stage-card-deals collapsed" id="${stageId}-deals">
-            ${data.deals.map(deal => this.renderDealCard(deal)).join('')}
-          </div>
-        </div>
-      `;
-    }).join('');
+      // Add click handlers for stage pills
+      stagesRow.querySelectorAll('.stage-pill').forEach(pill => {
+        pill.onclick = () => {
+          const stage = pill.dataset.stage;
+          this.selectPipelineStage(stage);
+        };
+      });
+    }
     
-    // Add click handlers for stage cards
-    container.querySelectorAll('.stage-card').forEach(card => {
-      card.onclick = () => {
-        const dealsEl = card.querySelector('.stage-card-deals');
-        if (dealsEl) dealsEl.classList.toggle('collapsed');
+    // If a stage is selected, render its deals
+    if (this.selectedPipelineStage && this.pipelineStageGroups[this.selectedPipelineStage]) {
+      this.renderPipelineDeals(this.selectedPipelineStage);
+    } else if (this.sortedPipelineStages.length > 0) {
+      // Auto-select first stage with deals
+      this.selectPipelineStage(this.sortedPipelineStages[0]);
+    }
+  }
+  
+  /**
+   * Select a pipeline stage and show its deals
+   */
+  selectPipelineStage(stage) {
+    this.selectedPipelineStage = stage;
+    
+    // Update active state on pills
+    const stagesRow = document.getElementById('pipeline-stages-row');
+    if (stagesRow) {
+      stagesRow.querySelectorAll('.stage-pill').forEach(pill => {
+        pill.classList.toggle('active', pill.dataset.stage === stage);
+      });
+    }
+    
+    // Render deals for this stage
+    this.renderPipelineDeals(stage);
+  }
+  
+  /**
+   * Render deals for a specific stage
+   */
+  renderPipelineDeals(stage) {
+    const dealsSection = document.getElementById('pipeline-deals-section');
+    const dealsHeader = document.getElementById('pipeline-deals-header');
+    const dealsGrid = document.getElementById('pipeline-deals-grid');
+    
+    if (!dealsSection || !dealsHeader || !dealsGrid) return;
+    
+    const stageData = this.pipelineStageGroups[stage];
+    if (!stageData) return;
+    
+    // Show deals section
+    dealsSection.classList.add('visible');
+    
+    // Update header
+    dealsHeader.innerHTML = `
+      <h3>${this.escapeHtml(stage)} <span style="font-weight: 400; color: var(--text-dim);">(${stageData.deals.length})</span></h3>
+      <span class="stage-total">${this.formatMoney(stageData.total)}</span>
+    `;
+    
+    // Render deal cards
+    dealsGrid.innerHTML = stageData.deals.map((deal, index) => this.renderDealCard(deal, index)).join('');
+    
+    // Add click handlers for deal cards
+    dealsGrid.querySelectorAll('.deal-card-compact').forEach(card => {
+      card.onclick = (e) => {
+        // Don't toggle if clicking on a link
+        if (e.target.tagName === 'A') return;
+        card.classList.toggle('expanded');
       };
     });
   }
   
   /**
-   * Render a single deal card with all fields
+   * Render a compact deal card with expandable details
    */
-  renderDealCard(deal) {
+  renderDealCard(deal, index) {
     const hasBlocker = deal.blockers && deal.blockers.toLowerCase() !== 'none' && deal.blockers.trim() !== '';
+    const ownerInitial = deal.owner ? deal.owner.charAt(0).toUpperCase() : '?';
+    
+    // Format close date to be more compact
+    let closeDisplay = deal.closeDate || 'TBD';
+    if (closeDisplay.includes('/')) {
+      const parts = closeDisplay.split('/');
+      if (parts.length >= 2) {
+        closeDisplay = `${parts[0]}/${parts[1]}`;
+      }
+    }
     
     return `
-      <div class="deal-card">
-        <div class="deal-card-header">
+      <div class="deal-card-compact" data-index="${index}">
+        <div class="deal-card-top">
           <span class="deal-card-name">${this.escapeHtml(deal.name)}</span>
           <span class="deal-card-value">${this.escapeHtml(deal.value || 'TBD')}</span>
         </div>
         <div class="deal-card-meta">
-          <span><span class="label">Owner:</span> ${this.escapeHtml(deal.owner || 'Unassigned')}</span>
-          <span><span class="label">Close:</span> ${this.escapeHtml(deal.closeDate || 'TBD')}</span>
+          <span>${this.escapeHtml(deal.owner || 'Unassigned')}</span>
+          <span>${closeDisplay}</span>
         </div>
-        ${deal.nextTask ? `<div class="deal-card-next"><span class="label">Next:</span> ${this.escapeHtml(deal.nextTask)}</div>` : ''}
-        ${hasBlocker ? `<div class="deal-card-blocker"><span class="blocker-label">Blocker:</span> ${this.escapeHtml(deal.blockers)}</div>` : ''}
+        ${hasBlocker ? `
+          <div class="deal-card-blocker-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            ${this.escapeHtml(this.truncateText(deal.blockers, 30))}
+          </div>
+        ` : ''}
+        <div class="deal-card-details">
+          ${deal.owner ? `
+            <div class="deal-card-detail-row">
+              <span class="deal-card-detail-label">Owner</span>
+              <span class="deal-card-detail-value">${this.escapeHtml(deal.owner)}</span>
+            </div>
+          ` : ''}
+          ${deal.closeDate ? `
+            <div class="deal-card-detail-row">
+              <span class="deal-card-detail-label">Close</span>
+              <span class="deal-card-detail-value">${this.escapeHtml(deal.closeDate)}</span>
+            </div>
+          ` : ''}
+          ${deal.nextTask ? `
+            <div class="deal-card-detail-row">
+              <span class="deal-card-detail-label">Next</span>
+              <span class="deal-card-detail-value">${this.escapeHtml(deal.nextTask)}</span>
+            </div>
+          ` : ''}
+          ${hasBlocker ? `
+            <div class="deal-card-detail-row">
+              <span class="deal-card-detail-label">Blocker</span>
+              <span class="deal-card-detail-value blocker">${this.escapeHtml(deal.blockers)}</span>
+            </div>
+          ` : ''}
+        </div>
       </div>
     `;
+  }
+  
+  /**
+   * Truncate text to a max length
+   */
+  truncateText(text, maxLength) {
+    if (!text || text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
   }
   
   /**

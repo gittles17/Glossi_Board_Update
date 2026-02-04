@@ -171,12 +171,22 @@
       </div>
     </div>
     
-    <!-- Dynamic Stage Columns -->
-    <div class="pipeline-stage-cards" id="pipeline-stages-container">
-      <!-- Stages rendered dynamically from Google Sheet -->
-      <div class="pipeline-empty-state" id="pipeline-empty">
-        <p>No pipeline data. Configure Google Sheet URL in Settings or drop a CSV file.</p>
+    <!-- Stage Pills Row -->
+    <div class="pipeline-stages-row" id="pipeline-stages-row">
+      <!-- Stage pills rendered dynamically -->
+    </div>
+    
+    <!-- Deals Grid (shown when stage selected) -->
+    <div class="pipeline-deals-section" id="pipeline-deals-section">
+      <div class="pipeline-deals-header" id="pipeline-deals-header"></div>
+      <div class="pipeline-deals-grid" id="pipeline-deals-grid">
+        <!-- Deal cards rendered here -->
       </div>
+    </div>
+    
+    <!-- Empty State -->
+    <div class="pipeline-empty-state" id="pipeline-empty">
+      <p>No pipeline data. Configure Google Sheet URL in Settings or drop a CSV file.</p>
     </div>
   </section>
 
