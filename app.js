@@ -1608,7 +1608,7 @@ class GlossiDashboard {
 
   /**
    * Parse money value string to number
-   * Handles ranges like "$36-$50K" by taking the first value
+   * Handles ranges like "$36-$50K", commas like "US$50,000.00"
    */
   parseMoneyValue(value) {
     if (!value) return 0;
@@ -1619,13 +1619,16 @@ class GlossiDashboard {
       numStr = value.split('-')[0];
     }
     
-    // Extract the number and multiplier
+    // Remove commas from numbers (e.g., "50,000" -> "50000")
+    numStr = numStr.replace(/,/g, '');
+    
+    // Extract the number
     const numMatch = numStr.match(/[\d.]+/);
     if (!numMatch) return 0;
     
     let num = parseFloat(numMatch[0]) || 0;
     
-    // Check for K/M multiplier in the original value (for ranges like "$36-$50K")
+    // Check for K/M multiplier in the original value
     if (/[Kk]/.test(value)) num *= 1000;
     else if (/[Mm]/.test(value)) num *= 1000000;
     
