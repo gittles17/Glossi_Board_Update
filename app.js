@@ -1155,15 +1155,17 @@ class GlossiDashboard {
     if (emptyEl) emptyEl.style.display = 'none';
     if (stagesRow) stagesRow.style.display = 'flex';
     
-    // Group deals by stage
+    // Group deals by stage (with fuzzy matching)
     this.pipelineStageGroups = {};
     let grandTotal = 0;
     let closedTotal = 0;
     
     pipelineData.forEach(deal => {
-      // Use exact stage from spreadsheet, skip empty stages
-      const stage = (deal.stage || '').trim();
-      if (!stage) return; // Skip deals with no stage
+      // Normalize stage name (case-insensitive, trim whitespace)
+      const rawStage = (deal.stage || '').trim();
+      if (!rawStage) return; // Skip deals with no stage
+      
+      const stage = this.normalizeStage(rawStage);
       
       if (!this.pipelineStageGroups[stage]) {
         this.pipelineStageGroups[stage] = { deals: [], total: 0 };
@@ -1191,7 +1193,7 @@ class GlossiDashboard {
     if (countEl) countEl.textContent = `(${totalDeals} deals)`;
     
     // Define stage order (matches typical sales funnel)
-    const stageOrder = ['Connected', 'Discovery Call', 'Demo', 'Proposal', 'POC', 'Closed', 'Stalled'];
+    const stageOrder = ['Connected', 'Discovery Call', 'Demo', 'Proposal', 'POC', 'Closed', 'Stalled', 'Lost'];
     this.sortedPipelineStages = Object.keys(this.pipelineStageGroups).sort((a, b) => {
       const aIdx = stageOrder.indexOf(a);
       const bIdx = stageOrder.indexOf(b);
@@ -1357,6 +1359,50 @@ class GlossiDashboard {
   truncateText(text, maxLength) {
     if (!text || text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
+  }
+  
+  /**
+   * Normalize stage name for fuzzy matching (case-insensitive)
+   */
+  normalizeStage(stage) {
+    if (!stage) return '';
+    
+    const lower = stage.toLowerCase().trim();
+    
+    // Map common variations to canonical names
+    const stageMap = {
+      'connected': 'Connected',
+      'discovery call': 'Discovery Call',
+      'discovery': 'Discovery Call',
+      'demo': 'Demo',
+      'proposal': 'Proposal',
+      'poc': 'POC',
+      'proof of concept': 'POC',
+      'closed': 'Closed',
+      'closed won': 'Closed',
+      'won': 'Closed',
+      'stalled': 'Stalled',
+      'on hold': 'Stalled',
+      'lost': 'Lost',
+      'closed lost': 'Lost'
+    };
+    
+    // Check for exact match first
+    if (stageMap[lower]) {
+      return stageMap[lower];
+    }
+    
+    // Check for partial matches
+    for (const [key, value] of Object.entries(stageMap)) {
+      if (lower.includes(key) || key.includes(lower)) {
+        return value;
+      }
+    }
+    
+    // Title case the original if no match found
+    return stage.split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
   }
   
   /**
