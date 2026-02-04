@@ -11,6 +11,9 @@ import { notebook } from './modules/notebook.js';
 // OpenAI API key for Whisper transcription (set in settings)
 let OPENAI_API_KEY = null;
 
+// Module-level variable for drag and drop (guaranteed accessible)
+let _draggedTodoId = null;
+
 class GlossiDashboard {
   constructor() {
     this.data = null;
@@ -439,16 +442,18 @@ class GlossiDashboard {
     const container = document.getElementById('action-items-content');
     if (!container) return;
     
+    const self = this; // Store reference for callbacks
+    
     // Handle drag start on drag handles
     container.querySelectorAll('.todo-drag-handle').forEach(handle => {
-      handle.addEventListener('dragstart', (e) => {
-        const todoItem = handle.closest('.todo-item');
+      handle.addEventListener('dragstart', function(e) {
+        const todoItem = this.closest('.todo-item');
         if (!todoItem) return;
         
         const todoId = todoItem.dataset.todoId;
         
-        // Store in class property (more reliable than dataTransfer)
-        this.draggedTodoId = todoId;
+        // Store in module-level variable (guaranteed accessible)
+        _draggedTodoId = todoId;
         
         // Also set dataTransfer for browser compatibility
         e.dataTransfer.setData('text/plain', todoId);
@@ -463,44 +468,44 @@ class GlossiDashboard {
         setTimeout(() => todoItem.classList.add('dragging'), 0);
       });
       
-      handle.addEventListener('dragend', (e) => {
-        const todoItem = handle.closest('.todo-item');
+      handle.addEventListener('dragend', function(e) {
+        const todoItem = this.closest('.todo-item');
         if (todoItem) {
           todoItem.classList.remove('dragging');
         }
         // Clear the dragged todo ID
-        this.draggedTodoId = null;
+        _draggedTodoId = null;
         container.querySelectorAll('.todo-group-items').forEach(g => g.classList.remove('drag-over'));
       });
     });
     
     // Handle drag over on group items (drop zones)
     container.querySelectorAll('.todo-group-items').forEach(dropZone => {
-      dropZone.addEventListener('dragover', (e) => {
+      dropZone.addEventListener('dragover', function(e) {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
-        dropZone.classList.add('drag-over');
+        this.classList.add('drag-over');
       });
       
-      dropZone.addEventListener('dragleave', (e) => {
-        if (!dropZone.contains(e.relatedTarget)) {
-          dropZone.classList.remove('drag-over');
+      dropZone.addEventListener('dragleave', function(e) {
+        if (!this.contains(e.relatedTarget)) {
+          this.classList.remove('drag-over');
         }
       });
       
-      dropZone.addEventListener('drop', (e) => {
+      dropZone.addEventListener('drop', function(e) {
         e.preventDefault();
-        dropZone.classList.remove('drag-over');
+        this.classList.remove('drag-over');
         
-        // Use class property instead of dataTransfer (more reliable)
-        const todoId = this.draggedTodoId;
-        const targetGroup = dropZone.closest('.todo-group');
+        // Use module-level variable (guaranteed accessible)
+        const todoId = _draggedTodoId;
+        const targetGroup = this.closest('.todo-group');
         const newOwner = targetGroup ? targetGroup.dataset.owner : null;
         
         if (todoId && newOwner) {
           storage.updateTodo(todoId, { owner: newOwner });
-          this.draggedTodoId = null;
-          this.renderActionItems();
+          _draggedTodoId = null;
+          self.renderActionItems();
         }
       });
     });
