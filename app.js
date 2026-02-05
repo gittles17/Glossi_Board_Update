@@ -287,20 +287,18 @@ class GlossiDashboard {
     const progressBar = document.getElementById('action-progress-fill');
     const allTodos = storage.getAllTodos();
     
-    // Update progress
-    const progress = storage.getTodoProgress();
-    progressEl.textContent = `${progress.completed}/${progress.total} complete`;
-    const percentage = progress.total > 0 ? (progress.completed / progress.total) * 100 : 0;
-    progressBar.style.width = `${percentage}%`;
+    // Update progress (just show count since completed items are deleted)
+    const totalTodos = allTodos.length;
+    progressEl.textContent = `${totalTodos} item${totalTodos !== 1 ? 's' : ''}`;
+    progressBar.style.width = totalTodos > 0 ? '100%' : '0%';
     
     if (allTodos.length === 0) {
       container.innerHTML = '<div class="empty-state">No action items yet.</div>';
       return;
     }
     
-    // Separate active and completed
-    const activeTodos = allTodos.filter(t => !t.completed);
-    const completedTodos = allTodos.filter(t => t.completed);
+    // All todos are active (completed ones are deleted)
+    const activeTodos = allTodos;
     
     // Group by owner
     const groupByOwner = (todos) => {
@@ -362,31 +360,6 @@ class GlossiDashboard {
       html += '<div class="empty-state">All caught up!</div>';
     }
     
-    // Render completed section grouped by owner
-    if (completedTodos.length > 0) {
-      const completedByOwner = groupByOwner(completedTodos);
-      html += `
-        <div class="todo-completed-section">
-          <button class="todo-completed-toggle" onclick="this.parentElement.classList.toggle('expanded')">
-            <svg class="toggle-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-            <span>Completed (${completedTodos.length})</span>
-          </button>
-          <div class="todo-completed-content">
-            ${Object.entries(completedByOwner).map(([owner, todos]) => `
-              <div class="todo-group" data-owner="${owner}">
-                <div class="todo-group-header">${owner}</div>
-                <div class="todo-group-items">
-                  ${todos.map(renderTodoItem).join('')}
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
-    
     container.innerHTML = html;
     this.setupTodoEditListeners(container);
     this.setupTodoDragDrop();
@@ -421,14 +394,11 @@ class GlossiDashboard {
   }
 
   /**
-   * Toggle a todo completion
+   * Complete and delete a todo (checking off deletes it permanently)
    */
   toggleTodo(todoId) {
-    const todo = storage.getAllTodos().find(t => t.id === todoId);
-    if (todo) {
-      storage.updateTodo(todoId, { completed: !todo.completed });
-      this.renderActionItems();
-    }
+    storage.deleteTodo(todoId);
+    this.renderActionItems();
   }
 
   /**
