@@ -287,18 +287,22 @@ class GlossiDashboard {
     const progressBar = document.getElementById('action-progress-fill');
     const allTodos = storage.getAllTodos();
     
-    // Update progress (just show count since completed items are deleted)
-    const totalTodos = allTodos.length;
-    progressEl.textContent = `${totalTodos} item${totalTodos !== 1 ? 's' : ''}`;
-    progressBar.style.width = totalTodos > 0 ? '100%' : '0%';
+    // Filter out any completed todos and delete them from storage
+    const completedTodos = allTodos.filter(t => t.completed);
+    completedTodos.forEach(t => storage.deleteTodo(t.id));
     
-    if (allTodos.length === 0) {
+    // Get only active todos
+    const activeTodos = allTodos.filter(t => !t.completed);
+    
+    // Update progress count
+    const count = activeTodos.length;
+    progressEl.textContent = `${count} item${count !== 1 ? 's' : ''}`;
+    progressBar.style.width = count > 0 ? '100%' : '0%';
+    
+    if (activeTodos.length === 0) {
       container.innerHTML = '<div class="empty-state">No action items yet.</div>';
       return;
     }
-    
-    // All todos are active (completed ones are deleted)
-    const activeTodos = allTodos;
     
     // Group by owner
     const groupByOwner = (todos) => {
@@ -313,7 +317,7 @@ class GlossiDashboard {
     
     // Render todo item HTML - no owner tag, just text
     const renderTodoItem = (todo) => `
-      <div class="todo-item ${todo.completed ? 'completed' : ''}" data-todo-id="${todo.id}" draggable="true">
+      <div class="todo-item" data-todo-id="${todo.id}" draggable="true">
         <div class="todo-drag-handle" title="Drag to move">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="9" cy="5" r="1.5"></circle>
@@ -324,7 +328,7 @@ class GlossiDashboard {
             <circle cx="15" cy="19" r="1.5"></circle>
           </svg>
         </div>
-        <div class="todo-checkbox ${todo.completed ? 'checked' : ''}" onclick="window.dashboard.toggleTodo('${todo.id}')">
+        <div class="todo-checkbox" onclick="window.dashboard.toggleTodo('${todo.id}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
