@@ -394,6 +394,13 @@ class GlossiDashboard {
           e.target.blur();
         }
       });
+      
+      // Strip formatting on paste - only allow plain text
+      item.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+        document.execCommand('insertText', false, text);
+      });
     });
   }
 
