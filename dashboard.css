@@ -5634,6 +5634,37 @@ body.sidebar-open .top-nav {
   color: var(--text-primary);
 }
 
+/* Screen reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Heading styled as h4 (for proper heading order with h2 tag) */
+h2.section-title-h4 {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* CLS prevention - reserve layout space */
+.seed-raise-section {
+  min-height: 200px;
+}
+
+.seed-progress-bar {
+  min-height: 12px;
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -6378,7 +6409,7 @@ body.sidebar-open .top-nav {
 .funnel-column .column-count {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .funnel-column .column-total {
@@ -6491,7 +6522,7 @@ body.sidebar-open .top-nav {
 
 .investor-card .investor-notes {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

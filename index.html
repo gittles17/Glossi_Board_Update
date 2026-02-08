@@ -5,17 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Glossi</title>
   <meta name="theme-color" content="#0a0d12">
+  <meta name="description" content="Glossi investor dashboard for tracking fundraising, pipeline, and board updates.">
   <link rel="icon" type="image/svg+xml" href="Asset 3.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap"></noscript>
   <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
   <!-- Top Navigation -->
   <header class="top-nav">
     <div class="nav-left">
-      <img src="Asset 3.svg" alt="Glossi" class="logo-img">
+      <img src="Asset 3.svg" alt="Glossi" class="logo-img" width="21" height="24">
     </div>
     <div class="nav-right">
       <!-- Desktop Nav Icons (hidden on mobile) -->
@@ -218,15 +220,16 @@
               <div class="meeting-section collapsible" id="summary-section">
                 <div class="section-header-row clickable" data-toggle="summary-content">
                   <div class="section-header-left">
-                    <button class="collapse-toggle" aria-expanded="true">
+                    <button class="collapse-toggle" aria-expanded="true" aria-label="Toggle Summary">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="6 9 12 15 18 9"></polyline>
                       </svg>
                     </button>
-                    <h4>Summary</h4>
+                    <h2 class="section-title-h4">Summary</h2>
                     <span class="item-count" id="summary-count"></span>
                   </div>
                   <div class="section-header-right">
+                    <label for="meeting-select" class="sr-only">Select meeting date</label>
                     <select id="meeting-select" class="time-filter time-filter-small">
                       <option value="latest">This Week</option>
                       <!-- Populated by JS with past weeks -->
@@ -250,12 +253,12 @@
               <div class="meeting-section collapsible" id="decisions-section">
                 <div class="section-header-row clickable" data-toggle="decisions-content">
                   <div class="section-header-left">
-                    <button class="collapse-toggle" aria-expanded="true">
+                    <button class="collapse-toggle" aria-expanded="true" aria-label="Toggle Key Decisions">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="6 9 12 15 18 9"></polyline>
                       </svg>
                     </button>
-                    <h4>Key Decisions</h4>
+                    <h2 class="section-title-h4">Key Decisions</h2>
                     <span class="item-count" id="decisions-count"></span>
                   </div>
                   <button class="add-btn-small" id="add-decision-btn" title="Add decision">
@@ -278,12 +281,12 @@
               <div class="meeting-section collapsible" id="actions-section">
                 <div class="section-header-row clickable" data-toggle="actions-content">
                   <div class="section-header-left">
-                    <button class="collapse-toggle" aria-expanded="true">
+                    <button class="collapse-toggle" aria-expanded="true" aria-label="Toggle Action Items">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="6 9 12 15 18 9"></polyline>
                       </svg>
                     </button>
-                    <h4>Action Items</h4>
+                    <h2 class="section-title-h4">Action Items</h2>
                   </div>
                   <div class="section-header-right">
                     <button class="add-btn-small" id="add-todo-btn" title="Add action item">

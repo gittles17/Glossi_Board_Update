@@ -7,6 +7,7 @@ const pdfParse = require('pdf-parse');
 const axios = require('axios');
 const FormData = require('form-data');
 
+const compression = require('compression');
 const app = express();
 const PORT = process.env.PORT || 5500;
 
@@ -54,6 +55,7 @@ async function initDatabase() {
 }
 
 // Middleware
+app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(__dirname));
 
