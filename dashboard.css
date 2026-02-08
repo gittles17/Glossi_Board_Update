@@ -6544,6 +6544,7 @@ h2.section-title-h4 {
 .pipeline-section {
   padding: var(--space-6);
   padding-top: var(--space-4);
+  min-height: 200px;
 }
 
 .pipeline-header {
@@ -6613,7 +6614,7 @@ h2.section-title-h4 {
 
 .sync-time {
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--text-secondary);
 }
 
 .pipeline-closed-info {
@@ -6625,7 +6626,7 @@ h2.section-title-h4 {
 
 .pipeline-deal-count {
   font-size: 14px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin-left: var(--space-2);
 }
 
@@ -6741,7 +6742,7 @@ h2.section-title-h4 {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin-bottom: var(--space-1);
   white-space: nowrap;
 }
@@ -6760,7 +6761,7 @@ h2.section-title-h4 {
 
 .stage-pill-count {
   font-size: 10px;
-  color: var(--text-dim);
+  color: var(--text-secondary);
   margin-top: 2px;
 }
 
