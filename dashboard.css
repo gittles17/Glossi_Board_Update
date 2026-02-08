@@ -24,7 +24,7 @@
   --text-primary: #ffffff;
   --text-secondary: #a3a3a3;
   --text-muted: #737373;
-  --text-dim: #525252;
+  --text-dim: #6b6b6b;
 
   /* Accents - Auris Palette */
   --accent-green: #5BB09A;
@@ -4876,7 +4876,7 @@ body.sidebar-open .top-nav {
 .link-column-count {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* Link Column Items (like column-items) */
@@ -4966,7 +4966,7 @@ body.sidebar-open .top-nav {
   font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 300;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -6858,7 +6858,7 @@ h2.section-title-h4 {
   display: flex;
   gap: var(--space-3);
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .deal-card-meta span {

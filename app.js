@@ -1617,7 +1617,7 @@ class GlossiDashboard {
     
     // Update header
     dealsHeader.innerHTML = `
-      <h3>${this.escapeHtml(stage)} <span style="font-weight: 400; color: var(--text-dim);">(${stageData.deals.length})</span></h3>
+      <h3>${this.escapeHtml(stage)} <span style="font-weight: 400; color: var(--text-secondary);">(${stageData.deals.length})</span></h3>
       <span class="stage-total">${this.formatMoney(stageData.total)}</span>
     `;
     
