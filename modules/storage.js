@@ -89,6 +89,7 @@ class Storage {
     this.settings = null;
     this.meetings = [];
     this.todos = []; // Independent action items storage
+    this.teamMembers = null;
     this.pipelineHistory = [];
     this.statHistory = [];
     this.saveTimeout = null;
@@ -124,6 +125,9 @@ class Storage {
           }
           if (result.data.todos) {
             this.todos = result.data.todos;
+          }
+          if (result.data.team_members) {
+            this.teamMembers = result.data.team_members;
           }
         }
       }
@@ -295,6 +299,21 @@ class Storage {
    */
   getAllTodos() {
     return this.todos || [];
+  }
+
+  /**
+   * Get team members
+   */
+  getTeamMembers() {
+    return this.teamMembers;
+  }
+
+  /**
+   * Set team members and sync
+   */
+  setTeamMembers(members) {
+    this.teamMembers = members;
+    this.syncToServer();
   }
 
   /**
@@ -1879,7 +1898,8 @@ class Storage {
           settings: this.settings,
           pipelineHistory: this.pipelineHistory,
           statHistory: this.statHistory,
-          todos: this.todos
+          todos: this.todos,
+          teamMembers: this.teamMembers
         })
       });
 

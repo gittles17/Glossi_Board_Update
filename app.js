@@ -52,18 +52,18 @@ class GlossiDashboard {
       'david': 'David'
     };
     
-    // Available team members for quick assignment (load from storage or use defaults)
-    const savedTeamMembers = localStorage.getItem('glossi_team_members');
-    this.teamMembers = savedTeamMembers 
-      ? JSON.parse(savedTeamMembers) 
-      : ['Ricky', 'Jonathan', 'Adam', 'Will', 'David', 'Unassigned'];
+    // Available team members for quick assignment (loaded in init from server/localStorage)
+    this.teamMembers = ['Ricky', 'Jonathan', 'Adam', 'Will', 'David', 'Unassigned'];
   }
   
   /**
-   * Save team members to localStorage
+   * Save team members to storage and sync
    */
   saveTeamMembers() {
     localStorage.setItem('glossi_team_members', JSON.stringify(this.teamMembers));
+    if (storage) {
+      storage.setTeamMembers(this.teamMembers);
+    }
   }
   
   /**
@@ -224,6 +224,17 @@ class GlossiDashboard {
     const { data, settings, meetings } = await storage.init();
     this.data = data;
     this.settings = settings;
+    
+    // Load team members from server data or localStorage
+    const serverTeamMembers = storage.getTeamMembers?.();
+    if (serverTeamMembers && serverTeamMembers.length > 0) {
+      this.teamMembers = serverTeamMembers;
+    } else {
+      try {
+        const saved = localStorage.getItem('glossi_team_members');
+        if (saved) this.teamMembers = JSON.parse(saved);
+      } catch (e) { /* use defaults */ }
+    }
 
     // Initialize AI processor with API key
     if (settings.apiKey) {

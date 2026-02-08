@@ -75,7 +75,7 @@ app.get('/api/data', async (req, res) => {
       });
     } else {
       // Load from files
-      const files = ['dashboard-data.json', 'meetings.json', 'settings.json', 'pipeline-history.json', 'stat-history.json', 'todos.json'];
+      const files = ['dashboard-data.json', 'meetings.json', 'settings.json', 'pipeline-history.json', 'stat-history.json', 'todos.json', 'team-members.json'];
       
       files.forEach(file => {
         const filePath = path.join(DATA_DIR, file);
@@ -100,7 +100,7 @@ app.get('/api/data', async (req, res) => {
 // Save all data
 app.post('/api/data', async (req, res) => {
   try {
-    const { data, meetings, settings, pipelineHistory, statHistory, todos } = req.body;
+    const { data, meetings, settings, pipelineHistory, statHistory, todos, teamMembers } = req.body;
     
     if (useDatabase) {
       // Save to PostgreSQL using upsert
@@ -120,6 +120,7 @@ app.post('/api/data', async (req, res) => {
       await saveData('pipeline_history', pipelineHistory);
       await saveData('stat_history', statHistory);
       await saveData('todos', todos);
+      await saveData('team_members', teamMembers);
       
     } else {
       // Save to files
@@ -162,6 +163,13 @@ app.post('/api/data', async (req, res) => {
         fs.writeFileSync(
           path.join(DATA_DIR, 'todos.json'),
           JSON.stringify(todos, null, 2)
+        );
+      }
+      
+      if (teamMembers) {
+        fs.writeFileSync(
+          path.join(DATA_DIR, 'team-members.json'),
+          JSON.stringify(teamMembers, null, 2)
         );
       }
       
