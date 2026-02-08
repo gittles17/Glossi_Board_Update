@@ -152,6 +152,9 @@ class Storage {
     if (!this.meetings || this.meetings.length === 0) {
       this.meetings = safeJsonParse('glossi_meetings', []);
     }
+    // Track if todos came from server
+    const todosFromServer = this.todos && this.todos.length > 0;
+    
     if (!this.todos || this.todos.length === 0) {
       this.todos = safeJsonParse('glossi_todos', []);
     }
@@ -176,6 +179,11 @@ class Storage {
         this.todos = migratedTodos;
         this.saveTodos();
       }
+    }
+    
+    // One-time sync: push localStorage todos to server if server had none
+    if (!todosFromServer && this.todos.length > 0 && this.serverAvailable) {
+      this.saveTodos();
     }
     if (!this.pipelineHistory || this.pipelineHistory.length === 0) {
       this.pipelineHistory = safeJsonParse('glossi_pipeline_history', []);
