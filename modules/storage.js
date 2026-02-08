@@ -122,6 +122,9 @@ class Storage {
           if (result.data.stat_history) {
             this.statHistory = result.data.stat_history;
           }
+          if (result.data.todos) {
+            this.todos = result.data.todos;
+          }
         }
       }
     } catch (e) {
@@ -1867,7 +1870,8 @@ class Storage {
           meetings: this.meetings,
           settings: this.settings,
           pipelineHistory: this.pipelineHistory,
-          statHistory: this.statHistory
+          statHistory: this.statHistory,
+          todos: this.todos
         })
       });
 
