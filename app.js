@@ -419,6 +419,7 @@ class GlossiDashboard {
    * Complete and delete a todo (checking off deletes it permanently)
    */
   toggleTodo(todoId) {
+    this.savePendingTodoEdits();
     storage.deleteTodo(todoId);
     this.renderActionItems();
   }
@@ -427,6 +428,7 @@ class GlossiDashboard {
    * Delete a todo
    */
   deleteTodo(todoId) {
+    this.savePendingTodoEdits();
     storage.deleteTodo(todoId);
     this.renderActionItems();
   }
