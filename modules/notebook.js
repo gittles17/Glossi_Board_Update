@@ -1264,26 +1264,40 @@ Respond with ONLY the category name (lowercase).`;
       // Build context from sources
       const context = this.buildSourceContext();
       
-      const systemPrompt = `You are an AI assistant for Glossi's investor knowledge base.
+      const systemPrompt = `You are a highly intelligent AI research assistant for Glossi, a seed-stage startup. You have deep knowledge of the company through the sources below and full memory of this conversation.
 
 SOURCES:
 ${context}
 
-FORMATTING RULES:
-- Use numbered sections for major topics (1. Topic Name)
-- Use - for bullet points under each section
-- Bold sparingly: only the first key term per bullet, not entire sentences
-- Keep bullets concise (1-2 lines max)
-- Add source citation at end of bullet: [Source: title]
-- No excessive formatting or emphasis
-- Be direct and scannable
+YOUR CAPABILITIES:
+- Synthesize information across multiple sources to form insights
+- Identify patterns, trends, and connections the user might not see
+- Provide strategic analysis, not just summaries
+- Reference specific data points and metrics when available
+- Compare current vs. past data when sources allow
+- Proactively surface relevant context from sources when it strengthens your answer
+
+RESPONSE STYLE:
+- Be concise but substantive. Prefer depth over breadth.
+- Lead with the key insight or answer, then support it
+- Use numbered sections only when covering multiple distinct topics
+- Use bullet points for supporting details (1-2 lines each)
+- Bold key terms or metrics sparingly for scannability
+- Cite sources inline: [Source: title]
+- When asked to "go deeper" or elaborate, build on your previous answer rather than repeating it
 
 CONTENT RULES:
-- Answer based ONLY on the provided sources
-- If information is not in sources, say so clearly
-- Prioritize recent and relevant information`;
+- Ground all claims in the provided sources
+- If information is not available in sources, say so clearly and suggest what data would help
+- When sources conflict or data is stale, flag it
+- Prioritize the most recent and relevant information`;
 
-      const response = await this.aiProcessor.chat(systemPrompt, message);
+      // Build conversation history for multi-turn context
+      const history = this.currentConversation.messages.slice(0, -1)
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => ({ role: m.role, content: m.content }));
+
+      const response = await this.aiProcessor.chat(systemPrompt, message, history);
       
       // Add assistant message
       this.currentConversation.messages.push({
@@ -1901,31 +1915,26 @@ ${linksData}
     if (continueBtn) continueBtn.style.display = 'none';
     
     try {
-      const sourceList = enabledSources.map(s => `- ${s.title} (${s.category})`).join('\n');
+      // Build source list including both file and dashboard sources
+      const fileSources = enabledSources.map(s => `- ${s.title} (${s.category})`);
+      const dashSources = Object.entries(this.dashboardSources)
+        .filter(([, s]) => s.enabled)
+        .map(([key]) => `- Dashboard: ${key} (live data)`);
+      const sourceList = [...fileSources, ...dashSources].join('\n');
       
-      const evaluationPrompt = `You are helping a user generate a report. Evaluate if their request is clear enough to proceed or if you need clarification.
+      const evaluationPrompt = `Evaluate if this report request is clear enough to generate immediately. Bias heavily toward proceeding. Only ask questions if the request is genuinely ambiguous.
 
 User's request: "${prompt}"
 
 Available sources:
 ${sourceList}
 
-If the request is clear and specific enough to generate a good report, respond with exactly:
-{"ready": true}
+Respond with ONLY valid JSON, no other text.
 
-If you need clarification, respond with a JSON object containing 1-3 questions. Each question should have:
-- "id": unique identifier
-- "question": the question text
-- "type": either "text" (for open answer) or "choice" (for multiple choice)
-- "options": array of options (only if type is "choice")
+If clear (default): {"ready": true}
+If genuinely ambiguous (rare): {"ready": false, "questions": [{"id": "q1", "question": "...", "type": "choice", "options": ["A", "B"]}]}
 
-Example response if clarification needed:
-{"ready": false, "questions": [
-  {"id": "timeframe", "question": "What time period should the report cover?", "type": "choice", "options": ["Last week", "Last month", "Last quarter", "All time"]},
-  {"id": "audience", "question": "Who is the primary audience for this report?", "type": "text"}
-]}
-
-Only ask questions that would meaningfully improve the report. If the prompt is reasonably clear, just proceed.`;
+Rules: Max 2 questions. Prefer "choice" type. If in doubt, respond {"ready": true}.`;
 
       const response = await this.aiProcessor.chat(evaluationPrompt, 'Evaluate this report request.');
       
@@ -2077,9 +2086,11 @@ Only ask questions that would meaningfully improve the report. If the prompt is 
       return;
     }
     
-    // Get all enabled sources
+    // Get all enabled sources (file + dashboard)
     const enabledSources = this.sources.filter(s => s.enabled !== false);
-    if (enabledSources.length === 0) {
+    const enabledDashboard = Object.values(this.dashboardSources).filter(s => s.enabled).length;
+    if (enabledSources.length === 0 && enabledDashboard === 0) {
+      this.showToast('Please enable at least one source to generate a report.', 'error');
       return;
     }
     
@@ -2113,23 +2124,24 @@ Only ask questions that would meaningfully improve the report. If the prompt is 
     if (backBtn) backBtn.style.display = 'none';
     
     try {
-      const context = enabledSources.map(s => 
-        `--- ${s.title} (${s.category}) ---\n${s.content}\n---`
-      ).join('\n\n');
+      // Use buildSourceContext which includes both file AND dashboard sources
+      const context = this.buildSourceContext();
       
-      const systemPrompt = `You are generating a report for Glossi, a seed-stage startup.
-Based on the provided sources, create a professional, well-structured report.
+      const systemPrompt = `You are a senior analyst generating a report for Glossi, a seed-stage startup building AI-powered product visualization tools.
 
-Sources:
+SOURCES:
 ${context}
 
-Guidelines:
-- Use clear headings and bullet points
-- Use markdown formatting (headers, bold, lists)
-- Prioritize recent and relevant information
-- Be specific with data and quotes
-- Keep it concise but comprehensive
-- Cite sources when referencing specific information`;
+REPORT GUIDELINES:
+- Write with the precision of an investor memo: every claim backed by specific data
+- Lead each section with the most important insight, not a generic overview
+- Use exact numbers, percentages, and comparisons (e.g., "$900K pipeline across 14 deals" not "strong pipeline")
+- Identify trends and patterns across sources (growth trajectories, recurring themes, risks)
+- Flag gaps in data or areas that need attention
+- Use markdown: ## for sections, **bold** for key metrics, bullet points for details
+- Keep it concise but analytically rich. Aim for quality of insight, not length.
+- Cite sources inline when referencing specific data: [Source: title]
+- If sources contain conflicting information, note the discrepancy`;
 
       const response = await this.aiProcessor.chat(systemPrompt, fullPrompt);
       
@@ -2148,13 +2160,19 @@ Guidelines:
         title = this.reportPrompt.substring(0, 50) + (this.reportPrompt.length > 50 ? '...' : '');
       }
       
+      // Track which sources were used (file + dashboard)
+      const sourceIds = enabledSources.map(s => s.id);
+      Object.entries(this.dashboardSources).forEach(([key, src]) => {
+        if (src.enabled) sourceIds.push('dashboard-' + key);
+      });
+      
       // Save report
       const report = {
         id: 'rpt_' + Date.now(),
         type: 'custom',
         title: title,
         content: response,
-        sourcesUsed: enabledSources.map(s => s.id),
+        sourcesUsed: sourceIds,
         createdAt: new Date().toISOString()
       };
       

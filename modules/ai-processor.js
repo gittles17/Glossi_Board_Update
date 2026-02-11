@@ -27,12 +27,17 @@ class AIProcessor {
   /**
    * Make a request to Claude Opus API
    */
-  async callClaude(systemPrompt, userMessage) {
+  async callClaude(systemPrompt, userMessage, conversationHistory = []) {
     if (!this.isConfigured()) {
       throw new Error('API key not configured. Please add your Anthropic API key in Settings.');
     }
 
     try {
+      const messages = [
+        ...conversationHistory.map(m => ({ role: m.role, content: m.content })),
+        { role: 'user', content: userMessage }
+      ];
+
       const response = await fetch(ANTHROPIC_API_URL, {
         method: 'POST',
         headers: {
@@ -43,11 +48,9 @@ class AIProcessor {
         },
         body: JSON.stringify({
           model: 'claude-opus-4-20250514',
-          max_tokens: 4096,
+          max_tokens: 8192,
           system: systemPrompt,
-          messages: [
-            { role: 'user', content: userMessage }
-          ]
+          messages
         })
       });
 
@@ -59,7 +62,6 @@ class AIProcessor {
       const data = await response.json();
       return data.content?.[0]?.text || '';
     } catch (error) {
-      console.error('Claude API error:', error);
       throw error;
     }
   }
@@ -331,8 +333,8 @@ Please analyze this update and identify all pipeline changes.`;
   /**
    * General chat method for Notebook
    */
-  async chat(systemPrompt, userMessage) {
-    return await this.callClaude(systemPrompt, userMessage);
+  async chat(systemPrompt, userMessage, conversationHistory = []) {
+    return await this.callClaude(systemPrompt, userMessage, conversationHistory);
   }
 
   /**
