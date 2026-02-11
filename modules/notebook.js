@@ -1415,6 +1415,37 @@ ${linksData}
 ---`);
     }
     
+    // Thoughts/Scratchpad (included when Week at a Glance is enabled)
+    if (this.dashboardSources.weekAtGlance.enabled) {
+      const thoughtsData = this.getThoughtsData();
+      if (thoughtsData) {
+        parts.push(`--- Dashboard Source: Thoughts & Notes (Live) ---
+${thoughtsData}
+---`);
+      }
+      
+      const talkingPointsData = this.getTalkingPointsData();
+      if (talkingPointsData) {
+        parts.push(`--- Dashboard Source: Key Talking Points (Live) ---
+${talkingPointsData}
+---`);
+      }
+      
+      const quotesData = this.getQuotesData();
+      if (quotesData) {
+        parts.push(`--- Dashboard Source: Quotes (Live) ---
+${quotesData}
+---`);
+      }
+      
+      const milestonesData = this.getMilestonesData();
+      if (milestonesData) {
+        parts.push(`--- Dashboard Source: Product Milestones (Live) ---
+${milestonesData}
+---`);
+      }
+    }
+    
     return parts.join('\n\n');
   }
   
@@ -1441,21 +1472,47 @@ ${linksData}
       });
     }
     
-    // Week summary (if exists in meetings or elsewhere)
+    // Latest meeting summary
     const meetings = this.storage.getMeetings();
     if (meetings && meetings.length > 0) {
       const latestMeeting = meetings[meetings.length - 1];
-      if (latestMeeting.summary) {
-        lines.push('\nLatest Summary:');
-        lines.push(latestMeeting.summary);
+      if (latestMeeting.summary && latestMeeting.summary.length > 0) {
+        lines.push('\nLatest Meeting Summary:');
+        const summaryItems = Array.isArray(latestMeeting.summary) ? latestMeeting.summary : [latestMeeting.summary];
+        summaryItems.forEach(s => lines.push(`- ${s}`));
       }
-      if (latestMeeting.keyDecisions && latestMeeting.keyDecisions.length > 0) {
+      if (latestMeeting.decisions && latestMeeting.decisions.length > 0) {
         lines.push('\nKey Decisions:');
-        latestMeeting.keyDecisions.forEach(d => lines.push(`- ${d}`));
+        latestMeeting.decisions.forEach(d => lines.push(`- ${d}`));
       }
-      if (latestMeeting.actionItems && latestMeeting.actionItems.length > 0) {
-        lines.push('\nAction Items:');
-        latestMeeting.actionItems.forEach(a => lines.push(`- ${a.text || a}`));
+      if (latestMeeting.todos && latestMeeting.todos.length > 0) {
+        lines.push('\nMeeting Action Items:');
+        latestMeeting.todos.forEach(t => {
+          const owner = t.owner ? ` [${t.owner}]` : '';
+          const status = t.completed ? ' (DONE)' : '';
+          lines.push(`- ${t.text || t}${owner}${status}`);
+        });
+      }
+    }
+    
+    // Standalone action items (independent of meetings)
+    const todos = this.storage.getAllTodos();
+    if (todos && todos.length > 0) {
+      const active = todos.filter(t => !t.completed);
+      const completed = todos.filter(t => t.completed);
+      if (active.length > 0) {
+        lines.push(`\nActive Action Items (${active.length}):`);
+        active.forEach(t => {
+          const owner = t.owner ? ` [${t.owner}]` : '';
+          lines.push(`- ${t.text}${owner}`);
+        });
+      }
+      if (completed.length > 0) {
+        lines.push(`\nCompleted Action Items (${completed.length}):`);
+        completed.forEach(t => {
+          const owner = t.owner ? ` [${t.owner}]` : '';
+          lines.push(`- ${t.text}${owner} (DONE)`);
+        });
       }
     }
     
@@ -1736,6 +1793,96 @@ ${linksData}
   }
   
   /**
+   * Get Thoughts/Scratchpad data from storage
+   */
+  getThoughtsData() {
+    const thoughts = this.storage.getThoughts();
+    if (!thoughts || thoughts.length === 0) return null;
+    
+    const lines = [`Thoughts & Notes (${thoughts.length} items):`];
+    
+    thoughts.forEach(thought => {
+      const title = thought.title || 'Untitled';
+      const date = thought.createdAt ? ` (${new Date(thought.createdAt).toLocaleDateString()})` : '';
+      lines.push(`\n${title}${date}`);
+      if (thought.content) {
+        lines.push(thought.content.substring(0, 500));
+      }
+      if (thought.items && thought.items.length > 0) {
+        thought.items.forEach(item => {
+          lines.push(`  - ${item.title || item.content || item}`);
+        });
+      }
+    });
+    
+    return lines.join('\n');
+  }
+  
+  /**
+   * Get Talking Points data from storage
+   */
+  getTalkingPointsData() {
+    const data = this.storage.getData();
+    const talkingPoints = data?.talkingPoints;
+    if (!talkingPoints || talkingPoints.length === 0) return null;
+    
+    const lines = [`Key Talking Points (${talkingPoints.length}):`];
+    
+    const byCategory = {};
+    talkingPoints.forEach(tp => {
+      const cat = tp.category || 'general';
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push(tp);
+    });
+    
+    Object.entries(byCategory).forEach(([category, points]) => {
+      lines.push(`\n${category.charAt(0).toUpperCase() + category.slice(1)}:`);
+      points.forEach(tp => {
+        lines.push(`- ${tp.title}: ${tp.content}`);
+      });
+    });
+    
+    return lines.join('\n');
+  }
+  
+  /**
+   * Get Quotes data from storage
+   */
+  getQuotesData() {
+    const quotes = this.storage.getQuotes();
+    if (!quotes || quotes.length === 0) return null;
+    
+    const lines = [`Customer/Partner Quotes (${quotes.length}):`];
+    
+    quotes.forEach(q => {
+      const source = q.source ? ` - ${q.source}` : '';
+      const context = q.context ? ` (${q.context})` : '';
+      const featured = q.featured ? ' [FEATURED]' : '';
+      lines.push(`- "${q.quote}"${source}${context}${featured}`);
+    });
+    
+    return lines.join('\n');
+  }
+  
+  /**
+   * Get Milestones data from storage
+   */
+  getMilestonesData() {
+    const milestones = this.storage.getMilestones();
+    if (!milestones || milestones.length === 0) return null;
+    
+    const lines = [`Product Milestones (${milestones.length}):`];
+    
+    milestones.forEach(m => {
+      lines.push(`- ${m.title}`);
+      if (m.before) lines.push(`  Before: ${m.before}`);
+      if (m.after) lines.push(`  After: ${m.after}`);
+    });
+    
+    return lines.join('\n');
+  }
+  
+  /**
    * Parse money value string to number
    */
   parseMoneyValue(value) {
@@ -1762,16 +1909,25 @@ ${linksData}
     
     recentMeetings.forEach(meeting => {
       lines.push(`Meeting: ${meeting.title || 'Untitled'} (${new Date(meeting.date).toLocaleDateString()})`);
-      if (meeting.summary) {
-        lines.push(`Summary: ${meeting.summary}`);
+      if (meeting.summary && meeting.summary.length > 0) {
+        lines.push('Summary:');
+        const summaryItems = Array.isArray(meeting.summary) ? meeting.summary : [meeting.summary];
+        summaryItems.forEach(s => lines.push(`  - ${s}`));
       }
-      if (meeting.keyDecisions && meeting.keyDecisions.length > 0) {
+      if (meeting.decisions && meeting.decisions.length > 0) {
         lines.push('Key Decisions:');
-        meeting.keyDecisions.forEach(d => lines.push(`  - ${d}`));
+        meeting.decisions.forEach(d => lines.push(`  - ${d}`));
       }
-      if (meeting.actionItems && meeting.actionItems.length > 0) {
+      if (meeting.todos && meeting.todos.length > 0) {
         lines.push('Action Items:');
-        meeting.actionItems.forEach(a => lines.push(`  - ${a.text || a}`));
+        meeting.todos.forEach(t => {
+          const owner = t.owner ? ` [${t.owner}]` : '';
+          const status = t.completed ? ' (DONE)' : '';
+          lines.push(`  - ${t.text || t}${owner}${status}`);
+        });
+      }
+      if (meeting.rawNotes) {
+        lines.push(`Raw Notes: ${meeting.rawNotes.substring(0, 500)}`);
       }
       lines.push('');
     });
