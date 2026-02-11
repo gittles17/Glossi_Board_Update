@@ -3534,30 +3534,32 @@ RULES:
     const weekRange = this.getWeekRange(new Date());
     let content = { weekRange, sections: [] };
     
-    // Pipeline
+    // Pipeline (use live Google Sheet data, same as dashboard)
     if (sections.pipeline) {
-      const pipelineData = this.data?.pipelineEmail || storage.getPipelineEmail?.() || null;
-      const deals = pipelineData?.deals || [];
-      const highlights = pipelineData?.highlights || {};
-      
-      // Calculate totals
+      const deals = this.pipelineDeals || [];
       let total = 0;
-      const stageTotals = { discovery: 0, demo: 0, pilot: 0, closing: 0 };
+      const stageTotals = {};
+
       deals.forEach(d => {
+        const stage = this.normalizeStage(d.stage || '');
+        if (!stage) return;
         const value = this.parseMoneyValue(d.value);
         total += value;
-        const stage = d.stage === 'proposal' ? 'demo' : (d.stage === 'negotiation' ? 'pilot' : d.stage);
-        if (stageTotals[stage] !== undefined) stageTotals[stage] += value;
+        if (!stageTotals[stage]) stageTotals[stage] = 0;
+        stageTotals[stage] += value;
       });
-      
+
       content.sections.push({
         name: 'Pipeline',
         data: {
           total: this.formatMoney(total),
           dealCount: deals.length,
-          stages: Object.entries(stageTotals).map(([stage, val]) => `${stage}: ${this.formatMoney(val)}`).join(', '),
-          hotDeals: highlights.hotDeals || [],
-          keyUpdates: highlights.keyUpdates || []
+          stages: Object.entries(stageTotals)
+            .map(([stage, val]) => `${stage}: ${this.formatMoney(val)}`).join(', '),
+          topDeals: deals
+            .filter(d => d.name || d.company)
+            .slice(0, 8)
+            .map(d => `${d.name || d.company}: ${d.value || 'TBD'} (${d.stage || 'unknown'})`)
         }
       });
     }
@@ -3589,10 +3591,12 @@ RULES:
         data: {
           summary: meeting?.summary || [],
           decisions: meeting?.decisions || [],
-          actionItems: meeting?.todos?.filter(t => !t.completed).map(t => ({
-            task: t.text,
-            owner: this.resolveOwnerName(t.owner)
-          })) || []
+          actionItems: storage.getAllTodos()
+            .filter(t => !t.completed)
+            .map(t => ({
+              task: t.text,
+              owner: this.resolveOwnerName(t.owner)
+            }))
         }
       });
     }
@@ -3748,8 +3752,8 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       if (section.name === 'Pipeline') {
         body += `Total: ${section.data.total} (${section.data.dealCount} deals)\n`;
         body += `By Stage: ${section.data.stages}\n`;
-        if (section.data.hotDeals?.length) {
-          body += `Hot Deals:\n${section.data.hotDeals.map(d => `  - ${d}`).join('\n')}\n`;
+        if (section.data.topDeals?.length) {
+          body += `Top Deals:\n${section.data.topDeals.map(d => `  - ${d}`).join('\n')}\n`;
         }
       } else if (section.name === 'Seed Raise') {
         body += `Raised: ${section.data.raised} / ${section.data.target}\n`;

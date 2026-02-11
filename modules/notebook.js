@@ -1863,9 +1863,10 @@ ${linksData}
       return;
     }
     
-    // Get enabled sources
+    // Get enabled sources (file sources + dashboard sources)
     const enabledSources = this.sources.filter(s => s.enabled !== false);
-    if (enabledSources.length === 0) {
+    const enabledDashboard = Object.values(this.dashboardSources).filter(s => s.enabled).length;
+    if (enabledSources.length === 0 && enabledDashboard === 0) {
       this.showToast('Please add and enable at least one source first.', 'error');
       return;
     }
