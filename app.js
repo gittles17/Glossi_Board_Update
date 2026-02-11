@@ -386,10 +386,28 @@ class GlossiDashboard {
   setupTodoEditListeners(container) {
     // Text editing (contenteditable)
     container.querySelectorAll('.editable-item').forEach(item => {
+      let inputDebounce = null;
+
+      // Auto-save on typing (debounced) so edits persist even without blur
+      item.addEventListener('input', (e) => {
+        if (_draggedTodoId) return;
+        clearTimeout(inputDebounce);
+        inputDebounce = setTimeout(() => {
+          const todoId = e.target.dataset.todoId;
+          const type = e.target.dataset.type;
+          const newValue = e.target.textContent.trim();
+          if (type === 'todo-text' && newValue) {
+            storage.updateTodo(todoId, { text: newValue });
+          }
+        }, 800);
+      });
+
       item.addEventListener('blur', (e) => {
         // Don't save during drag operations
         if (_draggedTodoId) return;
         
+        // Clear any pending debounce and save immediately
+        clearTimeout(inputDebounce);
         const todoId = e.target.dataset.todoId;
         const type = e.target.dataset.type;
         const newValue = e.target.textContent.trim();

@@ -1881,11 +1881,19 @@ class Storage {
   }
 
   /**
-   * Sync all data to server files
+   * Sync all data to server files (debounced to prevent race conditions)
    */
-  async syncToServer() {
-    if (!this.serverAvailable) return;
+  syncToServer() {
+    if (this._syncTimeout) {
+      clearTimeout(this._syncTimeout);
+    }
+    this._syncTimeout = setTimeout(() => this._doSyncToServer(), 500);
+  }
 
+  /**
+   * Perform the actual server sync
+   */
+  async _doSyncToServer() {
     try {
       const response = await fetch('/api/data', {
         method: 'POST',
@@ -1904,10 +1912,12 @@ class Storage {
       });
 
       if (response.ok) {
+        this.serverAvailable = true;
       } else {
         console.warn('Failed to sync to server');
       }
     } catch (e) {
+      this.serverAvailable = false;
       console.warn('Server sync failed:', e.message);
     }
   }

@@ -24,7 +24,10 @@ let pool = null;
 if (useDatabase) {
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    connectionTimeoutMillis: 5000,
+    query_timeout: 10000,
+    idleTimeoutMillis: 30000
   });
 } else {
 }
@@ -37,20 +40,25 @@ if (!useDatabase && !fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Initialize database table
+// Initialize database table (with timeout so server always starts)
 async function initDatabase() {
   if (!useDatabase) return;
   
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS app_data (
-        key VARCHAR(50) PRIMARY KEY,
-        data JSONB NOT NULL,
-        updated_at TIMESTAMP DEFAULT NOW()
+    await Promise.race([
+      pool.query(`
+        CREATE TABLE IF NOT EXISTS app_data (
+          key VARCHAR(50) PRIMARY KEY,
+          data JSONB NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Database init timed out after 8s')), 8000)
       )
-    `);
+    ]);
   } catch (error) {
-    console.error('Error initializing database:', error);
+    console.error('Database init failed, will retry on first request:', error.message);
   }
 }
 
@@ -94,8 +102,8 @@ app.get('/api/data', async (req, res) => {
     
     res.json({ success: true, data });
   } catch (error) {
-    console.error('Error loading data:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Error loading data:', error.message);
+    res.json({ success: true, data: {}, databaseUnavailable: true });
   }
 });
 
