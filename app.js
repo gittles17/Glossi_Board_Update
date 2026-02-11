@@ -1553,8 +1553,8 @@ class GlossiDashboard {
     // Count deals with valid stages
     const totalDeals = Object.values(this.pipelineStageGroups).reduce((sum, g) => sum + g.deals.length, 0);
     
-    // Update header with closed amount (like Seed Raise format)
-    if (closedEl) closedEl.textContent = this.formatMoney(closedTotal);
+    // Update header with total pipeline value (like Seed Raise format)
+    if (closedEl) closedEl.textContent = this.formatMoney(grandTotal);
     if (countEl) countEl.textContent = `(${totalDeals} deals)`;
     
     // Define stage order (matches typical sales funnel)
