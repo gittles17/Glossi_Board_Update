@@ -668,7 +668,7 @@ class Notebook {
           <line x1="12" y1="3" x2="12" y2="15"></line>
         </svg>
         <span class="kb-dropzone-text">Drop file here or click to browse</span>
-        <span class="kb-dropzone-hint">PDF, text, images, or audio</span>
+        <span class="kb-dropzone-hint">PDF, HTML, text, images, or audio</span>
       `;
     }
   }
@@ -679,16 +679,18 @@ class Notebook {
   async handleDroppedFile(file) {
     const textExtensions = ['.txt', '.md', '.csv', '.json'];
     const pdfExtensions = ['.pdf'];
+    const htmlExtensions = ['.html', '.htm'];
     const audioExtensions = ['.mp3', '.wav', '.m4a', '.webm', '.ogg'];
     const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
     
     const ext = '.' + file.name.split('.').pop().toLowerCase();
     const isText = textExtensions.includes(ext);
     const isPdf = pdfExtensions.includes(ext);
+    const isHtml = htmlExtensions.includes(ext);
     const isAudio = audioExtensions.includes(ext);
     const isImage = imageExtensions.includes(ext);
     
-    if (!isText && !isPdf && !isAudio && !isImage) {
+    if (!isText && !isPdf && !isHtml && !isAudio && !isImage) {
       return;
     }
     
@@ -725,6 +727,45 @@ class Notebook {
       if (isText) {
         // Read text files directly
         content = await file.text();
+        
+      } else if (isHtml) {
+        // Parse HTML files client-side using DOMParser
+        const rawHtml = await file.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(rawHtml, 'text/html');
+        
+        // Extract title from <title> tag if present
+        const htmlTitle = doc.querySelector('title')?.textContent?.trim();
+        if (htmlTitle) {
+          const source = this.sources.find(s => s.id === sourceId);
+          if (source) source.title = htmlTitle;
+        }
+        
+        // Remove non-content elements
+        doc.querySelectorAll('script, style, nav, footer, header, noscript, iframe').forEach(el => el.remove());
+        
+        // Convert headings to readable markers
+        doc.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(el => {
+          const level = el.tagName[1];
+          const prefix = '#'.repeat(parseInt(level));
+          el.textContent = `\n${prefix} ${el.textContent.trim()}\n`;
+        });
+        
+        // Convert list items
+        doc.querySelectorAll('li').forEach(el => {
+          el.textContent = `\n- ${el.textContent.trim()}`;
+        });
+        
+        // Convert paragraphs to have line breaks
+        doc.querySelectorAll('p').forEach(el => {
+          el.textContent = `\n${el.textContent.trim()}\n`;
+        });
+        
+        // Extract clean text
+        content = doc.body?.textContent || '';
+        content = content.replace(/[ \t]+/g, ' ');
+        content = content.replace(/\n\s*\n\s*\n/g, '\n\n');
+        content = content.trim();
         
       } else if (isPdf) {
         // Use Claude Vision OCR for reliable PDF processing on all devices
