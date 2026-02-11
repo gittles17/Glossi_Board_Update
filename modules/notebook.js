@@ -1601,15 +1601,20 @@ ${linksData}
         lines.push('');
       }
       
-      // All real deals grouped by stage
+      // All real deals grouped by stage with full detail
       lines.push('Active Deals:');
       Object.entries(stageBreakdown).forEach(([stage, data]) => {
         data.deals.forEach(deal => {
           const name = deal.name || deal.company || 'Unknown';
           const value = deal.value || 'TBD';
           const contact = deal.contact ? ` (${deal.contact})` : '';
-          const notes = deal.notes ? ` - ${deal.notes}` : '';
-          lines.push(`- [${stage}] ${name}: ${value}${contact}${notes}`);
+          const owner = deal.owner ? ` | Owner: ${deal.owner}` : '';
+          const closeDate = deal.closeDate ? ` | Close: ${deal.closeDate}` : '';
+          const nextTask = deal.nextTask ? ` | Next: ${deal.nextTask}` : '';
+          const notes = deal.notes ? ` | Notes: ${deal.notes}` : '';
+          const hasBlocker = deal.blockers && deal.blockers.toLowerCase() !== 'none' && deal.blockers.trim() !== '';
+          const blocker = hasBlocker ? ` | BLOCKER: ${deal.blockers}` : '';
+          lines.push(`- [${stage}] ${name}: ${value}${contact}${owner}${closeDate}${nextTask}${notes}${blocker}`);
         });
       });
       
@@ -1619,8 +1624,9 @@ ${linksData}
         lines.push(`Tasks/Follow-ups (${taskItems.length} items, not included in pipeline totals):`);
         taskItems.forEach(item => {
           const name = item.name || item.company || 'Unknown';
-          const notes = item.notes ? ` - ${item.notes}` : '';
-          lines.push(`- ${name}${notes}`);
+          const notes = item.notes ? ` | Notes: ${item.notes}` : '';
+          const nextTask = item.nextTask ? ` | Next: ${item.nextTask}` : '';
+          lines.push(`- ${name}${notes}${nextTask}`);
         });
       }
       
