@@ -1826,7 +1826,11 @@ ${linksData}
     const continueBtn = document.getElementById('kb-report-continue');
     const backBtn = document.getElementById('kb-report-back');
     
-    if (continueBtn) continueBtn.style.display = 'inline-flex';
+    if (continueBtn) {
+      continueBtn.style.display = 'inline-flex';
+      continueBtn.textContent = 'Continue';
+      continueBtn.onclick = () => this.evaluateReportPrompt();
+    }
     if (backBtn) backBtn.style.display = 'none';
     
     // Clear inputs
@@ -1850,16 +1854,19 @@ ${linksData}
     const prompt = promptInput?.value?.trim() || '';
     
     if (!prompt) {
+      this.showToast('Please enter a report prompt.', 'error');
       return;
     }
     
     if (!this.aiProcessor || !this.aiProcessor.isConfigured()) {
+      this.showToast('Please add your Anthropic API key in Settings to generate reports.', 'error');
       return;
     }
     
     // Get enabled sources
     const enabledSources = this.sources.filter(s => s.enabled !== false);
     if (enabledSources.length === 0) {
+      this.showToast('Please add and enable at least one source first.', 'error');
       return;
     }
     
@@ -1926,6 +1933,7 @@ Only ask questions that would meaningfully improve the report. If the prompt is 
         this.generateReport();
       }
     } catch (error) {
+      this.showToast('Report generation failed: ' + error.message, 'error');
       // Fall back to step 1
       const step1El = document.getElementById('kb-report-step-1');
       const loadingEl = document.getElementById('kb-report-loading');

@@ -3397,8 +3397,7 @@ RULES:
    * Open share email modal with section options
    */
   openShareEmailModal() {
-    const nb = storage.getNotebook();
-    const reports = kb?.reports || [];
+    const reports = notebook.reports || [];
     const reportsHint = document.getElementById('share-reports-hint');
     const reportsCheckbox = document.getElementById('share-reports');
     const reportsList = document.getElementById('share-reports-list');
@@ -3600,8 +3599,7 @@ RULES:
     
     // KB Reports (only selected ones)
     if (sections.reports) {
-      const nb = storage.getNotebook();
-      const allReports = kb?.reports || [];
+      const allReports = notebook.reports || [];
       const reportsList = document.getElementById('share-reports-list');
       const selectedIds = new Set();
       
