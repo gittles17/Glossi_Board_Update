@@ -486,6 +486,12 @@ class Notebook {
       reportBack.addEventListener('click', () => this.goBackReportStep());
     }
 
+    // Report skip button (bypass evaluation, generate directly)
+    const reportSkip = document.getElementById('kb-report-skip');
+    if (reportSkip) {
+      reportSkip.addEventListener('click', () => this.skipToGenerate());
+    }
+
     // Chat input
     const chatInput = document.getElementById('kb-chat-input');
     if (chatInput) {
@@ -1843,7 +1849,16 @@ ${linksData}
    */
   showReportModal() {
     this.resetReportModal();
+    this._skipEvaluation = false;
     this.showModal('kb-report-modal');
+  }
+
+  /**
+   * Skip evaluation and generate report directly
+   */
+  skipToGenerate() {
+    this._skipEvaluation = true;
+    this.generateReport();
   }
 
   /**
@@ -1872,6 +1887,7 @@ ${linksData}
     }
     
     this.reportPrompt = prompt;
+    this._skipEvaluation = false;
     
     // Show loading
     const step1 = document.getElementById('kb-report-step-1');
@@ -1912,6 +1928,9 @@ Example response if clarification needed:
 Only ask questions that would meaningfully improve the report. If the prompt is reasonably clear, just proceed.`;
 
       const response = await this.aiProcessor.chat(evaluationPrompt, 'Evaluate this report request.');
+      
+      // If user clicked Skip during evaluation, abort
+      if (this._skipEvaluation) return;
       
       // Parse AI response
       let evaluation;
