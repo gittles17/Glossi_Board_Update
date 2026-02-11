@@ -1506,17 +1506,13 @@ class GlossiDashboard {
     const countEl = document.getElementById('pipeline-deal-count');
     const emptyEl = document.getElementById('pipeline-empty');
     
-    // Get pipeline target from settings
-    const settings = this.data?.settings || {};
-    const pipelineTarget = settings.pipelineTarget || '$900K';
-    if (targetEl) targetEl.textContent = pipelineTarget;
-    
     // If no data, show empty state
     if (pipelineData.length === 0) {
       if (emptyEl) emptyEl.style.display = 'block';
       if (stagesRow) stagesRow.style.display = 'none';
       if (dealsSection) dealsSection.classList.remove('visible');
       if (closedEl) closedEl.textContent = '$0';
+      if (targetEl) targetEl.textContent = '$0';
       if (countEl) countEl.textContent = '';
       return;
     }
@@ -1553,8 +1549,9 @@ class GlossiDashboard {
     // Count deals with valid stages
     const totalDeals = Object.values(this.pipelineStageGroups).reduce((sum, g) => sum + g.deals.length, 0);
     
-    // Update header with total pipeline value (like Seed Raise format)
-    if (closedEl) closedEl.textContent = this.formatMoney(grandTotal);
+    // Update header: closed deals / total pipeline value
+    if (closedEl) closedEl.textContent = this.formatMoney(closedTotal);
+    if (targetEl) targetEl.textContent = this.formatMoney(grandTotal);
     if (countEl) countEl.textContent = `(${totalDeals} deals)`;
     
     // Define stage order (matches typical sales funnel)
