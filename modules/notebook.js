@@ -188,6 +188,11 @@ class Notebook {
     
     // Pre-generate AI summary in background (keep warm)
     setTimeout(() => this.generateSourceSummary(), 1500);
+    
+    // Flush pending saves before page unload to prevent data loss
+    window.addEventListener('beforeunload', () => {
+      this.storage.flushPendingSave();
+    });
   }
 
   /**
@@ -236,7 +241,7 @@ class Notebook {
   /**
    * Save data to storage
    */
-  saveData() {
+  saveData(immediate = false) {
     // Save dashboard source preferences (just enabled state)
     const dashboardSourcePrefs = {};
     Object.keys(this.dashboardSources).forEach(key => {
@@ -254,6 +259,11 @@ class Notebook {
       sourceSummary: this.sourceSummary,
       summaryHash: this.summaryHash
     });
+    
+    // For critical operations, flush to localStorage immediately
+    if (immediate) {
+      this.storage.saveImmediate();
+    }
   }
 
   /**
@@ -910,7 +920,7 @@ KEY INFORMATION:
         delete source.progress;
       }
       
-      this.saveData();
+      this.saveData(true);
       this.renderSources();
       
       // Show success with content info
@@ -1015,7 +1025,7 @@ KEY INFORMATION:
     };
     
     this.sources.push(source);
-    this.saveData();
+    this.saveData(true);
     this.render();
     this.hideModal('kb-source-modal');
     this.clearSourceModal();
@@ -1046,7 +1056,7 @@ KEY INFORMATION:
     };
     
     this.sources.push(source);
-    this.saveData();
+    this.saveData(true);
     this.render();
     this.clearSourceModal();
     
@@ -1085,7 +1095,7 @@ KEY INFORMATION:
         delete src.progress;
       }
       
-      this.saveData();
+      this.saveData(true);
       this.render();
       
     } catch (error) {
@@ -1098,7 +1108,7 @@ KEY INFORMATION:
         delete src.processing;
         delete src.progress;
       }
-      this.saveData();
+      this.saveData(true);
       this.render();
     }
     
@@ -2339,7 +2349,7 @@ REPORT GUIDELINES:
       };
       
       this.reports.push(report);
-      this.saveData();
+      this.saveData(true);
       
       this.hideModal('kb-report-modal');
       this.render();
@@ -2961,7 +2971,7 @@ REPORT GUIDELINES:
     }
     
     this.sources = this.sources.filter(s => s.id !== sourceId);
-    this.saveData();
+    this.saveData(true);
     this.renderSources();
   }
 

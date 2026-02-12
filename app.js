@@ -293,6 +293,9 @@ class GlossiDashboard {
    * Render independent action items in the meeting panel
    */
   renderActionItems() {
+    // Always persist any in-flight edits before rebuilding the DOM
+    this.savePendingTodoEdits();
+    
     const container = document.getElementById('todo-list');
     const progressEl = document.getElementById('todo-progress');
     const progressBar = document.getElementById('action-progress-fill');
@@ -399,7 +402,7 @@ class GlossiDashboard {
           if (type === 'todo-text' && newValue) {
             storage.updateTodo(todoId, { text: newValue });
           }
-        }, 800);
+        }, 300);
       });
 
       item.addEventListener('blur', (e) => {
@@ -8669,6 +8672,14 @@ Respond with just the category name (core, traction, market, or testimonials) an
 document.addEventListener('DOMContentLoaded', () => {
   window.dashboard = new GlossiDashboard();
   window.dashboard.init();
+  
+  // Flush pending edits and saves before page unload
+  window.addEventListener('beforeunload', () => {
+    if (window.dashboard) {
+      window.dashboard.savePendingTodoEdits();
+    }
+    storage.flushPendingSave();
+  });
 });
 
 export default GlossiDashboard;

@@ -1845,6 +1845,28 @@ class Storage {
   }
 
   /**
+   * Save immediately (bypass debounce for critical operations)
+   */
+  saveImmediate() {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
+    this.save();
+  }
+
+  /**
+   * Flush any pending debounced save (call before page unload)
+   */
+  flushPendingSave() {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+      this.save();
+    }
+  }
+
+  /**
    * Save all data to localStorage and sync to server
    */
   save() {
