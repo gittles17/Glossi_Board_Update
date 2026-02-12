@@ -1001,30 +1001,29 @@
         });
       }
 
+      // Get generated element once
+      const generatedEl = document.getElementById('pr-workspace-generated');
+      
       // Show chat when content is generated
       const observer2 = new MutationObserver(() => {
-        const generated = document.getElementById('pr-workspace-generated');
-        if (generated && chatSection) {
-          const isVisible = generated.style.display !== 'none';
+        if (generatedEl && chatSection) {
+          const isVisible = generatedEl.style.display !== 'none';
           chatSection.style.display = isVisible ? 'flex' : 'none';
         }
       });
-      const generated = document.getElementById('pr-workspace-generated');
-      if (generated) {
-        observer2.observe(generated, { attributes: true, attributeFilter: ['style'] });
+      if (generatedEl) {
+        observer2.observe(generatedEl, { attributes: true, attributeFilter: ['style'] });
       }
 
       // Show generated content actions when content exists
       const observer = new MutationObserver(() => {
-        const generated = document.getElementById('pr-workspace-generated');
         const actions = document.getElementById('pr-workspace-actions');
-        if (generated && actions) {
-          actions.style.display = generated.style.display === 'none' ? 'none' : 'flex';
+        if (generatedEl && actions) {
+          actions.style.display = generatedEl.style.display === 'none' ? 'none' : 'flex';
         }
       });
-      const generated = document.getElementById('pr-workspace-generated');
-      if (generated) {
-        observer.observe(generated, { attributes: true, attributeFilter: ['style'] });
+      if (generatedEl) {
+        observer.observe(generatedEl, { attributes: true, attributeFilter: ['style'] });
       }
 
       // Dropdown menu
