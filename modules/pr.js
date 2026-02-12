@@ -367,18 +367,13 @@ class PRAgent {
     const articlesList = document.getElementById('pr-articles-list');
     if (!articlesList) return;
 
-    if (!this.apiKey) {
-      articlesList.innerHTML = '<div class="pr-articles-loading">API key required</div>';
-      return;
-    }
-
     articlesList.innerHTML = '<div class="pr-articles-loading">Fetching articles...</div>';
 
     try {
       const response = await this.apiCall('/api/pr/articles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: this.apiKey })
+        body: JSON.stringify({})
       });
 
       if (response.success && response.articles) {
@@ -3370,11 +3365,6 @@ class MediaManager {
   }
 
   async discoverJournalists(outletName, outletUrl) {
-    if (!this.prAgent.apiKey) {
-      this.prAgent.showToast('Anthropic API key required. Set it in Dashboard Settings.', 'error');
-      return;
-    }
-
     // Show loading state
     const loadingModal = this.showLoadingModal('Discovering journalists...');
 
@@ -3384,8 +3374,7 @@ class MediaManager {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           outletName,
-          outletUrl,
-          apiKey: this.prAgent.apiKey
+          outletUrl
         })
       });
 

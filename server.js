@@ -731,10 +731,11 @@ app.delete('/api/pr/journalists/:id', async (req, res) => {
 // Discover journalists (Claude web search)
 app.post('/api/pr/discover-journalists', async (req, res) => {
   try {
-    const { outletName, outletUrl, apiKey } = req.body;
+    const { outletName, outletUrl } = req.body;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     
     if (!apiKey) {
-      return res.status(400).json({ success: false, error: 'API key required' });
+      return res.status(500).json({ success: false, error: 'Anthropic API key not configured in environment variables' });
     }
     
     // Phase 1: Find articles and journalists
@@ -1066,10 +1067,10 @@ app.get('/api/pr/news-hooks', async (req, res) => {
 // Fetch fresh articles (Claude web search)
 app.post('/api/pr/articles', async (req, res) => {
   try {
-    const { apiKey } = req.body;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     
     if (!apiKey) {
-      return res.status(400).json({ success: false, error: 'API key required' });
+      return res.status(500).json({ success: false, error: 'Anthropic API key not configured in environment variables' });
     }
     
     const articlesPrompt = `Search major tech publications (TechCrunch, The Verge, Wired, VentureBeat, MIT Technology Review, Ars Technica, Protocol, Fast Company) for recent articles from the past 7 days about:
