@@ -13862,13 +13862,6 @@ a.dropdown-item {
   margin: 0;
 }
 
-.pr-command-center-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
-}
-
 .pr-command-list {
   display: flex;
   flex-direction: column;
