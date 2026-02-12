@@ -83,6 +83,28 @@
 
         <!-- Tab Content: Research -->
         <div class="pr-panel-tab-content active" id="pr-tab-research">
+          <!-- Content Type and Generate Button -->
+          <div class="pr-generation-controls">
+            <select class="pr-content-type-select" id="pr-content-type-mobile">
+              <option value="press_release">Press Release</option>
+              <option value="media_pitch">Media Pitch Email</option>
+              <option value="product_announcement">Product Announcement</option>
+              <option value="founder_quote">Founder Quote / Soundbite</option>
+              <option value="blog_post">Blog Post</option>
+              <option value="linkedin_post">LinkedIn Post</option>
+              <option value="tweet_thread">Tweet Thread</option>
+              <option value="briefing_doc">Briefing Document</option>
+              <option value="talking_points">Talking Points</option>
+              <option value="custom">Custom</option>
+            </select>
+            <button class="pr-generate-btn-mobile" id="pr-generate-btn-mobile" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              Generate
+            </button>
+          </div>
+
           <!-- News Hooks Section -->
           <div class="pr-workflow-section pr-news-hooks-section">
             <div class="pr-workflow-header pr-news-hooks-header">
@@ -267,75 +289,91 @@
 
         <!-- Content area -->
         <div class="pr-workspace-content" id="pr-workspace-content">
-          <!-- Empty state -->
-          <div class="pr-workspace-empty pr-command-center" id="pr-workspace-empty">
-            <div class="pr-command-center-header">
-              <h2 class="pr-command-center-title">Dashboard</h2>
-            </div>
-
-            <div class="pr-command-list">
-              <div class="pr-command-item pr-item-green" data-action="generate">
-                <h3 class="pr-command-title">Content Library</h3>
-                <span class="pr-command-stat" id="pr-stat-library">0 items saved</span>
-              </div>
-
-              <div class="pr-command-item pr-item-blue" data-action="media">
-                <h3 class="pr-command-title">Media List</h3>
-                <span class="pr-command-stat" id="pr-stat-journalists">0 journalists saved</span>
-              </div>
-
-              <div class="pr-command-item pr-item-purple" data-action="calendar">
-                <h3 class="pr-command-title">Calendar</h3>
-                <span class="pr-command-stat" id="pr-stat-calendar">0 items scheduled</span>
-              </div>
-
-              <div class="pr-command-item pr-item-orange" data-action="news">
-                <h3 class="pr-command-title">News Hooks</h3>
-                <span class="pr-command-stat" id="pr-stat-news">Check for updates</span>
-              </div>
-            </div>
-
-            <div class="pr-articles-section" id="pr-articles-section">
-              <h3 class="pr-articles-heading">Recent Coverage</h3>
-              <div class="pr-articles-list" id="pr-articles-list">
-                <div class="pr-articles-loading">Loading articles...</div>
-              </div>
-            </div>
+          <!-- Workspace Tabs -->
+          <div class="pr-workspace-tabs">
+            <button class="pr-workspace-tab active" data-workspace-tab="content">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              Workspace
+            </button>
+            <button class="pr-workspace-tab" data-workspace-tab="news-hooks">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              News Hooks
+            </button>
           </div>
 
-          <!-- Loading state -->
-          <div class="pr-loading-state" id="pr-loading-state" style="display:none">
-            <div class="pr-loading-spinner"></div>
-            <p>Generating content...</p>
-          </div>
-
-          <!-- Generated content -->
-          <div class="pr-workspace-generated" id="pr-workspace-generated" style="display:none">
-            <div class="pr-drafts-header">
-              <span class="pr-drafts-title">Drafts</span>
-              <button class="pr-clear-drafts-btn" id="pr-clear-drafts-btn" title="Clear old drafts">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <!-- Tab Content: Workspace -->
+          <div class="pr-workspace-tab-content active" data-tab-content="content">
+            <!-- Empty state -->
+            <div class="pr-workspace-empty" id="pr-workspace-empty">
+              <div class="pr-empty-message">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
                 </svg>
-                Clear old drafts
-              </button>
-            </div>
-            <div class="pr-generated-content" id="pr-generated-content"></div>
-            <div class="pr-verification-bar" id="pr-verification-bar" style="display:none">
-              <div class="pr-verification-info">
-                <span class="pr-verification-text" id="pr-verification-text">0 of 0 claims sourced</span>
-              </div>
-              <div class="pr-verification-track">
-                <div class="pr-verification-progress" id="pr-verification-progress"></div>
+                <p>Select content type and generate</p>
               </div>
             </div>
-            
-            <!-- Refining overlay -->
-            <div class="pr-refining-overlay" id="pr-refining-overlay" style="display:none">
-              <div class="pr-refining-content">
-                <div class="pr-loading-spinner"></div>
-                <span class="pr-refining-text">Refining...</span>
+
+            <!-- Loading state -->
+            <div class="pr-loading-state" id="pr-loading-state" style="display:none">
+              <div class="pr-loading-spinner"></div>
+              <p>Generating content...</p>
+            </div>
+
+            <!-- Generated content -->
+            <div class="pr-workspace-generated" id="pr-workspace-generated" style="display:none">
+              <div class="pr-drafts-header">
+                <span class="pr-drafts-title">Drafts</span>
+                <button class="pr-clear-drafts-btn" id="pr-clear-drafts-btn" title="Clear old drafts">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  Clear old drafts
+                </button>
+              </div>
+              <div class="pr-generated-content" id="pr-generated-content"></div>
+              <div class="pr-verification-bar" id="pr-verification-bar" style="display:none">
+                <div class="pr-verification-info">
+                  <span class="pr-verification-text" id="pr-verification-text">0 of 0 claims sourced</span>
+                </div>
+                <div class="pr-verification-track">
+                  <div class="pr-verification-progress" id="pr-verification-progress"></div>
+                </div>
+              </div>
+              
+              <!-- Refining overlay -->
+              <div class="pr-refining-overlay" id="pr-refining-overlay" style="display:none">
+                <div class="pr-refining-content">
+                  <div class="pr-loading-spinner"></div>
+                  <span class="pr-refining-text">Refining...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Content: News Hooks -->
+          <div class="pr-workspace-tab-content" data-tab-content="news-hooks">
+            <div class="pr-news-hooks-container" id="pr-news-hooks-container">
+              <div class="pr-news-hooks-header">
+                <h3 class="pr-news-hooks-title">News Hooks</h3>
+                <button class="btn btn-secondary btn-sm" id="pr-fetch-news-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M1 20v-6h6"></path>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+              <div class="pr-news-hooks-list" id="pr-news-hooks-list">
+                <div class="pr-news-hooks-empty">No news hooks yet</div>
               </div>
             </div>
           </div>
@@ -935,6 +973,60 @@
 
       // Initialize panel resizer
       const panelResizer = new PanelResizer();
+
+      // Workspace tab switching
+      const workspaceTabs = document.querySelectorAll('.pr-workspace-tab');
+      const workspaceTabContents = document.querySelectorAll('.pr-workspace-tab-content');
+
+      workspaceTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const targetTab = tab.dataset.workspaceTab;
+          
+          // Update tabs
+          workspaceTabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          // Update content
+          workspaceTabContents.forEach(content => {
+            if (content.dataset.tabContent === targetTab) {
+              content.classList.add('active');
+            } else {
+              content.classList.remove('active');
+            }
+          });
+          
+          // Save active tab
+          localStorage.setItem('pr_active_workspace_tab', targetTab);
+        });
+      });
+
+      // Restore active workspace tab
+      const savedWorkspaceTab = localStorage.getItem('pr_active_workspace_tab');
+      if (savedWorkspaceTab) {
+        const targetTab = document.querySelector(`[data-workspace-tab="${savedWorkspaceTab}"]`);
+        if (targetTab) targetTab.click();
+      }
+
+      // Sync content type between mobile and desktop dropdowns
+      const contentTypeMobile = document.getElementById('pr-content-type-mobile');
+      const contentTypeDesktop = document.getElementById('pr-content-type');
+
+      if (contentTypeMobile && contentTypeDesktop) {
+        contentTypeMobile.addEventListener('change', () => {
+          contentTypeDesktop.value = contentTypeMobile.value;
+          pr.updateGenerateButton();
+        });
+        
+        contentTypeDesktop.addEventListener('change', () => {
+          contentTypeMobile.value = contentTypeDesktop.value;
+        });
+      }
+
+      // Generate button in left panel
+      const generateBtnMobile = document.getElementById('pr-generate-btn-mobile');
+      if (generateBtnMobile) {
+        generateBtnMobile.addEventListener('click', () => pr.generateContent());
+      }
 
       // Chat functionality
       const chatInput = document.getElementById('pr-chat-input');

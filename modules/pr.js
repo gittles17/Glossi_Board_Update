@@ -3913,12 +3913,15 @@ class NewsMonitor {
   setupDOM() {
     this.dom = {
       refreshBtn: document.getElementById('pr-refresh-news-btn'),
-      newsFeed: document.getElementById('pr-news-hooks-feed')
+      newsFeed: document.getElementById('pr-news-hooks-feed'),
+      fetchNewsBtn: document.getElementById('pr-fetch-news-btn'),
+      newsHooksList: document.getElementById('pr-news-hooks-list')
     };
   }
 
   setupEventListeners() {
     this.dom.refreshBtn?.addEventListener('click', () => this.refreshNews());
+    this.dom.fetchNewsBtn?.addEventListener('click', () => this.refreshNews());
   }
 
   async loadCachedNews() {
@@ -3943,7 +3946,15 @@ class NewsMonitor {
     // Show loading state
     this.dom.refreshBtn.disabled = true;
     this.dom.refreshBtn.classList.add('spinning');
-    this.dom.newsFeed.innerHTML = '<p class="pr-news-loading">Searching for relevant news...</p>';
+    this.dom.fetchNewsBtn.disabled = true;
+    this.dom.fetchNewsBtn.classList.add('spinning');
+    
+    if (this.dom.newsFeed) {
+      this.dom.newsFeed.innerHTML = '<p class="pr-news-loading">Searching for relevant news...</p>';
+    }
+    if (this.dom.newsHooksList) {
+      this.dom.newsHooksList.innerHTML = '<p class="pr-news-hooks-empty">Searching for relevant news...</p>';
+    }
 
     try {
       const response = await fetch('/api/pr/news-hooks', {
@@ -3969,18 +3980,28 @@ class NewsMonitor {
     } catch (error) {
       console.error('Error refreshing news:', error);
       this.prAgent.showToast('Failed to fetch news: ' + error.message, 'error');
-      this.dom.newsFeed.innerHTML = '<p class="pr-news-empty">Failed to load news. Try again.</p>';
+      if (this.dom.newsFeed) {
+        this.dom.newsFeed.innerHTML = '<p class="pr-news-empty">Failed to load news. Try again.</p>';
+      }
+      if (this.dom.newsHooksList) {
+        this.dom.newsHooksList.innerHTML = '<p class="pr-news-hooks-empty">Failed to load news. Try again.</p>';
+      }
     } finally {
       this.dom.refreshBtn.disabled = false;
       this.dom.refreshBtn.classList.remove('spinning');
+      this.dom.fetchNewsBtn.disabled = false;
+      this.dom.fetchNewsBtn.classList.remove('spinning');
     }
   }
 
   renderNews() {
-    if (!this.dom.newsFeed) return;
-
     if (this.newsHooks.length === 0) {
-      this.dom.newsFeed.innerHTML = '<p class="pr-news-empty">No recent news found. Click refresh to search.</p>';
+      if (this.dom.newsFeed) {
+        this.dom.newsFeed.innerHTML = '<p class="pr-news-empty">No recent news found. Click refresh to search.</p>';
+      }
+      if (this.dom.newsHooksList) {
+        this.dom.newsHooksList.innerHTML = '<p class="pr-news-hooks-empty">No recent news found. Click refresh to search.</p>';
+      }
       return;
     }
 
@@ -4018,15 +4039,28 @@ class NewsMonitor {
     });
     
     html += '</div>';
-    this.dom.newsFeed.innerHTML = html;
+    
+    if (this.dom.newsFeed) {
+      this.dom.newsFeed.innerHTML = html;
+      this.attachNewsEventListenersToContainer(this.dom.newsFeed);
+    }
+    if (this.dom.newsHooksList) {
+      this.dom.newsHooksList.innerHTML = html;
+      this.attachNewsEventListenersToContainer(this.dom.newsHooksList);
+    }
+  }
 
-    // Add event listeners
-    this.dom.newsFeed.querySelectorAll('.pr-use-hook-btn').forEach(btn => {
+  attachNewsEventListenersToContainer(container) {
+    container.querySelectorAll('.pr-use-hook-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const index = parseInt(btn.dataset.newsIndex);
         this.useAsHook(this.newsHooks[index]);
       });
     });
+  }
+
+  attachNewsEventListeners() {
+    // Deprecated - kept for compatibility
   }
 
   async useAsHook(newsItem) {
