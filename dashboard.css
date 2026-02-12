@@ -11739,7 +11739,7 @@ a.dropdown-item {
   min-width: 400px;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
   background: var(--bg-primary);
 }
 
@@ -11960,8 +11960,10 @@ a.dropdown-item {
 /* Workspace content area */
 .pr-workspace-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
-  padding: var(--space-4);
+  min-height: 0;
 }
 
 /* Empty state */
@@ -12072,8 +12074,15 @@ a.dropdown-item {
 
 /* Generated content */
 .pr-workspace-generated {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+  padding: var(--space-6);
   max-width: 720px;
   margin: 0 auto;
+  width: 100%;
 }
 
 .pr-generated-content {
@@ -14189,12 +14198,16 @@ a.dropdown-item {
    ============================================ */
 
 .pr-chat-section {
-  flex: 1;
+  position: sticky;
+  bottom: 0;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--border-color);
-  margin-top: var(--space-6);
   background: var(--bg-secondary);
+  border-top: 2px solid var(--border-color);
+  z-index: 100;
+  max-height: 500px;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .pr-chat-header {
@@ -14236,8 +14249,8 @@ a.dropdown-item {
 .pr-chat-area {
   flex: 1;
   overflow-y: auto;
-  min-height: 200px;
-  max-height: 400px;
+  min-height: 150px;
+  max-height: 350px;
 }
 
 .pr-messages {
