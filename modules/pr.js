@@ -178,6 +178,9 @@ class PRAgent {
     
     // Setup command center
     this.setupCommandCenter();
+    
+    // Setup API key monitoring
+    this.setupApiKeyMonitoring();
   }
   
   addEditFoundationButton() {
@@ -390,6 +393,29 @@ class PRAgent {
     setTimeout(() => {
       indicator.classList.remove('visible');
       setTimeout(() => indicator.remove(), 300);
+    }, 3000);
+  }
+
+  setupApiKeyMonitoring() {
+    // Check for API key updates every 3 seconds
+    setInterval(() => {
+      const previousKey = this.apiKey;
+      
+      try {
+        const glossiSettings = localStorage.getItem('glossi_settings');
+        if (glossiSettings) {
+          const gs = JSON.parse(glossiSettings);
+          this.apiKey = gs.apiKey || null;
+          this.openaiApiKey = gs.openaiApiKey || null;
+          
+          // If key status changed, update UI
+          if ((previousKey === null && this.apiKey) || (previousKey && !this.apiKey)) {
+            this.updateGenerateButton();
+          }
+        }
+      } catch (e) {
+        // Ignore parsing errors
+      }
     }, 3000);
   }
 
@@ -1637,7 +1663,7 @@ class PRAgent {
     if (hint && hintText) {
       if (!hasApiKey) {
         hint.style.display = 'flex';
-        hintText.textContent = 'Anthropic API key not detected. Set it in Dashboard Settings, then refresh this page.';
+        hintText.innerHTML = 'Anthropic API key not set. <a href="index.html" style="color: var(--accent-green); text-decoration: underline;">Open Dashboard Settings</a> to add your API key. No refresh needed!';
       } else if (selectedSources.length === 0 && this.sources.length > 0) {
         hint.style.display = 'flex';
         hintText.textContent = 'Select at least one source to generate content.';
