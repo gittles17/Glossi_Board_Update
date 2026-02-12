@@ -2722,6 +2722,21 @@ Be concise. Match the original style (Linear/Cursor voice).`;
         }
       });
     });
+    
+    // Update chat area visibility and auto-expand
+    const chatArea = document.getElementById('pr-chat-area');
+    const chatSection = document.getElementById('pr-chat-section');
+    if (chatArea && chatSection) {
+      if (messages.length > 0) {
+        chatArea.classList.add('has-messages');
+        // Auto-expand when new messages arrive
+        chatSection.classList.remove('collapsed');
+        const toggleBtn = document.getElementById('pr-toggle-chat-btn');
+        if (toggleBtn) toggleBtn.title = 'Collapse';
+      } else {
+        chatArea.classList.remove('has-messages');
+      }
+    }
   }
 
   showTypingIndicator() {

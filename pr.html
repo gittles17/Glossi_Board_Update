@@ -324,13 +324,20 @@
 
           <!-- Chat Interface for Content Refinement -->
           <div class="pr-chat-section" id="pr-chat-section" style="display:none">
-            <div class="pr-chat-header">
+            <div class="pr-chat-header" id="pr-chat-header">
               <span class="pr-chat-title">Refine Content</span>
-              <button class="pr-clear-btn" id="pr-clear-chat-btn" title="Clear chat">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                </svg>
-              </button>
+              <div class="pr-chat-header-buttons">
+                <button class="pr-icon-btn" id="pr-toggle-chat-btn" title="Collapse">
+                  <svg class="pr-chat-toggle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="18 15 12 9 6 15"></polyline>
+                  </svg>
+                </button>
+                <button class="pr-clear-btn" id="pr-clear-chat-btn" title="Clear chat">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
             <div class="pr-chat-area" id="pr-chat-area">
               <div class="pr-messages" id="pr-messages">
@@ -956,10 +963,55 @@
 
       // Clear chat button
       if (clearChatBtn) {
-        clearChatBtn.addEventListener('click', async () => {
+        clearChatBtn.addEventListener('click', async (e) => {
+          e.stopPropagation(); // Prevent header click
           const confirmed = await pr.showConfirm('Clear chat history? This cannot be undone.', 'Clear Chat');
           if (confirmed) {
             pr.clearChat();
+          }
+        });
+      }
+
+      // Toggle chat collapse
+      const toggleChatBtn = document.getElementById('pr-toggle-chat-btn');
+      const chatArea = document.getElementById('pr-chat-area');
+      
+      function updateChatAreaVisibility() {
+        const messages = messagesContainer?.querySelectorAll('.pr-message');
+        if (messages && messages.length > 0) {
+          chatArea?.classList.add('has-messages');
+        } else {
+          chatArea?.classList.remove('has-messages');
+        }
+      }
+      
+      if (toggleChatBtn && chatSection) {
+        toggleChatBtn.addEventListener('click', (e) => {
+          e.stopPropagation(); // Prevent header click
+          chatSection.classList.toggle('collapsed');
+          const isCollapsed = chatSection.classList.contains('collapsed');
+          toggleChatBtn.title = isCollapsed ? 'Expand' : 'Collapse';
+          localStorage.setItem('pr_chat_collapsed', isCollapsed);
+        });
+        
+        // Restore collapsed state
+        const savedCollapsed = localStorage.getItem('pr_chat_collapsed') === 'true';
+        if (savedCollapsed) {
+          chatSection.classList.add('collapsed');
+          toggleChatBtn.title = 'Expand';
+        }
+      }
+      
+      // Make header clickable to toggle (except for buttons)
+      const chatHeader = document.getElementById('pr-chat-header');
+      if (chatHeader && chatSection) {
+        chatHeader.addEventListener('click', (e) => {
+          // Only toggle if clicking header itself, not buttons
+          if (e.target === chatHeader || e.target.closest('.pr-chat-title')) {
+            chatSection.classList.toggle('collapsed');
+            const isCollapsed = chatSection.classList.contains('collapsed');
+            if (toggleChatBtn) toggleChatBtn.title = isCollapsed ? 'Expand' : 'Collapse';
+            localStorage.setItem('pr_chat_collapsed', isCollapsed);
           }
         });
       }
