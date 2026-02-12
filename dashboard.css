@@ -12584,16 +12584,66 @@ a.dropdown-item {
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   flex-shrink: 0;
 }
 
-.pr-strategy-header {
+/* Right panel tabs */
+.pr-right-panel-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.pr-right-panel-tab {
   display: flex;
   align-items: center;
-  padding: var(--space-4) var(--space-4);
-  border-bottom: 1px solid var(--border-color);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex: 1;
+  justify-content: center;
+}
+
+.pr-right-panel-tab:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pr-right-panel-tab.active {
+  color: var(--accent-blue);
+  border-bottom-color: var(--accent-blue);
+}
+
+.pr-right-panel-tab svg {
+  opacity: 0.7;
+}
+
+.pr-right-panel-tab.active svg {
+  opacity: 1;
+}
+
+.pr-right-panel-tab-content {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.pr-right-panel-tab-content.active {
+  display: flex;
+}
+
+.pr-strategy-header {
+  display: none;
 }
 
 .pr-strategy-label {
@@ -12605,7 +12655,15 @@ a.dropdown-item {
 .pr-strategy-body {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-3);
+  padding: var(--space-4);
+}
+
+.pr-media-panel-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: var(--space-4);
 }
 
 .pr-strategy-empty {

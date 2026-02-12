@@ -3281,10 +3281,10 @@ class MediaManager {
 
   setupDOM() {
     this.dom = {
-      outletsContainer: document.getElementById('pr-media-outlets'),
-      discoverView: document.getElementById('pr-media-discover'),
-      trackView: document.getElementById('pr-media-track'),
-      pitchTracker: document.getElementById('pr-pitch-tracker'),
+      outletsContainer: document.getElementById('pr-media-outlets-right') || document.getElementById('pr-media-outlets'),
+      discoverView: document.getElementById('pr-media-discover-right') || document.getElementById('pr-media-discover'),
+      trackView: document.getElementById('pr-media-track-right') || document.getElementById('pr-media-track'),
+      pitchTracker: document.getElementById('pr-pitch-tracker-right') || document.getElementById('pr-pitch-tracker'),
       toggleBtns: document.querySelectorAll('.pr-media-toggle-btn')
     };
   }

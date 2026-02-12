@@ -397,16 +397,59 @@
       <!-- Resizer between center and right -->
       <div class="pr-resizer" id="pr-resizer-right" data-resize="right"></div>
 
-      <!-- Column 3: Strategy Panel -->
+      <!-- Column 3: Right Panel (Media & Strategy) -->
       <div class="pr-strategy-panel" id="pr-strategy-panel">
-        <div class="pr-strategy-header">
-          <span class="pr-strategy-label">Strategy</span>
+        <!-- Tab Navigation -->
+        <div class="pr-right-panel-tabs">
+          <button class="pr-right-panel-tab active" data-right-tab="media">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            Media
+          </button>
+          <button class="pr-right-panel-tab" data-right-tab="strategy">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+            Strategy
+          </button>
         </div>
         
-        <div class="pr-strategy-body">
-          <div class="pr-strategy-content" id="pr-strategy-content"></div>
-          <div class="pr-strategy-empty" id="pr-strategy-empty">
-            <p>Strategy appears after generating content</p>
+        <!-- Tab Content: Media -->
+        <div class="pr-right-panel-tab-content active" data-right-content="media">
+          <div class="pr-media-panel-body">
+            <div class="pr-media-view">
+              <div class="pr-media-header">
+                <div class="pr-media-toggle">
+                  <button class="pr-media-toggle-btn active" data-media-view="discover">Discover</button>
+                  <button class="pr-media-toggle-btn" data-media-view="track">Track</button>
+                </div>
+              </div>
+              <div class="pr-media-discover active" id="pr-media-discover-right">
+                <div class="pr-media-outlets" id="pr-media-outlets-right">
+                  <p class="pr-loading-text">Loading outlets...</p>
+                </div>
+              </div>
+              <div class="pr-media-track" id="pr-media-track-right">
+                <div class="pr-pitch-tracker" id="pr-pitch-tracker-right">
+                  <p class="pr-empty-text">No pitches tracked yet</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Tab Content: Strategy -->
+        <div class="pr-right-panel-tab-content" data-right-content="strategy">
+          <div class="pr-strategy-body">
+            <div class="pr-strategy-content" id="pr-strategy-content"></div>
+            <div class="pr-strategy-empty" id="pr-strategy-empty">
+              <p>Strategy appears after generating content</p>
+            </div>
           </div>
         </div>
       </div>
@@ -988,6 +1031,39 @@
       if (savedWorkspaceTab) {
         const targetTab = document.querySelector(`[data-workspace-tab="${savedWorkspaceTab}"]`);
         if (targetTab) targetTab.click();
+      }
+
+      // Right panel tab switching
+      const rightPanelTabs = document.querySelectorAll('.pr-right-panel-tab');
+      const rightPanelTabContents = document.querySelectorAll('.pr-right-panel-tab-content');
+
+      rightPanelTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const targetTab = tab.dataset.rightTab;
+          
+          // Update tabs
+          rightPanelTabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          // Update content
+          rightPanelTabContents.forEach(content => {
+            if (content.dataset.rightContent === targetTab) {
+              content.classList.add('active');
+            } else {
+              content.classList.remove('active');
+            }
+          });
+          
+          // Save active tab
+          localStorage.setItem('pr_active_right_tab', targetTab);
+        });
+      });
+
+      // Restore active right panel tab
+      const savedRightTab = localStorage.getItem('pr_active_right_tab');
+      if (savedRightTab) {
+        const targetRightTab = document.querySelector(`[data-right-tab="${savedRightTab}"]`);
+        if (targetRightTab) targetRightTab.click();
       }
 
       // Sync content type between mobile and desktop dropdowns
