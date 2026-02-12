@@ -764,7 +764,7 @@ Return as structured JSON with this exact format:
 Find up to 10 recent, relevant articles.`;
 
     const articlesResponse = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-opus-4-20250514',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       system: 'You are a research assistant. Always return valid JSON.',
       messages: [{ role: 'user', content: articlesPrompt }]
@@ -826,7 +826,7 @@ Return as structured JSON with this exact format:
 }`;
 
         const contactResponse = await axios.post('https://api.anthropic.com/v1/messages', {
-          model: 'claude-opus-4-20250514',
+          model: 'claude-sonnet-4-20250514',
           max_tokens: 1024,
           system: 'You are a research assistant. Always return valid JSON. Only return verified contact information.',
           messages: [{ role: 'user', content: contactPrompt }]
@@ -1009,7 +1009,7 @@ Return as structured JSON with this exact format:
 Maximum 10 results, sorted by relevance.`;
 
     const newsResponse = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-opus-4-20250514',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       system: 'You are a news research assistant for Glossi, an AI-native 3D product visualization platform. Always return valid JSON.',
       messages: [{ role: 'user', content: newsPrompt }]
@@ -1101,7 +1101,7 @@ Categories:
 Only include articles from major tech publications. Maximum 5 results.`;
 
     const articlesResponse = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-opus-4-20250514',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       system: 'You are a research assistant for Glossi, an AI-native 3D product visualization platform. Always return valid JSON.',
       messages: [{ role: 'user', content: articlesPrompt }]

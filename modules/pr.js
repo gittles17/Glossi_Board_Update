@@ -1813,7 +1813,7 @@ class PRAgent {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-opus-4-20250514',
+          model: 'claude-sonnet-4-20250514',
           max_tokens: 8192,
           system: PR_SYSTEM_PROMPT,
           messages: [{ role: 'user', content: userMessage }]
@@ -2575,7 +2575,7 @@ Be concise. Match the original style (Linear/Cursor voice).`;
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-sonnet-4-20250514',
           max_tokens: 4096,
           system: systemPrompt,
           messages: messages
