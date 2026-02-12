@@ -114,6 +114,9 @@ class PRAgent {
     this.isGenerating = false;
     this.apiKey = null;
     this.openaiApiKey = null;
+    this.folders = [];
+    this.expandedFolders = {};
+    this.isDraggingSource = false;
   }
 
   init() {
@@ -144,9 +147,14 @@ class PRAgent {
     }
     try {
       const settingsRaw = localStorage.getItem('pr_settings');
-      this.settings = settingsRaw ? JSON.parse(settingsRaw) : {};
+      const settings = settingsRaw ? JSON.parse(settingsRaw) : {};
+      this.settings = settings;
+      this.folders = settings.folders || [];
+      this.expandedFolders = settings.expandedFolders || {};
     } catch (e) {
       this.settings = {};
+      this.folders = [];
+      this.expandedFolders = {};
     }
     try {
       const glossiSettings = localStorage.getItem('glossi_settings');
@@ -165,6 +173,9 @@ class PRAgent {
   saveSources() {
     try {
       localStorage.setItem('pr_sources', JSON.stringify(this.sources));
+      this.settings.folders = this.folders;
+      this.settings.expandedFolders = this.expandedFolders;
+      localStorage.setItem('pr_settings', JSON.stringify(this.settings));
     } catch (e) {
       this.showToast('Failed to save sources', 'error');
     }
@@ -246,6 +257,15 @@ class PRAgent {
 
     // Source search
     this.dom.sourceSearch?.addEventListener('input', () => this.filterSources());
+
+    // Create folder button
+    const createFolderBtn = document.getElementById('pr-create-folder-btn');
+    if (createFolderBtn) {
+      createFolderBtn.addEventListener('click', () => this.createFolder());
+    }
+
+    // Setup drag-drop for external files
+    this.setupExternalFileDrop();
 
     // Content type change
     this.dom.contentType?.addEventListener('change', () => {
@@ -626,6 +646,126 @@ class PRAgent {
     });
   }
 
+  // =========================================
+  // FOLDER MANAGEMENT
+  // =========================================
+
+  createFolder() {
+    const name = prompt('Enter folder name:');
+    if (!name || !name.trim()) return;
+    const folderName = name.trim();
+    if (this.folders.includes(folderName)) {
+      this.showToast('Folder already exists', 'error');
+      return;
+    }
+    this.folders.push(folderName);
+    this.expandedFolders[folderName] = true;
+    this.saveSources();
+    this.renderSources();
+    this.showToast('Folder created');
+  }
+
+  async deleteFolder(name) {
+    const sourcesInFolder = this.sources.filter(s => s.folder === name);
+    const message = sourcesInFolder.length > 0
+      ? `Delete "${name}"? ${sourcesInFolder.length} source(s) will be moved to ungrouped.`
+      : `Delete folder "${name}"?`;
+    const confirmed = await this.showConfirm(message, 'Delete Folder');
+    if (!confirmed) return;
+
+    this.folders = this.folders.filter(f => f !== name);
+    delete this.expandedFolders[name];
+    this.sources.forEach(s => {
+      if (s.folder === name) s.folder = null;
+    });
+    this.saveSources();
+    this.renderSources();
+    this.showToast('Folder deleted');
+  }
+
+  renameFolder(oldName) {
+    const newName = prompt('Enter new folder name:', oldName);
+    if (!newName || !newName.trim() || newName.trim() === oldName) return;
+    const folderName = newName.trim();
+    if (this.folders.includes(folderName)) {
+      this.showToast('Folder already exists', 'error');
+      return;
+    }
+    const index = this.folders.indexOf(oldName);
+    if (index !== -1) this.folders[index] = folderName;
+    if (this.expandedFolders[oldName]) {
+      this.expandedFolders[folderName] = this.expandedFolders[oldName];
+      delete this.expandedFolders[oldName];
+    }
+    this.sources.forEach(s => {
+      if (s.folder === oldName) s.folder = folderName;
+    });
+    this.saveSources();
+    this.renderSources();
+    this.showToast('Folder renamed');
+  }
+
+  toggleFolder(name) {
+    this.expandedFolders[name] = !this.expandedFolders[name];
+    this.saveSources();
+    const folder = document.querySelector(`[data-folder="${this.escapeHtml(name)}"]`);
+    if (folder) folder.classList.toggle('expanded', this.expandedFolders[name]);
+  }
+
+  moveSourceToFolder(sourceId, folderName) {
+    const source = this.sources.find(s => s.id === sourceId);
+    if (!source) return;
+    source.folder = folderName;
+    this.saveSources();
+    this.renderSources();
+    if (folderName) {
+      this.showToast(`Moved to "${folderName}"`);
+    } else {
+      this.showToast('Moved to ungrouped');
+    }
+  }
+
+  showFolderContextMenu(e, folderName) {
+    const menu = document.createElement('div');
+    menu.className = 'pr-context-menu';
+    menu.style.left = e.pageX + 'px';
+    menu.style.top = e.pageY + 'px';
+    menu.innerHTML = `
+      <button class="pr-context-menu-item" data-action="rename">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+        Rename
+      </button>
+      <button class="pr-context-menu-item" data-action="delete">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+        Delete
+      </button>
+    `;
+    document.body.appendChild(menu);
+
+    const removeMenu = () => {
+      menu.remove();
+      document.removeEventListener('click', removeMenu);
+    };
+    setTimeout(() => document.addEventListener('click', removeMenu), 100);
+
+    menu.querySelector('[data-action="rename"]').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      this.renameFolder(folderName);
+      removeMenu();
+    });
+    menu.querySelector('[data-action="delete"]').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      this.deleteFolder(folderName);
+      removeMenu();
+    });
+  }
+
   renderSources() {
     if (!this.dom.sourcesList) return;
 
@@ -649,11 +789,11 @@ class PRAgent {
       audio: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line></svg>'
     };
 
-    this.dom.sourcesList.innerHTML = this.sources.map(source => {
+    const renderSourceItem = (source) => {
       const date = new Date(source.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const preview = (source.content || '').substring(0, 100);
       return `
-        <div class="pr-source-item ${source.selected ? 'selected' : ''}" data-source-id="${source.id}">
+        <div class="pr-source-item ${source.selected ? 'selected' : ''}" data-source-id="${source.id}" draggable="true">
           <label class="pr-source-checkbox">
             <input type="checkbox" ${source.selected ? 'checked' : ''} data-action="toggle" data-id="${source.id}">
           </label>
@@ -674,7 +814,59 @@ class PRAgent {
             </svg>
           </button>
         </div>`;
-    }).join('');
+    };
+
+    const folders = {};
+    const ungrouped = [];
+    this.sources.forEach(source => {
+      if (source.folder) {
+        if (!folders[source.folder]) folders[source.folder] = [];
+        folders[source.folder].push(source);
+      } else {
+        ungrouped.push(source);
+      }
+    });
+
+    const allFolderNames = new Set([...Object.keys(folders), ...this.folders]);
+    let html = '';
+    Array.from(allFolderNames).sort().forEach(folderName => {
+      const folderSources = folders[folderName] || [];
+      const isExpanded = this.expandedFolders[folderName];
+      html += `
+        <div class="pr-folder ${isExpanded ? 'expanded' : ''}" data-folder="${this.escapeHtml(folderName)}">
+          <div class="pr-folder-header">
+            <svg class="pr-folder-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+            <svg class="pr-folder-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="pr-folder-name">${this.escapeHtml(folderName)}</span>
+            <span class="pr-folder-count">${folderSources.length}</span>
+          </div>
+          <div class="pr-folder-contents">
+            ${folderSources.map(s => renderSourceItem(s)).join('')}
+          </div>
+        </div>
+      `;
+    });
+    html += ungrouped.map(s => renderSourceItem(s)).join('');
+
+    const dropIndicator = '<div class="pr-drop-indicator" id="pr-drop-indicator"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg><span>Drop files here</span></div>';
+    this.dom.sourcesList.innerHTML = html + dropIndicator;
+
+    this.dom.sourcesList.querySelectorAll('.pr-folder-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const folderName = header.closest('.pr-folder').dataset.folder;
+        this.toggleFolder(folderName);
+      });
+      header.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const folderName = header.closest('.pr-folder').dataset.folder;
+        this.showFolderContextMenu(e, folderName);
+      });
+    });
 
     // Event delegation for source items
     this.dom.sourcesList.querySelectorAll('[data-action]').forEach(el => {
@@ -694,6 +886,179 @@ class PRAgent {
         });
       }
     });
+
+    this.setupSourceDrag();
+    this.setupFolderDrop();
+  }
+
+  setupSourceDrag() {
+    this.dom.sourcesList.querySelectorAll('[draggable]').forEach(item => {
+      item.addEventListener('dragstart', (e) => {
+        this.isDraggingSource = true;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', item.dataset.sourceId);
+        item.classList.add('dragging');
+      });
+      item.addEventListener('dragend', () => {
+        this.isDraggingSource = false;
+        item.classList.remove('dragging');
+      });
+    });
+  }
+
+  setupFolderDrop() {
+    this.dom.sourcesList.querySelectorAll('.pr-folder').forEach(folder => {
+      const header = folder.querySelector('.pr-folder-header');
+      header.addEventListener('dragover', (e) => {
+        if (!this.isDraggingSource) return;
+        e.preventDefault();
+        e.stopPropagation();
+        header.classList.add('drag-over');
+      });
+      header.addEventListener('dragleave', (e) => {
+        if (!header.contains(e.relatedTarget)) {
+          header.classList.remove('drag-over');
+        }
+      });
+      header.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        header.classList.remove('drag-over');
+        const sourceId = e.dataTransfer.getData('text/plain');
+        const folderName = folder.dataset.folder;
+        if (sourceId && this.sources.find(s => s.id === sourceId)) {
+          this.moveSourceToFolder(sourceId, folderName);
+        }
+      });
+    });
+
+    this.dom.sourcesList.addEventListener('dragover', (e) => {
+      if (!this.isDraggingSource) return;
+      if (!e.target.closest('.pr-folder-header')) {
+        e.preventDefault();
+      }
+    });
+    this.dom.sourcesList.addEventListener('drop', (e) => {
+      if (!this.isDraggingSource) return;
+      if (!e.target.closest('.pr-folder-header')) {
+        e.preventDefault();
+        const sourceId = e.dataTransfer.getData('text/plain');
+        const source = this.sources.find(s => s.id === sourceId);
+        if (source && source.folder) {
+          this.moveSourceToFolder(sourceId, null);
+        }
+      }
+    });
+  }
+
+  setupExternalFileDrop() {
+    const dropZone = this.dom.sourcesList;
+    if (!dropZone) return;
+
+    dropZone.addEventListener('dragover', (e) => {
+      if (!this.isDraggingSource) {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+        const indicator = document.getElementById('pr-drop-indicator');
+        if (indicator) indicator.style.display = 'flex';
+      }
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+      if (!dropZone.contains(e.relatedTarget)) {
+        dropZone.classList.remove('drag-over');
+        const indicator = document.getElementById('pr-drop-indicator');
+        if (indicator) indicator.style.display = 'none';
+      }
+    });
+
+    dropZone.addEventListener('drop', async (e) => {
+      if (this.isDraggingSource) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('drag-over');
+      const indicator = document.getElementById('pr-drop-indicator');
+      if (indicator) indicator.style.display = 'none';
+
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length > 0) {
+        for (const file of files) {
+          await this.handleDroppedFile(file);
+        }
+      }
+    });
+  }
+
+  async handleDroppedFile(file) {
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      this.showToast('File too large (max 10MB)', 'error');
+      return;
+    }
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    let content = '';
+    let type = 'file';
+
+    if (['txt', 'md', 'csv'].includes(ext)) {
+      content = await file.text();
+      type = 'text';
+    } else if (ext === 'pdf') {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const numPages = pdf.numPages;
+        const textParts = [];
+        for (let i = 1; i <= numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          textParts.push(textContent.items.map(item => item.str).join(' '));
+        }
+        content = textParts.join('\n\n');
+        type = 'file';
+      } catch (err) {
+        this.showToast('Failed to parse PDF', 'error');
+        return;
+      }
+    } else if (['mp3', 'wav', 'm4a', 'webm'].includes(ext)) {
+      if (!this.openaiApiKey) {
+        this.showToast('OpenAI API key required for audio transcription', 'error');
+        return;
+      }
+      try {
+        const transcription = await this.transcribeAudio(file);
+        content = transcription;
+        type = 'audio';
+      } catch (err) {
+        this.showToast('Audio transcription failed: ' + err.message, 'error');
+        return;
+      }
+    } else {
+      this.showToast('Unsupported file type', 'error');
+      return;
+    }
+
+    if (!content || content.trim().length === 0) {
+      this.showToast('No content extracted from file', 'error');
+      return;
+    }
+
+    const source = {
+      id: 'src_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      title: file.name,
+      type,
+      content: content.substring(0, 50000),
+      fileName: file.name,
+      createdAt: new Date().toISOString(),
+      selected: true,
+      folder: null
+    };
+
+    this.sources.push(source);
+    this.saveSources();
+    this.renderSources();
+    this.updateGenerateButton();
+    this.showToast('Source added from file');
   }
 
   renderHistory() {

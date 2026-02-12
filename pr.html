@@ -111,11 +111,17 @@
         <div class="pr-sources-header">
           <span class="pr-sources-label">Sources</span>
           <span class="pr-sources-count" id="pr-sources-count">0</span>
+          <button class="pr-create-folder-btn" id="pr-create-folder-btn" title="Create Folder">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
         </div>
         <div class="pr-source-search-wrap">
           <input type="text" class="pr-source-search" id="pr-source-search" placeholder="Search sources...">
         </div>
-        <div class="pr-sources-list" id="pr-sources-list">
+        <div class="pr-sources-list pr-drop-zone" id="pr-sources-list">
           <div class="pr-sources-empty" id="pr-sources-empty">
             <p>No sources yet</p>
             <p class="pr-empty-hint">Add content the PR agent can reference</p>
