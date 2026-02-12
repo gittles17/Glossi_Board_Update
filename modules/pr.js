@@ -520,14 +520,7 @@ class PRAgent {
         this.apiKey = gs.apiKey || null;
         this.openaiApiKey = gs.openaiApiKey || null;
         
-        // Log for debugging
-        if (this.apiKey) {
-          console.log('✓ Anthropic API key loaded successfully');
-        } else {
-          console.log('⚠ No Anthropic API key found in settings');
-        }
-      } else {
-        console.log('⚠ glossi_settings not found in localStorage');
+        // API key loaded from settings
       }
     } catch (e) {
       console.error('Error loading API keys:', e);
@@ -750,11 +743,6 @@ class PRAgent {
         if (this.dom.generateBtn?.disabled && e.target.closest('.pr-workspace-controls')) {
           const hasApiKey = this.apiKey && this.apiKey.length > 0;
           const selectedSources = this.sources.filter(s => s.selected);
-          if (!hasApiKey) {
-            console.warn('Generate clicked but no API key set');
-          } else if (selectedSources.length === 0) {
-            console.warn('Generate clicked but no sources selected');
-          }
         }
       });
     }
@@ -1394,7 +1382,6 @@ class PRAgent {
         });
       } else if (action === 'open-wizard') {
         el.addEventListener('click', () => {
-          console.log('Source clicked, opening wizard...');
           if (this.wizard) {
             this.wizard.open();
           } else {
@@ -1512,7 +1499,7 @@ class PRAgent {
   async handleDroppedFile(file) {
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      console.warn('File too large (max 10MB)');
+      this.prAgent.showToast('File too large (max 10MB)', 'error');
       return;
     }
 
@@ -1542,7 +1529,7 @@ class PRAgent {
       }
     } else if (['mp3', 'wav', 'm4a', 'webm'].includes(ext)) {
       if (!this.openaiApiKey) {
-        console.warn('OpenAI API key required for audio transcription');
+        this.showToast('OpenAI API key required for audio transcription', 'error');
         return;
       }
       try {
@@ -1554,12 +1541,12 @@ class PRAgent {
         return;
       }
     } else {
-      console.warn('Unsupported file type');
+      this.showToast('Unsupported file type', 'error');
       return;
     }
 
     if (!content || content.trim().length === 0) {
-      console.warn('No content extracted from file');
+      this.showToast('No content extracted from file', 'error');
       return;
     }
 
@@ -2279,7 +2266,7 @@ class PRAgent {
   async processFile(file) {
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      console.warn('File too large (max 10MB)');
+      this.prAgent.showToast('File too large (max 10MB)', 'error');
       return;
     }
 
@@ -2314,7 +2301,7 @@ class PRAgent {
         console.error('Failed to read PDF:', err);
       }
     } else {
-      console.warn('Unsupported file type');
+      this.prAgent.showToast('Unsupported file type', 'error');
     }
   }
 
@@ -2345,7 +2332,7 @@ class PRAgent {
 
   async startRecording() {
     if (!this.openaiApiKey) {
-      console.warn('OpenAI API key required for audio transcription');
+      this.prAgent.showToast('OpenAI API key required for audio transcription', 'error');
       return;
     }
 
@@ -2391,7 +2378,7 @@ class PRAgent {
 
   async transcribeAudio(fileOrBlob) {
     if (!this.openaiApiKey) {
-      console.warn('OpenAI API key required');
+      this.prAgent.showToast('OpenAI API key required', 'error');
       return;
     }
 
@@ -2461,6 +2448,256 @@ class PRAgent {
       toast.style.transition = 'all 0.3s ease';
       setTimeout(() => toast.remove(), 300);
     }, 3000);
+  }
+
+  // =========================================
+  // CHAT FUNCTIONALITY
+  // =========================================
+
+  async sendChatMessage() {
+    const input = document.getElementById('pr-chat-input');
+    const message = input?.value?.trim();
+    if (!message || !this.currentOutput) return;
+
+    if (!this.apiKey) {
+      this.showToast('Anthropic API key required. Set it in Dashboard Settings.', 'error');
+      return;
+    }
+
+    // Initialize chat history if not exists
+    if (!this.currentOutput.chatHistory) {
+      this.currentOutput.chatHistory = [];
+    }
+
+    // Add user message
+    this.currentOutput.chatHistory.push({
+      role: 'user',
+      content: message,
+      timestamp: Date.now()
+    });
+
+    // Clear input
+    input.value = '';
+    input.style.height = 'auto';
+
+    // Render messages
+    this.renderChatMessages();
+    this.showTypingIndicator();
+
+    try {
+      // Build context
+      const context = this.buildChatContext();
+      
+      const systemPrompt = `You are a PR content refinement assistant for Glossi. The user has generated PR content and wants to refine it.
+
+VOICE RULES (from PR system prompt):
+- Open with what happened or what the product does. Never with how you feel.
+- Short sentences. Period-separated thoughts. Not comma-laden ones.
+- Numbers over adjectives.
+- Name the specific technology.
+- Never use: "excited to announce", "thrilled", "groundbreaking", "game-changing"
+- No exclamation marks.
+- The confidence comes from specificity, not volume.
+
+CURRENT CONTEXT:
+${context}
+
+When user asks for changes:
+1. Apply the requested refinement
+2. Return the COMPLETE refined version wrapped in <content> tags
+3. Briefly explain what you changed
+4. Suggest related improvements if relevant
+
+Be concise. Match the original style (Linear/Cursor voice).`;
+
+      // Build conversation history
+      const messages = this.currentOutput.chatHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      // Call API
+      const response = await this.apiCall(ANTHROPIC_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: messages
+        })
+      });
+
+      const aiMessage = response.content[0].text;
+
+      // Add AI response
+      this.currentOutput.chatHistory.push({
+        role: 'assistant',
+        content: aiMessage,
+        timestamp: Date.now()
+      });
+
+      this.hideTypingIndicator();
+      this.renderChatMessages();
+
+      // Check if AI provided updated content (wrapped in <content> tags)
+      const contentMatch = aiMessage.match(/<content>([\s\S]*?)<\/content>/);
+      if (contentMatch) {
+        const updatedContent = contentMatch[1].trim();
+        this.currentOutput.content = updatedContent;
+        this.dom.generatedContent.innerHTML = this.formatContent(updatedContent);
+        this.showToast('Content updated', 'success');
+      }
+
+      // Save
+      await this.saveOutputs();
+
+      // Scroll to bottom
+      const messagesContainer = document.getElementById('pr-messages');
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    } catch (error) {
+      console.error('Error in chat:', error);
+      this.hideTypingIndicator();
+      this.currentOutput.chatHistory.push({
+        role: 'assistant',
+        content: 'Sorry, I encountered an error. Please try again.',
+        timestamp: Date.now()
+      });
+      this.renderChatMessages();
+      this.showToast('Chat error: ' + error.message, 'error');
+    }
+  }
+
+  buildChatContext() {
+    const parts = [];
+
+    // Current content
+    if (this.currentOutput) {
+      parts.push(`CONTENT TYPE: ${this.currentOutput.contentType}`);
+      parts.push(`\nCURRENT CONTENT:\n${this.currentOutput.content}`);
+    }
+
+    // Sources
+    if (this.sources.length > 0) {
+      parts.push('\n\nSOURCES:');
+      this.sources.forEach((source, i) => {
+        parts.push(`\n[Source ${i + 1}] ${source.title}:\n${source.content}`);
+      });
+    }
+
+    // Strategy
+    if (this.currentOutput?.strategy) {
+      parts.push('\n\nSTRATEGY RECOMMENDATIONS:\n' + JSON.stringify(this.currentOutput.strategy, null, 2));
+    }
+
+    return parts.join('\n');
+  }
+
+  renderChatMessages() {
+    const container = document.getElementById('pr-messages');
+    const suggestions = document.getElementById('pr-suggestions');
+    if (!container) return;
+
+    const messages = this.currentOutput?.chatHistory || [];
+
+    // Show/hide suggestions
+    if (suggestions) {
+      suggestions.style.display = messages.length === 0 ? 'flex' : 'none';
+    }
+
+    // Render messages
+    if (messages.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    container.innerHTML = messages.map((msg, index) => {
+      const roleClass = msg.role === 'user' ? 'pr-message-user' : 'pr-message-assistant';
+      const copyButton = msg.role === 'assistant' ? `
+        <div class="pr-message-actions">
+          <button class="pr-copy-btn" data-message-index="${index}" title="Copy to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copy
+          </button>
+        </div>
+      ` : '';
+
+      // Simple markdown-like formatting
+      let formattedContent = this.escapeHtml(msg.content);
+      // Remove <content> tags if present
+      formattedContent = formattedContent.replace(/&lt;content&gt;|&lt;\/content&gt;/g, '');
+      // Convert line breaks
+      formattedContent = formattedContent.replace(/\n/g, '<br>');
+
+      return `
+        <div class="pr-message ${roleClass}">
+          <div class="pr-message-content">
+            ${formattedContent}
+            ${copyButton}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Add copy button listeners
+    container.querySelectorAll('.pr-copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const index = parseInt(btn.dataset.messageIndex);
+        const message = messages[index];
+        if (message) {
+          let textToCopy = message.content;
+          // Remove content tags if present
+          textToCopy = textToCopy.replace(/<content>|<\/content>/g, '');
+          navigator.clipboard.writeText(textToCopy);
+          this.showToast('Copied to clipboard', 'success');
+        }
+      });
+    });
+  }
+
+  showTypingIndicator() {
+    const container = document.getElementById('pr-messages');
+    if (!container) return;
+
+    const indicator = document.createElement('div');
+    indicator.className = 'pr-message pr-message-assistant pr-message-loading';
+    indicator.id = 'pr-typing-indicator';
+    indicator.innerHTML = `
+      <div class="pr-message-content">
+        <div class="pr-typing-indicator">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    `;
+    container.appendChild(indicator);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  hideTypingIndicator() {
+    const indicator = document.getElementById('pr-typing-indicator');
+    if (indicator) {
+      indicator.remove();
+    }
+  }
+
+  clearChat() {
+    if (this.currentOutput && this.currentOutput.chatHistory) {
+      this.currentOutput.chatHistory = [];
+      this.renderChatMessages();
+      this.saveOutputs();
+      this.showToast('Chat cleared', 'success');
+    }
   }
 }
 

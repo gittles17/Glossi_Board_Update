@@ -65,113 +65,127 @@
   <main class="pr-main">
     <!-- Mobile Tab Bar -->
     <div class="pr-mobile-tabs" id="pr-mobile-tabs">
-      <button class="pr-mobile-tab active" data-tab="sources">Sources</button>
-      <button class="pr-mobile-tab" data-tab="media">Media</button>
-      <button class="pr-mobile-tab" data-tab="calendar">Calendar</button>
+      <button class="pr-mobile-tab active" data-tab="sources">Research</button>
       <button class="pr-mobile-tab" data-tab="workspace">Workspace</button>
       <button class="pr-mobile-tab" data-tab="strategy">Strategy</button>
     </div>
 
     <div class="pr-layout">
-      <!-- Column 1: Sources/Media/Calendar -->
+      <!-- Column 1: Workflow Sections -->
       <div class="pr-sources-panel" id="pr-sources-panel">
-        <!-- Left Panel Tabs -->
-        <div class="pr-left-tabs">
-          <button class="pr-left-tab active" data-left-tab="sources">Sources</button>
-          <button class="pr-left-tab" data-left-tab="media">Media</button>
-          <button class="pr-left-tab" data-left-tab="calendar">Calendar</button>
-        </div>
         
-        <!-- Sources Tab Content -->
-        <div class="pr-left-tab-content active" id="pr-tab-sources">
-        <div class="pr-sources-header">
-          <span class="pr-sources-label">Sources</span>
-          <span class="pr-sources-count" id="pr-sources-count">0</span>
-          <button class="pr-create-folder-btn" id="pr-create-folder-btn" title="Create Folder">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-          </button>
-        </div>
-        <div class="pr-source-search-wrap">
-          <input type="text" class="pr-source-search" id="pr-source-search" placeholder="Search sources...">
-        </div>
-        <div class="pr-sources-list pr-drop-zone" id="pr-sources-list">
-          <div class="pr-sources-empty" id="pr-sources-empty">
-            <p>No sources yet</p>
-            <p class="pr-empty-hint">Add content the PR agent can reference</p>
-          </div>
-        </div>
-        <button class="pr-add-source-btn" id="pr-add-source-btn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          <span>Add Source</span>
-        </button>
-
-        <!-- History Section -->
-        <div class="pr-history-divider"></div>
-        <div class="pr-history-header" id="pr-history-toggle">
-          <svg class="pr-history-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-          <span>📚 Content Library</span>
-          <span class="pr-history-badge" id="pr-history-count">0</span>
-        </div>
-        <div id="pr-history-content">
-          <div class="pr-history-list" id="pr-history-list">
-            <div class="pr-history-empty" id="pr-history-empty">
-              <p>No saved content yet</p>
-              <p class="pr-empty-hint">Generated content saves automatically</p>
-            </div>
-          </div>
-        </div>
-        </div>
-        
-        <!-- Media Tab Content -->
-        <div class="pr-left-tab-content" id="pr-tab-media">
-          <div class="pr-media-view">
-            <!-- Media view/toggle buttons -->
-            <div class="pr-media-header">
-              <div class="pr-media-toggle">
-                <button class="pr-media-toggle-btn active" data-media-view="discover">Discover</button>
-                <button class="pr-media-toggle-btn" data-media-view="track">Track</button>
-              </div>
-            </div>
-            
-            <!-- Discover View (Outlets) -->
-            <div class="pr-media-discover active" id="pr-media-discover">
-              <div class="pr-media-outlets" id="pr-media-outlets">
-                <p class="pr-loading-text">Loading outlets...</p>
-              </div>
-            </div>
-            
-            <!-- Track View (Pitches) -->
-            <div class="pr-media-track" id="pr-media-track">
-              <div class="pr-pitch-tracker" id="pr-pitch-tracker">
-                <p class="pr-empty-text">No pitches tracked yet</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Calendar Tab Content -->
-        <div class="pr-left-tab-content" id="pr-tab-calendar">
-          <div class="pr-calendar-header">
-            <span class="pr-calendar-label">Content Calendar</span>
-            <button class="btn-icon" id="pr-add-calendar-item" title="Add item">
+        <!-- News Hooks Section (moved from right panel) -->
+        <div class="pr-workflow-section pr-news-hooks-section">
+          <div class="pr-workflow-header pr-news-hooks-header">
+            <h2 class="pr-workflow-title pr-news-hooks-title">News Hooks</h2>
+            <button class="btn-icon" id="pr-refresh-news-btn" title="Refresh news">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6"></path>
+                <path d="M1 20v-6h6"></path>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="pr-news-hooks-feed" id="pr-news-hooks-feed">
+            <p class="pr-news-empty">No news hooks yet</p>
+          </div>
+        </div>
+
+        <!-- Sources Section -->
+        <div class="pr-workflow-section pr-sources-section">
+          <div class="pr-workflow-header pr-sources-header">
+            <h2 class="pr-workflow-title pr-sources-label">Sources</h2>
+            <span class="pr-sources-count" id="pr-sources-count">0</span>
+            <button class="pr-create-folder-btn" id="pr-create-folder-btn" title="Create Folder">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
             </button>
           </div>
-          <div class="pr-calendar-timeline" id="pr-calendar-timeline">
-            <div class="pr-calendar-empty">
-              <p>No items scheduled</p>
-              <p class="pr-empty-hint">Add content to your calendar</p>
+          <div class="pr-source-search-wrap">
+            <input type="text" class="pr-source-search" id="pr-source-search" placeholder="Search sources...">
+          </div>
+          <div class="pr-sources-list pr-drop-zone" id="pr-sources-list">
+            <div class="pr-sources-empty" id="pr-sources-empty">
+              <p>No sources yet</p>
+            </div>
+          </div>
+          <button class="pr-add-source-btn" id="pr-add-source-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Add Source</span>
+          </button>
+        </div>
+
+        <!-- Content Library Section -->
+        <div class="pr-workflow-section pr-library-section">
+          <div class="pr-workflow-header pr-history-header" id="pr-history-toggle">
+            <svg class="pr-history-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            <h2 class="pr-workflow-title">Content Library</h2>
+            <span class="pr-history-badge" id="pr-history-count">0</span>
+          </div>
+          <div id="pr-history-content">
+            <div class="pr-history-list" id="pr-history-list">
+              <div class="pr-history-empty" id="pr-history-empty">
+                <p>No content saved</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Media & Calendar Section (Collapsed) -->
+        <div class="pr-workflow-section pr-secondary-section">
+          <div class="pr-workflow-header pr-secondary-header" id="pr-secondary-toggle">
+            <svg class="pr-secondary-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+            <h2 class="pr-workflow-title">Media & Calendar</h2>
+          </div>
+          <div id="pr-secondary-content" style="display:none;">
+            <!-- Media Content -->
+            <div class="pr-secondary-subsection">
+              <h3 class="pr-subsection-title">Media List</h3>
+              <div class="pr-media-view">
+                <div class="pr-media-header">
+                  <div class="pr-media-toggle">
+                    <button class="pr-media-toggle-btn active" data-media-view="discover">Discover</button>
+                    <button class="pr-media-toggle-btn" data-media-view="track">Track</button>
+                  </div>
+                </div>
+                <div class="pr-media-discover active" id="pr-media-discover">
+                  <div class="pr-media-outlets" id="pr-media-outlets">
+                    <p class="pr-loading-text">Loading outlets...</p>
+                  </div>
+                </div>
+                <div class="pr-media-track" id="pr-media-track">
+                  <div class="pr-pitch-tracker" id="pr-pitch-tracker">
+                    <p class="pr-empty-text">No pitches tracked yet</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Calendar Content -->
+            <div class="pr-secondary-subsection">
+              <div class="pr-calendar-header">
+                <h3 class="pr-subsection-title pr-calendar-label">Content Calendar</h3>
+                <button class="btn-icon" id="pr-add-calendar-item" title="Add item">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+              </div>
+              <div class="pr-calendar-timeline" id="pr-calendar-timeline">
+                <div class="pr-calendar-empty">
+                  <p>No items scheduled</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -250,38 +264,9 @@
         <!-- Content area -->
         <div class="pr-workspace-content" id="pr-workspace-content">
           <!-- Empty state -->
-          <div class="pr-workspace-empty pr-command-center" id="pr-workspace-empty">
-            <div class="pr-command-center-header">
-              <h2 class="pr-command-center-title">Dashboard</h2>
-            </div>
-
-            <div class="pr-command-list">
-              <div class="pr-command-item pr-item-green" data-action="generate">
-                <h3 class="pr-command-title">Content Library</h3>
-                <span class="pr-command-stat" id="pr-stat-library">0 items saved</span>
-              </div>
-
-              <div class="pr-command-item pr-item-blue" data-action="media">
-                <h3 class="pr-command-title">Media List</h3>
-                <span class="pr-command-stat" id="pr-stat-journalists">0 journalists saved</span>
-              </div>
-
-              <div class="pr-command-item pr-item-purple" data-action="calendar">
-                <h3 class="pr-command-title">Calendar</h3>
-                <span class="pr-command-stat" id="pr-stat-calendar">0 items scheduled</span>
-              </div>
-
-              <div class="pr-command-item pr-item-orange" data-action="news">
-                <h3 class="pr-command-title">News Hooks</h3>
-                <span class="pr-command-stat" id="pr-stat-news">Check for updates</span>
-              </div>
-            </div>
-
-            <div class="pr-articles-section" id="pr-articles-section">
-              <h3 class="pr-articles-heading">Recent Coverage</h3>
-              <div class="pr-articles-list" id="pr-articles-list">
-                <div class="pr-articles-loading">Loading articles...</div>
-              </div>
+          <div class="pr-workspace-empty" id="pr-workspace-empty">
+            <div class="pr-workspace-instructions">
+              <p>Select sources and click Generate to create PR content</p>
             </div>
           </div>
 
@@ -303,6 +288,44 @@
               </div>
             </div>
           </div>
+
+          <!-- Chat Interface for Content Refinement -->
+          <div class="pr-chat-section" id="pr-chat-section" style="display:none">
+            <div class="pr-chat-header">
+              <span class="pr-chat-title">Refine Content</span>
+              <button class="pr-clear-btn" id="pr-clear-chat-btn" title="Clear chat">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="pr-chat-area" id="pr-chat-area">
+              <div class="pr-messages" id="pr-messages">
+                <!-- Messages rendered dynamically -->
+              </div>
+            </div>
+            
+            <!-- Suggested Prompts -->
+            <div class="pr-suggestions" id="pr-suggestions">
+              <button class="pr-suggestion-btn" data-prompt="Make it shorter">Make it shorter</button>
+              <button class="pr-suggestion-btn" data-prompt="Add more technical detail">Add technical detail</button>
+              <button class="pr-suggestion-btn" data-prompt="Change tone to be more confident">More confident tone</button>
+              <button class="pr-suggestion-btn" data-prompt="Emphasize the timing angle">Emphasize timing</button>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="pr-input-area" id="pr-input-area">
+              <div class="pr-input-wrapper">
+                <textarea id="pr-chat-input" class="pr-chat-input" placeholder="Ask me to refine the content..." rows="1"></textarea>
+                <button class="pr-send-btn" id="pr-send-btn" title="Send">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -312,29 +335,10 @@
           <span class="pr-strategy-label">Strategy</span>
         </div>
         
-        <!-- News Hooks Section -->
-        <div class="pr-news-hooks-section">
-          <div class="pr-news-hooks-header">
-            <h4 class="pr-news-hooks-title">News Hooks</h4>
-            <button class="btn-icon" id="pr-refresh-news-btn" title="Refresh news">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M23 4v6h-6"></path>
-                <path d="M1 20v-6h6"></path>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="pr-news-hooks-feed" id="pr-news-hooks-feed">
-            <p class="pr-news-empty">Click refresh to find relevant news hooks</p>
-          </div>
-        </div>
-        
-        <div class="pr-strategy-divider"></div>
-        
         <div class="pr-strategy-body">
           <div class="pr-strategy-content" id="pr-strategy-content"></div>
           <div class="pr-strategy-empty" id="pr-strategy-empty">
-            <p>Generate content to see distribution strategy, timing recommendations, and amplification playbook.</p>
+            <p>Strategy appears after generating content</p>
           </div>
         </div>
       </div>
@@ -760,52 +764,96 @@
       pr.setupFileUpload();
       pr.setupAudio();
 
-      // Left panel tab switching (desktop)
-      document.querySelectorAll('.pr-left-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-          const target = tab.dataset.leftTab;
-          
-          // Update tab active states
-          document.querySelectorAll('.pr-left-tab').forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          
-          // Update content active states
-          document.querySelectorAll('.pr-left-tab-content').forEach(content => {
-            content.classList.remove('active');
-          });
-          document.getElementById(`pr-tab-${target}`)?.classList.add('active');
-        });
-      });
-      
-      // Mobile tab switching
+      // Mobile tab switching (simplified to 3 tabs)
       document.querySelectorAll('.pr-mobile-tab').forEach(tab => {
         tab.addEventListener('click', () => {
           document.querySelectorAll('.pr-mobile-tab').forEach(t => t.classList.remove('active'));
           tab.classList.add('active');
           const target = tab.dataset.tab;
           
-          // Handle left panel tabs (sources, media, calendar)
-          if (target === 'sources' || target === 'media' || target === 'calendar') {
-            document.getElementById('pr-sources-panel').classList.add('mobile-active');
-            document.getElementById('pr-workspace-panel').classList.remove('mobile-active');
-            document.getElementById('pr-strategy-panel').classList.remove('mobile-active');
-            
-            // Switch to the correct left panel tab
-            document.querySelectorAll('.pr-left-tab').forEach(t => t.classList.remove('active'));
-            document.querySelector(`.pr-left-tab[data-left-tab="${target}"]`)?.classList.add('active');
-            
-            document.querySelectorAll('.pr-left-tab-content').forEach(content => {
-              content.classList.remove('active');
-            });
-            document.getElementById(`pr-tab-${target}`)?.classList.add('active');
-          } else {
-            // Handle workspace and strategy
-            document.getElementById('pr-sources-panel').classList.toggle('mobile-active', false);
-            document.getElementById('pr-workspace-panel').classList.toggle('mobile-active', target === 'workspace');
-            document.getElementById('pr-strategy-panel').classList.toggle('mobile-active', target === 'strategy');
-          }
+          // Show correct panel
+          document.getElementById('pr-sources-panel').classList.toggle('mobile-active', target === 'sources');
+          document.getElementById('pr-workspace-panel').classList.toggle('mobile-active', target === 'workspace');
+          document.getElementById('pr-strategy-panel').classList.toggle('mobile-active', target === 'strategy');
         });
       });
+
+      // Secondary section toggle (Media & Calendar)
+      const secondaryToggle = document.getElementById('pr-secondary-toggle');
+      const secondaryContent = document.getElementById('pr-secondary-content');
+      const secondaryChevron = document.querySelector('.pr-secondary-chevron');
+      if (secondaryToggle && secondaryContent) {
+        secondaryToggle.addEventListener('click', () => {
+          const isExpanded = secondaryContent.style.display !== 'none';
+          secondaryContent.style.display = isExpanded ? 'none' : 'block';
+          secondaryToggle.classList.toggle('expanded', !isExpanded);
+        });
+      }
+
+      // Chat functionality
+      const chatInput = document.getElementById('pr-chat-input');
+      const sendBtn = document.getElementById('pr-send-btn');
+      const clearChatBtn = document.getElementById('pr-clear-chat-btn');
+      const chatSection = document.getElementById('pr-chat-section');
+      const messagesContainer = document.getElementById('pr-messages');
+      const suggestionsContainer = document.getElementById('pr-suggestions');
+
+      // Auto-resize textarea
+      if (chatInput) {
+        chatInput.addEventListener('input', () => {
+          chatInput.style.height = 'auto';
+          chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+        });
+
+        // Send on Enter, newline on Shift+Enter
+        chatInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            pr.sendChatMessage();
+          }
+        });
+      }
+
+      // Send button
+      if (sendBtn) {
+        sendBtn.addEventListener('click', () => pr.sendChatMessage());
+      }
+
+      // Clear chat button
+      if (clearChatBtn) {
+        clearChatBtn.addEventListener('click', async () => {
+          const confirmed = await pr.showConfirm('Clear chat history? This cannot be undone.', 'Clear Chat');
+          if (confirmed) {
+            pr.clearChat();
+          }
+        });
+      }
+
+      // Suggestion buttons
+      if (suggestionsContainer) {
+        suggestionsContainer.addEventListener('click', (e) => {
+          const btn = e.target.closest('.pr-suggestion-btn');
+          if (btn && chatInput) {
+            const prompt = btn.dataset.prompt;
+            chatInput.value = prompt;
+            chatInput.focus();
+            pr.sendChatMessage();
+          }
+        });
+      }
+
+      // Show chat when content is generated
+      const observer2 = new MutationObserver(() => {
+        const generated = document.getElementById('pr-workspace-generated');
+        if (generated && chatSection) {
+          const isVisible = generated.style.display !== 'none';
+          chatSection.style.display = isVisible ? 'flex' : 'none';
+        }
+      });
+      const generated = document.getElementById('pr-workspace-generated');
+      if (generated) {
+        observer2.observe(generated, { attributes: true, attributeFilter: ['style'] });
+      }
 
       // Show generated content actions when content exists
       const observer = new MutationObserver(() => {
