@@ -219,9 +219,6 @@ class PRAgent {
         this.handleCommandCardClick(action);
       });
     });
-    
-    // Build recent activity
-    this.updateRecentActivity();
   }
 
   async updateCommandCenterStats() {
@@ -319,60 +316,6 @@ class PRAgent {
     }
   }
 
-  updateRecentActivity() {
-    const activityList = document.getElementById('pr-activity-list');
-    if (!activityList) return;
-
-    const activities = [];
-
-    // Recent outputs
-    if (this.outputs.length > 0) {
-      const recentOutputs = this.outputs.slice(0, 3);
-      recentOutputs.forEach(output => {
-        const time = this.getRelativeTime(output.timestamp);
-        activities.push({
-          icon: '📝',
-          text: `Generated: ${output.title || output.type}`,
-          time
-        });
-      });
-    }
-
-    // Recent sources added
-    if (this.sources.length > 0) {
-      activities.push({
-        icon: '📚',
-        text: `${this.sources.length} sources in foundation`,
-        time: ''
-      });
-    }
-
-    if (activities.length === 0) {
-      activityList.innerHTML = '<div class="pr-activity-empty">No recent activity yet. Start by adding sources or generating content.</div>';
-      return;
-    }
-
-    activityList.innerHTML = activities.map(activity => `
-      <div class="pr-activity-item">
-        <span class="pr-activity-icon">${activity.icon}</span>
-        <span class="pr-activity-text">${activity.text}</span>
-        ${activity.time ? `<span class="pr-activity-time">${activity.time}</span>` : ''}
-      </div>
-    `).join('');
-  }
-
-  getRelativeTime(timestamp) {
-    const now = Date.now();
-    const diff = now - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    return `${days}d ago`;
-  }
 
   showSaveConfirmation() {
     // Create save indicator
@@ -1823,9 +1766,6 @@ class PRAgent {
       this.renderStrategy(output.strategy);
       this.renderHistory();
       this.showWorkspace();
-      
-      // Update command center activity
-      this.updateRecentActivity();
       
       // Show save confirmation
       this.showSaveConfirmation();
