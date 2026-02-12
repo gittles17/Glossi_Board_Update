@@ -296,6 +296,20 @@ class GlossiDashboard {
     // Always persist any in-flight edits before rebuilding the DOM
     this.savePendingTodoEdits();
     
+    // If user is actively editing a todo, defer the re-render until they finish
+    const activeEl = document.activeElement;
+    const isEditingTodo = activeEl && activeEl.closest('#todo-list') && activeEl.matches('.todo-text');
+    if (isEditingTodo) {
+      if (!this._pendingTodoRender) {
+        this._pendingTodoRender = true;
+        activeEl.addEventListener('blur', () => {
+          this._pendingTodoRender = false;
+          setTimeout(() => this.renderActionItems(), 50);
+        }, { once: true });
+      }
+      return;
+    }
+    
     const container = document.getElementById('todo-list');
     const progressEl = document.getElementById('todo-progress');
     const progressBar = document.getElementById('action-progress-fill');
@@ -393,7 +407,6 @@ class GlossiDashboard {
 
       // Auto-save on typing (debounced) so edits persist even without blur
       item.addEventListener('input', (e) => {
-        if (_draggedTodoId) return;
         clearTimeout(inputDebounce);
         inputDebounce = setTimeout(() => {
           const todoId = e.target.dataset.todoId;
@@ -406,10 +419,7 @@ class GlossiDashboard {
       });
 
       item.addEventListener('blur', (e) => {
-        // Don't save during drag operations
-        if (_draggedTodoId) return;
-        
-        // Clear any pending debounce and save immediately
+        // Clear any pending debounce and save immediately on blur
         clearTimeout(inputDebounce);
         const todoId = e.target.dataset.todoId;
         const type = e.target.dataset.type;

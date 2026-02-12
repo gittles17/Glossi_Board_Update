@@ -124,7 +124,7 @@ class Storage {
             this.statHistory = result.data.stat_history;
           }
           if (result.data.todos) {
-            this.todos = result.data.todos;
+            this._serverTodos = result.data.todos;
           }
           if (result.data.team_members) {
             this.teamMembers = result.data.team_members;
@@ -156,12 +156,27 @@ class Storage {
     if (!this.meetings || this.meetings.length === 0) {
       this.meetings = safeJsonParse('glossi_meetings', []);
     }
-    // Track if todos came from server
-    const todosFromServer = this.todos && this.todos.length > 0;
+    // Merge todos: localStorage is the authoritative local source,
+    // server may have data from other devices or be stale
+    const localTodos = safeJsonParse('glossi_todos', []);
+    const serverTodos = this._serverTodos || [];
+    delete this._serverTodos;
     
-    if (!this.todos || this.todos.length === 0) {
-      this.todos = safeJsonParse('glossi_todos', []);
+    if (localTodos.length > 0) {
+      // localStorage always has the most recent local edits
+      const localMap = new Map(localTodos.map(t => [t.id, t]));
+      const merged = [...localTodos];
+      // Add any server-only todos (e.g., from another device)
+      serverTodos.forEach(t => {
+        if (!localMap.has(t.id)) merged.push(t);
+      });
+      this.todos = merged;
+    } else if (serverTodos.length > 0) {
+      this.todos = serverTodos;
+    } else {
+      this.todos = [];
     }
+    const todosFromServer = serverTodos.length > 0 && localTodos.length === 0;
     
     // Migration: Copy todos from meetings to independent storage (one-time)
     if (this.todos.length === 0 && this.meetings && this.meetings.length > 0) {
