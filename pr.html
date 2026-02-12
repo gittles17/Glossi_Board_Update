@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>PR - Glossi</title>
+  <meta name="theme-color" content="#0a0d12">
+  <link rel="icon" type="image/svg+xml" href="Asset 3.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body class="pr-page">
+  <!-- Top Navigation -->
+  <header class="top-nav">
+    <div class="nav-left">
+      <a href="index.html" class="nav-back" title="Back to Dashboard">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+      </a>
+      <img src="Asset 3.svg" alt="Glossi" class="logo-img">
+      <span class="nav-page-title">PR</span>
+    </div>
+    <div class="nav-right">
+      <div class="nav-icons-desktop">
+        <a href="index.html" class="btn-icon" title="Dashboard">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+        </a>
+        <a href="notebook.html" class="btn-icon" title="Notebook">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+        </a>
+        <button class="btn-icon" id="desktop-help-btn" title="How to use PR Agent">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </button>
+        <button class="btn-icon" id="desktop-settings-btn" title="Settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="dropdown-wrapper nav-mobile-only">
+        <button class="btn-icon" id="menu-btn" title="Menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+        <div class="dropdown-menu" id="dropdown-menu">
+          <a href="index.html" class="dropdown-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            Dashboard
+          </a>
+          <a href="notebook.html" class="dropdown-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            Notebook
+          </a>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" id="menu-help">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            How It Works
+          </button>
+          <button class="dropdown-item" id="menu-settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+            </svg>
+            Settings
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main PR Layout -->
+  <main class="pr-main">
+    <!-- Mobile Tab Bar -->
+    <div class="pr-mobile-tabs" id="pr-mobile-tabs">
+      <button class="pr-mobile-tab active" data-tab="sources">Sources</button>
+      <button class="pr-mobile-tab" data-tab="workspace">Workspace</button>
+      <button class="pr-mobile-tab" data-tab="strategy">Strategy</button>
+    </div>
+
+    <div class="pr-layout">
+      <!-- Column 1: Sources -->
+      <div class="pr-sources-panel" id="pr-sources-panel">
+        <div class="pr-sources-header">
+          <span class="pr-sources-label">Sources</span>
+          <span class="pr-sources-count" id="pr-sources-count">0</span>
+        </div>
+        <div class="pr-source-search-wrap">
+          <input type="text" class="pr-source-search" id="pr-source-search" placeholder="Search sources...">
+        </div>
+        <div class="pr-sources-list" id="pr-sources-list">
+          <div class="pr-sources-empty" id="pr-sources-empty">
+            <p>No sources yet</p>
+            <p class="pr-empty-hint">Add content the PR agent can reference</p>
+          </div>
+        </div>
+        <button class="pr-add-source-btn" id="pr-add-source-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Add Source</span>
+        </button>
+
+        <!-- History Section -->
+        <div class="pr-history-divider"></div>
+        <div class="pr-history-header" id="pr-history-toggle">
+          <svg class="pr-history-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+          <span>History</span>
+        </div>
+        <div id="pr-history-content">
+          <div class="pr-history-list" id="pr-history-list">
+            <div class="pr-history-empty" id="pr-history-empty">
+              <p>No outputs yet</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 2: Workspace -->
+      <div class="pr-workspace-panel" id="pr-workspace-panel">
+        <!-- Top bar -->
+        <div class="pr-workspace-topbar">
+          <div class="pr-workspace-controls">
+            <select class="pr-content-type" id="pr-content-type">
+              <option value="press_release">Press Release</option>
+              <option value="media_pitch">Media Pitch Email</option>
+              <option value="product_announcement">Product Announcement</option>
+              <option value="founder_quote">Founder Quote / Soundbite</option>
+              <option value="blog_post">Blog Post</option>
+              <option value="linkedin_post">LinkedIn Post</option>
+              <option value="tweet_thread">Tweet Thread</option>
+              <option value="briefing_doc">Briefing Document</option>
+              <option value="talking_points">Talking Points</option>
+              <option value="custom">Custom</option>
+            </select>
+            <button class="pr-generate-btn" id="pr-generate-btn" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              Generate
+            </button>
+            <button class="pr-regenerate-btn" id="pr-regenerate-btn" style="display:none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6"></path>
+                <path d="M1 20v-6h6"></path>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+              Regenerate
+            </button>
+          </div>
+          <div class="pr-workspace-actions" style="display:none" id="pr-workspace-actions">
+            <button class="pr-action-btn" id="pr-copy-btn" title="Copy to clipboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+            <div class="pr-export-wrap">
+              <button class="pr-action-btn" id="pr-export-btn" title="Export">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              </button>
+              <div class="pr-export-menu" id="pr-export-menu">
+                <button class="pr-export-item" id="pr-export-text">Copy as text</button>
+                <button class="pr-export-item" id="pr-export-html">Download as HTML</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status hint (shown when generate is disabled) -->
+        <div class="pr-status-hint" id="pr-status-hint" style="display:none">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span id="pr-status-hint-text"></span>
+        </div>
+
+        <!-- Custom prompt (hidden unless Custom selected) -->
+        <div class="pr-custom-prompt-wrap" id="pr-custom-prompt-wrap" style="display:none">
+          <textarea class="pr-custom-prompt" id="pr-custom-prompt" placeholder="Describe what you want to generate..." rows="2"></textarea>
+        </div>
+
+        <!-- Content area -->
+        <div class="pr-workspace-content" id="pr-workspace-content">
+          <!-- Empty state -->
+          <div class="pr-workspace-empty" id="pr-workspace-empty">
+            <div class="pr-empty-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+            </div>
+            <p class="pr-empty-title">PR Agent</p>
+            <p class="pr-empty-desc">To get started:</p>
+            <ol class="pr-empty-steps" id="pr-empty-steps">
+              <li id="pr-step-key">Set your Anthropic API key in Settings</li>
+              <li id="pr-step-source">Add a source using the left panel</li>
+              <li id="pr-step-select">Select a content type above, then click Generate</li>
+            </ol>
+          </div>
+
+          <!-- Loading state -->
+          <div class="pr-loading-state" id="pr-loading-state" style="display:none">
+            <div class="pr-loading-spinner"></div>
+            <p>Generating content...</p>
+          </div>
+
+          <!-- Generated content -->
+          <div class="pr-workspace-generated" id="pr-workspace-generated" style="display:none">
+            <div class="pr-generated-content" id="pr-generated-content"></div>
+            <div class="pr-verification-bar" id="pr-verification-bar" style="display:none">
+              <div class="pr-verification-info">
+                <span class="pr-verification-text" id="pr-verification-text">0 of 0 claims sourced</span>
+              </div>
+              <div class="pr-verification-track">
+                <div class="pr-verification-progress" id="pr-verification-progress"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 3: Strategy Panel -->
+      <div class="pr-strategy-panel" id="pr-strategy-panel">
+        <div class="pr-strategy-header">
+          <span class="pr-strategy-label">Strategy</span>
+        </div>
+        <div class="pr-strategy-body">
+          <div class="pr-strategy-content" id="pr-strategy-content"></div>
+          <div class="pr-strategy-empty" id="pr-strategy-empty">
+            <p>Generate content to see distribution strategy, timing recommendations, and amplification playbook.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add Source Modal -->
+  <div class="modal-overlay" id="pr-source-modal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2>Add Source</h2>
+        <button class="btn-icon modal-close" id="pr-source-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Source Type Tabs -->
+        <div class="pr-source-tabs">
+          <button class="pr-source-tab active" data-type="text">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            Paste Text
+          </button>
+          <button class="pr-source-tab" data-type="url">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+            URL
+          </button>
+          <button class="pr-source-tab" data-type="file">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+              <polyline points="13 2 13 9 20 9"></polyline>
+            </svg>
+            Upload File
+          </button>
+          <button class="pr-source-tab" data-type="audio">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+            </svg>
+            Audio
+          </button>
+        </div>
+
+        <!-- Paste Text Panel -->
+        <div class="pr-source-panel active" id="pr-panel-text">
+          <div class="notes-input-section">
+            <label for="pr-source-title">Title (optional)</label>
+            <input type="text" id="pr-source-title" class="input" placeholder="e.g., Q1 Product Update">
+          </div>
+          <div class="notes-input-section">
+            <label for="pr-source-text">Content</label>
+            <textarea id="pr-source-text" class="input textarea" rows="10" placeholder="Paste your text content here..."></textarea>
+          </div>
+        </div>
+
+        <!-- URL Panel -->
+        <div class="pr-source-panel" id="pr-panel-url">
+          <div class="notes-input-section">
+            <label for="pr-source-title-url">Title (optional)</label>
+            <input type="text" id="pr-source-title-url" class="input" placeholder="e.g., TechCrunch Article">
+          </div>
+          <div class="notes-input-section">
+            <label for="pr-source-url">URL</label>
+            <input type="url" id="pr-source-url" class="input" placeholder="https://...">
+            <p class="input-hint">Content will be fetched and extracted automatically</p>
+          </div>
+        </div>
+
+        <!-- File Upload Panel -->
+        <div class="pr-source-panel" id="pr-panel-file">
+          <div class="notes-input-section">
+            <label for="pr-source-title-file">Title (optional)</label>
+            <input type="text" id="pr-source-title-file" class="input" placeholder="e.g., Press Kit PDF">
+          </div>
+          <div class="pr-file-dropzone" id="pr-file-dropzone">
+            <input type="file" id="pr-source-file-input" accept=".txt,.md,.csv,.pdf" style="display:none">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <span>Drop file here or click to browse</span>
+            <span class="pr-dropzone-hint">PDF, TXT, MD, CSV (max 10MB)</span>
+          </div>
+          <div class="pr-file-preview" id="pr-file-preview" style="display:none"></div>
+        </div>
+
+        <!-- Audio Panel -->
+        <div class="pr-source-panel" id="pr-panel-audio">
+          <div class="notes-input-section">
+            <label for="pr-source-title-audio">Title (optional)</label>
+            <input type="text" id="pr-source-title-audio" class="input" placeholder="e.g., Founder Interview">
+          </div>
+          <div class="pr-audio-controls">
+            <button class="btn btn-secondary" id="pr-audio-record">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="6" fill="currentColor"></circle>
+              </svg>
+              Record
+            </button>
+            <button class="btn btn-danger" id="pr-audio-stop" style="display:none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="6" y="6" width="12" height="12" fill="currentColor"></rect>
+              </svg>
+              Stop
+            </button>
+            <span class="pr-audio-divider">or</span>
+            <button class="btn btn-secondary" id="pr-audio-upload-btn">Upload Audio</button>
+            <input type="file" id="pr-audio-file-input" accept=".mp3,.wav,.m4a,.webm" style="display:none">
+          </div>
+          <div class="pr-audio-indicator" id="pr-audio-indicator" style="display:none">
+            <span class="pr-recording-dot"></span>
+            <span>Recording...</span>
+          </div>
+          <div class="pr-audio-preview" id="pr-audio-preview" style="display:none">
+            <span id="pr-audio-status">Processing...</span>
+          </div>
+          <div class="pr-audio-transcript" id="pr-audio-transcript" style="display:none"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="pr-source-cancel">Cancel</button>
+        <button class="btn btn-primary" id="pr-source-save">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add Source
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Guide Modal -->
+  <div class="modal-overlay" id="pr-help-modal">
+    <div class="modal modal-large pr-help-modal">
+      <div class="modal-header">
+        <h2>How the PR Agent Works</h2>
+        <button class="btn-icon modal-close" id="pr-help-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body pr-help-body">
+
+        <!-- Overview -->
+        <div class="pr-help-section" data-help-section="overview">
+          <button class="pr-help-section-toggle active">
+            <svg class="pr-help-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            Overview
+          </button>
+          <div class="pr-help-section-content" style="display:block">
+            <p>The PR Agent is an AI-powered communications tool that generates press coverage, media pitches, and PR content for Glossi. It operates on a simple principle: <strong>every claim must be traceable to a source you provide</strong>.</p>
+            <p>The agent does not have access to your dashboard data, pipeline, or meeting notes. It only knows what you explicitly give it through the Sources panel.</p>
+            <p>The page has three columns:</p>
+            <ul>
+              <li><strong>Sources</strong> (left) - Your content library. Add text, URLs, files, or audio that the agent can reference.</li>
+              <li><strong>Workspace</strong> (center) - Where content is generated, reviewed, and edited.</li>
+              <li><strong>Strategy</strong> (right) - AI-generated distribution recommendations that appear after content is created.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Getting Started -->
+        <div class="pr-help-section" data-help-section="getting-started">
+          <button class="pr-help-section-toggle">
+            <svg class="pr-help-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            Getting Started
+          </button>
+          <div class="pr-help-section-content">
+            <p class="pr-help-step-label">Step 1: Configure your API key</p>
+            <p>Click the Settings icon in the nav bar. Enter your Anthropic API key (required for generation) and optionally your OpenAI key (required for audio transcription). These are the same keys used by the main dashboard.</p>
+            <p class="pr-help-step-label">Step 2: Add your first source</p>
+            <p>Click <strong>+ Add Source</strong> in the left panel. Paste text containing the facts, metrics, and context you want the agent to reference. Give it a descriptive title.</p>
+            <p class="pr-help-step-label">Step 3: Select sources and content type</p>
+            <p>Check the boxes next to the sources you want included. Choose a content type from the dropdown (e.g., Press Release, Media Pitch).</p>
+            <p class="pr-help-step-label">Step 4: Generate</p>
+            <p>Click the green <strong>Generate</strong> button. The agent will analyze your sources and produce content with inline citations. A strategy panel will populate on the right.</p>
+            <p class="pr-help-step-label">Step 5: Review and refine</p>
+            <p>Check the verification bar at the bottom. Approve or remove any flagged claims. Click any paragraph to edit it inline. Copy or export when ready.</p>
+          </div>
+        </div>
+
+        <!-- Sources -->
+        <div class="pr-help-section" data-help-section="sources">
+          <button class="pr-help-section-toggle">
+            <svg class="pr-help-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            Sources
+          </button>
+          <div class="pr-help-section-content">
+            <p>Sources are the raw materials the agent works from. There are four ways to add them:</p>
+            <h4>Paste Text</h4>
+            <p>Copy and paste any text: product updates, metrics, announcements, internal memos, customer quotes. This is the fastest way to get started.</p>
+            <h4>URL</h4>
+            <p>Enter a webpage URL. The agent will fetch and extract the text content. Works best with article pages and blog posts. JavaScript-heavy pages may return limited content.</p>
+            <h4>Upload File</h4>
+            <p>Drag and drop or browse for files. Supported formats: PDF, TXT, MD, CSV. Maximum size is 10MB. PDF text is extracted automatically.</p>
+            <h4>Audio</h4>
+            <p>Record directly from your microphone or upload an audio file (.mp3, .wav, .m4a). The audio is transcribed using OpenAI Whisper, then saved as a text source. Requires an OpenAI API key in Settings.</p>
+            <h4>Managing Sources</h4>
+            <ul>
+              <li><strong>Select/deselect</strong> - Use the checkbox to include or exclude a source from generation. Only checked sources are sent to the AI.</li>
+              <li><strong>Edit title</strong> - Click on a source's title to edit it inline.</li>
+              <li><strong>Delete</strong> - Hover over a source and click the X icon. A confirmation dialog will appear.</li>
+              <li><strong>Search</strong> - Use the search bar to filter sources by title.</li>
+              <li><strong>Persistence</strong> - All sources are saved to your browser's localStorage. They persist across page refreshes.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Content Types -->
+        <div class="pr-help-section" data-help-section="content-types">
+          <button class="pr-help-section-toggle">
+            <svg class="pr-help-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            Content Types
+          </button>
+          <div class="pr-help-section-content">
+            <p>Each content type instructs the AI to produce a different format and tone:</p>
+            <div class="pr-help-type-grid">
+              <div class="pr-help-type">
+                <strong>Press Release</strong>
+                <p>Structured announcement. Opens with the news, includes a founder quote, closes with a company boilerplate. Written like a Linear blog post, not a traditional PR wire.</p>
+              </div>
+              <div class="pr-help-type">
+                <strong>Media Pitch Email</strong>
+                <p>Short, direct email to a journalist. Opens with the angle, not a greeting. Under 150 words. Gets to the point in the first sentence.</p>
+              </div>
+              <div class="pr-help-type">
+                <strong>Product Announcement</strong>
+                <p>Changelog-style entry. What shipped. What it does. One sentence on why it matters. Concise and factual.</p>
+              </div>
+              <div class="pr-help-type">
+                <strong>Founder Quote / Soundbite</strong>
+                <p>A short, quotable statement a journalist would actually use. Not corporate speak. Think something you would read attributed in a TechCrunch article.</p>
+              </div>
+              <div class="pr-help-type">
+                <strong>Blog Post</strong>
+                <p>Opinionated, substantive writing. First-person where appropriate. Reads like a Linear "Now" blog entry. Real thinking about real problems in the space.</p>
+              </div>
+              <div class="pr-help-type">
+                <strong>LinkedIn Post</strong>
+                <p>Perspective piece. Share a take, back it with what you have built. No hashtag spam. One or two hashtags maximum.</p>
+              </div>
+              <div class="pr-help-type">
+                <strong>Tweet Thread</strong>
+                <p>Each tweet stands alone. First tweet is the hook. Last tweet has the call to action. Each segment stays under 280 characters.</p>
+              </div>
+              <div class="pr-help-type">
+                <strong>Briefing Document</strong>
+                <p>Background context for a journalist meeting. Key facts, suggested angles, what to emphasize, and what to avoid.</p>
+              </div>
+              <div class="pr-help-type">
+                <strong>Talking Points</strong>
+                <p>Bullet-format list. Each point is self-contained and ordered by importance. Use for investor calls, press interviews, or internal prep.</p>
+              </div>
+              <div class="pr-help-type">
+                <strong>Custom</strong>
+                <p>Write your own prompt. A free-text field appears where you describe exactly what you need. The agent still follows Glossi voice rules and citation requirements.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Citations & Verification -->
+        <div class="pr-help-section" data-help-section="citations">
+          <button class="pr-help-section-toggle">
+            <svg class="pr-help-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            Citations and Verification
+          </button>
+          <div class="pr-help-section-content">
+            <p>Every factual claim the agent makes must be traceable to a source. This is the core design principle.</p>
+            <h4>How citations work</h4>
+            <p>Generated content contains small green superscript numbers (e.g., <span class="pr-help-cite-example">1</span>). Each number links to a specific source you provided.</p>
+            <ul>
+              <li><strong>Hover</strong> over a citation number to see the source name and the relevant excerpt.</li>
+              <li><strong>Click</strong> a citation number to scroll to and highlight the corresponding source in the left panel.</li>
+            </ul>
+            <h4>Unsourced claims</h4>
+            <p>If the agent cannot find a source for a claim, it flags it with an amber <span class="pr-help-needs-source-example">NEEDS SOURCE</span> badge. These require your attention.</p>
+            <p>Click a NEEDS SOURCE badge to see options:</p>
+            <ul>
+              <li><strong>Approve</strong> - You confirm the claim is accurate. The badge turns green.</li>
+              <li><strong>Remove</strong> - The paragraph containing the unsourced claim is deleted.</li>
+            </ul>
+            <h4>Verification bar</h4>
+            <p>At the bottom of the workspace, a progress bar shows "X of Y claims sourced." Once all claims are either cited or approved, the output status changes to "reviewed."</p>
+          </div>
+        </div>
+
+        <!-- Strategy Panel -->
+        <div class="pr-help-section" data-help-section="strategy">
+          <button class="pr-help-section-toggle">
+            <svg class="pr-help-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            Strategy Panel
+          </button>
+          <div class="pr-help-section-content">
+            <p>After content is generated, the right panel populates with distribution strategy recommendations. This is what makes the PR Agent more than a content generator.</p>
+            <h4>Distribution Strategy</h4>
+            <p>Outlets are ranked by tier (Tier 1: TechCrunch, The Verge, etc. down to niche AI newsletters). Each outlet includes a rationale for why it is relevant and a suggested angle for how to frame the story specifically for that publication.</p>
+            <h4>Timing and Hooks</h4>
+            <p>Recommendations for when to publish and what current industry events or news cycles to connect with.</p>
+            <h4>Journalist Targets</h4>
+            <p>Suggests beats to target, not specific journalist names. For example: "reporters covering AI creative tools" or "3D/spatial computing." You find the specific contacts.</p>
+            <h4>Amplification Playbook</h4>
+            <p>A sequenced plan for maximizing reach: social media posting order, internal communications (investor updates, team announcements), and community seeding (relevant subreddits, Discord servers, Slack groups).</p>
+          </div>
+        </div>
+
+        <!-- Editing & Export -->
+        <div class="pr-help-section" data-help-section="editing">
+          <button class="pr-help-section-toggle">
+            <svg class="pr-help-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            Editing and Export
+          </button>
+          <div class="pr-help-section-content">
+            <h4>Inline editing</h4>
+            <p>Click any paragraph in the generated content to edit it directly. Changes are saved when you click away. The edit persists in your history.</p>
+            <h4>Copy</h4>
+            <p>Click the copy icon in the workspace toolbar. The content is copied as clean text with no citation markers or NEEDS SOURCE badges.</p>
+            <h4>Export</h4>
+            <p>Click the export icon for options:</p>
+            <ul>
+              <li><strong>Copy as text</strong> - Clean plain text to your clipboard.</li>
+              <li><strong>Download as HTML</strong> - A formatted .html file with styling preserved.</li>
+            </ul>
+            <h4>Regenerate</h4>
+            <p>Click Regenerate to produce a new version with the same sources and content type. The previous version remains in your History.</p>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="pr-help-section" data-help-section="history">
+          <button class="pr-help-section-toggle">
+            <svg class="pr-help-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            History
+          </button>
+          <div class="pr-help-section-content">
+            <p>Every generation is saved automatically. The History section at the bottom of the Sources panel shows all past outputs.</p>
+            <ul>
+              <li><strong>Click</strong> a history item to reload it into the workspace with all citations and strategy data intact.</li>
+              <li><strong>Delete</strong> by clicking the X icon on a history item. A confirmation dialog will appear.</li>
+              <li>History is stored in localStorage under the key <code>pr_outputs</code> and persists across page refreshes.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Glossi Voice Guide -->
+        <div class="pr-help-section" data-help-section="voice">
+          <button class="pr-help-section-toggle">
+            <svg class="pr-help-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            Glossi Voice Guide
+          </button>
+          <div class="pr-help-section-content">
+            <p>The PR Agent writes in Glossi's voice, which is modeled on how Linear and Cursor communicate. The core principle: quiet confidence through specificity, not volume.</p>
+            <h4>The rules</h4>
+            <ul>
+              <li>Open with what happened or what the product does. Never with how the company feels about it.</li>
+              <li>Short sentences. Period-separated thoughts.</li>
+              <li>Numbers over adjectives. "80% reduction" beats "dramatic reduction."</li>
+              <li>Name the specific technology. "Real-time 3D compositing in browser via Unreal Engine 5." Not "our advanced AI platform."</li>
+              <li>Features are facts, not events. Announce them like a changelog entry.</li>
+              <li>No exclamation marks in any PR content.</li>
+              <li>Never explain why Glossi is great. Describe what it does. Let the reader conclude.</li>
+            </ul>
+            <h4>Banned words and phrases</h4>
+            <div class="pr-help-banned">
+              <span>excited to announce</span>
+              <span>thrilled</span>
+              <span>groundbreaking</span>
+              <span>revolutionary</span>
+              <span>game-changing</span>
+              <span>best-in-class</span>
+              <span>cutting-edge</span>
+              <span>leveraging</span>
+              <span>unlocking</span>
+              <span>synergy</span>
+              <span>paradigm shift</span>
+              <span>we believe</span>
+            </div>
+            <h4>What good output sounds like</h4>
+            <ul>
+              <li>"Glossi keeps the product untouched. AI generates the scene around it."</li>
+              <li>"50+ brands use Glossi to produce product visuals at scale without compromising accuracy."</li>
+              <li>"Real-time 3D, in browser. No plugins. No downloads. No compromises on the asset."</li>
+            </ul>
+            <p>If the generated content does not match this voice, try regenerating or editing the system behavior through more specific source material.</p>
+          </div>
+        </div>
+
+        <!-- Tips for Better Output -->
+        <div class="pr-help-section" data-help-section="tips">
+          <button class="pr-help-section-toggle">
+            <svg class="pr-help-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            Tips for Better Output
+          </button>
+          <div class="pr-help-section-content">
+            <div class="pr-help-tip">
+              <strong>Write sources like facts, not instructions</strong>
+              <p>Instead of "Tell people about our new feature," write "Glossi shipped real-time lighting in February 2026. It reduces scene setup time from 20 minutes to under 30 seconds." The agent works from facts, not directives.</p>
+            </div>
+            <div class="pr-help-tip">
+              <strong>Include specific numbers</strong>
+              <p>The agent prioritizes concrete data. Sources containing metrics (revenue, cost reduction, user counts, timeframes) produce significantly stronger output than vague descriptions.</p>
+            </div>
+            <div class="pr-help-tip">
+              <strong>Separate concerns into different sources</strong>
+              <p>Create one source for product updates, another for traction metrics, another for competitive context. This gives you granular control over what the agent references for each generation.</p>
+            </div>
+            <div class="pr-help-tip">
+              <strong>Use Custom when you need precision</strong>
+              <p>The Custom content type lets you write specific instructions. For example: "Write a 3-paragraph product announcement focused on the lighting feature. Use only Source 1 and Source 3. Target audience is technical journalists."</p>
+            </div>
+            <div class="pr-help-tip">
+              <strong>Iterate with Regenerate</strong>
+              <p>If the first generation is not right, click Regenerate. Each attempt is saved to History, so you never lose a version. You can also edit inline after generation.</p>
+            </div>
+            <div class="pr-help-tip">
+              <strong>Check the strategy panel</strong>
+              <p>Do not skip the right panel. The outlet-specific angles are particularly useful, because the same news should be framed differently for TechCrunch (technology angle) versus AdAge (marketing angle) versus 3D World (technical depth).</p>
+            </div>
+            <div class="pr-help-tip">
+              <strong>Handle NEEDS SOURCE flags</strong>
+              <p>If you see many amber badges, your sources probably do not contain enough factual detail. Add more specific sources and regenerate rather than approving unsourced claims.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="btn-icon modal-close" id="settings-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-section">
+          <h3>AI Configuration</h3>
+          <div class="notes-input-section">
+            <label for="settings-api-key">Anthropic API Key</label>
+            <input type="password" id="settings-api-key" class="input" placeholder="sk-ant-...">
+            <p class="input-hint">Required for content generation</p>
+          </div>
+          <div class="notes-input-section">
+            <label for="settings-openai-key">OpenAI API Key</label>
+            <input type="password" id="settings-openai-key" class="input" placeholder="sk-proj-...">
+            <p class="input-hint">Required for audio transcription</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="settings-cancel">Cancel</button>
+        <button class="btn btn-primary" id="settings-save">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal modal-confirm">
+      <div class="modal-header">
+        <h2 id="confirm-modal-title">Confirm</h2>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-modal-message">Are you sure?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="confirm-modal-cancel">Cancel</button>
+        <button class="btn btn-danger" id="confirm-modal-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- PDF.js for file processing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
+
+  <script type="module">
+    import { PRAgent } from './modules/pr.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const pr = new PRAgent();
+      pr.init();
+      pr.setupFileUpload();
+      pr.setupAudio();
+
+      // Mobile tab switching
+      document.querySelectorAll('.pr-mobile-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.pr-mobile-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          const target = tab.dataset.tab;
+          document.getElementById('pr-sources-panel').classList.toggle('mobile-active', target === 'sources');
+          document.getElementById('pr-workspace-panel').classList.toggle('mobile-active', target === 'workspace');
+          document.getElementById('pr-strategy-panel').classList.toggle('mobile-active', target === 'strategy');
+        });
+      });
+
+      // Show generated content actions when content exists
+      const observer = new MutationObserver(() => {
+        const generated = document.getElementById('pr-workspace-generated');
+        const actions = document.getElementById('pr-workspace-actions');
+        if (generated && actions) {
+          actions.style.display = generated.style.display === 'none' ? 'none' : 'flex';
+        }
+      });
+      const generated = document.getElementById('pr-workspace-generated');
+      if (generated) {
+        observer.observe(generated, { attributes: true, attributeFilter: ['style'] });
+      }
+
+      // Help modal
+      const helpModal = document.getElementById('pr-help-modal');
+      const helpClose = document.getElementById('pr-help-modal-close');
+      function openHelp() { helpModal?.classList.add('visible'); }
+      function closeHelp() { helpModal?.classList.remove('visible'); }
+      document.getElementById('desktop-help-btn')?.addEventListener('click', openHelp);
+      document.getElementById('menu-help')?.addEventListener('click', () => {
+        dropdownMenu?.classList.remove('active');
+        openHelp();
+      });
+      helpClose?.addEventListener('click', closeHelp);
+      helpModal?.addEventListener('click', (e) => { if (e.target === helpModal) closeHelp(); });
+      helpModal?.querySelectorAll('.pr-help-section-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const isActive = btn.classList.contains('active');
+          btn.classList.toggle('active', !isActive);
+          const content = btn.nextElementSibling;
+          if (content) content.style.display = isActive ? 'none' : 'block';
+        });
+      });
+
+      // Dropdown menu
+      const menuBtn = document.getElementById('menu-btn');
+      const dropdownMenu = document.getElementById('dropdown-menu');
+      if (menuBtn && dropdownMenu) {
+        menuBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdownMenu.classList.toggle('active');
+        });
+        document.addEventListener('click', () => dropdownMenu.classList.remove('active'));
+        dropdownMenu.addEventListener('click', (e) => e.stopPropagation());
+      }
+
+      // Settings modal
+      const settingsModal = document.getElementById('settings-modal');
+      const settingsClose = document.getElementById('settings-modal-close');
+      const settingsCancel = document.getElementById('settings-cancel');
+      const settingsSave = document.getElementById('settings-save');
+      const apiKeyInput = document.getElementById('settings-api-key');
+      const openaiKeyInput = document.getElementById('settings-openai-key');
+
+      function openSettings() {
+        try {
+          const settings = JSON.parse(localStorage.getItem('glossi_settings') || '{}');
+          if (apiKeyInput && settings.apiKey) apiKeyInput.value = settings.apiKey;
+          if (openaiKeyInput && settings.openaiApiKey) openaiKeyInput.value = settings.openaiApiKey;
+        } catch {}
+        settingsModal?.classList.add('visible');
+      }
+
+      document.getElementById('desktop-settings-btn')?.addEventListener('click', openSettings);
+      document.getElementById('menu-settings')?.addEventListener('click', () => {
+        dropdownMenu?.classList.remove('active');
+        openSettings();
+      });
+
+      settingsClose?.addEventListener('click', () => settingsModal?.classList.remove('visible'));
+      settingsCancel?.addEventListener('click', () => settingsModal?.classList.remove('visible'));
+      settingsModal?.addEventListener('click', (e) => {
+        if (e.target === settingsModal) settingsModal.classList.remove('visible');
+      });
+
+      settingsSave?.addEventListener('click', () => {
+        const key = apiKeyInput?.value.trim() || '';
+        const openaiKey = openaiKeyInput?.value.trim() || '';
+        try {
+          const existing = JSON.parse(localStorage.getItem('glossi_settings') || '{}');
+          existing.apiKey = key;
+          existing.openaiApiKey = openaiKey;
+          localStorage.setItem('glossi_settings', JSON.stringify(existing));
+        } catch {}
+        pr.apiKey = key;
+        pr.openaiApiKey = openaiKey;
+        pr.updateGenerateButton();
+        settingsModal?.classList.remove('visible');
+        pr.showToast('Settings saved');
+      });
+    });
+  </script>
+</body>
+</html>
