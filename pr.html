@@ -291,24 +291,44 @@
         <div class="pr-workspace-content" id="pr-workspace-content">
           <!-- Workspace Tabs -->
           <div class="pr-workspace-tabs">
-            <button class="pr-workspace-tab active" data-workspace-tab="content">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-              </svg>
-              Workspace
-            </button>
-            <button class="pr-workspace-tab" data-workspace-tab="news-hooks">
+            <button class="pr-workspace-tab active" data-workspace-tab="news-hooks">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"></circle>
                 <polyline points="12 6 12 12 16 14"></polyline>
               </svg>
               News Hooks
             </button>
+            <button class="pr-workspace-tab" data-workspace-tab="content">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              Workspace
+            </button>
+          </div>
+
+          <!-- Tab Content: News Hooks -->
+          <div class="pr-workspace-tab-content active" data-tab-content="news-hooks">
+            <div class="pr-news-hooks-container" id="pr-news-hooks-container">
+              <div class="pr-news-hooks-header">
+                <h3 class="pr-news-hooks-title">News Hooks</h3>
+                <button class="btn btn-secondary btn-sm" id="pr-fetch-news-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M1 20v-6h6"></path>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+              <div class="pr-news-hooks-list" id="pr-news-hooks-list">
+                <div class="pr-news-hooks-empty">No news hooks yet</div>
+              </div>
+            </div>
           </div>
 
           <!-- Tab Content: Workspace -->
-          <div class="pr-workspace-tab-content active" data-tab-content="content">
+          <div class="pr-workspace-tab-content" data-tab-content="content">
             <!-- Empty state -->
             <div class="pr-workspace-empty" id="pr-workspace-empty">
               <div class="pr-empty-message">
@@ -354,26 +374,6 @@
                   <div class="pr-loading-spinner"></div>
                   <span class="pr-refining-text">Refining...</span>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Tab Content: News Hooks -->
-          <div class="pr-workspace-tab-content" data-tab-content="news-hooks">
-            <div class="pr-news-hooks-container" id="pr-news-hooks-container">
-              <div class="pr-news-hooks-header">
-                <h3 class="pr-news-hooks-title">News Hooks</h3>
-                <button class="btn btn-secondary btn-sm" id="pr-fetch-news-btn">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M23 4v6h-6"></path>
-                    <path d="M1 20v-6h6"></path>
-                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                  </svg>
-                  Refresh
-                </button>
-              </div>
-              <div class="pr-news-hooks-list" id="pr-news-hooks-list">
-                <div class="pr-news-hooks-empty">No news hooks yet</div>
               </div>
             </div>
           </div>

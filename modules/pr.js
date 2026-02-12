@@ -1933,6 +1933,12 @@ class PRAgent {
     if (this.dom.workspaceEmpty) this.dom.workspaceEmpty.style.display = 'none';
     if (this.dom.workspaceGenerated) this.dom.workspaceGenerated.style.display = 'block';
     if (this.dom.regenerateBtn) this.dom.regenerateBtn.style.display = 'inline-flex';
+    
+    // Switch to workspace tab after generation
+    const workspaceTab = document.querySelector('[data-workspace-tab="content"]');
+    if (workspaceTab) {
+      workspaceTab.click();
+    }
   }
 
   renderGeneratedContent(output) {
