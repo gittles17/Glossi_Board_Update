@@ -489,8 +489,18 @@ class PRAgent {
         const gs = JSON.parse(glossiSettings);
         this.apiKey = gs.apiKey || null;
         this.openaiApiKey = gs.openaiApiKey || null;
+        
+        // Log for debugging
+        if (this.apiKey) {
+          console.log('✓ Anthropic API key loaded successfully');
+        } else {
+          console.log('⚠ No Anthropic API key found in settings');
+        }
+      } else {
+        console.log('⚠ glossi_settings not found in localStorage');
       }
     } catch (e) {
+      console.error('Error loading API keys:', e);
       this.apiKey = null;
       this.openaiApiKey = null;
     }
