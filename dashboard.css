@@ -13251,6 +13251,11 @@ a.dropdown-item {
   overflow: hidden;
 }
 
+.pr-media-discover {
+  overflow-y: auto;
+  overflow-x: visible;
+}
+
 .pr-media-header {
   padding: var(--space-3);
   border-bottom: 1px solid var(--border-color);
