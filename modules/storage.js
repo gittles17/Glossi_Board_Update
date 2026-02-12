@@ -97,6 +97,17 @@ class Storage {
   }
 
   /**
+   * Check if running in production environment
+   */
+  isProduction() {
+    return this.serverAvailable && 
+           window.location.hostname !== 'localhost' && 
+           window.location.hostname !== '127.0.0.1' &&
+           !window.location.hostname.includes('192.168.') &&
+           !window.location.hostname.includes('local');
+  }
+
+  /**
    * Initialize storage - load from server files first, then localStorage as fallback
    */
   async init() {
@@ -135,7 +146,6 @@ class Storage {
       this.serverAvailable = false;
     }
 
-    // Fallback to localStorage if server data is empty
     // Helper to safely parse JSON from localStorage
     const safeJsonParse = (key, fallback) => {
       try {
@@ -147,14 +157,34 @@ class Storage {
       }
     };
 
+    // Only use localStorage if server is unavailable or returned no data
+    const useLocalStorageFallback = !this.serverAvailable;
+    
     if (!this.data) {
-      this.data = safeJsonParse('glossi_data', { ...DEFAULT_DATA });
+      const localData = safeJsonParse('glossi_data', null);
+      this.data = localData || { ...DEFAULT_DATA };
+      // Migrate: if localStorage has data but server doesn't, push to server
+      if (localData && this.serverAvailable) {
+        this.scheduleSave();
+      }
     }
     if (!this.settings) {
-      this.settings = safeJsonParse('glossi_settings', { ...DEFAULT_SETTINGS });
+      const localSettings = safeJsonParse('glossi_settings', null);
+      this.settings = localSettings || { ...DEFAULT_SETTINGS };
+      // Migrate: if localStorage has settings but server doesn't, push to server
+      if (localSettings && this.serverAvailable) {
+        this.saveSettings();
+      }
     }
     if (!this.meetings || this.meetings.length === 0) {
-      this.meetings = safeJsonParse('glossi_meetings', []);
+      const localMeetings = safeJsonParse('glossi_meetings', []);
+      if (localMeetings.length > 0) {
+        this.meetings = localMeetings;
+        // Migrate: if localStorage has meetings but server doesn't, push to server
+        if (this.serverAvailable) {
+          this.scheduleSave();
+        }
+      }
     }
     // Merge todos: localStorage is the authoritative local source,
     // server may have data from other devices or be stale
@@ -205,10 +235,24 @@ class Storage {
       this.saveTodos();
     }
     if (!this.pipelineHistory || this.pipelineHistory.length === 0) {
-      this.pipelineHistory = safeJsonParse('glossi_pipeline_history', []);
+      const localPipelineHistory = safeJsonParse('glossi_pipeline_history', []);
+      if (localPipelineHistory.length > 0) {
+        this.pipelineHistory = localPipelineHistory;
+        // Migrate: push to server if available
+        if (this.serverAvailable) {
+          this.savePipelineHistory();
+        }
+      }
     }
     if (!this.statHistory || this.statHistory.length === 0) {
-      this.statHistory = safeJsonParse('glossi_stat_history', []);
+      const localStatHistory = safeJsonParse('glossi_stat_history', []);
+      if (localStatHistory.length > 0) {
+        this.statHistory = localStatHistory;
+        // Migrate: push to server if available
+        if (this.serverAvailable) {
+          this.saveStatHistory();
+        }
+      }
     }
 
 

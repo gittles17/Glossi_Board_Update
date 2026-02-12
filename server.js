@@ -186,6 +186,16 @@ async function initDatabase() {
             fetched_at TIMESTAMP DEFAULT NOW()
           )
         `);
+        
+        // PR settings (folders, preferences, UI state)
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS pr_settings (
+            id SERIAL PRIMARY KEY,
+            user_id VARCHAR(50) DEFAULT 'default',
+            settings JSONB NOT NULL,
+            updated_at TIMESTAMP DEFAULT NOW()
+          )
+        `);
       })(),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Database init timed out after 8s')), 8000)
@@ -204,6 +214,15 @@ app.use(express.static(__dirname));
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', database: useDatabase });
+});
+
+// API settings endpoint - returns API key availability without exposing keys
+app.get('/api/settings', (req, res) => {
+  res.json({
+    hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
+    hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+    isProduction: useDatabase && process.env.NODE_ENV === 'production'
+  });
 });
 
 // Load all data
@@ -466,6 +485,43 @@ app.post('/api/pr/wizard', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error saving wizard data:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get PR settings
+app.get('/api/pr/settings', async (req, res) => {
+  try {
+    if (!useDatabase) {
+      return res.json({ success: true, settings: null });
+    }
+    
+    const result = await pool.query('SELECT settings FROM pr_settings WHERE user_id = $1 ORDER BY id DESC LIMIT 1', ['default']);
+    const settings = result.rows.length > 0 ? result.rows[0].settings : null;
+    
+    res.json({ success: true, settings });
+  } catch (error) {
+    console.error('Error loading PR settings:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Save PR settings
+app.post('/api/pr/settings', async (req, res) => {
+  try {
+    const { settings } = req.body;
+    
+    if (!useDatabase) {
+      return res.json({ success: true });
+    }
+    
+    // Delete existing and insert new for this user
+    await pool.query('DELETE FROM pr_settings WHERE user_id = $1', ['default']);
+    await pool.query('INSERT INTO pr_settings (user_id, settings, updated_at) VALUES ($1, $2, NOW())', ['default', JSON.stringify(settings)]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error saving PR settings:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

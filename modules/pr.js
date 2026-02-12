@@ -503,32 +503,74 @@ class PRAgent {
       }
     }
     
-    // Settings still from localStorage (contains API keys)
+    // Load PR settings from API first, fallback to localStorage
     try {
-      const settingsRaw = localStorage.getItem('pr_settings');
-      const settings = settingsRaw ? JSON.parse(settingsRaw) : {};
-      this.settings = settings;
-      this.folders = settings.folders || [];
-      this.expandedFolders = settings.expandedFolders || {};
-    } catch (e) {
-      this.settings = {};
-      this.folders = [];
-      this.expandedFolders = {};
-    }
-    
-    try {
-      const glossiSettings = localStorage.getItem('glossi_settings');
-      if (glossiSettings) {
-        const gs = JSON.parse(glossiSettings);
-        this.apiKey = gs.apiKey || null;
-        this.openaiApiKey = gs.openaiApiKey || null;
-        
-        // API key loaded from settings
+      const response = await fetch('/api/pr/settings');
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.settings) {
+          this.settings = result.settings;
+          this.folders = result.settings.folders || [];
+          this.expandedFolders = result.settings.expandedFolders || {};
+        } else {
+          // Fallback to localStorage if no server settings
+          const settingsRaw = localStorage.getItem('pr_settings');
+          const settings = settingsRaw ? JSON.parse(settingsRaw) : {};
+          this.settings = settings;
+          this.folders = settings.folders || [];
+          this.expandedFolders = settings.expandedFolders || {};
+          // Migrate to server if we have local data
+          if (settingsRaw) {
+            this.saveSettings();
+          }
+        }
+      } else {
+        throw new Error('API not available');
       }
     } catch (e) {
-      console.error('Error loading API keys:', e);
-      this.apiKey = null;
-      this.openaiApiKey = null;
+      // Fallback to localStorage on error
+      try {
+        const settingsRaw = localStorage.getItem('pr_settings');
+        const settings = settingsRaw ? JSON.parse(settingsRaw) : {};
+        this.settings = settings;
+        this.folders = settings.folders || [];
+        this.expandedFolders = settings.expandedFolders || {};
+      } catch (e2) {
+        this.settings = {};
+        this.folders = [];
+        this.expandedFolders = {};
+      }
+    }
+    
+    // Check server for environment-configured API keys first
+    try {
+      const response = await fetch('/api/settings');
+      if (response.ok) {
+        const serverSettings = await response.json();
+        // If server has API keys configured via environment, we're done
+        if (serverSettings.hasAnthropicKey) {
+          this.apiKey = 'env'; // Placeholder to indicate env key exists
+        }
+        if (serverSettings.hasOpenAIKey) {
+          this.openaiApiKey = 'env'; // Placeholder to indicate env key exists
+        }
+      }
+    } catch (e) {
+      console.warn('Could not check server for API keys');
+    }
+    
+    // Fall back to localStorage if no environment keys
+    if (!this.apiKey || !this.openaiApiKey) {
+      try {
+        const glossiSettings = localStorage.getItem('glossi_settings');
+        if (glossiSettings) {
+          const gs = JSON.parse(glossiSettings);
+          if (!this.apiKey) this.apiKey = gs.apiKey || null;
+          if (!this.openaiApiKey) this.openaiApiKey = gs.openaiApiKey || null;
+        }
+      } catch (e) {
+        console.error('Error loading API keys from localStorage:', e);
+      }
     }
     
     this.isGenerating = false;
@@ -634,10 +676,23 @@ class PRAgent {
   }
 
   async saveSources() {
-    // Save folder settings to localStorage
+    // Save folder settings to API and localStorage
     try {
       this.settings.folders = this.folders;
       this.settings.expandedFolders = this.expandedFolders;
+      
+      // Save to API first
+      try {
+        await fetch('/api/pr/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ settings: this.settings })
+        });
+      } catch (apiError) {
+        console.warn('Failed to save settings to server, using localStorage fallback');
+      }
+      
+      // Also save to localStorage as fallback
       localStorage.setItem('pr_settings', JSON.stringify(this.settings));
     } catch (e) {
       console.error('Failed to save settings:', e);
@@ -650,8 +705,20 @@ class PRAgent {
     // Outputs are saved individually via API calls when created
   }
 
-  saveSettings() {
+  async saveSettings() {
     try {
+      // Save to API first
+      try {
+        await fetch('/api/pr/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ settings: this.settings })
+        });
+      } catch (apiError) {
+        console.warn('Failed to save settings to server, using localStorage fallback');
+      }
+      
+      // Also save to localStorage as fallback
       localStorage.setItem('pr_settings', JSON.stringify(this.settings));
     } catch (e) {
       console.error('Failed to save settings:', e);
