@@ -11846,9 +11846,6 @@ a.dropdown-item {
 }
 
 .pr-workspace-tab {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   background: transparent;
   border: none;
@@ -11868,14 +11865,6 @@ a.dropdown-item {
 .pr-workspace-tab.active {
   color: var(--accent-blue);
   border-bottom-color: var(--accent-blue);
-}
-
-.pr-workspace-tab svg {
-  opacity: 0.7;
-}
-
-.pr-workspace-tab.active svg {
-  opacity: 1;
 }
 
 .pr-workspace-tab-content {
@@ -12597,9 +12586,6 @@ a.dropdown-item {
 }
 
 .pr-right-panel-tab {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   background: transparent;
   border: none;
@@ -12621,14 +12607,6 @@ a.dropdown-item {
 .pr-right-panel-tab.active {
   color: var(--accent-blue);
   border-bottom-color: var(--accent-blue);
-}
-
-.pr-right-panel-tab svg {
-  opacity: 0.7;
-}
-
-.pr-right-panel-tab.active svg {
-  opacity: 1;
 }
 
 .pr-right-panel-tab-content {
@@ -14910,8 +14888,8 @@ a.dropdown-item {
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  color: var(--text-secondary);
-  font-size: 14px;
+  color: var(--text-muted);
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -14919,13 +14897,13 @@ a.dropdown-item {
 }
 
 .pr-panel-tab:hover {
-  color: var(--text-primary);
+  color: var(--text-secondary);
   background: rgba(255, 255, 255, 0.02);
 }
 
 .pr-panel-tab.active {
-  color: var(--text-primary);
-  border-bottom-color: var(--accent-green);
+  color: var(--accent-blue);
+  border-bottom-color: var(--accent-blue);
 }
 
 /* Tab Content */
