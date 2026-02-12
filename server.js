@@ -977,13 +977,12 @@ app.post('/api/pr/news-hooks', async (req, res) => {
       return res.status(500).json({ success: false, error: 'Anthropic API key not configured in environment variables' });
     }
     
-    // Clean up old news hooks before fetching new ones
+    // Clean up old news hooks before fetching new ones (by article date)
     if (useDatabase) {
       try {
         await pool.query(`
           DELETE FROM pr_news_hooks 
           WHERE date < NOW() - INTERVAL '30 days'
-          AND fetched_at < NOW() - INTERVAL '30 days'
         `);
       } catch (cleanupError) {
         console.error('Error cleaning up old news:', cleanupError);
@@ -1069,12 +1068,11 @@ app.get('/api/pr/news-hooks', async (req, res) => {
       return res.json({ success: true, news: [] });
     }
     
-    // Only return news from the last 30 days
+    // Only return news from the last 30 days (by article date, not fetch date)
     const result = await pool.query(`
       SELECT * FROM pr_news_hooks 
       WHERE date > NOW() - INTERVAL '30 days'
-      OR fetched_at > NOW() - INTERVAL '30 days'
-      ORDER BY fetched_at DESC
+      ORDER BY date DESC, fetched_at DESC
     `);
     res.json({ success: true, news: result.rows });
   } catch (error) {
@@ -1090,11 +1088,10 @@ app.delete('/api/pr/news-hooks/old', async (req, res) => {
       return res.json({ success: true, deleted: 0 });
     }
     
-    // Delete news older than 30 days
+    // Delete news older than 30 days (by article date)
     const result = await pool.query(`
       DELETE FROM pr_news_hooks 
       WHERE date < NOW() - INTERVAL '30 days'
-      AND fetched_at < NOW() - INTERVAL '30 days'
     `);
     res.json({ success: true, deleted: result.rowCount });
   } catch (error) {

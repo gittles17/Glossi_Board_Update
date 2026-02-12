@@ -12613,7 +12613,7 @@ a.dropdown-item {
   display: none;
   flex: 1;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .pr-right-panel-tab-content.active {
@@ -12640,8 +12640,7 @@ a.dropdown-item {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  padding: var(--space-4);
+  overflow: hidden;
 }
 
 .pr-strategy-empty {
@@ -13226,7 +13225,7 @@ a.dropdown-item {
   display: flex;
   flex-direction: column;
   flex: 1;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .pr-media-discover {
@@ -13277,7 +13276,6 @@ a.dropdown-item {
   display: none;
   flex-direction: column;
   flex: 1;
-  overflow-y: auto;
   padding: var(--space-3);
 }
 
