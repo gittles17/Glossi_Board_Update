@@ -1364,8 +1364,11 @@ class PRAgent {
         });
       } else if (action === 'open-wizard') {
         el.addEventListener('click', () => {
-          if (this.wizardManager) {
-            this.wizardManager.open();
+          console.log('Source clicked, opening wizard...');
+          if (this.wizard) {
+            this.wizard.open();
+          } else {
+            console.error('Wizard not initialized');
           }
         });
       }
