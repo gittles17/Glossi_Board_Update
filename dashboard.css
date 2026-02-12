@@ -12575,6 +12575,8 @@ a.dropdown-item {
   background: var(--bg-secondary);
   overflow: hidden;
   flex-shrink: 0;
+  border-radius: 0;
+  position: relative;
 }
 
 /* Right panel tabs */
@@ -12614,6 +12616,9 @@ a.dropdown-item {
   flex: 1;
   flex-direction: column;
   overflow: hidden;
+  border-radius: 0;
+  position: relative;
+  background: var(--bg-secondary);
 }
 
 .pr-right-panel-tab-content.active {
@@ -12641,6 +12646,9 @@ a.dropdown-item {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  border-radius: 0;
+  position: relative;
+  overflow: hidden;
 }
 
 .pr-strategy-empty {
@@ -13226,6 +13234,9 @@ a.dropdown-item {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  border-radius: 0;
+  overflow: hidden;
+  position: relative;
 }
 
 .pr-media-discover {
@@ -13233,6 +13244,9 @@ a.dropdown-item {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  border-radius: 0;
+  background: var(--bg-secondary);
+  position: relative;
 }
 
 .pr-media-header {
@@ -13294,6 +13308,27 @@ a.dropdown-item {
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-3);
+}
+
+/* Prevent any circular overlays or artifacts */
+.pr-strategy-panel *::before,
+.pr-strategy-panel *::after,
+.pr-media-panel-body *::before,
+.pr-media-panel-body *::after {
+  border-radius: 0 !important;
+}
+
+.pr-strategy-panel::before,
+.pr-strategy-panel::after,
+.pr-right-panel-tab-content::before,
+.pr-right-panel-tab-content::after,
+.pr-media-panel-body::before,
+.pr-media-panel-body::after,
+.pr-media-view::before,
+.pr-media-view::after,
+.pr-media-discover::before,
+.pr-media-discover::after {
+  display: none !important;
 }
 
 .pr-loading-text,
