@@ -71,77 +71,83 @@
     </div>
 
     <div class="pr-layout">
-      <!-- Column 1: Workflow Sections -->
+      <!-- Column 1: Tabbed Panel -->
       <div class="pr-sources-panel" id="pr-sources-panel">
         
-        <!-- News Hooks Section (moved from right panel) -->
-        <div class="pr-workflow-section pr-news-hooks-section">
-          <div class="pr-workflow-header pr-news-hooks-header">
-            <h2 class="pr-workflow-title pr-news-hooks-title">News Hooks</h2>
-            <button class="btn-icon" id="pr-refresh-news-btn" title="Refresh news">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M23 4v6h-6"></path>
-                <path d="M1 20v-6h6"></path>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="pr-news-hooks-feed" id="pr-news-hooks-feed">
-            <p class="pr-news-empty">No news hooks yet</p>
-          </div>
+        <!-- Tab Navigation -->
+        <div class="pr-panel-tabs">
+          <button class="pr-panel-tab active" data-panel-tab="research">Research</button>
+          <button class="pr-panel-tab" data-panel-tab="library">Library</button>
+          <button class="pr-panel-tab" data-panel-tab="media">Media</button>
         </div>
 
-        <!-- Sources Section -->
-        <div class="pr-workflow-section pr-sources-section">
-          <div class="pr-workflow-header pr-sources-header">
-            <h2 class="pr-workflow-title pr-sources-label">Sources</h2>
-            <span class="pr-sources-count" id="pr-sources-count">0</span>
-            <button class="pr-create-folder-btn" id="pr-create-folder-btn" title="Create Folder">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <!-- Tab Content: Research -->
+        <div class="pr-panel-tab-content active" id="pr-tab-research">
+          <!-- News Hooks Section -->
+          <div class="pr-workflow-section pr-news-hooks-section">
+            <div class="pr-workflow-header pr-news-hooks-header">
+              <h2 class="pr-workflow-title pr-news-hooks-title">News Hooks</h2>
+              <button class="btn-icon" id="pr-refresh-news-btn" title="Refresh news">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6"></path>
+                  <path d="M1 20v-6h6"></path>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="pr-news-hooks-feed" id="pr-news-hooks-feed">
+              <p class="pr-news-empty">No news hooks yet</p>
+            </div>
+          </div>
+
+          <!-- Sources Section -->
+          <div class="pr-workflow-section pr-sources-section">
+            <div class="pr-workflow-header pr-sources-header">
+              <h2 class="pr-workflow-title pr-sources-label">Sources</h2>
+              <span class="pr-sources-count" id="pr-sources-count">0</span>
+              <button class="pr-create-folder-btn" id="pr-create-folder-btn" title="Create Folder">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+            </div>
+            <div class="pr-source-search-wrap">
+              <input type="text" class="pr-source-search" id="pr-source-search" placeholder="Search sources...">
+            </div>
+            <div class="pr-sources-list pr-drop-zone" id="pr-sources-list">
+              <div class="pr-sources-empty" id="pr-sources-empty">
+                <p>No sources yet</p>
+              </div>
+            </div>
+            <button class="pr-add-source-btn" id="pr-add-source-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
+              <span>Add Source</span>
             </button>
           </div>
-          <div class="pr-source-search-wrap">
-            <input type="text" class="pr-source-search" id="pr-source-search" placeholder="Search sources...">
-          </div>
-          <div class="pr-sources-list pr-drop-zone" id="pr-sources-list">
-            <div class="pr-sources-empty" id="pr-sources-empty">
-              <p>No sources yet</p>
-            </div>
-          </div>
-          <button class="pr-add-source-btn" id="pr-add-source-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            <span>Add Source</span>
-          </button>
         </div>
 
-        <!-- Content Library Section -->
-        <div class="pr-workflow-section pr-library-section">
-          <div class="pr-workflow-header pr-history-header">
-            <h2 class="pr-workflow-title">Content Library</h2>
-            <span class="pr-history-badge" id="pr-history-count">0</span>
-          </div>
-          <div class="pr-history-list" id="pr-history-list">
-            <div class="pr-history-empty" id="pr-history-empty">
-              <p>No content saved</p>
+        <!-- Tab Content: Library -->
+        <div class="pr-panel-tab-content" id="pr-tab-library">
+          <div class="pr-workflow-section pr-library-section">
+            <div class="pr-workflow-header pr-history-header">
+              <h2 class="pr-workflow-title">Content Library</h2>
+              <span class="pr-history-badge" id="pr-history-count">0</span>
+            </div>
+            <div class="pr-history-list" id="pr-history-list">
+              <div class="pr-history-empty" id="pr-history-empty">
+                <p>No content saved</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Media & Calendar Section (Collapsed) -->
-        <div class="pr-workflow-section pr-secondary-section">
-          <div class="pr-workflow-header pr-secondary-header" id="pr-secondary-toggle">
-            <svg class="pr-secondary-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-            <h2 class="pr-workflow-title">Media & Calendar</h2>
-          </div>
-          <div id="pr-secondary-content" style="display:none;">
+        <!-- Tab Content: Media -->
+        <div class="pr-panel-tab-content" id="pr-tab-media">
+          <div class="pr-workflow-section pr-secondary-section">
             <!-- Media Content -->
             <div class="pr-secondary-subsection">
               <h3 class="pr-subsection-title">Media List</h3>
@@ -185,6 +191,9 @@
           </div>
         </div>
       </div>
+
+      <!-- Resizer between left and center -->
+      <div class="pr-resizer" id="pr-resizer-left" data-resize="left"></div>
 
       <!-- Column 2: Workspace -->
       <div class="pr-workspace-panel" id="pr-workspace-panel">
@@ -352,6 +361,9 @@
           </div>
         </div>
       </div>
+
+      <!-- Resizer between center and right -->
+      <div class="pr-resizer" id="pr-resizer-right" data-resize="right"></div>
 
       <!-- Column 3: Strategy Panel -->
       <div class="pr-strategy-panel" id="pr-strategy-panel">
@@ -802,17 +814,117 @@
         });
       });
 
-      // Secondary section toggle (Media & Calendar)
-      const secondaryToggle = document.getElementById('pr-secondary-toggle');
-      const secondaryContent = document.getElementById('pr-secondary-content');
-      const secondaryChevron = document.querySelector('.pr-secondary-chevron');
-      if (secondaryToggle && secondaryContent) {
-        secondaryToggle.addEventListener('click', () => {
-          const isExpanded = secondaryContent.style.display !== 'none';
-          secondaryContent.style.display = isExpanded ? 'none' : 'block';
-          secondaryToggle.classList.toggle('expanded', !isExpanded);
+      // Panel tab switching (desktop)
+      document.querySelectorAll('.pr-panel-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const targetTab = tab.dataset.panelTab;
+          
+          // Update active states
+          document.querySelectorAll('.pr-panel-tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.pr-panel-tab-content').forEach(c => c.classList.remove('active'));
+          
+          tab.classList.add('active');
+          document.getElementById(`pr-tab-${targetTab}`).classList.add('active');
         });
+      });
+
+      // Panel Resizer Class
+      class PanelResizer {
+        constructor() {
+          this.leftResizer = document.getElementById('pr-resizer-left');
+          this.rightResizer = document.getElementById('pr-resizer-right');
+          this.leftPanel = document.getElementById('pr-sources-panel');
+          this.rightPanel = document.getElementById('pr-strategy-panel');
+          
+          this.init();
+          this.loadSavedWidths();
+        }
+        
+        init() {
+          if (this.leftResizer) {
+            this.leftResizer.addEventListener('mousedown', (e) => this.startResize(e, 'left'));
+            this.leftResizer.addEventListener('dblclick', () => this.resetWidth('left'));
+          }
+          
+          if (this.rightResizer) {
+            this.rightResizer.addEventListener('mousedown', (e) => this.startResize(e, 'right'));
+            this.rightResizer.addEventListener('dblclick', () => this.resetWidth('right'));
+          }
+        }
+        
+        startResize(e, side) {
+          e.preventDefault();
+          
+          const resizer = side === 'left' ? this.leftResizer : this.rightResizer;
+          resizer.classList.add('resizing');
+          document.body.classList.add('pr-resizing');
+          
+          const startX = e.clientX;
+          const startWidth = side === 'left' 
+            ? this.leftPanel.offsetWidth 
+            : this.rightPanel.offsetWidth;
+          
+          const onMouseMove = (e) => {
+            const delta = side === 'left' ? e.clientX - startX : startX - e.clientX;
+            const newWidth = startWidth + delta;
+            
+            const panel = side === 'left' ? this.leftPanel : this.rightPanel;
+            const minWidth = parseInt(getComputedStyle(panel).minWidth);
+            const maxWidth = parseInt(getComputedStyle(panel).maxWidth);
+            
+            if (newWidth >= minWidth && newWidth <= maxWidth) {
+              const cssVar = side === 'left' ? '--panel-left-width' : '--panel-right-width';
+              document.documentElement.style.setProperty(cssVar, `${newWidth}px`);
+            }
+          };
+          
+          const onMouseUp = () => {
+            resizer.classList.remove('resizing');
+            document.body.classList.remove('pr-resizing');
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            this.saveWidths();
+          };
+          
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        }
+        
+        resetWidth(side) {
+          const defaultWidth = side === 'left' ? '280px' : '320px';
+          const cssVar = side === 'left' ? '--panel-left-width' : '--panel-right-width';
+          document.documentElement.style.setProperty(cssVar, defaultWidth);
+          this.saveWidths();
+        }
+        
+        saveWidths() {
+          const leftWidth = getComputedStyle(document.documentElement)
+            .getPropertyValue('--panel-left-width').trim() || '280px';
+          const rightWidth = getComputedStyle(document.documentElement)
+            .getPropertyValue('--panel-right-width').trim() || '320px';
+          
+          localStorage.setItem('pr_panel_widths', JSON.stringify({
+            left: leftWidth,
+            right: rightWidth
+          }));
+        }
+        
+        loadSavedWidths() {
+          try {
+            const saved = localStorage.getItem('pr_panel_widths');
+            if (saved) {
+              const { left, right } = JSON.parse(saved);
+              if (left) document.documentElement.style.setProperty('--panel-left-width', left);
+              if (right) document.documentElement.style.setProperty('--panel-right-width', right);
+            }
+          } catch (e) {
+            // Ignore errors
+          }
+        }
       }
+
+      // Initialize panel resizer
+      const panelResizer = new PanelResizer();
 
       // Chat functionality
       const chatInput = document.getElementById('pr-chat-input');

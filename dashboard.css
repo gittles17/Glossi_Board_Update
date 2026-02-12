@@ -14490,3 +14490,155 @@ a.dropdown-item {
     font-size: 16px; /* Prevents iOS zoom */
   }
 }
+/* ============================================
+   PANEL TABS
+   ============================================ */
+
+.pr-panel-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 var(--space-2);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.pr-panel-tab {
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.pr-panel-tab:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pr-panel-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent-green);
+}
+
+/* Tab Content */
+.pr-panel-tab-content {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+.pr-panel-tab-content.active {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================
+   RESIZABLE PANELS
+   ============================================ */
+
+/* Main layout needs to be flex */
+.pr-layout {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Panel widths with CSS variables for dynamic sizing */
+.pr-sources-panel {
+  width: var(--panel-left-width, 280px);
+  min-width: 200px;
+  max-width: 500px;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.pr-strategy-panel {
+  width: var(--panel-right-width, 320px);
+  min-width: 250px;
+  max-width: 500px;
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+}
+
+.pr-workspace-panel {
+  flex: 1;
+  min-width: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Resizer Divider */
+.pr-resizer {
+  width: 4px;
+  background: transparent;
+  cursor: col-resize;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+  z-index: 10;
+}
+
+.pr-resizer:hover,
+.pr-resizer.resizing {
+  background: var(--accent-green);
+}
+
+.pr-resizer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  right: -4px;
+  /* Wider hit area for easier dragging */
+}
+
+/* Disable user selection during resize */
+.pr-resizing {
+  user-select: none;
+}
+
+body.pr-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+body.pr-resizing * {
+  cursor: col-resize !important;
+}
+
+/* Mobile: hide resizers and use fixed layout */
+@media (max-width: 768px) {
+  .pr-resizer {
+    display: none;
+  }
+  
+  .pr-panel-tabs {
+    display: none; /* Use mobile tabs instead */
+  }
+  
+  .pr-sources-panel,
+  .pr-strategy-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+}

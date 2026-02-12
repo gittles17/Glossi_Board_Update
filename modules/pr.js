@@ -274,79 +274,50 @@ class PRAgent {
     
     switch (action) {
       case 'generate':
-        // Scroll to Content Library section to show saved content
+        // Switch to Library tab
         if (isMobile) {
           const mobileSourcesTab = document.querySelector('.pr-mobile-tab[data-tab="sources"]');
           if (mobileSourcesTab) mobileSourcesTab.click();
         }
-        setTimeout(() => {
-          const librarySection = document.querySelector('.pr-library-section');
-          if (librarySection) {
-            librarySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            // Highlight the library section briefly
-            librarySection.style.transition = 'background 0.3s ease';
-            librarySection.style.background = 'rgba(91, 176, 154, 0.1)';
-            setTimeout(() => {
-              librarySection.style.background = '';
-            }, 1500);
-          }
-        }, isMobile ? 300 : 0);
+        // Switch to Library panel tab
+        const libraryTab = document.querySelector('.pr-panel-tab[data-panel-tab="library"]');
+        if (libraryTab) libraryTab.click();
         break;
         
       case 'media':
-        // Expand Media & Calendar section and scroll to it
+        // Switch to Media tab
         if (isMobile) {
           const mobileSourcesTab = document.querySelector('.pr-mobile-tab[data-tab="sources"]');
           if (mobileSourcesTab) mobileSourcesTab.click();
         }
-        setTimeout(() => {
-          const secondaryToggle = document.getElementById('pr-secondary-toggle');
-          const secondaryContent = document.getElementById('pr-secondary-content');
-          if (secondaryToggle && secondaryContent && secondaryContent.style.display === 'none') {
-            secondaryToggle.click();
-          }
-          setTimeout(() => {
-            const secondarySection = document.querySelector('.pr-secondary-section');
-            if (secondarySection) {
-              secondarySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-          }, 200);
-        }, isMobile ? 300 : 0);
+        const mediaTab = document.querySelector('.pr-panel-tab[data-panel-tab="media"]');
+        if (mediaTab) mediaTab.click();
         break;
         
       case 'calendar':
-        // Expand Media & Calendar section and scroll to calendar
+        // Switch to Media tab and scroll to calendar
         if (isMobile) {
           const mobileSourcesTab = document.querySelector('.pr-mobile-tab[data-tab="sources"]');
           if (mobileSourcesTab) mobileSourcesTab.click();
         }
+        const calendarTab = document.querySelector('.pr-panel-tab[data-panel-tab="media"]');
+        if (calendarTab) calendarTab.click();
         setTimeout(() => {
-          const secondaryToggle = document.getElementById('pr-secondary-toggle');
-          const secondaryContent = document.getElementById('pr-secondary-content');
-          if (secondaryToggle && secondaryContent && secondaryContent.style.display === 'none') {
-            secondaryToggle.click();
+          const calendarSection = document.querySelector('.pr-calendar-header');
+          if (calendarSection) {
+            calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
-          setTimeout(() => {
-            const calendarSection = document.querySelector('.pr-calendar-header');
-            if (calendarSection) {
-              calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-          }, 200);
-        }, isMobile ? 300 : 0);
+        }, 200);
         break;
         
       case 'news':
-        // Scroll to news hooks section (now in left panel)
+        // Switch to Research tab (news hooks are there)
         if (isMobile) {
           const mobileSourcesTab = document.querySelector('.pr-mobile-tab[data-tab="sources"]');
           if (mobileSourcesTab) mobileSourcesTab.click();
         }
-        setTimeout(() => {
-          const newsSection = document.querySelector('.pr-news-hooks-section');
-          if (newsSection) {
-            newsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        }, isMobile ? 300 : 0);
+        const researchTab = document.querySelector('.pr-panel-tab[data-panel-tab="research"]');
+        if (researchTab) researchTab.click();
         break;
     }
   }
