@@ -720,7 +720,6 @@ class PRAgent {
       strategyEmpty: document.getElementById('pr-strategy-empty'),
       historyList: document.getElementById('pr-history-list'),
       historyEmpty: document.getElementById('pr-history-empty'),
-      historyToggle: document.getElementById('pr-history-toggle'),
       historySection: document.getElementById('pr-history-section'),
       toastContainer: document.getElementById('toast-container')
     };
@@ -800,16 +799,7 @@ class PRAgent {
       this.dom.exportMenu?.classList.remove('active');
     });
 
-    // History toggle
-    this.dom.historyToggle?.addEventListener('click', () => {
-      const content = document.getElementById('pr-history-content');
-      const toggle = this.dom.historyToggle;
-      if (content) {
-        const isCollapsed = content.style.display === 'none';
-        content.style.display = isCollapsed ? 'block' : 'none';
-        toggle.classList.toggle('collapsed', !isCollapsed);
-      }
-    });
+    // Content Library is now always visible (no toggle)
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {

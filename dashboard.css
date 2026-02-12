@@ -11245,6 +11245,7 @@ a.dropdown-item {
   background: var(--bg-secondary);
   overflow-y: auto;
   overflow-x: hidden;
+  padding-top: var(--space-2);
 }
 
 .pr-sources-header {
@@ -11294,11 +11295,11 @@ a.dropdown-item {
 }
 
 .pr-sources-list {
-  flex: 1;
+  flex: 0 1 auto;
   overflow-y: auto;
   padding: var(--space-1) var(--space-2);
   position: relative;
-  min-height: 200px;
+  min-height: 100px;
   max-height: 400px;
 }
 
@@ -11587,6 +11588,7 @@ a.dropdown-item {
 
 /* Add source button */
 .pr-add-source-btn {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14079,13 +14081,17 @@ a.dropdown-item {
 /* Workflow Section Container */
 .pr-workflow-section {
   border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: var(--space-8);
-  margin-bottom: var(--space-8);
+  padding: var(--space-6) 0;
+  margin-bottom: 0;
 }
 
 .pr-workflow-section:last-child {
   border-bottom: none;
-  margin-bottom: 0;
+  padding-bottom: var(--space-4);
+}
+
+.pr-workflow-section:first-child {
+  padding-top: var(--space-4);
 }
 
 /* Sources Section - needs flex to allow sources list to expand */
@@ -14093,6 +14099,7 @@ a.dropdown-item {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  flex: 0 0 auto;
 }
 
 /* Workflow Header (H2 level - 20px semibold) */
@@ -14100,9 +14107,8 @@ a.dropdown-item {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-4);
-  margin-top: var(--space-6);
-  margin-bottom: var(--space-4);
+  padding: 0 var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
 .pr-workflow-title {
