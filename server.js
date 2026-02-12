@@ -989,7 +989,12 @@ app.post('/api/pr/news-hooks', async (req, res) => {
       }
     }
     
-    const newsPrompt = `Search for news from the past 7 days about:
+    const today = new Date().toISOString().split('T')[0];
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    const newsPrompt = `CRITICAL: Only search for news articles published between ${sevenDaysAgo} and ${today} (within the last 7 days). Do NOT include any articles older than 7 days.
+
+Search topics:
 - World models (Google Genie, World Labs, OpenAI)
 - AI product visualization or 3D commerce
 - Brand consistency and AI-generated content
@@ -999,7 +1004,7 @@ app.post('/api/pr/news-hooks', async (req, res) => {
 For each result, return:
 - Headline
 - Outlet name
-- Date
+- Date (MUST be between ${sevenDaysAgo} and ${today} in YYYY-MM-DD format)
 - URL
 - One-sentence summary
 - Relevance to Glossi (how Glossi could tie into this story)
@@ -1010,7 +1015,7 @@ Return as structured JSON with this exact format:
     {
       "headline": "Headline text",
       "outlet": "Outlet name",
-      "date": "2024-01-15",
+      "date": "2026-02-12",
       "url": "https://...",
       "summary": "One sentence summary",
       "relevance": "How Glossi ties in"
@@ -1018,7 +1023,7 @@ Return as structured JSON with this exact format:
   ]
 }
 
-Maximum 10 results, sorted by relevance.`;
+Maximum 10 results, sorted by date (newest first), then relevance. ONLY include articles from the past 7 days.`;
 
     const newsResponse = await axios.post('https://api.anthropic.com/v1/messages', {
       model: 'claude-sonnet-4-20250514',
@@ -1046,12 +1051,37 @@ Maximum 10 results, sorted by relevance.`;
       // Clear old news and insert new
       await pool.query('DELETE FROM pr_news_hooks');
       
+      // Validate and insert only recent articles (within 30 days)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      let insertedCount = 0;
+      
       for (const item of (newsData.news || [])) {
+        // Validate date
+        if (!item.date) {
+          console.log('Skipping article with no date:', item.headline);
+          continue;
+        }
+        
+        const articleDate = new Date(item.date);
+        if (isNaN(articleDate.getTime())) {
+          console.log('Skipping article with invalid date:', item.date, item.headline);
+          continue;
+        }
+        
+        if (articleDate < thirtyDaysAgo) {
+          console.log('Skipping old article:', item.date, item.headline);
+          continue;
+        }
+        
+        // Insert valid article
         await pool.query(`
           INSERT INTO pr_news_hooks (headline, outlet, date, url, summary, relevance, fetched_at)
           VALUES ($1, $2, $3, $4, $5, $6, NOW())
         `, [item.headline, item.outlet, item.date, item.url, item.summary, item.relevance]);
+        insertedCount++;
       }
+      
+      console.log(`Inserted ${insertedCount} of ${newsData.news?.length || 0} articles (rejected old or invalid articles)`);
     }
     
     res.json({ success: true, news: newsData.news || [] });
