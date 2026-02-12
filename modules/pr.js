@@ -2511,13 +2511,16 @@ class PRAgent {
     const message = input?.value?.trim();
     if (!message || !this.currentOutput) return;
 
-    // Clear input and show loading
+    // Clear input
     input.value = '';
     input.style.height = 'auto';
     input.disabled = true;
     
     const sendBtn = document.getElementById('pr-send-btn');
     if (sendBtn) sendBtn.disabled = true;
+    
+    // Show refining overlay
+    this.showRefiningOverlay();
 
     try {
       // Build context
@@ -2567,11 +2570,13 @@ Apply the requested refinement and return ONLY the complete refined content (no 
       // Generate new suggestions
       await this.generateSuggestions();
 
-      this.showToast('Content updated', 'success');
     } catch (error) {
       console.error('Error in refinement:', error);
-      this.showToast('Refinement error: ' + error.message, 'error');
+      this.showRefiningError('Refinement failed. Please try again.');
+      setTimeout(() => this.hideRefiningOverlay(), 2000);
+      return;
     } finally {
+      this.hideRefiningOverlay();
       input.disabled = false;
       if (sendBtn) sendBtn.disabled = false;
       input.focus();
@@ -2695,6 +2700,34 @@ Return ONLY the JSON array, nothing else.`;
 
   clearChat() {
     // No longer needed - no chat history
+  }
+
+  showRefiningOverlay() {
+    const overlay = document.getElementById('pr-refining-overlay');
+    if (overlay) {
+      overlay.style.display = 'flex';
+    }
+  }
+
+  hideRefiningOverlay() {
+    const overlay = document.getElementById('pr-refining-overlay');
+    if (overlay) {
+      overlay.style.display = 'none';
+      const textEl = overlay.querySelector('.pr-refining-text');
+      if (textEl) {
+        textEl.textContent = 'Refining...';
+        textEl.style.color = 'var(--text-secondary)';
+      }
+    }
+  }
+
+  showRefiningError(message) {
+    const overlay = document.getElementById('pr-refining-overlay');
+    const textEl = overlay?.querySelector('.pr-refining-text');
+    if (textEl) {
+      textEl.textContent = message;
+      textEl.style.color = 'var(--accent-red)';
+    }
   }
 }
 
