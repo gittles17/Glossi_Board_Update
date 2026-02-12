@@ -25,26 +25,19 @@ class AIProcessor {
   }
 
   /**
-   * Make a request to Claude Opus API
+   * Make a request to Claude Opus API via server proxy
    */
   async callClaude(systemPrompt, userMessage, conversationHistory = []) {
-    if (!this.isConfigured()) {
-      throw new Error('API key not configured. Please add your Anthropic API key in Settings.');
-    }
-
     try {
       const messages = [
         ...conversationHistory.map(m => ({ role: m.role, content: m.content })),
         { role: 'user', content: userMessage }
       ];
 
-      const response = await fetch(ANTHROPIC_API_URL, {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           model: 'claude-opus-4-20250514',
@@ -56,7 +49,7 @@ class AIProcessor {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error?.message || 'API request failed');
+        throw new Error(error.error || 'API request failed');
       }
 
       const data = await response.json();

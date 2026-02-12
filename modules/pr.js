@@ -1812,13 +1812,10 @@ class PRAgent {
     userMessage += `SOURCES:\n${sourcesContext}`;
 
     try {
-      const response = await fetch(ANTHROPIC_API_URL, {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           model: 'claude-opus-4-20250514',
@@ -1830,7 +1827,7 @@ class PRAgent {
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error?.message || `API request failed (${response.status})`);
+        throw new Error(err.error || `API request failed (${response.status})`);
       }
 
       const data = await response.json();
@@ -2576,13 +2573,11 @@ Be concise. Match the original style (Linear/Cursor voice).`;
         content: msg.content
       }));
 
-      // Call API
-      const response = await this.apiCall(ANTHROPIC_API_URL, {
+      // Call API via proxy
+      const response = await this.apiCall('/api/chat', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-          'anthropic-version': '2023-06-01'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           model: 'claude-3-5-sonnet-20241022',

@@ -225,6 +225,43 @@ app.get('/api/settings', (req, res) => {
   });
 });
 
+// Proxy endpoint for Anthropic API calls (avoids CORS)
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { messages, system, model, max_tokens } = req.body;
+    
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Anthropic API key not configured in environment variables' 
+      });
+    }
+    
+    const response = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: model || 'claude-sonnet-4-20250514',
+      max_tokens: max_tokens || 4096,
+      system: system || '',
+      messages
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      timeout: 60000
+    });
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('Chat API error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      success: false,
+      error: error.response?.data?.error?.message || error.message
+    });
+  }
+});
+
 // Load all data
 app.get('/api/data', async (req, res) => {
   try {
@@ -1306,16 +1343,39 @@ app.post('/api/transcribe', upload.single('file'), async (req, res) => {
   }
 });
 
+// Validate environment variables
+function validateEnvironment() {
+  const warnings = [];
+  
+  if (!process.env.ANTHROPIC_API_KEY) {
+    warnings.push('⚠️  ANTHROPIC_API_KEY not set - AI features will not work');
+  }
+  
+  if (!process.env.OPENAI_API_KEY) {
+    warnings.push('⚠️  OPENAI_API_KEY not set - Audio transcription will not work');
+  }
+  
+  if (!process.env.DATABASE_URL) {
+    warnings.push('⚠️  DATABASE_URL not set - Using local file storage');
+  }
+  
+  if (warnings.length > 0) {
+    console.warn('\n' + warnings.join('\n') + '\n');
+  } else {
+    console.log('✓ All environment variables configured');
+  }
+}
+
 // Start server
 async function start() {
+  validateEnvironment();
   await initDatabase();
   
   const host = useDatabase ? '0.0.0.0' : '127.0.0.1';
   
   app.listen(PORT, host, () => {
-    if (useDatabase) {
-    } else {
-    }
+    console.log(`Server running on http://${host}:${PORT}`);
+    console.log(`Database: ${useDatabase ? 'PostgreSQL' : 'Local files'}`);
   });
 }
 
