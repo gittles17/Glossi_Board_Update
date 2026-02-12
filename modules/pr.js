@@ -177,7 +177,7 @@ class PRAgent {
       this.settings.expandedFolders = this.expandedFolders;
       localStorage.setItem('pr_settings', JSON.stringify(this.settings));
     } catch (e) {
-      this.showToast('Failed to save sources', 'error');
+      console.error('Failed to save sources:', e);
     }
   }
 
@@ -185,7 +185,7 @@ class PRAgent {
     try {
       localStorage.setItem('pr_outputs', JSON.stringify(this.outputs));
     } catch (e) {
-      this.showToast('Failed to save outputs', 'error');
+      console.error('Failed to save outputs:', e);
     }
   }
 
@@ -193,7 +193,7 @@ class PRAgent {
     try {
       localStorage.setItem('pr_settings', JSON.stringify(this.settings));
     } catch (e) {
-      this.showToast('Failed to save settings', 'error');
+      console.error('Failed to save settings:', e);
     }
   }
 
@@ -286,9 +286,9 @@ class PRAgent {
           const hasApiKey = this.apiKey && this.apiKey.length > 0;
           const selectedSources = this.sources.filter(s => s.selected);
           if (!hasApiKey) {
-            this.showToast('Set your Anthropic API key in Dashboard Settings first', 'error');
+            console.warn('Generate clicked but no API key set');
           } else if (selectedSources.length === 0) {
-            this.showToast('Select at least one source to generate content', 'error');
+            console.warn('Generate clicked but no sources selected');
           }
         }
       });
@@ -450,18 +450,15 @@ class PRAgent {
       const textInput = document.getElementById('pr-source-text');
       content = textInput?.value.trim() || '';
       if (!content) {
-        this.showToast('Please enter some text content', 'error');
         return;
       }
     } else if (type === 'url') {
       const urlInput = document.getElementById('pr-source-url');
       url = urlInput?.value.trim() || '';
       if (!url) {
-        this.showToast('Please enter a URL', 'error');
         return;
       }
       if (!this.isValidUrl(url)) {
-        this.showToast('Please enter a valid URL', 'error');
         return;
       }
       const urlTitle = document.getElementById('pr-source-title-url')?.value.trim() || '';
@@ -471,13 +468,11 @@ class PRAgent {
       content = this._pendingFileContent || '';
       fileName = this._pendingFileName || '';
       if (!content) {
-        this.showToast('Please upload a file first', 'error');
         return;
       }
     } else if (type === 'audio') {
       content = this._pendingTranscription || '';
       if (!content) {
-        this.showToast('Please record or upload audio first', 'error');
         return;
       }
     }
@@ -500,7 +495,6 @@ class PRAgent {
     this.renderSources();
     this.updateGenerateButton();
     this.closeSourceModal();
-    this.showToast('Source added');
 
     // Clean up pending data
     this._pendingFileContent = null;
@@ -524,7 +518,6 @@ class PRAgent {
   }
 
   async fetchUrlContent(url, title) {
-    this.showToast('Fetching URL content...');
     try {
       const response = await fetch(`/api/fetch-url?url=${encodeURIComponent(url)}`);
       let content = '';
@@ -542,12 +535,11 @@ class PRAgent {
           scripts.forEach(el => el.remove());
           content = tempDiv.textContent?.replace(/\s+/g, ' ').trim() || '';
         } catch {
-          this.showToast('Could not fetch URL content. The site may block external requests.', 'error');
+          console.error('Could not fetch URL content');
           return;
         }
       }
       if (!content || content.length < 10) {
-        this.showToast('Could not extract meaningful content from this URL', 'error');
         return;
       }
 
@@ -567,9 +559,8 @@ class PRAgent {
       this.renderSources();
       this.updateGenerateButton();
       this.closeSourceModal();
-      this.showToast('URL source added');
     } catch (err) {
-      this.showToast('Failed to fetch URL: ' + err.message, 'error');
+      console.error('Failed to fetch URL:', err);
     }
   }
 
@@ -581,7 +572,6 @@ class PRAgent {
     this.saveSources();
     this.renderSources();
     this.updateGenerateButton();
-    this.showToast('Source deleted');
   }
 
   toggleSourceSelection(id) {
@@ -655,14 +645,12 @@ class PRAgent {
     if (!name || !name.trim()) return;
     const folderName = name.trim();
     if (this.folders.includes(folderName)) {
-      this.showToast('Folder already exists', 'error');
       return;
     }
     this.folders.push(folderName);
     this.expandedFolders[folderName] = true;
     this.saveSources();
     this.renderSources();
-    this.showToast('Folder created');
   }
 
   async deleteFolder(name) {
@@ -680,7 +668,6 @@ class PRAgent {
     });
     this.saveSources();
     this.renderSources();
-    this.showToast('Folder deleted');
   }
 
   renameFolder(oldName) {
@@ -688,7 +675,6 @@ class PRAgent {
     if (!newName || !newName.trim() || newName.trim() === oldName) return;
     const folderName = newName.trim();
     if (this.folders.includes(folderName)) {
-      this.showToast('Folder already exists', 'error');
       return;
     }
     const index = this.folders.indexOf(oldName);
@@ -702,7 +688,6 @@ class PRAgent {
     });
     this.saveSources();
     this.renderSources();
-    this.showToast('Folder renamed');
   }
 
   toggleFolder(name) {
@@ -718,11 +703,7 @@ class PRAgent {
     source.folder = folderName;
     this.saveSources();
     this.renderSources();
-    if (folderName) {
-      this.showToast(`Moved to "${folderName}"`);
-    } else {
-      this.showToast('Moved to ungrouped');
-    }
+    return;
   }
 
   showFolderContextMenu(e, folderName) {
@@ -992,7 +973,7 @@ class PRAgent {
   async handleDroppedFile(file) {
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      this.showToast('File too large (max 10MB)', 'error');
+      console.warn('File too large (max 10MB)');
       return;
     }
 
@@ -1017,12 +998,12 @@ class PRAgent {
         content = textParts.join('\n\n');
         type = 'file';
       } catch (err) {
-        this.showToast('Failed to parse PDF', 'error');
+        console.error('Failed to parse PDF:', err);
         return;
       }
     } else if (['mp3', 'wav', 'm4a', 'webm'].includes(ext)) {
       if (!this.openaiApiKey) {
-        this.showToast('OpenAI API key required for audio transcription', 'error');
+        console.warn('OpenAI API key required for audio transcription');
         return;
       }
       try {
@@ -1030,16 +1011,16 @@ class PRAgent {
         content = transcription;
         type = 'audio';
       } catch (err) {
-        this.showToast('Audio transcription failed: ' + err.message, 'error');
+        console.error('Audio transcription failed:', err);
         return;
       }
     } else {
-      this.showToast('Unsupported file type', 'error');
+      console.warn('Unsupported file type');
       return;
     }
 
     if (!content || content.trim().length === 0) {
-      this.showToast('No content extracted from file', 'error');
+      console.warn('No content extracted from file');
       return;
     }
 
@@ -1058,7 +1039,6 @@ class PRAgent {
     this.saveSources();
     this.renderSources();
     this.updateGenerateButton();
-    this.showToast('Source added from file');
   }
 
   renderHistory() {
@@ -1108,7 +1088,6 @@ class PRAgent {
           this.outputs = this.outputs.filter(o => o.id !== btn.dataset.historyDelete);
           this.saveOutputs();
           this.renderHistory();
-          this.showToast('Output deleted');
         }
       });
     });
@@ -1183,12 +1162,10 @@ class PRAgent {
 
     const selectedSources = this.sources.filter(s => s.selected);
     if (selectedSources.length === 0) {
-      this.showToast('Select at least one source', 'error');
       return;
     }
 
     if (!this.apiKey) {
-      this.showToast('Configure your Anthropic API key in Dashboard Settings', 'error');
       return;
     }
 
@@ -1197,7 +1174,6 @@ class PRAgent {
     const customPrompt = contentType === 'custom' ? (this.dom.customPrompt?.value.trim() || '') : '';
 
     if (contentType === 'custom' && !customPrompt) {
-      this.showToast('Enter a custom prompt', 'error');
       return;
     }
 
@@ -1294,7 +1270,7 @@ class PRAgent {
       this.showWorkspace();
 
     } catch (err) {
-      this.showToast('Generation failed: ' + err.message, 'error');
+      console.error('Generation failed:', err);
       this.hideLoading();
     } finally {
       this.isGenerating = false;
@@ -1634,10 +1610,8 @@ class PRAgent {
   copyContent() {
     if (!this.dom.generatedContent) return;
     const text = this.getCleanText();
-    navigator.clipboard.writeText(text).then(() => {
-      this.showToast('Copied to clipboard');
-    }).catch(() => {
-      this.showToast('Failed to copy', 'error');
+    navigator.clipboard.writeText(text).catch(err => {
+      console.error('Failed to copy:', err);
     });
   }
 
@@ -1705,7 +1679,7 @@ class PRAgent {
   async processFile(file) {
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      this.showToast('File too large. Maximum size is 10MB.', 'error');
+      console.warn('File too large (max 10MB)');
       return;
     }
 
@@ -1737,10 +1711,10 @@ class PRAgent {
           preview.textContent = text.substring(0, 500) + (text.length > 500 ? '...' : '');
         }
       } catch (err) {
-        this.showToast('Failed to read PDF: ' + err.message, 'error');
+        console.error('Failed to read PDF:', err);
       }
     } else {
-      this.showToast('Unsupported file type. Use .txt, .pdf, .md, or .csv files.', 'error');
+      console.warn('Unsupported file type');
     }
   }
 
@@ -1771,7 +1745,7 @@ class PRAgent {
 
   async startRecording() {
     if (!this.openaiApiKey) {
-      this.showToast('Configure your OpenAI API key in Dashboard Settings for audio transcription', 'error');
+      console.warn('OpenAI API key required for audio transcription');
       return;
     }
 
@@ -1799,7 +1773,7 @@ class PRAgent {
       if (stopBtn) stopBtn.style.display = 'inline-flex';
       if (indicator) indicator.style.display = 'flex';
     } catch (err) {
-      this.showToast('Microphone access denied. Please allow microphone permissions.', 'error');
+      console.error('Microphone access denied:', err);
     }
   }
 
@@ -1817,7 +1791,7 @@ class PRAgent {
 
   async transcribeAudio(fileOrBlob) {
     if (!this.openaiApiKey) {
-      this.showToast('Configure your OpenAI API key in Dashboard Settings', 'error');
+      console.warn('OpenAI API key required');
       return;
     }
 
@@ -1857,7 +1831,7 @@ class PRAgent {
       }
     } catch (err) {
       if (audioStatus) audioStatus.textContent = 'Transcription failed';
-      this.showToast('Audio transcription failed: ' + err.message, 'error');
+      console.error('Audio transcription failed:', err);
     }
   }
 
