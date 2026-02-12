@@ -1052,7 +1052,7 @@ class PRAgent {
           <label class="pr-source-checkbox">
             <input type="checkbox" ${source.selected ? 'checked' : ''} data-action="toggle" data-id="${source.id}">
           </label>
-          <div class="pr-source-info" data-action="edit-title" data-id="${source.id}">
+          <div class="pr-source-info" data-action="open-wizard" data-id="${source.id}">
             <div class="pr-source-header">
               <span class="pr-source-type-icon">${typeIcons[source.type] || typeIcons.text}</span>
               <span class="pr-source-title">${this.escapeHtml(source.title)}</span>
@@ -1135,9 +1135,11 @@ class PRAgent {
           e.stopPropagation();
           this.deleteSource(el.dataset.id);
         });
-      } else if (action === 'edit-title') {
+      } else if (action === 'open-wizard') {
         el.addEventListener('click', () => {
-          this.editSourceTitle(el.dataset.id);
+          if (this.wizardManager) {
+            this.wizardManager.open();
+          }
         });
       }
     });
@@ -2302,9 +2304,21 @@ class WizardManager {
   }
 
   open(isEditing = false) {
-    this.isEditing = isEditing;
+    // Auto-detect if we have existing data
+    if (!isEditing && this.data && Object.keys(this.data).length > 0) {
+      this.isEditing = true;
+    } else {
+      this.isEditing = isEditing;
+    }
+    
     this.currentStep = 1;
     this.goToStep(1);
+    
+    // Repopulate fields with existing data
+    if (this.isEditing) {
+      this.populateFields();
+    }
+    
     this.dom.overlay?.classList.add('visible');
     document.body.style.overflow = 'hidden';
   }
