@@ -222,11 +222,15 @@ class PRAgent {
   }
 
   async updateCommandCenterStats() {
-    // Update sources count
-    const sourcesCount = this.sources.length;
-    const sourcesStat = document.getElementById('pr-stat-sources');
-    if (sourcesStat) {
-      sourcesStat.textContent = `${sourcesCount} source${sourcesCount !== 1 ? 's' : ''} ready`;
+    // Update library count - show saved content
+    const libraryStat = document.getElementById('pr-stat-library');
+    if (libraryStat) {
+      const count = this.outputs.length;
+      if (count > 0) {
+        libraryStat.textContent = `${count} item${count !== 1 ? 's' : ''} saved`;
+      } else {
+        libraryStat.textContent = 'No content yet';
+      }
     }
 
     // Update journalists count
@@ -267,8 +271,17 @@ class PRAgent {
     
     switch (action) {
       case 'generate':
-        // Stay on workspace, just focus the generate button
-        document.getElementById('pr-generate-btn')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Scroll to History section to show saved content
+        const historySection = document.querySelector('.pr-history-section');
+        if (historySection) {
+          historySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Highlight the history section briefly
+          historySection.style.transition = 'background 0.3s ease';
+          historySection.style.background = 'rgba(91, 176, 154, 0.1)';
+          setTimeout(() => {
+            historySection.style.background = '';
+          }, 1500);
+        }
         break;
         
       case 'media':
@@ -356,6 +369,28 @@ class PRAgent {
     if (minutes < 60) return `${minutes}m ago`;
     if (hours < 24) return `${hours}h ago`;
     return `${days}d ago`;
+  }
+
+  showSaveConfirmation() {
+    // Create save indicator
+    const indicator = document.createElement('div');
+    indicator.className = 'pr-save-indicator';
+    indicator.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      <span>Saved to Library</span>
+    `;
+    document.body.appendChild(indicator);
+
+    // Animate in
+    setTimeout(() => indicator.classList.add('visible'), 10);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+      indicator.classList.remove('visible');
+      setTimeout(() => indicator.remove(), 300);
+    }, 3000);
   }
 
   async loadData() {
@@ -1491,6 +1526,13 @@ class PRAgent {
   renderHistory() {
     if (!this.dom.historyList) return;
 
+    // Update count badge
+    const countBadge = document.getElementById('pr-history-count');
+    if (countBadge) {
+      countBadge.textContent = this.outputs.length;
+      countBadge.style.display = this.outputs.length > 0 ? 'inline-flex' : 'none';
+    }
+
     if (this.outputs.length === 0) {
       this.dom.historyList.innerHTML = '';
       if (this.dom.historyEmpty) this.dom.historyEmpty.style.display = 'block';
@@ -1503,12 +1545,16 @@ class PRAgent {
 
     this.dom.historyList.innerHTML = sorted.map(output => {
       const date = new Date(output.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const time = new Date(output.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
       const typeLabel = CONTENT_TYPES.find(t => t.id === output.contentType)?.label || output.contentType;
       return `
         <div class="pr-history-item" data-output-id="${output.id}">
           <div class="pr-history-info">
             <span class="pr-history-title">${this.escapeHtml(output.title || 'Untitled')}</span>
-            <span class="pr-history-meta">${typeLabel} / ${date}</span>
+            <span class="pr-history-meta">
+              <span class="pr-history-type">${typeLabel}</span>
+              <span class="pr-history-date">${date} at ${time}</span>
+            </span>
           </div>
           <button class="pr-history-delete" data-history-delete="${output.id}" title="Delete">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1741,6 +1787,9 @@ class PRAgent {
       
       // Update command center activity
       this.updateRecentActivity();
+      
+      // Show save confirmation
+      this.showSaveConfirmation();
 
     } catch (err) {
       console.error('Generation failed:', err);

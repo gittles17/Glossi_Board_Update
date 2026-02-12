@@ -11615,10 +11615,26 @@ a.dropdown-item {
   font: 500 12px var(--font-sans);
   cursor: pointer;
   user-select: none;
+  position: relative;
 }
 
 .pr-history-header:hover {
   color: var(--text-secondary);
+}
+
+.pr-history-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  background: var(--accent-green);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9px;
+  margin-left: auto;
 }
 
 .pr-history-chevron {
@@ -11640,6 +11656,16 @@ a.dropdown-item {
   padding: var(--space-4);
   color: var(--text-dim);
   font-size: 12px;
+}
+
+.pr-history-empty p {
+  margin: 0 0 var(--space-1) 0;
+}
+
+.pr-empty-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.8;
 }
 
 .pr-history-item {
@@ -11673,6 +11699,20 @@ a.dropdown-item {
 .pr-history-meta {
   font: 400 11px var(--font-sans);
   color: var(--text-dim);
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.pr-history-type {
+  color: var(--accent-green);
+  font-weight: 500;
+}
+
+.pr-history-date::before {
+  content: '•';
+  margin-right: var(--space-1);
+  opacity: 0.5;
 }
 
 .pr-history-delete {
@@ -13941,4 +13981,37 @@ a.dropdown-item {
   .pr-command-card-icon {
     font-size: 24px;
   }
+}
+
+/* ============================================
+   SAVE CONFIRMATION INDICATOR
+   ============================================ */
+
+.pr-save-indicator {
+  position: fixed;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  background: var(--accent-green);
+  color: white;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+
+.pr-save-indicator.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pr-save-indicator svg {
+  flex-shrink: 0;
 }

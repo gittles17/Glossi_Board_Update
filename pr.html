@@ -117,12 +117,14 @@
           <svg class="pr-history-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
-          <span>History</span>
+          <span>📚 Content Library</span>
+          <span class="pr-history-badge" id="pr-history-count">0</span>
         </div>
         <div id="pr-history-content">
           <div class="pr-history-list" id="pr-history-list">
             <div class="pr-history-empty" id="pr-history-empty">
-              <p>No outputs yet</p>
+              <p>No saved content yet</p>
+              <p class="pr-empty-hint">Generated content saves automatically</p>
             </div>
           </div>
         </div>
@@ -257,9 +259,9 @@
             <div class="pr-command-center-grid">
               <div class="pr-command-card" data-action="generate">
                 <div class="pr-command-card-icon">📰</div>
-                <h3 class="pr-command-card-title">Generate Content</h3>
-                <p class="pr-command-card-desc">Create press releases, pitches, and social posts</p>
-                <div class="pr-command-card-stat" id="pr-stat-sources">0 sources ready</div>
+                <h3 class="pr-command-card-title">Content Library</h3>
+                <p class="pr-command-card-desc">View and manage all generated content</p>
+                <div class="pr-command-card-stat" id="pr-stat-library">0 items saved</div>
               </div>
 
               <div class="pr-command-card" data-action="media">
