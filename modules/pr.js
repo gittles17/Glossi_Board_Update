@@ -3935,8 +3935,29 @@ class NewsMonitor {
       }
       const data = await response.json();
       if (data.success && data.news && data.news.length > 0) {
-        this.newsHooks = data.news;
+        // Filter out news older than 30 days
+        const now = Date.now();
+        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+        const filteredNews = data.news.filter(item => {
+          const itemDate = new Date(item.date || item.fetched_at);
+          return (now - itemDate.getTime()) < thirtyDaysMs;
+        });
+        
+        // Check if filtered news is all stale (>7 days old)
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+        const hasRecentNews = filteredNews.some(item => {
+          const itemDate = new Date(item.date || item.fetched_at);
+          return (now - itemDate.getTime()) < sevenDaysMs;
+        });
+        
+        this.newsHooks = filteredNews;
         this.renderNews();
+        
+        // Auto-refresh if no recent news (all cached news is >7 days old or empty)
+        if (!hasRecentNews && this.prAgent.apiKey) {
+          console.log('Cached news is stale, auto-refreshing...');
+          setTimeout(() => this.refreshNews(), 1000);
+        }
       } else {
         // No cached news, show empty state
         this.renderNews();
