@@ -14206,54 +14206,17 @@ a.dropdown-item {
   background: var(--bg-secondary);
   border-top: 2px solid var(--border-color);
   z-index: 100;
-  max-height: 400px;
+  padding: var(--space-4);
+  padding-top: var(--space-6);
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
-  transition: max-height 0.3s ease;
 }
 
-.pr-chat-section.collapsed {
-  max-height: 80px;
-}
-
-.pr-chat-section.collapsed .pr-chat-area {
-  display: none;
-}
-
-.pr-chat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
-  flex-shrink: 0;
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.15s ease;
-}
-
-.pr-chat-header:hover {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.pr-chat-header-buttons {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-}
-
-.pr-chat-toggle {
-  width: 16px;
-  height: 16px;
-  transition: transform 0.3s ease;
-}
-
-.pr-chat-section.collapsed .pr-chat-toggle {
-  transform: rotate(180deg);
-}
-
-.pr-icon-btn {
-  width: 24px;
-  height: 24px;
+.pr-clear-chat-btn {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14263,6 +14226,7 @@ a.dropdown-item {
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
+  z-index: 10;
   padding: 0;
 }
 
@@ -14279,37 +14243,29 @@ a.dropdown-item {
   letter-spacing: -0.01em;
 }
 
-.pr-clear-btn {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.pr-clear-btn:hover {
+.pr-clear-chat-btn:hover {
   background: rgba(255, 255, 255, 0.05);
   border-color: var(--border-color);
   color: var(--text-primary);
 }
 
-.pr-chat-area {
-  flex: 0 1 auto;
-  overflow-y: auto;
-  min-height: 0;
-  max-height: 250px;
-  display: none;
+.pr-clear-chat-btn:active {
+  transform: scale(0.95);
 }
 
-.pr-chat-area.has-messages {
-  display: block;
-  min-height: 100px;
+.pr-suggestions-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.pr-suggestions-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .pr-messages {
@@ -14423,8 +14379,6 @@ a.dropdown-item {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border-top: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
 
@@ -14434,7 +14388,7 @@ a.dropdown-item {
   border: 1px solid var(--border-color);
   border-radius: 16px;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;

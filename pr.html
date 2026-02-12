@@ -324,39 +324,25 @@
 
           <!-- Chat Interface for Content Refinement -->
           <div class="pr-chat-section" id="pr-chat-section" style="display:none">
-            <div class="pr-chat-header" id="pr-chat-header">
-              <span class="pr-chat-title">Refine Content</span>
-              <div class="pr-chat-header-buttons">
-                <button class="pr-icon-btn" id="pr-toggle-chat-btn" title="Collapse">
-                  <svg class="pr-chat-toggle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="18 15 12 9 6 15"></polyline>
-                  </svg>
-                </button>
-                <button class="pr-clear-btn" id="pr-clear-chat-btn" title="Clear chat">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <div class="pr-chat-area" id="pr-chat-area">
-              <div class="pr-messages" id="pr-messages">
-                <!-- Messages rendered dynamically -->
-              </div>
-            </div>
+            <!-- Sticky Clear Button -->
+            <button class="pr-clear-chat-btn" id="pr-clear-chat-btn" title="Clear chat history">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+              </svg>
+            </button>
             
-            <!-- Suggested Prompts -->
-            <div class="pr-suggestions" id="pr-suggestions">
-              <button class="pr-suggestion-btn" data-prompt="Make it shorter">Make it shorter</button>
-              <button class="pr-suggestion-btn" data-prompt="Add more technical detail">Add technical detail</button>
-              <button class="pr-suggestion-btn" data-prompt="Change tone to be more confident">More confident tone</button>
-              <button class="pr-suggestion-btn" data-prompt="Emphasize the timing angle">Emphasize timing</button>
+            <!-- Smart Suggestions -->
+            <div class="pr-suggestions-container" id="pr-suggestions-container">
+              <div class="pr-suggestions-label">Suggestions</div>
+              <div class="pr-suggestions" id="pr-suggestions">
+                <!-- Dynamic suggestions rendered here -->
+              </div>
             </div>
 
             <!-- Chat Input -->
             <div class="pr-input-area" id="pr-input-area">
               <div class="pr-input-wrapper">
-                <textarea id="pr-chat-input" class="pr-chat-input" placeholder="Ask me to refine the content..." rows="1"></textarea>
+                <textarea id="pr-chat-input" class="pr-chat-input" placeholder="Refine further..." rows="1"></textarea>
                 <button class="pr-send-btn" id="pr-send-btn" title="Send">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -964,67 +950,23 @@
       // Clear chat button
       if (clearChatBtn) {
         clearChatBtn.addEventListener('click', async (e) => {
-          e.stopPropagation(); // Prevent header click
-          const confirmed = await pr.showConfirm('Clear chat history? This cannot be undone.', 'Clear Chat');
-          if (confirmed) {
-            pr.clearChat();
+          e.stopPropagation();
+          const confirmed = await pr.showConfirm('Clear refinement history? This will regenerate suggestions.', 'Clear History');
+          if (confirmed && pr.currentOutput) {
+            await pr.generateSuggestions();
+            pr.showToast('Suggestions refreshed', 'success');
           }
         });
       }
 
-      // Toggle chat collapse
-      const toggleChatBtn = document.getElementById('pr-toggle-chat-btn');
-      const chatArea = document.getElementById('pr-chat-area');
-      
-      function updateChatAreaVisibility() {
-        const messages = messagesContainer?.querySelectorAll('.pr-message');
-        if (messages && messages.length > 0) {
-          chatArea?.classList.add('has-messages');
-        } else {
-          chatArea?.classList.remove('has-messages');
-        }
-      }
-      
-      if (toggleChatBtn && chatSection) {
-        toggleChatBtn.addEventListener('click', (e) => {
-          e.stopPropagation(); // Prevent header click
-          chatSection.classList.toggle('collapsed');
-          const isCollapsed = chatSection.classList.contains('collapsed');
-          toggleChatBtn.title = isCollapsed ? 'Expand' : 'Collapse';
-          localStorage.setItem('pr_chat_collapsed', isCollapsed);
-        });
-        
-        // Restore collapsed state
-        const savedCollapsed = localStorage.getItem('pr_chat_collapsed') === 'true';
-        if (savedCollapsed) {
-          chatSection.classList.add('collapsed');
-          toggleChatBtn.title = 'Expand';
-        }
-      }
-      
-      // Make header clickable to toggle (except for buttons)
-      const chatHeader = document.getElementById('pr-chat-header');
-      if (chatHeader && chatSection) {
-        chatHeader.addEventListener('click', (e) => {
-          // Only toggle if clicking header itself, not buttons
-          if (e.target === chatHeader || e.target.closest('.pr-chat-title')) {
-            chatSection.classList.toggle('collapsed');
-            const isCollapsed = chatSection.classList.contains('collapsed');
-            if (toggleChatBtn) toggleChatBtn.title = isCollapsed ? 'Expand' : 'Collapse';
-            localStorage.setItem('pr_chat_collapsed', isCollapsed);
-          }
-        });
-      }
-
-      // Suggestion buttons
+      // Suggestion buttons - one-click refinement
       if (suggestionsContainer) {
-        suggestionsContainer.addEventListener('click', (e) => {
+        suggestionsContainer.addEventListener('click', async (e) => {
           const btn = e.target.closest('.pr-suggestion-btn');
           if (btn && chatInput) {
-            const prompt = btn.dataset.prompt;
-            chatInput.value = prompt;
-            chatInput.focus();
-            pr.sendChatMessage();
+            const suggestion = btn.dataset.suggestion;
+            chatInput.value = suggestion;
+            await pr.sendChatMessage();
           }
         });
       }
@@ -1032,11 +974,16 @@
       // Get generated element once
       const generatedEl = document.getElementById('pr-workspace-generated');
       
-      // Show chat when content is generated
-      const observer2 = new MutationObserver(() => {
+      // Show chat and generate suggestions when content is generated
+      const observer2 = new MutationObserver(async () => {
         if (generatedEl && chatSection) {
           const isVisible = generatedEl.style.display !== 'none';
           chatSection.style.display = isVisible ? 'flex' : 'none';
+          
+          // Generate initial suggestions when content first appears
+          if (isVisible && pr.currentOutput) {
+            await pr.generateSuggestions();
+          }
         }
       });
       if (generatedEl) {

@@ -2511,30 +2511,13 @@ class PRAgent {
     const message = input?.value?.trim();
     if (!message || !this.currentOutput) return;
 
-    if (!this.apiKey) {
-      this.showToast('Anthropic API key required. Set it in Dashboard Settings.', 'error');
-      return;
-    }
-
-    // Initialize chat history if not exists
-    if (!this.currentOutput.chatHistory) {
-      this.currentOutput.chatHistory = [];
-    }
-
-    // Add user message
-    this.currentOutput.chatHistory.push({
-      role: 'user',
-      content: message,
-      timestamp: Date.now()
-    });
-
-    // Clear input
+    // Clear input and show loading
     input.value = '';
     input.style.height = 'auto';
-
-    // Render messages
-    this.renderChatMessages();
-    this.showTypingIndicator();
+    input.disabled = true;
+    
+    const sendBtn = document.getElementById('pr-send-btn');
+    if (sendBtn) sendBtn.disabled = true;
 
     try {
       // Build context
@@ -2554,19 +2537,9 @@ VOICE RULES (from PR system prompt):
 CURRENT CONTEXT:
 ${context}
 
-When user asks for changes:
-1. Apply the requested refinement
-2. Return the COMPLETE refined version wrapped in <content> tags
-3. Briefly explain what you changed
-4. Suggest related improvements if relevant
+USER REQUEST: ${message}
 
-Be concise. Match the original style (Linear/Cursor voice).`;
-
-      // Build conversation history
-      const messages = this.currentOutput.chatHistory.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
+Apply the requested refinement and return ONLY the complete refined content (no explanations, no tags, just the refined text).`;
 
       // Call API via proxy
       const response = await this.apiCall('/api/chat', {
@@ -2578,50 +2551,109 @@ Be concise. Match the original style (Linear/Cursor voice).`;
           model: 'claude-sonnet-4-20250514',
           max_tokens: 4096,
           system: systemPrompt,
-          messages: messages
+          messages: [{ role: 'user', content: message }]
         })
       });
 
-      const aiMessage = response.content[0].text;
+      const refinedContent = response.content[0].text.trim();
 
-      // Add AI response
-      this.currentOutput.chatHistory.push({
-        role: 'assistant',
-        content: aiMessage,
-        timestamp: Date.now()
-      });
-
-      this.hideTypingIndicator();
-      this.renderChatMessages();
-
-      // Check if AI provided updated content (wrapped in <content> tags)
-      const contentMatch = aiMessage.match(/<content>([\s\S]*?)<\/content>/);
-      if (contentMatch) {
-        const updatedContent = contentMatch[1].trim();
-        this.currentOutput.content = updatedContent;
-        this.dom.generatedContent.innerHTML = this.formatContent(updatedContent);
-        this.showToast('Content updated', 'success');
-      }
-
+      // Update content directly in workspace
+      this.currentOutput.content = refinedContent;
+      this.dom.generatedContent.innerHTML = this.formatContent(refinedContent);
+      
       // Save
       await this.saveOutputs();
 
-      // Scroll to bottom
-      const messagesContainer = document.getElementById('pr-messages');
-      if (messagesContainer) {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      }
+      // Generate new suggestions
+      await this.generateSuggestions();
+
+      this.showToast('Content updated', 'success');
     } catch (error) {
-      console.error('Error in chat:', error);
-      this.hideTypingIndicator();
-      this.currentOutput.chatHistory.push({
-        role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
-        timestamp: Date.now()
-      });
-      this.renderChatMessages();
-      this.showToast('Chat error: ' + error.message, 'error');
+      console.error('Error in refinement:', error);
+      this.showToast('Refinement error: ' + error.message, 'error');
+    } finally {
+      input.disabled = false;
+      if (sendBtn) sendBtn.disabled = false;
+      input.focus();
     }
+  }
+
+  async generateSuggestions() {
+    if (!this.currentOutput) return;
+
+    const container = document.getElementById('pr-suggestions');
+    if (!container) return;
+
+    try {
+      const context = this.buildChatContext();
+      
+      const systemPrompt = `You are analyzing PR content for Glossi. Generate 4-5 specific, actionable refinement suggestions.
+
+CONTEXT:
+${context}
+
+Return ONLY a JSON array of suggestions in this format:
+["suggestion text 1", "suggestion text 2", ...]
+
+Suggestion types to consider:
+1. Link to active news hooks (if available in sources)
+2. Tighten/shorten specific sections
+3. Add missing Glossi metrics or specifics
+4. Adjust tone (more direct, more confident)
+5. Emphasize timing/positioning angles
+6. Remove weak/generic language
+
+Each suggestion should be:
+- Specific and actionable (not generic like "improve tone")
+- 3-7 words max
+- Directly applicable with one click
+
+Examples of good suggestions:
+- "Tie to Nike launches announcement"
+- "Shorten opening by 30%"
+- "Add 50x rendering speed metric"
+- "Remove 'game-changing' language"
+- "Emphasize world models timing"
+
+Return ONLY the JSON array, nothing else.`;
+
+      const response = await this.apiCall('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: 'Generate refinement suggestions for this content.' }]
+        })
+      });
+
+      const responseText = response.content[0].text.trim();
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      const suggestions = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+
+      // Render suggestions
+      container.innerHTML = suggestions.map(suggestion => 
+        `<button class="pr-suggestion-btn" data-suggestion="${this.escapeHtml(suggestion)}">${this.escapeHtml(suggestion)}</button>`
+      ).join('');
+
+    } catch (error) {
+      console.error('Error generating suggestions:', error);
+      // Fallback to default suggestions
+      container.innerHTML = `
+        <button class="pr-suggestion-btn" data-suggestion="Make more direct">Make more direct</button>
+        <button class="pr-suggestion-btn" data-suggestion="Shorten by 20%">Shorten by 20%</button>
+        <button class="pr-suggestion-btn" data-suggestion="Add specific metrics">Add specific metrics</button>
+      `;
+    }
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   buildChatContext() {
@@ -2650,119 +2682,19 @@ Be concise. Match the original style (Linear/Cursor voice).`;
   }
 
   renderChatMessages() {
-    const container = document.getElementById('pr-messages');
-    const suggestions = document.getElementById('pr-suggestions');
-    if (!container) return;
-
-    const messages = this.currentOutput?.chatHistory || [];
-
-    // Show/hide suggestions
-    if (suggestions) {
-      suggestions.style.display = messages.length === 0 ? 'flex' : 'none';
-    }
-
-    // Render messages
-    if (messages.length === 0) {
-      container.innerHTML = '';
-      return;
-    }
-
-    container.innerHTML = messages.map((msg, index) => {
-      const roleClass = msg.role === 'user' ? 'pr-message-user' : 'pr-message-assistant';
-      const copyButton = msg.role === 'assistant' ? `
-        <div class="pr-message-actions">
-          <button class="pr-copy-btn" data-message-index="${index}" title="Copy to clipboard">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-            Copy
-          </button>
-        </div>
-      ` : '';
-
-      // Simple markdown-like formatting
-      let formattedContent = this.escapeHtml(msg.content);
-      // Remove <content> tags if present
-      formattedContent = formattedContent.replace(/&lt;content&gt;|&lt;\/content&gt;/g, '');
-      // Convert line breaks
-      formattedContent = formattedContent.replace(/\n/g, '<br>');
-
-      return `
-        <div class="pr-message ${roleClass}">
-          <div class="pr-message-content">
-            ${formattedContent}
-            ${copyButton}
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    // Add copy button listeners
-    container.querySelectorAll('.pr-copy-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const index = parseInt(btn.dataset.messageIndex);
-        const message = messages[index];
-        if (message) {
-          let textToCopy = message.content;
-          // Remove content tags if present
-          textToCopy = textToCopy.replace(/<content>|<\/content>/g, '');
-          navigator.clipboard.writeText(textToCopy);
-          this.showToast('Copied to clipboard', 'success');
-        }
-      });
-    });
-    
-    // Update chat area visibility and auto-expand
-    const chatArea = document.getElementById('pr-chat-area');
-    const chatSection = document.getElementById('pr-chat-section');
-    if (chatArea && chatSection) {
-      if (messages.length > 0) {
-        chatArea.classList.add('has-messages');
-        // Auto-expand when new messages arrive
-        chatSection.classList.remove('collapsed');
-        const toggleBtn = document.getElementById('pr-toggle-chat-btn');
-        if (toggleBtn) toggleBtn.title = 'Collapse';
-      } else {
-        chatArea.classList.remove('has-messages');
-      }
-    }
+    // No longer needed - content updates directly in workspace
   }
 
   showTypingIndicator() {
-    const container = document.getElementById('pr-messages');
-    if (!container) return;
-
-    const indicator = document.createElement('div');
-    indicator.className = 'pr-message pr-message-assistant pr-message-loading';
-    indicator.id = 'pr-typing-indicator';
-    indicator.innerHTML = `
-      <div class="pr-message-content">
-        <div class="pr-typing-indicator">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-      </div>
-    `;
-    container.appendChild(indicator);
-    container.scrollTop = container.scrollHeight;
+    // No longer needed - refinement happens instantly
   }
 
   hideTypingIndicator() {
-    const indicator = document.getElementById('pr-typing-indicator');
-    if (indicator) {
-      indicator.remove();
-    }
+    // No longer needed - refinement happens instantly
   }
 
   clearChat() {
-    if (this.currentOutput && this.currentOutput.chatHistory) {
-      this.currentOutput.chatHistory = [];
-      this.renderChatMessages();
-      this.saveOutputs();
-      this.showToast('Chat cleared', 'success');
-    }
+    // No longer needed - no chat history
   }
 }
 
