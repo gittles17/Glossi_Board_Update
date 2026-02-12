@@ -836,6 +836,15 @@
           this.leftPanel = document.getElementById('pr-sources-panel');
           this.rightPanel = document.getElementById('pr-strategy-panel');
           
+          console.log('PanelResizer initialized:', {
+            leftResizer: this.leftResizer,
+            rightResizer: this.rightResizer,
+            leftPanel: this.leftPanel,
+            rightPanel: this.rightPanel,
+            leftPanelWidth: this.leftPanel?.offsetWidth,
+            rightPanelWidth: this.rightPanel?.offsetWidth
+          });
+          
           this.init();
           this.loadSavedWidths();
         }
@@ -854,6 +863,7 @@
         
         startResize(e, side) {
           e.preventDefault();
+          console.log('startResize called:', side, 'clientX:', e.clientX);
           
           const resizer = side === 'left' ? this.leftResizer : this.rightResizer;
           resizer.classList.add('resizing');
@@ -864,6 +874,8 @@
             ? this.leftPanel.offsetWidth 
             : this.rightPanel.offsetWidth;
           
+          console.log('Start width:', startWidth, 'at X:', startX);
+          
           const onMouseMove = (e) => {
             const delta = side === 'left' ? e.clientX - startX : startX - e.clientX;
             const newWidth = startWidth + delta;
@@ -872,9 +884,13 @@
             const minWidth = parseInt(getComputedStyle(panel).minWidth);
             const maxWidth = parseInt(getComputedStyle(panel).maxWidth);
             
+            console.log('onMouseMove:', { delta, newWidth, minWidth, maxWidth, passes: newWidth >= minWidth && newWidth <= maxWidth });
+            
             if (newWidth >= minWidth && newWidth <= maxWidth) {
               const cssVar = side === 'left' ? '--panel-left-width' : '--panel-right-width';
               document.documentElement.style.setProperty(cssVar, `${newWidth}px`);
+              console.log('Set', cssVar, 'to', `${newWidth}px`);
+              console.log('Current computed:', getComputedStyle(document.documentElement).getPropertyValue(cssVar));
             }
           };
           
@@ -912,13 +928,20 @@
         loadSavedWidths() {
           try {
             const saved = localStorage.getItem('pr_panel_widths');
+            console.log('loadSavedWidths:', saved);
             if (saved) {
               const { left, right } = JSON.parse(saved);
-              if (left) document.documentElement.style.setProperty('--panel-left-width', left);
-              if (right) document.documentElement.style.setProperty('--panel-right-width', right);
+              if (left) {
+                document.documentElement.style.setProperty('--panel-left-width', left);
+                console.log('Loaded left width:', left);
+              }
+              if (right) {
+                document.documentElement.style.setProperty('--panel-right-width', right);
+                console.log('Loaded right width:', right);
+              }
             }
           } catch (e) {
-            // Ignore errors
+            console.error('Error loading saved widths:', e);
           }
         }
       }

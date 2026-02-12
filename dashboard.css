@@ -11204,6 +11204,7 @@ a.dropdown-item {
 
 .pr-layout {
   display: flex;
+  flex-direction: row;
   flex: 1;
   overflow: hidden;
 }
