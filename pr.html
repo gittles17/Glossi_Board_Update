@@ -228,7 +228,7 @@
             <p class="pr-empty-title">PR Agent</p>
             <p class="pr-empty-desc">To get started:</p>
             <ol class="pr-empty-steps" id="pr-empty-steps">
-              <li id="pr-step-key">Set your Anthropic API key in Settings</li>
+              <li id="pr-step-key">Anthropic API key (set in Dashboard Settings)</li>
               <li id="pr-step-source">Add a source using the left panel</li>
               <li id="pr-step-select">Select a content type above, then click Generate</li>
             </ol>
@@ -447,8 +447,8 @@
             Getting Started
           </button>
           <div class="pr-help-section-content">
-            <p class="pr-help-step-label">Step 1: Configure your API key</p>
-            <p>Click the Settings icon in the nav bar. Enter your Anthropic API key (required for generation) and optionally your OpenAI key (required for audio transcription). These are the same keys used by the main dashboard.</p>
+            <p class="pr-help-step-label">Step 1: Confirm your API key</p>
+            <p>The PR Agent uses the same Anthropic API key configured on the main Dashboard. Open Settings on this page to verify the key is detected. If it says "Not set," go to the Dashboard, open Settings there, and save your key.</p>
             <p class="pr-help-step-label">Step 2: Add your first source</p>
             <p>Click <strong>+ Add Source</strong> in the left panel. Paste text containing the facts, metrics, and context you want the agent to reference. Give it a descriptive title.</p>
             <p class="pr-help-step-label">Step 3: Select sources and content type</p>
@@ -723,21 +723,22 @@
       <div class="modal-body">
         <div class="settings-section">
           <h3>AI Configuration</h3>
-          <div class="notes-input-section">
-            <label for="settings-api-key">Anthropic API Key</label>
-            <input type="password" id="settings-api-key" class="input" placeholder="sk-ant-...">
-            <p class="input-hint">Required for content generation</p>
-          </div>
-          <div class="notes-input-section">
-            <label for="settings-openai-key">OpenAI API Key</label>
-            <input type="password" id="settings-openai-key" class="input" placeholder="sk-proj-...">
-            <p class="input-hint">Required for audio transcription</p>
+          <p class="input-hint" style="margin-bottom: var(--space-3)">API keys are shared across all Glossi pages. Configure them on the <a href="index.html" style="color: var(--accent-green)">Dashboard</a>.</p>
+          <div class="pr-settings-status">
+            <div class="pr-settings-row">
+              <span class="pr-settings-label-text">Anthropic API Key</span>
+              <span class="pr-settings-badge" id="pr-anthropic-status">Not set</span>
+            </div>
+            <div class="pr-settings-row">
+              <span class="pr-settings-label-text">OpenAI API Key</span>
+              <span class="pr-settings-badge" id="pr-openai-status">Not set</span>
+            </div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="settings-cancel">Cancel</button>
-        <button class="btn btn-primary" id="settings-save">Save Settings</button>
+        <a href="index.html" class="btn btn-primary">Open Dashboard Settings</a>
+        <button class="btn btn-secondary" id="settings-cancel">Close</button>
       </div>
     </div>
   </div>
@@ -834,19 +835,26 @@
         dropdownMenu.addEventListener('click', (e) => e.stopPropagation());
       }
 
-      // Settings modal
+      // Settings modal (read-only, keys are managed on dashboard)
       const settingsModal = document.getElementById('settings-modal');
       const settingsClose = document.getElementById('settings-modal-close');
       const settingsCancel = document.getElementById('settings-cancel');
-      const settingsSave = document.getElementById('settings-save');
-      const apiKeyInput = document.getElementById('settings-api-key');
-      const openaiKeyInput = document.getElementById('settings-openai-key');
 
       function openSettings() {
+        const anthropicBadge = document.getElementById('pr-anthropic-status');
+        const openaiBadge = document.getElementById('pr-openai-status');
         try {
           const settings = JSON.parse(localStorage.getItem('glossi_settings') || '{}');
-          if (apiKeyInput && settings.apiKey) apiKeyInput.value = settings.apiKey;
-          if (openaiKeyInput && settings.openaiApiKey) openaiKeyInput.value = settings.openaiApiKey;
+          if (anthropicBadge) {
+            const hasKey = settings.apiKey && settings.apiKey.length > 0;
+            anthropicBadge.textContent = hasKey ? 'Connected' : 'Not set';
+            anthropicBadge.classList.toggle('connected', hasKey);
+          }
+          if (openaiBadge) {
+            const hasKey = settings.openaiApiKey && settings.openaiApiKey.length > 0;
+            openaiBadge.textContent = hasKey ? 'Connected' : 'Not set';
+            openaiBadge.classList.toggle('connected', hasKey);
+          }
         } catch {}
         settingsModal?.classList.add('visible');
       }
@@ -861,22 +869,6 @@
       settingsCancel?.addEventListener('click', () => settingsModal?.classList.remove('visible'));
       settingsModal?.addEventListener('click', (e) => {
         if (e.target === settingsModal) settingsModal.classList.remove('visible');
-      });
-
-      settingsSave?.addEventListener('click', () => {
-        const key = apiKeyInput?.value.trim() || '';
-        const openaiKey = openaiKeyInput?.value.trim() || '';
-        try {
-          const existing = JSON.parse(localStorage.getItem('glossi_settings') || '{}');
-          existing.apiKey = key;
-          existing.openaiApiKey = openaiKey;
-          localStorage.setItem('glossi_settings', JSON.stringify(existing));
-        } catch {}
-        pr.apiKey = key;
-        pr.openaiApiKey = openaiKey;
-        pr.updateGenerateButton();
-        settingsModal?.classList.remove('visible');
-        pr.showToast('Settings saved');
       });
     });
   </script>

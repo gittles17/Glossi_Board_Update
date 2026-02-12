@@ -266,7 +266,7 @@ class PRAgent {
           const hasApiKey = this.apiKey && this.apiKey.length > 0;
           const selectedSources = this.sources.filter(s => s.selected);
           if (!hasApiKey) {
-            this.showToast('Set your Anthropic API key in Settings first', 'error');
+            this.showToast('Set your Anthropic API key in Dashboard Settings first', 'error');
           } else if (selectedSources.length === 0) {
             this.showToast('Select at least one source to generate content', 'error');
           }
@@ -789,7 +789,7 @@ class PRAgent {
     if (hint && hintText) {
       if (!hasApiKey) {
         hint.style.display = 'flex';
-        hintText.textContent = 'Add your Anthropic API key in Settings to enable generation.';
+        hintText.textContent = 'Anthropic API key not detected. Set it in Dashboard Settings, then refresh this page.';
       } else if (selectedSources.length === 0 && this.sources.length > 0) {
         hint.style.display = 'flex';
         hintText.textContent = 'Select at least one source to generate content.';
