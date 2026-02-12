@@ -264,9 +264,38 @@
         <!-- Content area -->
         <div class="pr-workspace-content" id="pr-workspace-content">
           <!-- Empty state -->
-          <div class="pr-workspace-empty" id="pr-workspace-empty">
-            <div class="pr-workspace-instructions">
-              <p>Select sources and click Generate to create PR content</p>
+          <div class="pr-workspace-empty pr-command-center" id="pr-workspace-empty">
+            <div class="pr-command-center-header">
+              <h2 class="pr-command-center-title">Dashboard</h2>
+            </div>
+
+            <div class="pr-command-list">
+              <div class="pr-command-item pr-item-green" data-action="generate">
+                <h3 class="pr-command-title">Content Library</h3>
+                <span class="pr-command-stat" id="pr-stat-library">0 items saved</span>
+              </div>
+
+              <div class="pr-command-item pr-item-blue" data-action="media">
+                <h3 class="pr-command-title">Media List</h3>
+                <span class="pr-command-stat" id="pr-stat-journalists">0 journalists saved</span>
+              </div>
+
+              <div class="pr-command-item pr-item-purple" data-action="calendar">
+                <h3 class="pr-command-title">Calendar</h3>
+                <span class="pr-command-stat" id="pr-stat-calendar">0 items scheduled</span>
+              </div>
+
+              <div class="pr-command-item pr-item-orange" data-action="news">
+                <h3 class="pr-command-title">News Hooks</h3>
+                <span class="pr-command-stat" id="pr-stat-news">Check for updates</span>
+              </div>
+            </div>
+
+            <div class="pr-articles-section" id="pr-articles-section">
+              <h3 class="pr-articles-heading">Recent Coverage</h3>
+              <div class="pr-articles-list" id="pr-articles-list">
+                <div class="pr-articles-loading">Loading articles...</div>
+              </div>
             </div>
           </div>
 

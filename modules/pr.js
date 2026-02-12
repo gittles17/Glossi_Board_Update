@@ -213,7 +213,7 @@ class PRAgent {
     await this.updateCommandCenterStats();
     
     // Setup card click handlers
-    document.querySelectorAll('.pr-command-card').forEach(card => {
+    document.querySelectorAll('.pr-command-item').forEach(card => {
       card.addEventListener('click', () => {
         const action = card.dataset.action;
         this.handleCommandCardClick(action);
@@ -274,47 +274,79 @@ class PRAgent {
     
     switch (action) {
       case 'generate':
-        // Scroll to History section to show saved content
-        const historySection = document.querySelector('.pr-history-section');
-        if (historySection) {
-          historySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          // Highlight the history section briefly
-          historySection.style.transition = 'background 0.3s ease';
-          historySection.style.background = 'rgba(91, 176, 154, 0.1)';
-          setTimeout(() => {
-            historySection.style.background = '';
-          }, 1500);
+        // Scroll to Content Library section to show saved content
+        if (isMobile) {
+          const mobileSourcesTab = document.querySelector('.pr-mobile-tab[data-tab="sources"]');
+          if (mobileSourcesTab) mobileSourcesTab.click();
         }
+        setTimeout(() => {
+          const librarySection = document.querySelector('.pr-library-section');
+          if (librarySection) {
+            librarySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Highlight the library section briefly
+            librarySection.style.transition = 'background 0.3s ease';
+            librarySection.style.background = 'rgba(91, 176, 154, 0.1)';
+            setTimeout(() => {
+              librarySection.style.background = '';
+            }, 1500);
+          }
+        }, isMobile ? 300 : 0);
         break;
         
       case 'media':
-        const mediaTab = document.querySelector('.pr-left-tab[data-tab="media"]');
-        if (mediaTab) mediaTab.click();
+        // Expand Media & Calendar section and scroll to it
         if (isMobile) {
-          const mobileMediaTab = document.querySelector('.pr-mobile-tab[data-tab="media"]');
-          if (mobileMediaTab) mobileMediaTab.click();
+          const mobileSourcesTab = document.querySelector('.pr-mobile-tab[data-tab="sources"]');
+          if (mobileSourcesTab) mobileSourcesTab.click();
         }
+        setTimeout(() => {
+          const secondaryToggle = document.getElementById('pr-secondary-toggle');
+          const secondaryContent = document.getElementById('pr-secondary-content');
+          if (secondaryToggle && secondaryContent && secondaryContent.style.display === 'none') {
+            secondaryToggle.click();
+          }
+          setTimeout(() => {
+            const secondarySection = document.querySelector('.pr-secondary-section');
+            if (secondarySection) {
+              secondarySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }, 200);
+        }, isMobile ? 300 : 0);
         break;
         
       case 'calendar':
-        const calendarTab = document.querySelector('.pr-left-tab[data-tab="calendar"]');
-        if (calendarTab) calendarTab.click();
+        // Expand Media & Calendar section and scroll to calendar
         if (isMobile) {
-          const mobileCalendarTab = document.querySelector('.pr-mobile-tab[data-tab="calendar"]');
-          if (mobileCalendarTab) mobileCalendarTab.click();
+          const mobileSourcesTab = document.querySelector('.pr-mobile-tab[data-tab="sources"]');
+          if (mobileSourcesTab) mobileSourcesTab.click();
         }
+        setTimeout(() => {
+          const secondaryToggle = document.getElementById('pr-secondary-toggle');
+          const secondaryContent = document.getElementById('pr-secondary-content');
+          if (secondaryToggle && secondaryContent && secondaryContent.style.display === 'none') {
+            secondaryToggle.click();
+          }
+          setTimeout(() => {
+            const calendarSection = document.querySelector('.pr-calendar-header');
+            if (calendarSection) {
+              calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }, 200);
+        }, isMobile ? 300 : 0);
         break;
         
       case 'news':
-        // Switch to strategy view
+        // Scroll to news hooks section (now in left panel)
         if (isMobile) {
-          const mobileStrategyTab = document.querySelector('.pr-mobile-tab[data-tab="strategy"]');
-          if (mobileStrategyTab) mobileStrategyTab.click();
+          const mobileSourcesTab = document.querySelector('.pr-mobile-tab[data-tab="sources"]');
+          if (mobileSourcesTab) mobileSourcesTab.click();
         }
-        // Scroll to news section
         setTimeout(() => {
-          document.querySelector('.pr-news-hooks-section')?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+          const newsSection = document.querySelector('.pr-news-hooks-section');
+          if (newsSection) {
+            newsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, isMobile ? 300 : 0);
         break;
     }
   }
