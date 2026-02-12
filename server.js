@@ -971,10 +971,10 @@ app.delete('/api/pr/calendar/:id', async (req, res) => {
 // Refresh news hooks (Claude web search)
 app.post('/api/pr/news-hooks', async (req, res) => {
   try {
-    const { apiKey } = req.body;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     
     if (!apiKey) {
-      return res.status(400).json({ success: false, error: 'API key required' });
+      return res.status(500).json({ success: false, error: 'Anthropic API key not configured in environment variables' });
     }
     
     const newsPrompt = `Search for news from the past 7 days about:

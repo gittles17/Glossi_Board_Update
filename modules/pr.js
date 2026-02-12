@@ -3954,7 +3954,7 @@ class NewsMonitor {
         this.renderNews();
         
         // Auto-refresh if no recent news (all cached news is >7 days old or empty)
-        if (!hasRecentNews && this.prAgent.apiKey) {
+        if (!hasRecentNews) {
           console.log('Cached news is stale, auto-refreshing...');
           setTimeout(() => this.refreshNews(), 1000);
         }
@@ -3970,11 +3970,6 @@ class NewsMonitor {
   }
 
   async refreshNews() {
-    if (!this.prAgent.apiKey) {
-      this.prAgent.showToast('Anthropic API key required. Set it in Dashboard Settings.', 'error');
-      return;
-    }
-
     // Show loading state
     if (this.dom.fetchNewsBtn) {
       this.dom.fetchNewsBtn.disabled = true;
@@ -3988,8 +3983,7 @@ class NewsMonitor {
     try {
       const response = await fetch('/api/pr/news-hooks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: this.prAgent.apiKey })
+        headers: { 'Content-Type': 'application/json' }
       });
 
       const data = await response.json();
