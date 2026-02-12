@@ -219,6 +219,9 @@ class PRAgent {
         this.handleCommandCardClick(action);
       });
     });
+    
+    // Setup article feed
+    await this.setupArticleFeed();
   }
 
   async updateCommandCenterStats() {
@@ -337,6 +340,90 @@ class PRAgent {
       indicator.classList.remove('visible');
       setTimeout(() => indicator.remove(), 300);
     }, 3000);
+  }
+
+  async setupArticleFeed() {
+    const articlesList = document.getElementById('pr-articles-list');
+    if (!articlesList) return;
+
+    // Check if we need to fetch fresh articles
+    const lastFetch = localStorage.getItem('pr_articles_last_fetch');
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+
+    if (!lastFetch || (now - parseInt(lastFetch)) > oneDayMs) {
+      // Fetch fresh articles
+      await this.fetchArticles();
+    } else {
+      // Display cached articles
+      await this.displayCachedArticles();
+    }
+  }
+
+  async fetchArticles() {
+    const articlesList = document.getElementById('pr-articles-list');
+    if (!articlesList) return;
+
+    if (!this.apiKey) {
+      articlesList.innerHTML = '<div class="pr-articles-loading">API key required</div>';
+      return;
+    }
+
+    articlesList.innerHTML = '<div class="pr-articles-loading">Fetching articles...</div>';
+
+    try {
+      const response = await this.apiCall('/api/pr/articles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: this.apiKey })
+      });
+
+      if (response.success && response.articles) {
+        // Update last fetch timestamp
+        localStorage.setItem('pr_articles_last_fetch', Date.now().toString());
+        this.renderArticles(response.articles);
+      } else {
+        articlesList.innerHTML = '<div class="pr-articles-loading">No articles found</div>';
+      }
+    } catch (error) {
+      console.error('Error fetching articles:', error);
+      articlesList.innerHTML = '<div class="pr-articles-loading">Error loading articles</div>';
+    }
+  }
+
+  async displayCachedArticles() {
+    const articlesList = document.getElementById('pr-articles-list');
+    if (!articlesList) return;
+
+    try {
+      const response = await this.apiCall('/api/pr/articles');
+      
+      if (response.success && response.articles && response.articles.length > 0) {
+        this.renderArticles(response.articles);
+      } else {
+        articlesList.innerHTML = '<div class="pr-articles-loading">No articles yet</div>';
+      }
+    } catch (error) {
+      console.error('Error loading cached articles:', error);
+      articlesList.innerHTML = '<div class="pr-articles-loading">Error loading articles</div>';
+    }
+  }
+
+  renderArticles(articles) {
+    const articlesList = document.getElementById('pr-articles-list');
+    if (!articlesList) return;
+
+    if (!articles || articles.length === 0) {
+      articlesList.innerHTML = '<div class="pr-articles-loading">No articles found</div>';
+      return;
+    }
+
+    articlesList.innerHTML = articles.map(article => `
+      <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="pr-article-item">
+        <span class="pr-article-outlet">${article.outlet}</span>
+        <span class="pr-article-title">${article.title}</span>
+      </a>
+    `).join('');
   }
 
   setupApiKeyMonitoring() {

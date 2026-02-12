@@ -172,6 +172,20 @@ async function initDatabase() {
             fetched_at TIMESTAMP DEFAULT NOW()
           )
         `);
+        
+        // Articles feed
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS pr_articles (
+            id SERIAL PRIMARY KEY,
+            title TEXT NOT NULL,
+            outlet TEXT NOT NULL,
+            url TEXT NOT NULL,
+            summary TEXT,
+            published_date TEXT,
+            category TEXT,
+            fetched_at TIMESTAMP DEFAULT NOW()
+          )
+        `);
       })(),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Database init timed out after 8s')), 8000)
@@ -952,6 +966,98 @@ app.get('/api/pr/news-hooks', async (req, res) => {
     res.json({ success: true, news: result.rows });
   } catch (error) {
     console.error('Error loading news hooks:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Fetch fresh articles (Claude web search)
+app.post('/api/pr/articles', async (req, res) => {
+  try {
+    const { apiKey } = req.body;
+    
+    if (!apiKey) {
+      return res.status(400).json({ success: false, error: 'API key required' });
+    }
+    
+    const articlesPrompt = `Search major tech publications (TechCrunch, The Verge, Wired, VentureBeat, MIT Technology Review, Ars Technica, Protocol, Fast Company) for recent articles from the past 7 days about:
+
+1. Glossi brand mentions or AI product visualization tools
+2. AI-powered 3D rendering, product visualization, and e-commerce technology
+3. Enterprise creative AI adoption, brand consistency, and marketing technology
+
+Return the top 5 most relevant articles as JSON:
+{
+  "articles": [
+    {
+      "title": "Article headline",
+      "outlet": "Publication name",
+      "url": "https://...",
+      "summary": "One sentence description",
+      "published_date": "2026-02-12",
+      "category": "brand OR industry OR opportunity"
+    }
+  ]
+}
+
+Categories:
+- "brand" = mentions Glossi or similar tools
+- "industry" = AI/3D/visualization tech news
+- "opportunity" = trending topics Glossi could comment on
+
+Only include articles from major tech publications. Maximum 5 results.`;
+
+    const articlesResponse = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: 'claude-opus-4-20250514',
+      max_tokens: 4096,
+      system: 'You are a research assistant for Glossi, an AI-native 3D product visualization platform. Always return valid JSON.',
+      messages: [{ role: 'user', content: articlesPrompt }]
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      }
+    });
+    
+    const articlesText = articlesResponse.data.content?.[0]?.text || '{}';
+    let articlesData;
+    try {
+      const jsonMatch = articlesText.match(/\{[\s\S]*\}/);
+      articlesData = jsonMatch ? JSON.parse(jsonMatch[0]) : { articles: [] };
+    } catch {
+      articlesData = { articles: [] };
+    }
+    
+    if (useDatabase) {
+      // Clear old articles and insert new
+      await pool.query('DELETE FROM pr_articles');
+      
+      for (const item of (articlesData.articles || [])) {
+        await pool.query(`
+          INSERT INTO pr_articles (title, outlet, url, summary, published_date, category, fetched_at)
+          VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        `, [item.title, item.outlet, item.url, item.summary, item.published_date, item.category]);
+      }
+    }
+    
+    res.json({ success: true, articles: articlesData.articles || [] });
+  } catch (error) {
+    console.error('Error fetching articles:', error);
+    res.status(500).json({ success: false, error: error.response?.data?.error?.message || error.message });
+  }
+});
+
+// Get cached articles
+app.get('/api/pr/articles', async (req, res) => {
+  try {
+    if (!useDatabase) {
+      return res.json({ success: true, articles: [] });
+    }
+    
+    const result = await pool.query('SELECT * FROM pr_articles ORDER BY fetched_at DESC LIMIT 5');
+    res.json({ success: true, articles: result.rows });
+  } catch (error) {
+    console.error('Error loading articles:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
