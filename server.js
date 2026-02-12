@@ -977,6 +977,19 @@ app.post('/api/pr/news-hooks', async (req, res) => {
       return res.status(500).json({ success: false, error: 'Anthropic API key not configured in environment variables' });
     }
     
+    // Clean up old news hooks before fetching new ones
+    if (useDatabase) {
+      try {
+        await pool.query(`
+          DELETE FROM pr_news_hooks 
+          WHERE date < NOW() - INTERVAL '30 days'
+          AND fetched_at < NOW() - INTERVAL '30 days'
+        `);
+      } catch (cleanupError) {
+        console.error('Error cleaning up old news:', cleanupError);
+      }
+    }
+    
     const newsPrompt = `Search for news from the past 7 days about:
 - World models (Google Genie, World Labs, OpenAI)
 - AI product visualization or 3D commerce
@@ -1056,10 +1069,36 @@ app.get('/api/pr/news-hooks', async (req, res) => {
       return res.json({ success: true, news: [] });
     }
     
-    const result = await pool.query('SELECT * FROM pr_news_hooks ORDER BY fetched_at DESC');
+    // Only return news from the last 30 days
+    const result = await pool.query(`
+      SELECT * FROM pr_news_hooks 
+      WHERE date > NOW() - INTERVAL '30 days'
+      OR fetched_at > NOW() - INTERVAL '30 days'
+      ORDER BY fetched_at DESC
+    `);
     res.json({ success: true, news: result.rows });
   } catch (error) {
     console.error('Error loading news hooks:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete old news hooks (cleanup endpoint)
+app.delete('/api/pr/news-hooks/old', async (req, res) => {
+  try {
+    if (!useDatabase) {
+      return res.json({ success: true, deleted: 0 });
+    }
+    
+    // Delete news older than 30 days
+    const result = await pool.query(`
+      DELETE FROM pr_news_hooks 
+      WHERE date < NOW() - INTERVAL '30 days'
+      AND fetched_at < NOW() - INTERVAL '30 days'
+    `);
+    res.json({ success: true, deleted: result.rowCount });
+  } catch (error) {
+    console.error('Error deleting old news hooks:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
