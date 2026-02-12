@@ -1245,26 +1245,10 @@ class GlossiDashboard {
       this.addSelectedTodos();
     });
 
-    document.getElementById('toggle-api-key').addEventListener('click', (e) => {
-      const input = document.getElementById('api-key');
-      if (input.type === 'password') {
-        input.type = 'text';
-        e.target.textContent = 'Hide';
-      } else {
-        input.type = 'password';
-        e.target.textContent = 'Show';
-      }
-    });
-
-    document.getElementById('toggle-openai-key').addEventListener('click', (e) => {
-      const input = document.getElementById('openai-api-key');
-      if (input.type === 'password') {
-        input.type = 'text';
-        e.target.textContent = 'Hide';
-      } else {
-        input.type = 'password';
-        e.target.textContent = 'Show';
-      }
+    // API keys are now managed via environment variables
+    // Check environment status when settings modal opens
+    document.getElementById('settings-btn')?.addEventListener('click', () => {
+      this.checkAPIKeyStatus();
     });
 
     document.getElementById('settings-save').addEventListener('click', () => {
@@ -8435,8 +8419,7 @@ Respond with just the category name (core, traction, market, or testimonials) an
    * Save settings
    */
   async saveSettings() {
-    const apiKey = document.getElementById('api-key').value.trim();
-    const openaiApiKey = document.getElementById('openai-api-key').value.trim();
+    // API keys are now managed via environment variables
     const pipelineSheetUrl = document.getElementById('pipeline-sheet-url')?.value.trim() || '';
 
     // Update seed raise target
@@ -8460,25 +8443,16 @@ Respond with just the category name (core, traction, market, or testimonials) an
     // Update storage and local settings
     this.data = storage.getData();
     this.settings = storage.updateSettings({ 
-      apiKey, 
-      openaiApiKey,
       pipelineSheetUrl,
       autoCurate,
       staleThresholdWeeks
     });
-    aiProcessor.setApiKey(apiKey);
-    OPENAI_API_KEY = openaiApiKey || null;
 
     // Close modal first
     this.hideModal('settings-modal');
 
-    // Test connection if key provided
-    if (apiKey) {
-      const connected = await aiProcessor.testConnection();
-    }
-
     // Update UI status
-    this.renderSettingsStatus();
+    this.checkAPIKeyStatus();
     this.renderSeedRaise();
     
     // Refresh pipeline if URL changed
@@ -8488,36 +8462,45 @@ Respond with just the category name (core, traction, market, or testimonials) an
   }
 
   /**
+   * Check API key status from environment
+   */
+  async checkAPIKeyStatus() {
+    try {
+      const response = await fetch('/api/settings');
+      const data = await response.json();
+      
+      // Update status badges
+      this.updateStatusBadge('anthropic-env-status', data.hasAnthropicKey);
+      this.updateStatusBadge('openai-env-status', data.hasOpenAIKey);
+    } catch (error) {
+      console.error('Failed to check API key status:', error);
+      this.updateStatusBadge('anthropic-env-status', false);
+      this.updateStatusBadge('openai-env-status', false);
+    }
+  }
+
+  /**
+   * Update status badge display
+   */
+  updateStatusBadge(id, isConfigured) {
+    const badge = document.getElementById(id);
+    if (!badge) return;
+    
+    if (isConfigured) {
+      badge.textContent = 'Configured';
+      badge.className = 'status-badge status-success';
+    } else {
+      badge.textContent = 'Not configured';
+      badge.className = 'status-badge status-error';
+    }
+  }
+
+  /**
    * Render settings status
    */
   renderSettingsStatus() {
-    const statusEl = document.getElementById('api-status');
-    const apiKey = document.getElementById('api-key');
-    
-    apiKey.value = this.settings.apiKey || '';
-
-    if (aiProcessor.isConfigured()) {
-      statusEl.classList.add('connected');
-      statusEl.querySelector('.status-text').textContent = 'Connected';
-    } else {
-      statusEl.classList.remove('connected');
-      statusEl.querySelector('.status-text').textContent = 'Not configured';
-    }
-
-    // OpenAI API key status
-    const openaiStatusEl = document.getElementById('openai-status');
-    const openaiApiKey = document.getElementById('openai-api-key');
-    
-    openaiApiKey.value = this.settings.openaiApiKey || '';
-    OPENAI_API_KEY = this.settings.openaiApiKey || null;
-
-    if (this.settings.openaiApiKey) {
-      openaiStatusEl.classList.add('connected');
-      openaiStatusEl.querySelector('.status-text').textContent = 'Connected';
-    } else {
-      openaiStatusEl.classList.remove('connected');
-      openaiStatusEl.querySelector('.status-text').textContent = 'Not configured';
-    }
+    // Check API key status from environment
+    this.checkAPIKeyStatus();
 
     // Pipeline sheet URL
     const pipelineSheetUrlEl = document.getElementById('pipeline-sheet-url');

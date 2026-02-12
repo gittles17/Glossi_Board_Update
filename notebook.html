@@ -351,11 +351,7 @@
       <div class="modal-body">
         <div class="settings-section">
           <h3>AI Configuration</h3>
-          <div class="notes-input-section">
-            <label for="anthropic-key">Anthropic API Key</label>
-            <input type="password" id="anthropic-key" class="input" placeholder="sk-ant-...">
-            <p class="input-hint">Required for AI analysis and chat features</p>
-          </div>
+          <p class="input-hint">API keys are configured via environment variables. Status: <span class="status-badge" id="anthropic-env-status">Checking...</span></p>
         </div>
       </div>
       <div class="modal-footer">
@@ -465,7 +461,6 @@
       const settingsClose = document.getElementById('settings-modal-close');
       const settingsCancel = document.getElementById('settings-cancel');
       const settingsSave = document.getElementById('settings-save');
-      const anthropicKeyInput = document.getElementById('anthropic-key');
       
       // Toggle dropdown
       if (menuBtn && dropdownMenu) {
@@ -486,12 +481,25 @@
       
       // Settings button in dropdown
       if (menuSettings) {
-        menuSettings.addEventListener('click', () => {
+        menuSettings.addEventListener('click', async () => {
           dropdownMenu.classList.remove('active');
           settingsModal.classList.add('visible');
-          const currentSettings = storage.getSettings();
-          if (anthropicKeyInput && currentSettings.apiKey) {
-            anthropicKeyInput.value = currentSettings.apiKey;
+          // Check environment API key status
+          try {
+            const response = await fetch('/api/settings');
+            const data = await response.json();
+            const statusBadge = document.getElementById('anthropic-env-status');
+            if (statusBadge) {
+              if (data.hasAnthropicKey) {
+                statusBadge.textContent = 'Configured';
+                statusBadge.className = 'status-badge status-success';
+              } else {
+                statusBadge.textContent = 'Not configured';
+                statusBadge.className = 'status-badge status-error';
+              }
+            }
+          } catch (error) {
+            console.error('Failed to check API key status:', error);
           }
         });
       }
@@ -513,11 +521,10 @@
       
       if (settingsSave) {
         settingsSave.addEventListener('click', () => {
-          const key = anthropicKeyInput.value.trim();
-          storage.updateSettings({ apiKey: key });
-          aiProcessor.setApiKey(key);
+          // API keys are now managed via environment variables
+          // No settings to save
           settingsModal.classList.remove('visible');
-          notebook.showToast('Settings saved', 'success');
+          notebook.showToast('Settings viewed', 'success');
         });
       }
       

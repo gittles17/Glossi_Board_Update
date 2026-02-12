@@ -534,21 +534,20 @@
       <div class="modal-body">
         <div class="settings-section">
           <h3>AI Configuration</h3>
-          <p class="input-hint" style="margin-bottom: var(--space-3)">API keys are shared across all Glossi pages. Configure them on the <a href="index.html" style="color: var(--accent-green)">Dashboard</a>.</p>
+          <p class="input-hint" style="margin-bottom: var(--space-3)">API keys are configured via environment variables in production.</p>
           <div class="pr-settings-status">
             <div class="pr-settings-row">
-              <span class="pr-settings-label-text">Anthropic API Key</span>
-              <span class="pr-settings-badge" id="pr-anthropic-status">Not set</span>
+              <span class="pr-settings-label-text">Anthropic API</span>
+              <span class="pr-settings-badge" id="pr-anthropic-status">Checking...</span>
             </div>
             <div class="pr-settings-row">
-              <span class="pr-settings-label-text">OpenAI API Key</span>
-              <span class="pr-settings-badge" id="pr-openai-status">Not set</span>
+              <span class="pr-settings-label-text">OpenAI API</span>
+              <span class="pr-settings-badge" id="pr-openai-status">Checking...</span>
             </div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <a href="index.html" class="btn btn-primary">Open Dashboard Settings</a>
         <button class="btn btn-secondary" id="settings-cancel">Close</button>
       </div>
     </div>

@@ -433,30 +433,19 @@
       </div>
       <div class="modal-body">
         <div class="settings-section">
-          <h3>Claude API Configuration</h3>
-          <p class="settings-description">Enter your Anthropic API key to enable AI-powered features.</p>
-          <div class="input-group">
-            <label for="api-key">Anthropic API Key</label>
-            <input type="password" id="api-key" class="input" placeholder="sk-ant-...">
-            <button class="btn btn-secondary btn-sm" id="toggle-api-key">Show</button>
+          <h3>AI Configuration</h3>
+          <p class="settings-description">API keys are configured via environment variables in production.</p>
+          <div class="api-status-grid">
+            <div class="api-status-item">
+              <span class="settings-label">Anthropic API</span>
+              <span class="status-badge" id="anthropic-env-status">Checking...</span>
+            </div>
+            <div class="api-status-item">
+              <span class="settings-label">OpenAI API</span>
+              <span class="status-badge" id="openai-env-status">Checking...</span>
+            </div>
           </div>
-          <div class="api-status" id="api-status">
-            <span class="status-indicator"></span>
-            <span class="status-text">Not configured</span>
-          </div>
-        </div>
-        <div class="settings-section">
-          <h3>Audio Transcription (OpenAI)</h3>
-          <p class="settings-description">Enter your OpenAI API key for Whisper audio transcription.</p>
-          <div class="input-group">
-            <label for="openai-api-key">OpenAI API Key</label>
-            <input type="password" id="openai-api-key" class="input" placeholder="sk-proj-...">
-            <button class="btn btn-secondary btn-sm" id="toggle-openai-key">Show</button>
-          </div>
-          <div class="api-status" id="openai-status">
-            <span class="status-indicator"></span>
-            <span class="status-text">Not configured</span>
-          </div>
+          <p class="settings-hint">Contact your administrator to update API keys in production.</p>
         </div>
         <div class="settings-section">
           <h3>Seed Raise</h3>
