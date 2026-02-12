@@ -12186,6 +12186,97 @@ a.dropdown-item {
   to { transform: rotate(360deg); }
 }
 
+/* Draft versioning */
+.pr-drafts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) 0 var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: var(--space-5);
+}
+
+.pr-drafts-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pr-clear-drafts-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pr-clear-drafts-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-color-light);
+  color: var(--text-secondary);
+}
+
+.pr-draft {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-6);
+  border-bottom: 2px solid var(--border-subtle);
+}
+
+.pr-draft:last-child {
+  border-bottom: none;
+}
+
+.pr-draft-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+}
+
+.pr-draft-version {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-blue);
+}
+
+.pr-draft:first-child .pr-draft-version {
+  color: var(--accent-green);
+}
+
+.pr-draft-time {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.pr-draft-prompt {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-left: auto;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pr-draft-content {
+  font: 400 14px/1.7 var(--font-sans);
+  color: var(--text-secondary);
+  user-select: text;
+  cursor: text;
+}
+
 /* Citations */
 .pr-citation {
   display: inline-flex;

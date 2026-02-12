@@ -1864,7 +1864,12 @@ class PRAgent {
         id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
         contentType,
         title: this.extractTitle(parsed.content, typeLabel),
-        content: parsed.content,
+        drafts: [{
+          content: parsed.content,
+          version: 1,
+          timestamp: Date.now(),
+          prompt: null
+        }],
         sources: selectedSources.map(s => s.id),
         citations: parsed.citations || [],
         strategy: parsed.strategy || null,
@@ -1933,45 +1938,67 @@ class PRAgent {
   renderGeneratedContent(output) {
     if (!this.dom.generatedContent || !output) return;
 
-    let html = this.formatContent(output.content, output.citations);
-    this.dom.generatedContent.innerHTML = html;
-
-    // Setup inline editing
-    this.dom.generatedContent.querySelectorAll('.pr-paragraph').forEach(p => {
-      p.addEventListener('click', () => {
-        if (p.contentEditable === 'true') return;
-        p.contentEditable = true;
-        p.focus();
-        p.classList.add('editing');
-      });
-
-      p.addEventListener('blur', () => {
-        p.contentEditable = false;
-        p.classList.remove('editing');
-        if (this.currentOutput) {
-          this.updateOutputContent();
-        }
-      });
-    });
-
-    // Citation hover tooltips
-    this.dom.generatedContent.querySelectorAll('.pr-citation').forEach(cite => {
-      cite.addEventListener('mouseenter', (e) => this.showCitationTooltip(e, cite));
-      cite.addEventListener('mouseleave', () => this.hideCitationTooltip());
-      cite.addEventListener('click', () => {
-        const sourceId = cite.dataset.sourceId;
-        if (sourceId) {
-          this.highlightSource(sourceId);
-        }
-      });
-    });
-
-    // Needs source badge click handlers
-    this.dom.generatedContent.querySelectorAll('.pr-needs-source').forEach(badge => {
-      badge.addEventListener('click', (e) => this.handleNeedsSourceClick(e, badge));
-    });
+    // Use new draft rendering if drafts exist
+    if (output.drafts && output.drafts.length > 0) {
+      this.renderDrafts();
+    } else {
+      // Backward compatibility - migrate old format
+      output = this.migrateContentToDrafts(output);
+      this.renderDrafts();
+    }
 
     this.updateVerificationBar(output);
+  }
+
+  renderDrafts() {
+    if (!this.currentOutput || !this.currentOutput.drafts) return;
+    
+    const container = this.dom.generatedContent;
+    const drafts = this.currentOutput.drafts;
+    
+    container.innerHTML = drafts.map((draft, index) => {
+      const isLatest = index === 0;
+      const timeAgo = this.formatTimeAgo(draft.timestamp);
+      
+      return `
+        <div class="pr-draft" data-version="${draft.version}">
+          <div class="pr-draft-header">
+            <span class="pr-draft-version">
+              ${isLatest ? 'Latest' : `Version ${draft.version}`}
+            </span>
+            <span class="pr-draft-time">${timeAgo}</span>
+            ${draft.prompt ? `<span class="pr-draft-prompt">"${this.escapeHtml(draft.prompt)}"</span>` : ''}
+          </div>
+          <div class="pr-draft-content">
+            ${this.formatContent(draft.content, this.currentOutput.citations)}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  formatTimeAgo(timestamp) {
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  }
+
+  migrateContentToDrafts(output) {
+    if (output.content && !output.drafts) {
+      output.drafts = [{
+        content: output.content,
+        version: 1,
+        timestamp: new Date(output.createdAt).getTime(),
+        prompt: null
+      }];
+      delete output.content;
+    }
+    return output;
   }
 
   formatContent(content, citations) {
@@ -2560,9 +2587,22 @@ Apply the requested refinement and return ONLY the complete refined content (no 
 
       const refinedContent = response.content[0].text.trim();
 
-      // Update content directly in workspace
-      this.currentOutput.content = refinedContent;
-      this.dom.generatedContent.innerHTML = this.formatContent(refinedContent);
+      // Migrate to drafts if needed
+      if (!this.currentOutput.drafts) {
+        this.currentOutput = this.migrateContentToDrafts(this.currentOutput);
+      }
+
+      // Create new draft version
+      const newVersion = this.currentOutput.drafts.length + 1;
+      this.currentOutput.drafts.unshift({
+        content: refinedContent,
+        version: newVersion,
+        timestamp: Date.now(),
+        prompt: message
+      });
+      
+      // Render updated drafts
+      this.renderDrafts();
       
       // Save
       await this.saveOutputs();
@@ -2664,10 +2704,21 @@ Return ONLY the JSON array, nothing else.`;
   buildChatContext() {
     const parts = [];
 
-    // Current content
+    // Current content - include all drafts
     if (this.currentOutput) {
       parts.push(`CONTENT TYPE: ${this.currentOutput.contentType}`);
-      parts.push(`\nCURRENT CONTENT:\n${this.currentOutput.content}`);
+      
+      if (this.currentOutput.drafts && this.currentOutput.drafts.length > 0) {
+        parts.push(`\nDRAFT VERSIONS (${this.currentOutput.drafts.length} total):`);
+        this.currentOutput.drafts.forEach((draft, i) => {
+          const label = i === 0 ? 'LATEST DRAFT' : `VERSION ${draft.version}`;
+          const promptInfo = draft.prompt ? ` (refined with: "${draft.prompt}")` : '';
+          parts.push(`\n${label}${promptInfo}:\n${draft.content}`);
+        });
+      } else if (this.currentOutput.content) {
+        // Backward compatibility
+        parts.push(`\nCURRENT CONTENT:\n${this.currentOutput.content}`);
+      }
     }
 
     // Sources
@@ -2728,6 +2779,16 @@ Return ONLY the JSON array, nothing else.`;
       textEl.textContent = message;
       textEl.style.color = 'var(--accent-red)';
     }
+  }
+
+  async clearOldDrafts() {
+    if (!this.currentOutput || !this.currentOutput.drafts) return;
+    
+    const latestDraft = this.currentOutput.drafts[0];
+    this.currentOutput.drafts = [latestDraft];
+    
+    await this.saveOutputs();
+    this.renderDrafts();
   }
 }
 
