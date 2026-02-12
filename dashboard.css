@@ -11969,10 +11969,12 @@ a.dropdown-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   height: 100%;
   text-align: center;
-  padding: var(--space-8);
+  padding: var(--space-6) var(--space-4);
+  padding-top: var(--space-4);
+  overflow-y: auto;
 }
 
 .pr-empty-icon {
@@ -13835,7 +13837,8 @@ a.dropdown-item {
 .pr-command-center {
   max-width: 900px;
   margin: 0 auto;
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-4) var(--space-6);
+  width: 100%;
 }
 
 .pr-command-center-header {
