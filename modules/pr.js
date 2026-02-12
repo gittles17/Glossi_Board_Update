@@ -3930,13 +3930,21 @@ class NewsMonitor {
   async loadCachedNews() {
     try {
       const response = await fetch('/api/pr/news-hooks');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
-      if (data.success && data.news.length > 0) {
+      if (data.success && data.news && data.news.length > 0) {
         this.newsHooks = data.news;
+        this.renderNews();
+      } else {
+        // No cached news, show empty state
         this.renderNews();
       }
     } catch (error) {
       console.error('Error loading cached news:', error);
+      // Show empty state on error
+      this.renderNews();
     }
   }
 
