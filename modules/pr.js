@@ -119,32 +119,141 @@ class PRAgent {
     this.isDraggingSource = false;
   }
 
-  init() {
-    this.loadData();
+  async apiCall(url, options = {}, retries = 2) {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const response = await fetch(url, options);
+        
+        if (!response.ok) {
+          if (response.status === 429 && i < retries) {
+            await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
+            continue;
+          }
+          
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Request failed (${response.status})`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        if (i === retries) {
+          throw error;
+        }
+        
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
+  async init() {
+    await this.loadData();
     this.setupDOM();
     this.setupEventListeners();
     this.renderSources();
     this.renderHistory();
     this.updateGenerateButton();
+    
+    // Initialize wizard
+    this.wizard = new WizardManager(this);
+    await this.wizard.init();
+    
+    // Initialize media manager
+    this.mediaManager = new MediaManager(this);
+    await this.mediaManager.init();
+    
+    // Initialize news monitor
+    this.newsMonitor = new NewsMonitor(this);
+    await this.newsMonitor.init();
+    
+    // Initialize calendar manager
+    this.calendarManager = new CalendarManager(this);
+    await this.calendarManager.init();
+    
+    // Add "Edit Foundation" button to sources header
+    this.addEditFoundationButton();
+  }
+  
+  addEditFoundationButton() {
+    const sourcesHeader = document.querySelector('.pr-sources-header');
+    if (sourcesHeader && !document.getElementById('pr-edit-foundation-btn')) {
+      const editBtn = document.createElement('button');
+      editBtn.id = 'pr-edit-foundation-btn';
+      editBtn.className = 'pr-create-folder-btn';
+      editBtn.title = 'Edit Foundation';
+      editBtn.innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+      `;
+      editBtn.addEventListener('click', () => this.wizard.open(true));
+      
+      // Insert before the create folder button
+      const createFolderBtn = document.getElementById('pr-create-folder-btn');
+      if (createFolderBtn) {
+        sourcesHeader.insertBefore(editBtn, createFolderBtn);
+      } else {
+        sourcesHeader.appendChild(editBtn);
+      }
+    }
   }
 
-  loadData() {
+  async loadData() {
+    // Check if migration is needed (localStorage has data but API doesn't)
+    await this.checkAndMigrateData();
+    
+    // Load sources from API
     try {
-      const sourcesRaw = localStorage.getItem('pr_sources');
-      const parsed = sourcesRaw ? JSON.parse(sourcesRaw) : [];
-      this.sources = Array.isArray(parsed) ? parsed.map(s => ({
-        ...s,
-        selected: s.selected !== false
-      })) : [];
+      const response = await fetch('/api/pr/sources');
+      const data = await response.json();
+      if (data.success) {
+        this.sources = data.sources.map(s => ({
+          ...s,
+          selected: s.selected !== false
+        }));
+      } else {
+        this.sources = [];
+      }
     } catch (e) {
-      this.sources = [];
+      console.error('Error loading sources from API:', e);
+      // Fallback to localStorage
+      try {
+        const sourcesRaw = localStorage.getItem('pr_sources');
+        const parsed = sourcesRaw ? JSON.parse(sourcesRaw) : [];
+        this.sources = Array.isArray(parsed) ? parsed.map(s => ({
+          ...s,
+          selected: s.selected !== false
+        })) : [];
+      } catch (e2) {
+        this.sources = [];
+      }
     }
+    
+    // Load outputs from API
     try {
-      const outputsRaw = localStorage.getItem('pr_outputs');
-      this.outputs = outputsRaw ? JSON.parse(outputsRaw) : [];
+      const response = await fetch('/api/pr/outputs');
+      const data = await response.json();
+      if (data.success) {
+        this.outputs = data.outputs;
+      } else {
+        this.outputs = [];
+      }
     } catch (e) {
-      this.outputs = [];
+      console.error('Error loading outputs from API:', e);
+      // Fallback to localStorage
+      try {
+        const outputsRaw = localStorage.getItem('pr_outputs');
+        this.outputs = outputsRaw ? JSON.parse(outputsRaw) : [];
+      } catch (e2) {
+        this.outputs = [];
+      }
     }
+    
+    // Settings still from localStorage (contains API keys)
     try {
       const settingsRaw = localStorage.getItem('pr_settings');
       const settings = settingsRaw ? JSON.parse(settingsRaw) : {};
@@ -156,6 +265,7 @@ class PRAgent {
       this.folders = [];
       this.expandedFolders = {};
     }
+    
     try {
       const glossiSettings = localStorage.getItem('glossi_settings');
       if (glossiSettings) {
@@ -167,26 +277,124 @@ class PRAgent {
       this.apiKey = null;
       this.openaiApiKey = null;
     }
+    
     this.isGenerating = false;
   }
 
-  saveSources() {
+  async checkAndMigrateData() {
+    // Check if localStorage has data
+    const localSources = localStorage.getItem('pr_sources');
+    const localOutputs = localStorage.getItem('pr_outputs');
+    
+    if (!localSources && !localOutputs) {
+      // No local data to migrate
+      return;
+    }
+
     try {
-      localStorage.setItem('pr_sources', JSON.stringify(this.sources));
+      // Check if API already has data
+      const sourcesResponse = await fetch('/api/pr/sources');
+      const sourcesData = await sourcesResponse.json();
+      
+      const outputsResponse = await fetch('/api/pr/outputs');
+      const outputsData = await outputsResponse.json();
+      
+      // If API has data, skip migration (already done)
+      if ((sourcesData.sources && sourcesData.sources.length > 0) || 
+          (outputsData.outputs && outputsData.outputs.length > 0)) {
+        return;
+      }
+      
+      // Show migration modal
+      const migrationNeeded = (localSources && JSON.parse(localSources).length > 0) ||
+                             (localOutputs && JSON.parse(localOutputs).length > 0);
+      
+      if (!migrationNeeded) return;
+      
+      // Create migration modal
+      const modal = document.createElement('div');
+      modal.className = 'pr-migration-modal';
+      modal.innerHTML = `
+        <div class="pr-migration-content">
+          <div class="pr-loading-spinner"></div>
+          <h3>Migrating your PR data...</h3>
+          <p class="pr-migration-progress" id="pr-migration-progress">Preparing migration...</p>
+          <div class="pr-migration-bar">
+            <div class="pr-migration-bar-fill" id="pr-migration-bar-fill"></div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      
+      const progressText = document.getElementById('pr-migration-progress');
+      const progressBar = document.getElementById('pr-migration-bar-fill');
+      
+      let migratedCount = 0;
+      let totalCount = 0;
+      
+      // Migrate sources
+      if (localSources) {
+        const sources = JSON.parse(localSources);
+        totalCount += sources.length;
+        
+        for (let i = 0; i < sources.length; i++) {
+          const source = sources[i];
+          await fetch('/api/pr/sources', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(source)
+          });
+          migratedCount++;
+          if (progressText) progressText.textContent = `Migrated ${migratedCount} of ${totalCount} items...`;
+          if (progressBar) progressBar.style.width = `${(migratedCount / totalCount) * 100}%`;
+        }
+      }
+      
+      // Migrate outputs
+      if (localOutputs) {
+        const outputs = JSON.parse(localOutputs);
+        totalCount += outputs.length;
+        
+        for (let i = 0; i < outputs.length; i++) {
+          const output = outputs[i];
+          await fetch('/api/pr/outputs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(output)
+          });
+          migratedCount++;
+          if (progressText) progressText.textContent = `Migrated ${migratedCount} of ${totalCount} items...`;
+          if (progressBar) progressBar.style.width = `${(migratedCount / totalCount) * 100}%`;
+        }
+      }
+      
+      if (progressText) progressText.textContent = 'Migration complete!';
+      if (progressBar) progressBar.style.width = '100%';
+      
+      setTimeout(() => {
+        modal.remove();
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Migration error:', error);
+    }
+  }
+
+  async saveSources() {
+    // Save folder settings to localStorage
+    try {
       this.settings.folders = this.folders;
       this.settings.expandedFolders = this.expandedFolders;
       localStorage.setItem('pr_settings', JSON.stringify(this.settings));
     } catch (e) {
-      console.error('Failed to save sources:', e);
+      console.error('Failed to save settings:', e);
     }
+    
+    // Sources are saved individually via API calls when modified
   }
 
-  saveOutputs() {
-    try {
-      localStorage.setItem('pr_outputs', JSON.stringify(this.outputs));
-    } catch (e) {
-      console.error('Failed to save outputs:', e);
-    }
+  async saveOutputs() {
+    // Outputs are saved individually via API calls when created
   }
 
   saveSettings() {
@@ -436,7 +644,7 @@ class PRAgent {
     this._activeSourceTab = type;
   }
 
-  saveSource() {
+  async saveSource() {
     const type = this._activeSourceTab || 'text';
     const titleSuffix = type === 'text' ? '' : `-${type}`;
     const titleInput = document.getElementById(`pr-source-title${titleSuffix}`);
@@ -491,6 +699,18 @@ class PRAgent {
     };
 
     this.sources.push(source);
+    
+    // Save to API
+    try {
+      await fetch('/api/pr/sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(source)
+      });
+    } catch (error) {
+      console.error('Error saving source:', error);
+    }
+    
     this.saveSources();
     this.renderSources();
     this.updateGenerateButton();
@@ -555,6 +775,18 @@ class PRAgent {
       };
 
       this.sources.push(source);
+      
+      // Save to API
+      try {
+        await fetch('/api/pr/sources', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(source)
+        });
+      } catch (error) {
+        console.error('Error saving source:', error);
+      }
+      
       this.saveSources();
       this.renderSources();
       this.updateGenerateButton();
@@ -569,15 +801,37 @@ class PRAgent {
     if (!confirmed) return;
 
     this.sources = this.sources.filter(s => s.id !== id);
+    
+    // Delete from API
+    try {
+      await fetch(`/api/pr/sources/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (error) {
+      console.error('Error deleting source:', error);
+    }
+    
     this.saveSources();
     this.renderSources();
     this.updateGenerateButton();
   }
 
-  toggleSourceSelection(id) {
+  async toggleSourceSelection(id) {
     const source = this.sources.find(s => s.id === id);
     if (source) {
       source.selected = !source.selected;
+      
+      // Update in API
+      try {
+        await fetch('/api/pr/sources', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(source)
+        });
+      } catch (error) {
+        console.error('Error updating source:', error);
+      }
+      
       this.saveSources();
       this.renderSources();
       this.updateGenerateButton();
@@ -605,6 +859,14 @@ class PRAgent {
       const newTitle = titleEl.textContent.trim();
       if (newTitle && newTitle !== source.title) {
         source.title = newTitle;
+        
+        // Update in API
+        fetch('/api/pr/sources', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(source)
+        }).catch(error => console.error('Error updating source:', error));
+        
         this.saveSources();
       } else {
         titleEl.textContent = source.title;
@@ -697,10 +959,22 @@ class PRAgent {
     if (folder) folder.classList.toggle('expanded', this.expandedFolders[name]);
   }
 
-  moveSourceToFolder(sourceId, folderName) {
+  async moveSourceToFolder(sourceId, folderName) {
     const source = this.sources.find(s => s.id === sourceId);
     if (!source) return;
     source.folder = folderName;
+    
+    // Update in API
+    try {
+      await fetch('/api/pr/sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(source)
+      });
+    } catch (error) {
+      console.error('Error updating source:', error);
+    }
+    
     this.saveSources();
     this.renderSources();
     return;
@@ -1036,6 +1310,18 @@ class PRAgent {
     };
 
     this.sources.push(source);
+    
+    // Save to API
+    try {
+      await fetch('/api/pr/sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(source)
+      });
+    } catch (error) {
+      console.error('Error saving source:', error);
+    }
+    
     this.saveSources();
     this.renderSources();
     this.updateGenerateButton();
@@ -1085,7 +1371,18 @@ class PRAgent {
         e.stopPropagation();
         const confirmed = await this.showConfirm('Delete this output?', 'Delete');
         if (confirmed) {
-          this.outputs = this.outputs.filter(o => o.id !== btn.dataset.historyDelete);
+          const outputId = btn.dataset.historyDelete;
+          this.outputs = this.outputs.filter(o => o.id !== outputId);
+          
+          // Delete from API
+          try {
+            await fetch(`/api/pr/outputs/${outputId}`, {
+              method: 'DELETE'
+            });
+          } catch (error) {
+            console.error('Error deleting output:', error);
+          }
+          
           this.saveOutputs();
           this.renderHistory();
         }
@@ -1262,6 +1559,18 @@ class PRAgent {
 
       this.currentOutput = output;
       this.outputs.push(output);
+      
+      // Save to API
+      try {
+        await fetch('/api/pr/outputs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(output)
+        });
+      } catch (error) {
+        console.error('Error saving output:', error);
+      }
+      
       this.saveOutputs();
 
       this.renderGeneratedContent(output);
@@ -1479,11 +1788,23 @@ class PRAgent {
     setTimeout(() => document.addEventListener('click', closeMenu), 0);
   }
 
-  updateOutputContent() {
+  async updateOutputContent() {
     if (!this.currentOutput || !this.dom.generatedContent) return;
     const outputIndex = this.outputs.findIndex(o => o.id === this.currentOutput.id);
     if (outputIndex !== -1) {
       this.outputs[outputIndex].content = this.dom.generatedContent.innerText;
+      
+      // Update in API
+      try {
+        await fetch('/api/pr/outputs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.outputs[outputIndex])
+        });
+      } catch (error) {
+        console.error('Error updating output:', error);
+      }
+      
       this.saveOutputs();
     }
   }
@@ -1864,4 +2185,1608 @@ class PRAgent {
   }
 }
 
-export { PRAgent, CONTENT_TYPES };
+// =========================================
+// WIZARD MANAGER
+// =========================================
+
+class WizardManager {
+  constructor(prAgent) {
+    this.prAgent = prAgent;
+    this.currentStep = 1;
+    this.totalSteps = 6;
+    this.data = {};
+    this.isEditing = false;
+  }
+
+  async init() {
+    this.setupDOM();
+    this.setupEventListeners();
+    await this.loadWizardData();
+    
+    // Check if wizard should auto-launch
+    const shouldAutoLaunch = await this.shouldAutoLaunch();
+    if (shouldAutoLaunch) {
+      this.open();
+    }
+  }
+
+  setupDOM() {
+    this.dom = {
+      overlay: document.getElementById('wizard-overlay'),
+      closeBtn: document.getElementById('wizard-close'),
+      stepText: document.getElementById('wizard-step-text'),
+      progressFill: document.getElementById('wizard-progress-fill'),
+      body: document.getElementById('wizard-body'),
+      backBtn: document.getElementById('wizard-back'),
+      nextBtn: document.getElementById('wizard-next'),
+      finishBtn: document.getElementById('wizard-finish'),
+      skipBtn: document.getElementById('wizard-skip'),
+      steps: document.querySelectorAll('.wizard-step')
+    };
+  }
+
+  setupEventListeners() {
+    this.dom.closeBtn?.addEventListener('click', () => this.close());
+    this.dom.backBtn?.addEventListener('click', () => this.previousStep());
+    this.dom.nextBtn?.addEventListener('click', () => this.nextStep());
+    this.dom.finishBtn?.addEventListener('click', () => this.finish());
+    this.dom.skipBtn?.addEventListener('click', () => this.skipStep());
+    
+    // Close on ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.dom.overlay?.classList.contains('visible')) {
+        this.close();
+      }
+    });
+    
+    // Save on input change (debounced)
+    this.dom.overlay?.querySelectorAll('input, textarea').forEach(input => {
+      input.addEventListener('input', () => {
+        clearTimeout(this._saveTimeout);
+        this._saveTimeout = setTimeout(() => this.saveProgress(), 1000);
+      });
+    });
+    
+    // Pre-fill defaults
+    this.setDefaults();
+  }
+
+  setDefaults() {
+    const companyName = document.getElementById('wizard-company-name');
+    const companyDesc = document.getElementById('wizard-company-description');
+    
+    if (companyName && !companyName.value) {
+      companyName.value = 'Glossi';
+    }
+    if (companyDesc && !companyDesc.value) {
+      companyDesc.value = 'AI-native 3D product visualization platform';
+    }
+  }
+
+  async shouldAutoLaunch() {
+    try {
+      const response = await fetch('/api/pr/sources');
+      const data = await response.json();
+      return data.success && data.sources.length === 0;
+    } catch {
+      return false;
+    }
+  }
+
+  async loadWizardData() {
+    try {
+      const response = await fetch('/api/pr/wizard');
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        this.data = result.data;
+        this.populateFields();
+      }
+    } catch (error) {
+      console.error('Error loading wizard data:', error);
+    }
+  }
+
+  populateFields() {
+    Object.keys(this.data).forEach(key => {
+      const element = document.getElementById(key);
+      if (element) {
+        if (element.type === 'radio') {
+          const radio = document.querySelector(`input[name="${element.name}"][value="${this.data[key]}"]`);
+          if (radio) radio.checked = true;
+        } else {
+          element.value = this.data[key] || '';
+        }
+      }
+    });
+  }
+
+  open(isEditing = false) {
+    this.isEditing = isEditing;
+    this.currentStep = 1;
+    this.goToStep(1);
+    this.dom.overlay?.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+  }
+
+  close() {
+    this.saveProgress();
+    this.dom.overlay?.classList.remove('visible');
+    document.body.style.overflow = '';
+  }
+
+  goToStep(step) {
+    this.currentStep = step;
+    
+    // Update step visibility
+    this.dom.steps?.forEach(stepEl => {
+      stepEl.classList.toggle('active', parseInt(stepEl.dataset.step) === step);
+    });
+    
+    // Update progress
+    if (this.dom.stepText) {
+      this.dom.stepText.textContent = `Step ${step} of ${this.totalSteps}`;
+    }
+    if (this.dom.progressFill) {
+      const progress = (step / this.totalSteps) * 100;
+      this.dom.progressFill.style.width = `${progress}%`;
+    }
+    
+    // Update button visibility
+    if (this.dom.backBtn) {
+      this.dom.backBtn.style.display = step > 1 ? 'inline-flex' : 'none';
+    }
+    if (this.dom.nextBtn) {
+      this.dom.nextBtn.style.display = step < this.totalSteps ? 'inline-flex' : 'none';
+    }
+    if (this.dom.finishBtn) {
+      this.dom.finishBtn.style.display = step === this.totalSteps ? 'inline-flex' : 'none';
+    }
+    
+    // Scroll to top
+    if (this.dom.body) {
+      this.dom.body.scrollTop = 0;
+    }
+  }
+
+  nextStep() {
+    this.saveProgress();
+    if (this.currentStep < this.totalSteps) {
+      this.goToStep(this.currentStep + 1);
+    }
+  }
+
+  previousStep() {
+    this.saveProgress();
+    if (this.currentStep > 1) {
+      this.goToStep(this.currentStep - 1);
+    }
+  }
+
+  skipStep() {
+    this.nextStep();
+  }
+
+  collectData() {
+    const data = {};
+    
+    // Step 1
+    data['wizard-company-name'] = document.getElementById('wizard-company-name')?.value || '';
+    data['wizard-company-description'] = document.getElementById('wizard-company-description')?.value || '';
+    data['wizard-founded-year'] = document.getElementById('wizard-founded-year')?.value || '';
+    data['wizard-team-size'] = document.getElementById('wizard-team-size')?.value || '';
+    data['wizard-headquarters'] = document.getElementById('wizard-headquarters')?.value || '';
+    data['wizard-website'] = document.getElementById('wizard-website')?.value || '';
+    data['wizard-founders'] = document.getElementById('wizard-founders')?.value || '';
+    data['wizard-founder-background'] = document.getElementById('wizard-founder-background')?.value || '';
+    
+    // Step 2
+    data['wizard-problem'] = document.getElementById('wizard-problem')?.value || '';
+    data['wizard-who'] = document.getElementById('wizard-who')?.value || '';
+    data['wizard-current-solution'] = document.getElementById('wizard-current-solution')?.value || '';
+    data['wizard-cost'] = document.getElementById('wizard-cost')?.value || '';
+    
+    // Step 3
+    data['wizard-solution'] = document.getElementById('wizard-solution')?.value || '';
+    data['wizard-technology'] = document.getElementById('wizard-technology')?.value || '';
+    data['wizard-insight'] = document.getElementById('wizard-insight')?.value || '';
+    data['wizard-analogy'] = document.getElementById('wizard-analogy')?.value || '';
+    
+    // Step 4
+    data['wizard-customers'] = document.getElementById('wizard-customers')?.value || '';
+    data['wizard-revenue'] = document.getElementById('wizard-revenue')?.value || '';
+    data['wizard-key-metric'] = document.getElementById('wizard-key-metric')?.value || '';
+    data['wizard-notable-customers'] = document.getElementById('wizard-notable-customers')?.value || '';
+    data['wizard-press'] = document.getElementById('wizard-press')?.value || '';
+    data['wizard-awards'] = document.getElementById('wizard-awards')?.value || '';
+    data['wizard-features'] = document.getElementById('wizard-features')?.value || '';
+    
+    // Step 5
+    data['wizard-market-urgency'] = document.getElementById('wizard-market-urgency')?.value || '';
+    data['wizard-tech-shifts'] = document.getElementById('wizard-tech-shifts')?.value || '';
+    data['wizard-moat'] = document.getElementById('wizard-moat')?.value || '';
+    data['wizard-if-not'] = document.getElementById('wizard-if-not')?.value || '';
+    
+    // Step 6
+    data['wizard-elevator-pitch'] = document.getElementById('wizard-elevator-pitch')?.value || '';
+    data['wizard-strong-opinion'] = document.getElementById('wizard-strong-opinion')?.value || '';
+    data['wizard-investor-pitch'] = document.getElementById('wizard-investor-pitch')?.value || '';
+    const toneRadio = document.querySelector('input[name="wizard-tone"]:checked');
+    data['wizard-tone'] = toneRadio?.value || 'understated';
+    
+    return data;
+  }
+
+  async saveProgress() {
+    this.data = this.collectData();
+    
+    try {
+      const response = await fetch('/api/pr/wizard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: this.data })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save progress');
+      }
+    } catch (error) {
+      console.error('Error saving wizard progress:', error);
+    }
+  }
+
+  async finish() {
+    try {
+      await this.saveProgress();
+      await this.generateSources();
+      this.close();
+      this.prAgent.showToast('PR foundation created! 5 sources added.', 'success');
+    } catch (error) {
+      console.error('Error finishing wizard:', error);
+      this.prAgent.showToast('Failed to complete wizard. Please try again.', 'error');
+    }
+  }
+
+  async generateSources() {
+    const data = this.data;
+    const sources = [];
+    
+    // Source 1: Company Fact Sheet (Step 1 + Step 4)
+    const factSheetContent = `
+Company: ${data['wizard-company-name'] || '[Not provided]'}
+Description: ${data['wizard-company-description'] || '[Not provided]'}
+Founded: ${data['wizard-founded-year'] || '[Not provided]'}
+Team Size: ${data['wizard-team-size'] || '[Not provided]'}
+Location: ${data['wizard-headquarters'] || '[Not provided]'}
+Website: ${data['wizard-website'] || '[Not provided]'}
+Founders: ${data['wizard-founders'] || '[Not provided]'}
+Background: ${data['wizard-founder-background'] || '[Not provided]'}
+
+TRACTION:
+Customers: ${data['wizard-customers'] || '[Not provided]'}
+Revenue/Pipeline: ${data['wizard-revenue'] || '[Not provided]'}
+Key Metric: ${data['wizard-key-metric'] || '[Not provided]'}
+Notable Customers: ${data['wizard-notable-customers'] || '[Not provided]'}
+Press Coverage: ${data['wizard-press'] || '[Not provided]'}
+Awards/Investors: ${data['wizard-awards'] || '[Not provided]'}
+Recent Features: ${data['wizard-features'] || '[Not provided]'}
+    `.trim();
+    
+    sources.push({
+      id: 'src_wizard_facts_' + Date.now(),
+      title: 'Company Fact Sheet',
+      type: 'text',
+      content: factSheetContent,
+      createdAt: new Date().toISOString(),
+      selected: true
+    });
+    
+    // Source 2: Problem & Market Context (Step 2)
+    const problemContent = `
+THE PROBLEM:
+${data['wizard-problem'] || '[Not provided - add details to improve PR output]'}
+
+WHO HAS THIS PROBLEM:
+${data['wizard-who'] || '[Not provided - add details to improve PR output]'}
+
+CURRENT SOLUTIONS:
+${data['wizard-current-solution'] || '[Not provided - add details to improve PR output]'}
+
+COST OF CURRENT APPROACH:
+${data['wizard-cost'] || '[Not provided - add details to improve PR output]'}
+    `.trim();
+    
+    sources.push({
+      id: 'src_wizard_problem_' + Date.now(),
+      title: 'Problem & Market Context',
+      type: 'text',
+      content: problemContent,
+      createdAt: new Date().toISOString(),
+      selected: true
+    });
+    
+    // Source 3: Solution & Technology (Step 3)
+    const solutionContent = `
+HOW WE SOLVE IT:
+${data['wizard-solution'] || '[Not provided - add details to improve PR output]'}
+
+CORE TECHNOLOGY:
+${data['wizard-technology'] || '[Not provided - add details to improve PR output]'}
+
+KEY INSIGHT/DIFFERENTIATOR:
+${data['wizard-insight'] || '[Not provided - add details to improve PR output]'}
+
+ANALOGY:
+${data['wizard-analogy'] || '[Not provided - add details to improve PR output]'}
+    `.trim();
+    
+    sources.push({
+      id: 'src_wizard_solution_' + Date.now(),
+      title: 'Solution & Technology',
+      type: 'text',
+      content: solutionContent,
+      createdAt: new Date().toISOString(),
+      selected: true
+    });
+    
+    // Source 4: Market Timing & Why Now (Step 5)
+    const timingContent = `
+MARKET URGENCY:
+${data['wizard-market-urgency'] || '[Not provided - add details to improve PR output]'}
+
+TECHNOLOGY SHIFTS:
+${data['wizard-tech-shifts'] || '[Not provided - add details to improve PR output]'}
+
+WHY INCUMBENTS CAN'T DO THIS:
+${data['wizard-moat'] || '[Not provided - add details to improve PR output]'}
+
+CONSEQUENCE OF INACTION:
+${data['wizard-if-not'] || '[Not provided - add details to improve PR output]'}
+    `.trim();
+    
+    sources.push({
+      id: 'src_wizard_timing_' + Date.now(),
+      title: 'Market Timing & Why Now',
+      type: 'text',
+      content: timingContent,
+      createdAt: new Date().toISOString(),
+      selected: true
+    });
+    
+    // Source 5: Founder Voice & Messaging (Step 6)
+    const voiceContent = `
+30-SECOND PITCH:
+${data['wizard-elevator-pitch'] || '[Not provided - add details to improve PR output]'}
+
+STRONG OPINION:
+${data['wizard-strong-opinion'] || '[Not provided - add details to improve PR output]'}
+
+WHAT RESONATES WITH INVESTORS:
+${data['wizard-investor-pitch'] || '[Not provided - add details to improve PR output]'}
+
+TONE PREFERENCE:
+${data['wizard-tone'] || 'understated'}
+    `.trim();
+    
+    sources.push({
+      id: 'src_wizard_voice_' + Date.now(),
+      title: 'Founder Voice & Messaging',
+      type: 'text',
+      content: voiceContent,
+      createdAt: new Date().toISOString(),
+      selected: true
+    });
+    
+    // Save all sources to database
+    for (const source of sources) {
+      try {
+        const response = await fetch('/api/pr/sources', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(source)
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to save source: ${source.title}`);
+        }
+      } catch (error) {
+        console.error('Error saving source:', error);
+        throw error;
+      }
+    }
+    
+    // Refresh sources display
+    await this.prAgent.loadData();
+    this.prAgent.renderSources();
+    this.prAgent.updateGenerateButton();
+  }
+}
+
+// =========================================
+// MEDIA MANAGER
+// =========================================
+
+const OUTLET_DATABASE = {
+  tier1: [
+    { name: "TechCrunch", beats: ["AI", "3D", "startups", "enterprise"], url: "techcrunch.com", notes: "Strongest for funding announcements and product launches" },
+    { name: "The Verge", beats: ["AI", "creative tools", "tech products"], url: "theverge.com", notes: "Best for consumer-facing tech stories with visual demos" },
+    { name: "VentureBeat", beats: ["AI", "enterprise", "3D"], url: "venturebeat.com", notes: "AI/ML focused, good for technical depth" },
+    { name: "Wired", beats: ["AI", "design", "future of work"], url: "wired.com", notes: "Long-form, needs a strong narrative angle" },
+    { name: "The Information", beats: ["enterprise tech", "AI"], url: "theinformation.com", notes: "Premium audience, focuses on enterprise adoption" },
+    { name: "Fast Company", beats: ["design", "innovation", "creative tech"], url: "fastcompany.com", notes: "Design and innovation angle, good for 'most innovative companies' lists" },
+  ],
+  tier2: [
+    { name: "Adweek", beats: ["brand strategy", "creative tech", "marketing"], url: "adweek.com", notes: "Brand/marketing angle, CMO audience" },
+    { name: "Digiday", beats: ["marketing tech", "brand content", "e-commerce"], url: "digiday.com", notes: "Marketing tech transformation stories" },
+    { name: "Campaign", beats: ["advertising", "brand", "creative"], url: "campaignlive.com", notes: "Global advertising and brand strategy" },
+    { name: "Marketing Brew", beats: ["marketing", "brand tech"], url: "marketingbrew.com", notes: "Newsletter format, concise, high-engagement audience" },
+    { name: "Product Hunt", beats: ["product launches"], url: "producthunt.com", notes: "Community-driven launch platform" },
+    { name: "Hacker News", beats: ["technical", "startups"], url: "news.ycombinator.com", notes: "Developer/technical audience, organic only" },
+  ],
+  tier3_niche: [
+    { name: "3D World", beats: ["3D", "visualization", "rendering"], url: "3dworldmag.com", notes: "Deep technical audience, 3D professionals" },
+    { name: "CGSociety", beats: ["3D", "VFX", "visualization"], url: "cgsociety.org", notes: "CG/VFX community" },
+    { name: "Creative Bloq", beats: ["design", "creative tools"], url: "creativebloq.com", notes: "Creative professionals, design tools" },
+    { name: "RetailDive", beats: ["retail tech", "e-commerce"], url: "retaildive.com", notes: "Retail industry vertical" },
+    { name: "Glossy", beats: ["fashion", "beauty", "DTC brands"], url: "glossy.co", notes: "Fashion/beauty brand audience, perfect vertical fit" },
+  ],
+  newsletters: [
+    { name: "The Neuron", beats: ["AI"], url: "theneurondaily.com", notes: "Daily AI newsletter, large audience" },
+    { name: "TLDR AI", beats: ["AI"], url: "tldr.tech/ai", notes: "Short-form AI news, developer skew" },
+    { name: "Ben's Bites", beats: ["AI", "startups"], url: "bensbites.com", notes: "AI startup ecosystem" },
+    { name: "Import AI", beats: ["AI research"], url: "importai.net", notes: "More technical/research-focused" },
+    { name: "The Hustle", beats: ["startups", "business"], url: "thehustle.co", notes: "Business-focused, accessible tone" },
+  ]
+};
+
+class MediaManager {
+  constructor(prAgent) {
+    this.prAgent = prAgent;
+    this.journalists = [];
+    this.pitches = [];
+  }
+
+  async init() {
+    this.setupDOM();
+    this.setupEventListeners();
+    await this.loadJournalists();
+    await this.loadPitches();
+    this.renderOutlets();
+  }
+
+  setupDOM() {
+    this.dom = {
+      outletsContainer: document.getElementById('pr-media-outlets'),
+      discoverView: document.getElementById('pr-media-discover'),
+      trackView: document.getElementById('pr-media-track'),
+      pitchTracker: document.getElementById('pr-pitch-tracker'),
+      toggleBtns: document.querySelectorAll('.pr-media-toggle-btn')
+    };
+  }
+
+  setupEventListeners() {
+    // Toggle between Discover and Track views
+    this.dom.toggleBtns?.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.mediaView;
+        
+        this.dom.toggleBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        this.dom.discoverView?.classList.toggle('active', view === 'discover');
+        this.dom.trackView?.classList.toggle('active', view === 'track');
+        
+        if (view === 'track') {
+          // Render journalist table
+          this.dom.pitchTracker.innerHTML = this.renderJournalistTable();
+          this.setupJournalistTableListeners();
+        }
+      });
+    });
+  }
+
+  async loadJournalists() {
+    try {
+      const response = await fetch('/api/pr/journalists');
+      const data = await response.json();
+      if (data.success) {
+        this.journalists = data.journalists;
+      }
+    } catch (error) {
+      console.error('Error loading journalists:', error);
+    }
+  }
+
+  async loadPitches() {
+    try {
+      const response = await fetch('/api/pr/pitches');
+      const data = await response.json();
+      if (data.success) {
+        this.pitches = data.pitches;
+      }
+    } catch (error) {
+      console.error('Error loading pitches:', error);
+    }
+  }
+
+  renderOutlets() {
+    if (!this.dom.outletsContainer) return;
+
+    const tierLabels = {
+      tier1: 'Tier 1',
+      tier2: 'Tier 2',
+      tier3_niche: 'Tier 3 / Niche',
+      newsletters: 'Newsletters'
+    };
+
+    let html = '';
+    
+    Object.keys(OUTLET_DATABASE).forEach(tier => {
+      html += `<div class="pr-outlet-tier">
+        <h4 class="pr-outlet-tier-label">${tierLabels[tier]}</h4>
+        <div class="pr-outlet-cards">`;
+      
+      OUTLET_DATABASE[tier].forEach(outlet => {
+        html += `
+          <div class="pr-outlet-card">
+            <div class="pr-outlet-card-header">
+              <div class="pr-outlet-card-title">
+                <span class="pr-outlet-name">${this.escapeHtml(outlet.name)}</span>
+                <a href="https://${outlet.url}" target="_blank" class="pr-outlet-url" title="Visit ${outlet.name}">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                  </svg>
+                </a>
+              </div>
+            </div>
+            <div class="pr-outlet-beats">
+              ${outlet.beats.map(beat => `<span class="pr-beat-tag">${beat}</span>`).join('')}
+            </div>
+            <p class="pr-outlet-notes">${this.escapeHtml(outlet.notes)}</p>
+            <button class="btn btn-sm btn-primary pr-find-journalists-btn" data-outlet="${this.escapeHtml(outlet.name)}" data-url="${outlet.url}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+              Find Journalists
+            </button>
+          </div>
+        `;
+      });
+      
+      html += `</div></div>`;
+    });
+
+    this.dom.outletsContainer.innerHTML = html;
+
+    // Add event listeners to find journalists buttons
+    this.dom.outletsContainer.querySelectorAll('.pr-find-journalists-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const outletName = btn.dataset.outlet;
+        const outletUrl = btn.dataset.url;
+        this.discoverJournalists(outletName, outletUrl);
+      });
+    });
+  }
+
+  async discoverJournalists(outletName, outletUrl) {
+    if (!this.prAgent.apiKey) {
+      this.prAgent.showToast('Anthropic API key required. Set it in Dashboard Settings.', 'error');
+      return;
+    }
+
+    // Show loading state
+    const loadingModal = this.showLoadingModal('Discovering journalists...');
+
+    try {
+      const response = await fetch('/api/pr/discover-journalists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          outletName,
+          outletUrl,
+          apiKey: this.prAgent.apiKey
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Discovery failed');
+      }
+
+      loadingModal.remove();
+      
+      if (data.journalists.length === 0) {
+        this.prAgent.showToast('No journalists found for this outlet', 'info');
+        return;
+      }
+
+      this.showJournalistResults(data.journalists, outletName);
+    } catch (error) {
+      loadingModal.remove();
+      console.error('Error discovering journalists:', error);
+      this.prAgent.showToast('Failed to discover journalists. ' + error.message, 'error');
+    }
+  }
+
+  showLoadingModal(message) {
+    const modal = document.createElement('div');
+    modal.className = 'pr-loading-modal';
+    modal.innerHTML = `
+      <div class="pr-loading-modal-content">
+        <div class="pr-loading-spinner"></div>
+        <p>${message}</p>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    return modal;
+  }
+
+  showJournalistResults(journalists, outletName) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay visible';
+    modal.innerHTML = `
+      <div class="modal modal-large">
+        <div class="modal-header">
+          <h2>Journalists at ${this.escapeHtml(outletName)}</h2>
+          <button class="btn-icon modal-close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="pr-journalist-results">
+            ${journalists.map(j => `
+              <div class="pr-journalist-card">
+                <div class="pr-journalist-header">
+                  <div class="pr-journalist-info">
+                    <h3 class="pr-journalist-name">${this.escapeHtml(j.name)}</h3>
+                    <p class="pr-journalist-outlet">${this.escapeHtml(j.outlet)}${j.beat ? ` / ${this.escapeHtml(j.beat)}` : ''}</p>
+                  </div>
+                  ${j.contactFound ? '<span class="pr-contact-badge">Contact info found</span>' : ''}
+                </div>
+                ${j.articles && j.articles.length > 0 ? `
+                  <div class="pr-journalist-articles">
+                    <p class="pr-articles-label">Recent coverage:</p>
+                    ${j.articles.slice(0, 3).map(a => `
+                      <div class="pr-article-item">
+                        <a href="${a.url}" target="_blank" class="pr-article-title">${this.escapeHtml(a.title)}</a>
+                        <p class="pr-article-meta">${a.date || 'Recent'}</p>
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : ''}
+                ${(j.email || j.twitter || j.linkedin) ? `
+                  <div class="pr-journalist-contact">
+                    ${j.email ? `<span class="pr-contact-item">📧 ${this.escapeHtml(j.email)}</span>` : ''}
+                    ${j.twitter ? `<span class="pr-contact-item">𝕏 @${this.escapeHtml(j.twitter)}</span>` : ''}
+                    ${j.linkedin ? `<a href="${j.linkedin}" target="_blank" class="pr-contact-item">💼 LinkedIn</a>` : ''}
+                  </div>
+                ` : ''}
+                <button class="btn btn-primary pr-save-journalist-btn" data-journalist='${JSON.stringify(j).replace(/'/g, "&apos;")}'>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                  </svg>
+                  Save to Media List
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+
+    modal.querySelectorAll('.pr-save-journalist-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const journalist = JSON.parse(btn.dataset.journalist.replace(/&apos;/g, "'"));
+        await this.saveJournalist(journalist);
+        btn.disabled = true;
+        btn.textContent = 'Saved!';
+      });
+    });
+  }
+
+  async saveJournalist(journalist) {
+    const id = 'jrn_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+    const journalistData = {
+      id,
+      name: journalist.name,
+      outlet: journalist.outlet,
+      outlet_url: journalist.outletUrl,
+      beat: journalist.beat || null,
+      recent_articles: journalist.articles || [],
+      email: journalist.email || null,
+      twitter: journalist.twitter || null,
+      linkedin: journalist.linkedin || null,
+      notes: '',
+      last_pitched: null,
+      status: 'new'
+    };
+
+    try {
+      await fetch('/api/pr/journalists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(journalistData)
+      });
+
+      this.journalists.push(journalistData);
+      this.prAgent.showToast(`${journalist.name} saved to media list`, 'success');
+    } catch (error) {
+      console.error('Error saving journalist:', error);
+      this.prAgent.showToast('Failed to save journalist', 'error');
+    }
+  }
+
+  renderPitches() {
+    if (!this.dom.pitchTracker) return;
+
+    if (this.pitches.length === 0) {
+      this.dom.pitchTracker.innerHTML = '<p class="pr-empty-text">No pitches tracked yet</p>';
+      return;
+    }
+
+    // Pitch analytics
+    const sent = this.pitches.filter(p => ['sent', 'followed_up', 'responded', 'covered'].includes(p.status)).length;
+    const responded = this.pitches.filter(p => ['responded', 'covered'].includes(p.status)).length;
+    const covered = this.pitches.filter(p => p.status === 'covered').length;
+
+    let html = `
+      <div class="pr-pitch-analytics">
+        <div class="pr-pitch-stat">
+          <span class="pr-pitch-stat-value">${sent}</span>
+          <span class="pr-pitch-stat-label">Pitches Sent</span>
+        </div>
+        <div class="pr-pitch-stat">
+          <span class="pr-pitch-stat-value">${responded}</span>
+          <span class="pr-pitch-stat-label">Responses</span>
+        </div>
+        <div class="pr-pitch-stat">
+          <span class="pr-pitch-stat-value">${covered}</span>
+          <span class="pr-pitch-stat-label">Coverage</span>
+        </div>
+      </div>
+      <div class="pr-pitch-list">
+    `;
+    
+    this.pitches.forEach(pitch => {
+      const journalist = this.journalists.find(j => j.id === pitch.journalist_id);
+      const followUpDue = pitch.follow_up_date && new Date(pitch.follow_up_date) <= new Date();
+      
+      html += `
+        <div class="pr-pitch-item ${followUpDue ? 'follow-up-due' : ''}">
+          <div class="pr-pitch-header">
+            <div class="pr-pitch-info">
+              <span class="pr-pitch-journalist">${journalist ? this.escapeHtml(journalist.name) : 'Unknown'}</span>
+              ${journalist ? `<span class="pr-pitch-outlet">${this.escapeHtml(journalist.outlet)}</span>` : ''}
+            </div>
+            <select class="pr-pitch-status-select" data-pitch-id="${pitch.id}">
+              <option value="drafted" ${pitch.status === 'drafted' ? 'selected' : ''}>Drafted</option>
+              <option value="sent" ${pitch.status === 'sent' ? 'selected' : ''}>Sent</option>
+              <option value="followed_up" ${pitch.status === 'followed_up' ? 'selected' : ''}>Followed Up</option>
+              <option value="responded" ${pitch.status === 'responded' ? 'selected' : ''}>Responded</option>
+              <option value="declined" ${pitch.status === 'declined' ? 'selected' : ''}>Declined</option>
+              <option value="covered" ${pitch.status === 'covered' ? 'selected' : ''}>Covered</option>
+            </select>
+          </div>
+          <div class="pr-pitch-meta">
+            <span>${pitch.sent_date ? new Date(pitch.sent_date).toLocaleDateString() : 'Not sent'}</span>
+            ${followUpDue ? '<span class="pr-follow-up-badge">Follow-up due</span>' : ''}
+          </div>
+          ${pitch.notes ? `<p class="pr-pitch-notes">${this.escapeHtml(pitch.notes)}</p>` : ''}
+          ${pitch.coverage_url ? `<a href="${pitch.coverage_url}" target="_blank" class="pr-coverage-link">View Coverage →</a>` : ''}
+        </div>
+      `;
+    });
+    
+    html += `</div>`;
+    this.dom.pitchTracker.innerHTML = html;
+
+    // Add status change listeners
+    this.dom.pitchTracker.querySelectorAll('.pr-pitch-status-select').forEach(select => {
+      select.addEventListener('change', async (e) => {
+        const pitchId = e.target.dataset.pitchId;
+        const newStatus = e.target.value;
+        await this.updatePitchStatus(pitchId, newStatus);
+      });
+    });
+  }
+
+  async updatePitchStatus(pitchId, newStatus) {
+    const pitch = this.pitches.find(p => p.id === pitchId);
+    if (!pitch) return;
+
+    pitch.status = newStatus;
+
+    try {
+      await fetch('/api/pr/pitches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pitch)
+      });
+
+      this.renderPitches();
+      this.prAgent.showToast('Pitch status updated', 'success');
+    } catch (error) {
+      console.error('Error updating pitch status:', error);
+      this.prAgent.showToast('Failed to update status', 'error');
+    }
+  }
+
+  renderJournalistTable() {
+    if (this.journalists.length === 0) {
+      return '<p class="pr-empty-text">No journalists saved yet. Discover journalists from outlets.</p>';
+    }
+
+    let html = `
+      <div class="pr-journalist-table">
+        <div class="pr-journalist-filters">
+          <input type="text" class="input input-sm" id="pr-journalist-search" placeholder="Search journalists...">
+          <select class="input input-sm" id="pr-journalist-filter-outlet">
+            <option value="">All Outlets</option>
+            ${[...new Set(this.journalists.map(j => j.outlet))].map(outlet => 
+              `<option value="${outlet}">${outlet}</option>`
+            ).join('')}
+          </select>
+          <select class="input input-sm" id="pr-journalist-filter-status">
+            <option value="">All Status</option>
+            <option value="new">New</option>
+            <option value="researched">Researched</option>
+            <option value="pitched">Pitched</option>
+            <option value="responded">Responded</option>
+            <option value="covered">Covered</option>
+          </select>
+        </div>
+        <div class="pr-journalist-table-rows">
+    `;
+
+    this.journalists.forEach(journalist => {
+      html += `
+        <div class="pr-journalist-row" data-journalist-id="${journalist.id}">
+          <div class="pr-journalist-row-main">
+            <div class="pr-journalist-row-info">
+              <span class="pr-journalist-row-name">${this.escapeHtml(journalist.name)}</span>
+              <span class="pr-journalist-row-outlet">${this.escapeHtml(journalist.outlet)}</span>
+              ${journalist.beat ? `<span class="pr-journalist-row-beat">${this.escapeHtml(journalist.beat)}</span>` : ''}
+            </div>
+            <div class="pr-journalist-row-actions">
+              <select class="pr-status-select" data-journalist-id="${journalist.id}">
+                <option value="new" ${journalist.status === 'new' ? 'selected' : ''}>New</option>
+                <option value="researched" ${journalist.status === 'researched' ? 'selected' : ''}>Researched</option>
+                <option value="pitched" ${journalist.status === 'pitched' ? 'selected' : ''}>Pitched</option>
+                <option value="responded" ${journalist.status === 'responded' ? 'selected' : ''}>Responded</option>
+                <option value="covered" ${journalist.status === 'covered' ? 'selected' : ''}>Covered</option>
+              </select>
+              <button class="btn-icon" data-action="view" data-journalist-id="${journalist.id}" title="View details">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+              <button class="btn-icon" data-action="delete" data-journalist-id="${journalist.id}" title="Delete">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          ${(journalist.email || journalist.twitter || journalist.linkedin) ? `
+            <div class="pr-journalist-row-contact">
+              ${journalist.email ? `<span>📧 ${this.escapeHtml(journalist.email)}</span>` : ''}
+              ${journalist.twitter ? `<span>𝕏 @${this.escapeHtml(journalist.twitter)}</span>` : ''}
+              ${journalist.linkedin ? `<a href="${journalist.linkedin}" target="_blank">💼 LinkedIn</a>` : ''}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    });
+
+    html += `</div></div>`;
+    return html;
+  }
+
+  setupJournalistTableListeners() {
+    // Status change
+    document.querySelectorAll('.pr-status-select').forEach(select => {
+      select.addEventListener('change', async (e) => {
+        const journalistId = e.target.dataset.journalistId;
+        const newStatus = e.target.value;
+        await this.updateJournalistStatus(journalistId, newStatus);
+      });
+    });
+
+    // Actions
+    document.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const action = btn.dataset.action;
+        const journalistId = btn.dataset.journalistId;
+
+        if (action === 'view') {
+          this.viewJournalistDetails(journalistId);
+        } else if (action === 'delete') {
+          await this.deleteJournalist(journalistId);
+        }
+      });
+    });
+
+    // Filtering
+    const searchInput = document.getElementById('pr-journalist-search');
+    const outletFilter = document.getElementById('pr-journalist-filter-outlet');
+    const statusFilter = document.getElementById('pr-journalist-filter-status');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', () => this.filterJournalists());
+    }
+    if (outletFilter) {
+      outletFilter.addEventListener('change', () => this.filterJournalists());
+    }
+    if (statusFilter) {
+      statusFilter.addEventListener('change', () => this.filterJournalists());
+    }
+  }
+
+  filterJournalists() {
+    const searchTerm = document.getElementById('pr-journalist-search')?.value.toLowerCase() || '';
+    const outletFilter = document.getElementById('pr-journalist-filter-outlet')?.value || '';
+    const statusFilter = document.getElementById('pr-journalist-filter-status')?.value || '';
+
+    document.querySelectorAll('.pr-journalist-row').forEach(row => {
+      const journalistId = row.dataset.journalistId;
+      const journalist = this.journalists.find(j => j.id === journalistId);
+
+      if (!journalist) {
+        row.style.display = 'none';
+        return;
+      }
+
+      const matchesSearch = journalist.name.toLowerCase().includes(searchTerm) ||
+                           journalist.outlet.toLowerCase().includes(searchTerm);
+      const matchesOutlet = !outletFilter || journalist.outlet === outletFilter;
+      const matchesStatus = !statusFilter || journalist.status === statusFilter;
+
+      row.style.display = matchesSearch && matchesOutlet && matchesStatus ? '' : 'none';
+    });
+  }
+
+  async updateJournalistStatus(journalistId, newStatus) {
+    const journalist = this.journalists.find(j => j.id === journalistId);
+    if (!journalist) return;
+
+    journalist.status = newStatus;
+
+    try {
+      await fetch('/api/pr/journalists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(journalist)
+      });
+
+      this.prAgent.showToast('Status updated', 'success');
+    } catch (error) {
+      console.error('Error updating journalist status:', error);
+      this.prAgent.showToast('Failed to update status', 'error');
+    }
+  }
+
+  async deleteJournalist(journalistId) {
+    const confirmed = confirm('Delete this journalist from your media list?');
+    if (!confirmed) return;
+
+    try {
+      await fetch(`/api/pr/journalists/${journalistId}`, {
+        method: 'DELETE'
+      });
+
+      this.journalists = this.journalists.filter(j => j.id !== journalistId);
+      
+      // Re-render track view
+      if (this.dom.trackView?.classList.contains('active')) {
+        this.dom.pitchTracker.innerHTML = this.renderJournalistTable();
+        this.setupJournalistTableListeners();
+      }
+
+      this.prAgent.showToast('Journalist deleted', 'success');
+    } catch (error) {
+      console.error('Error deleting journalist:', error);
+      this.prAgent.showToast('Failed to delete journalist', 'error');
+    }
+  }
+
+  viewJournalistDetails(journalistId) {
+    const journalist = this.journalists.find(j => j.id === journalistId);
+    if (!journalist) return;
+
+    // Create modal with journalist details
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay visible';
+    modal.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h2>${this.escapeHtml(journalist.name)}</h2>
+          <button class="btn-icon modal-close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="pr-journalist-details">
+            <div class="pr-detail-row">
+              <span class="pr-detail-label">Outlet:</span>
+              <span class="pr-detail-value">${this.escapeHtml(journalist.outlet)}</span>
+            </div>
+            ${journalist.beat ? `
+              <div class="pr-detail-row">
+                <span class="pr-detail-label">Beat:</span>
+                <span class="pr-detail-value">${this.escapeHtml(journalist.beat)}</span>
+              </div>
+            ` : ''}
+            ${journalist.email ? `
+              <div class="pr-detail-row">
+                <span class="pr-detail-label">Email:</span>
+                <span class="pr-detail-value">${this.escapeHtml(journalist.email)}</span>
+              </div>
+            ` : ''}
+            ${journalist.twitter ? `
+              <div class="pr-detail-row">
+                <span class="pr-detail-label">Twitter:</span>
+                <span class="pr-detail-value">@${this.escapeHtml(journalist.twitter)}</span>
+              </div>
+            ` : ''}
+            ${journalist.linkedin ? `
+              <div class="pr-detail-row">
+                <span class="pr-detail-label">LinkedIn:</span>
+                <a href="${journalist.linkedin}" target="_blank" class="pr-detail-value">${journalist.linkedin}</a>
+              </div>
+            ` : ''}
+            ${journalist.notes ? `
+              <div class="pr-detail-row">
+                <span class="pr-detail-label">Notes:</span>
+                <p class="pr-detail-value">${this.escapeHtml(journalist.notes)}</p>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+  }
+
+  escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+}
+
+// =========================================
+// NEWS MONITOR
+// =========================================
+
+class NewsMonitor {
+  constructor(prAgent) {
+    this.prAgent = prAgent;
+    this.newsHooks = [];
+  }
+
+  async init() {
+    this.setupDOM();
+    this.setupEventListeners();
+    await this.loadCachedNews();
+  }
+
+  setupDOM() {
+    this.dom = {
+      refreshBtn: document.getElementById('pr-refresh-news-btn'),
+      newsFeed: document.getElementById('pr-news-hooks-feed')
+    };
+  }
+
+  setupEventListeners() {
+    this.dom.refreshBtn?.addEventListener('click', () => this.refreshNews());
+  }
+
+  async loadCachedNews() {
+    try {
+      const response = await fetch('/api/pr/news-hooks');
+      const data = await response.json();
+      if (data.success && data.news.length > 0) {
+        this.newsHooks = data.news;
+        this.renderNews();
+      }
+    } catch (error) {
+      console.error('Error loading cached news:', error);
+    }
+  }
+
+  async refreshNews() {
+    if (!this.prAgent.apiKey) {
+      this.prAgent.showToast('Anthropic API key required. Set it in Dashboard Settings.', 'error');
+      return;
+    }
+
+    // Show loading state
+    this.dom.refreshBtn.disabled = true;
+    this.dom.refreshBtn.classList.add('spinning');
+    this.dom.newsFeed.innerHTML = '<p class="pr-news-loading">Searching for relevant news...</p>';
+
+    try {
+      const response = await fetch('/api/pr/news-hooks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: this.prAgent.apiKey })
+      });
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch news');
+      }
+
+      this.newsHooks = data.news || [];
+      this.renderNews();
+      
+      if (this.newsHooks.length > 0) {
+        this.prAgent.showToast(`Found ${this.newsHooks.length} relevant news hooks`, 'success');
+      } else {
+        this.prAgent.showToast('No recent news found', 'info');
+      }
+    } catch (error) {
+      console.error('Error refreshing news:', error);
+      this.prAgent.showToast('Failed to fetch news: ' + error.message, 'error');
+      this.dom.newsFeed.innerHTML = '<p class="pr-news-empty">Failed to load news. Try again.</p>';
+    } finally {
+      this.dom.refreshBtn.disabled = false;
+      this.dom.refreshBtn.classList.remove('spinning');
+    }
+  }
+
+  renderNews() {
+    if (!this.dom.newsFeed) return;
+
+    if (this.newsHooks.length === 0) {
+      this.dom.newsFeed.innerHTML = '<p class="pr-news-empty">No recent news found. Click refresh to search.</p>';
+      return;
+    }
+
+    let html = '<div class="pr-news-items">';
+    
+    this.newsHooks.forEach((item, index) => {
+      const date = new Date(item.date || item.fetched_at);
+      const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+      const isStale = daysAgo > 7;
+      
+      html += `
+        <div class="pr-news-item ${isStale ? 'stale' : ''}">
+          <div class="pr-news-header">
+            <a href="${item.url}" target="_blank" class="pr-news-headline">${this.escapeHtml(item.headline)}</a>
+            ${isStale ? '<span class="pr-news-stale-badge">Old</span>' : ''}
+          </div>
+          <div class="pr-news-meta">
+            <span class="pr-news-outlet">${this.escapeHtml(item.outlet)}</span>
+            <span class="pr-news-date">${daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`}</span>
+          </div>
+          <p class="pr-news-summary">${this.escapeHtml(item.summary)}</p>
+          <div class="pr-news-relevance">
+            <span class="pr-relevance-label">How Glossi ties in:</span>
+            <p class="pr-relevance-text">${this.escapeHtml(item.relevance)}</p>
+          </div>
+          <button class="btn btn-sm pr-use-hook-btn" data-news-index="${index}">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Use as Hook
+          </button>
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+    this.dom.newsFeed.innerHTML = html;
+
+    // Add event listeners
+    this.dom.newsFeed.querySelectorAll('.pr-use-hook-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const index = parseInt(btn.dataset.newsIndex);
+        this.useAsHook(this.newsHooks[index]);
+      });
+    });
+  }
+
+  async useAsHook(newsItem) {
+    const sourceContent = `
+NEWS HOOK: ${newsItem.headline}
+
+OUTLET: ${newsItem.outlet}
+DATE: ${newsItem.date}
+URL: ${newsItem.url}
+
+SUMMARY:
+${newsItem.summary}
+
+RELEVANCE TO GLOSSI:
+${newsItem.relevance}
+    `.trim();
+
+    const source = {
+      id: 'src_news_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      title: `News Hook: ${newsItem.headline}`,
+      type: 'text',
+      content: sourceContent,
+      url: newsItem.url,
+      createdAt: new Date().toISOString(),
+      selected: true
+    };
+
+    // Save to API
+    try {
+      await fetch('/api/pr/sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(source)
+      });
+
+      this.prAgent.sources.push(source);
+      await this.prAgent.loadData();
+      this.prAgent.renderSources();
+      this.prAgent.updateGenerateButton();
+      
+      this.prAgent.showToast('News hook added to sources', 'success');
+      
+      // Switch to Sources tab to show the new source
+      const sourcesTab = document.querySelector('.pr-left-tab[data-left-tab="sources"]');
+      if (sourcesTab) sourcesTab.click();
+    } catch (error) {
+      console.error('Error saving news hook as source:', error);
+      this.prAgent.showToast('Failed to add news hook', 'error');
+    }
+  }
+
+  escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+}
+
+// =========================================
+// CALENDAR MANAGER
+// =========================================
+
+class CalendarManager {
+  constructor(prAgent) {
+    this.prAgent = prAgent;
+    this.calendarItems = [];
+  }
+
+  async init() {
+    this.setupDOM();
+    this.setupEventListeners();
+    await this.loadCalendarItems();
+    this.renderCalendar();
+  }
+
+  setupDOM() {
+    this.dom = {
+      timeline: document.getElementById('pr-calendar-timeline'),
+      addBtn: document.getElementById('pr-add-calendar-item')
+    };
+  }
+
+  setupEventListeners() {
+    this.dom.addBtn?.addEventListener('click', () => this.showAddItemModal());
+  }
+
+  async loadCalendarItems() {
+    try {
+      const response = await fetch('/api/pr/calendar');
+      const data = await response.json();
+      if (data.success) {
+        this.calendarItems = data.items;
+      }
+    } catch (error) {
+      console.error('Error loading calendar items:', error);
+    }
+  }
+
+  renderCalendar() {
+    if (!this.dom.timeline) return;
+
+    if (this.calendarItems.length === 0) {
+      this.dom.timeline.innerHTML = `
+        <div class="pr-calendar-empty">
+          <p>No items scheduled</p>
+          <p class="pr-empty-hint">Add content to your calendar</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Group items by week
+    const now = new Date();
+    const thisWeekStart = new Date(now);
+    thisWeekStart.setDate(now.getDate() - now.getDay());
+    const nextWeekStart = new Date(thisWeekStart);
+    nextWeekStart.setDate(thisWeekStart.getDate() + 7);
+
+    const thisWeek = [];
+    const nextWeek = [];
+    const later = [];
+
+    this.calendarItems.forEach(item => {
+      const itemDate = new Date(item.date);
+      if (itemDate < nextWeekStart) {
+        if (itemDate >= thisWeekStart) {
+          thisWeek.push(item);
+        } else {
+          // Past items go in "this week" for now
+          thisWeek.push(item);
+        }
+      } else if (itemDate < new Date(nextWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000)) {
+        nextWeek.push(item);
+      } else {
+        later.push(item);
+      }
+    });
+
+    let html = '';
+
+    if (thisWeek.length > 0) {
+      html += '<div class="pr-calendar-week"><h4 class="pr-calendar-week-title">This Week</h4>';
+      thisWeek.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(item => {
+        html += this.renderCalendarItem(item);
+      });
+      html += '</div>';
+    }
+
+    if (nextWeek.length > 0) {
+      html += '<div class="pr-calendar-week"><h4 class="pr-calendar-week-title">Next Week</h4>';
+      nextWeek.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(item => {
+        html += this.renderCalendarItem(item);
+      });
+      html += '</div>';
+    }
+
+    if (later.length > 0) {
+      html += '<div class="pr-calendar-week"><h4 class="pr-calendar-week-title">Later</h4>';
+      later.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(item => {
+        html += this.renderCalendarItem(item);
+      });
+      html += '</div>';
+    }
+
+    this.dom.timeline.innerHTML = html;
+
+    // Add event listeners
+    this.dom.timeline.querySelectorAll('.pr-calendar-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const itemId = el.dataset.itemId;
+        this.openCalendarItem(itemId);
+      });
+    });
+
+    this.dom.timeline.querySelectorAll('.pr-calendar-delete').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const itemId = btn.dataset.itemId;
+        await this.deleteCalendarItem(itemId);
+      });
+    });
+  }
+
+  renderCalendarItem(item) {
+    const date = new Date(item.date);
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    const statusClasses = {
+      'not_started': 'pr-status-not-started',
+      'draft_ready': 'pr-status-draft',
+      'sent': 'pr-status-sent',
+      'published': 'pr-status-published'
+    };
+
+    const statusLabels = {
+      'not_started': 'Not Started',
+      'draft_ready': 'Draft Ready',
+      'sent': 'Sent',
+      'published': 'Published'
+    };
+
+    const typeIcons = {
+      'linkedin_post': '💼',
+      'tweet_thread': '𝕏',
+      'blog_post': '📝',
+      'press_release': '📰',
+      'media_pitch': '📧',
+      'pitch': '📧',
+      'custom': '📌'
+    };
+
+    return `
+      <div class="pr-calendar-item ${statusClasses[item.status] || ''}" data-item-id="${item.id}">
+        <div class="pr-calendar-item-date">
+          <span class="pr-calendar-day">${dayName}</span>
+          <span class="pr-calendar-date-num">${dateStr}</span>
+        </div>
+        <div class="pr-calendar-item-content">
+          <div class="pr-calendar-item-header">
+            <span class="pr-calendar-type-icon">${typeIcons[item.type] || '📌'}</span>
+            <span class="pr-calendar-item-title">${this.escapeHtml(item.title)}</span>
+          </div>
+          <span class="pr-calendar-status-badge">${statusLabels[item.status] || item.status}</span>
+        </div>
+        <button class="pr-calendar-delete" data-item-id="${item.id}" title="Delete">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    `;
+  }
+
+  showAddItemModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay visible';
+    modal.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Add Calendar Item</h2>
+          <button class="btn-icon modal-close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="notes-input-section">
+            <label for="cal-item-date">Date</label>
+            <input type="date" id="cal-item-date" class="input" required>
+          </div>
+          <div class="notes-input-section">
+            <label for="cal-item-type">Type</label>
+            <select id="cal-item-type" class="input">
+              <option value="linkedin_post">LinkedIn Post</option>
+              <option value="tweet_thread">Tweet Thread</option>
+              <option value="blog_post">Blog Post</option>
+              <option value="press_release">Press Release</option>
+              <option value="media_pitch">Media Pitch</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="notes-input-section">
+            <label for="cal-item-title">Title</label>
+            <input type="text" id="cal-item-title" class="input" placeholder="e.g., LinkedIn post - Why AI Wrappers Will Lose" required>
+          </div>
+          <div class="notes-input-section">
+            <label for="cal-item-notes">Notes (optional)</label>
+            <textarea id="cal-item-notes" class="input textarea" rows="3" placeholder="Additional notes..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cal-modal-cancel">Cancel</button>
+          <button class="btn btn-primary" id="cal-modal-save">Add to Calendar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Set default date to today
+    document.getElementById('cal-item-date').valueAsDate = new Date();
+
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.querySelector('#cal-modal-cancel').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+
+    modal.querySelector('#cal-modal-save').addEventListener('click', async () => {
+      const date = document.getElementById('cal-item-date').value;
+      const type = document.getElementById('cal-item-type').value;
+      const title = document.getElementById('cal-item-title').value.trim();
+      const notes = document.getElementById('cal-item-notes').value.trim();
+
+      if (!date || !title) {
+        this.prAgent.showToast('Date and title are required', 'error');
+        return;
+      }
+
+      const item = {
+        id: 'cal_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        date,
+        type,
+        title,
+        content_id: null,
+        pitch_id: null,
+        status: 'not_started',
+        notes
+      };
+
+      try {
+        await fetch('/api/pr/calendar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(item)
+        });
+
+        this.calendarItems.push(item);
+        this.renderCalendar();
+        modal.remove();
+        this.prAgent.showToast('Calendar item added', 'success');
+      } catch (error) {
+        console.error('Error adding calendar item:', error);
+        this.prAgent.showToast('Failed to add calendar item', 'error');
+      }
+    });
+  }
+
+  async deleteCalendarItem(itemId) {
+    const confirmed = confirm('Delete this calendar item?');
+    if (!confirmed) return;
+
+    try {
+      await fetch(`/api/pr/calendar/${itemId}`, {
+        method: 'DELETE'
+      });
+
+      this.calendarItems = this.calendarItems.filter(i => i.id !== itemId);
+      this.renderCalendar();
+      this.prAgent.showToast('Calendar item deleted', 'success');
+    } catch (error) {
+      console.error('Error deleting calendar item:', error);
+      this.prAgent.showToast('Failed to delete item', 'error');
+    }
+  }
+
+  openCalendarItem(itemId) {
+    const item = this.calendarItems.find(i => i.id === itemId);
+    if (!item) return;
+
+    // If linked to content, open workspace
+    if (item.content_id) {
+      const output = this.prAgent.outputs.find(o => o.id === item.content_id);
+      if (output) {
+        this.prAgent.loadOutput(output.id);
+        // Switch to workspace tab on mobile
+        const workspaceTab = document.querySelector('.pr-mobile-tab[data-tab="workspace"]');
+        if (workspaceTab) workspaceTab.click();
+      }
+    }
+    // Otherwise show edit modal (simplified for now)
+  }
+
+  escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+}
+
+export { PRAgent, CONTENT_TYPES, WizardManager, MediaManager, NewsMonitor, CalendarManager };

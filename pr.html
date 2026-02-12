@@ -66,13 +66,24 @@
     <!-- Mobile Tab Bar -->
     <div class="pr-mobile-tabs" id="pr-mobile-tabs">
       <button class="pr-mobile-tab active" data-tab="sources">Sources</button>
+      <button class="pr-mobile-tab" data-tab="media">Media</button>
+      <button class="pr-mobile-tab" data-tab="calendar">Calendar</button>
       <button class="pr-mobile-tab" data-tab="workspace">Workspace</button>
       <button class="pr-mobile-tab" data-tab="strategy">Strategy</button>
     </div>
 
     <div class="pr-layout">
-      <!-- Column 1: Sources -->
+      <!-- Column 1: Sources/Media/Calendar -->
       <div class="pr-sources-panel" id="pr-sources-panel">
+        <!-- Left Panel Tabs -->
+        <div class="pr-left-tabs">
+          <button class="pr-left-tab active" data-left-tab="sources">Sources</button>
+          <button class="pr-left-tab" data-left-tab="media">Media</button>
+          <button class="pr-left-tab" data-left-tab="calendar">Calendar</button>
+        </div>
+        
+        <!-- Sources Tab Content -->
+        <div class="pr-left-tab-content active" id="pr-tab-sources">
         <div class="pr-sources-header">
           <span class="pr-sources-label">Sources</span>
           <span class="pr-sources-count" id="pr-sources-count">0</span>
@@ -112,6 +123,53 @@
           <div class="pr-history-list" id="pr-history-list">
             <div class="pr-history-empty" id="pr-history-empty">
               <p>No outputs yet</p>
+            </div>
+          </div>
+        </div>
+        </div>
+        
+        <!-- Media Tab Content -->
+        <div class="pr-left-tab-content" id="pr-tab-media">
+          <div class="pr-media-view">
+            <!-- Media view/toggle buttons -->
+            <div class="pr-media-header">
+              <div class="pr-media-toggle">
+                <button class="pr-media-toggle-btn active" data-media-view="discover">Discover</button>
+                <button class="pr-media-toggle-btn" data-media-view="track">Track</button>
+              </div>
+            </div>
+            
+            <!-- Discover View (Outlets) -->
+            <div class="pr-media-discover active" id="pr-media-discover">
+              <div class="pr-media-outlets" id="pr-media-outlets">
+                <p class="pr-loading-text">Loading outlets...</p>
+              </div>
+            </div>
+            
+            <!-- Track View (Pitches) -->
+            <div class="pr-media-track" id="pr-media-track">
+              <div class="pr-pitch-tracker" id="pr-pitch-tracker">
+                <p class="pr-empty-text">No pitches tracked yet</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Calendar Tab Content -->
+        <div class="pr-left-tab-content" id="pr-tab-calendar">
+          <div class="pr-calendar-header">
+            <span class="pr-calendar-label">Content Calendar</span>
+            <button class="btn-icon" id="pr-add-calendar-item" title="Add item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="pr-calendar-timeline" id="pr-calendar-timeline">
+            <div class="pr-calendar-empty">
+              <p>No items scheduled</p>
+              <p class="pr-empty-hint">Add content to your calendar</p>
             </div>
           </div>
         </div>
@@ -231,6 +289,26 @@
         <div class="pr-strategy-header">
           <span class="pr-strategy-label">Strategy</span>
         </div>
+        
+        <!-- News Hooks Section -->
+        <div class="pr-news-hooks-section">
+          <div class="pr-news-hooks-header">
+            <h4 class="pr-news-hooks-title">News Hooks</h4>
+            <button class="btn-icon" id="pr-refresh-news-btn" title="Refresh news">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6"></path>
+                <path d="M1 20v-6h6"></path>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="pr-news-hooks-feed" id="pr-news-hooks-feed">
+            <p class="pr-news-empty">Click refresh to find relevant news hooks</p>
+          </div>
+        </div>
+        
+        <div class="pr-strategy-divider"></div>
+        
         <div class="pr-strategy-body">
           <div class="pr-strategy-content" id="pr-strategy-content"></div>
           <div class="pr-strategy-empty" id="pr-strategy-empty">
@@ -430,6 +508,218 @@
     </div>
   </div>
 
+  <!-- Wizard Modal -->
+  <div class="wizard-overlay" id="wizard-overlay">
+    <div class="wizard-container">
+      <div class="wizard-header">
+        <div class="wizard-progress">
+          <span class="wizard-step-text" id="wizard-step-text">Step 1 of 6</span>
+          <div class="wizard-progress-bar">
+            <div class="wizard-progress-fill" id="wizard-progress-fill"></div>
+          </div>
+        </div>
+        <button class="wizard-close" id="wizard-close" title="Save and close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="wizard-body" id="wizard-body">
+        <!-- Step 1: Company Basics -->
+        <div class="wizard-step active" data-step="1">
+          <h2 class="wizard-title">Tell us about your company</h2>
+          <div class="wizard-field">
+            <label for="wizard-company-name">Company Name</label>
+            <input type="text" id="wizard-company-name" class="input" placeholder="e.g., Glossi">
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-company-description">One-line Description</label>
+            <input type="text" id="wizard-company-description" class="input" placeholder="e.g., AI-native 3D product visualization platform">
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-founded-year">Founded Year</label>
+            <input type="text" id="wizard-founded-year" class="input" placeholder="e.g., 2024">
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-team-size">Team Size</label>
+            <input type="text" id="wizard-team-size" class="input" placeholder="e.g., 5 people">
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-headquarters">Headquarters / Location</label>
+            <input type="text" id="wizard-headquarters" class="input" placeholder="e.g., San Francisco, CA">
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-website">Website URL</label>
+            <input type="url" id="wizard-website" class="input" placeholder="https://glossi.io">
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-founders">Founder Name(s) and Title(s)</label>
+            <input type="text" id="wizard-founders" class="input" placeholder="e.g., Jonathan Gitlin, CEO & Co-Founder">
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-founder-background">Founder Background</label>
+            <textarea id="wizard-founder-background" class="input textarea" rows="3" placeholder="Previously at [company], expertise in [area]"></textarea>
+            <p class="input-hint">What makes your founder(s) uniquely qualified to build this?</p>
+          </div>
+        </div>
+        
+        <!-- Step 2: The Problem -->
+        <div class="wizard-step" data-step="2">
+          <h2 class="wizard-title">Tell us about the problem Glossi solves</h2>
+          <p class="wizard-subtitle">Be specific. Include numbers, timeframes, and pain points you've heard directly from customers.</p>
+          <div class="wizard-field">
+            <label for="wizard-problem">What problem does your product solve?</label>
+            <textarea id="wizard-problem" class="input textarea" rows="4" placeholder="What happens when brands use AI image generators on their products?"></textarea>
+            <p class="input-hint">💡 Example: "Colors shift, proportions drift, logos get warped. The more content you create, the worse it gets."</p>
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-who">Who experiences this problem?</label>
+            <textarea id="wizard-who" class="input textarea" rows="3" placeholder="Enterprise brands, e-commerce teams, CPG marketing departments"></textarea>
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-current-solution">What do they currently do about it?</label>
+            <textarea id="wizard-current-solution" class="input textarea" rows="3" placeholder="Traditional photography, 3D rendering, or AI generators that distort the product"></textarea>
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-cost">What's the cost of the current approach?</label>
+            <textarea id="wizard-cost" class="input textarea" rows="3" placeholder="Weeks per shoot, $50K+ per product line, brand inconsistency at scale"></textarea>
+          </div>
+        </div>
+        
+        <!-- Step 3: The Solution -->
+        <div class="wizard-step" data-step="3">
+          <h2 class="wizard-title">Tell us about your solution</h2>
+          <div class="wizard-field">
+            <label for="wizard-solution">How does your product solve this differently?</label>
+            <textarea id="wizard-solution" class="input textarea" rows="4" placeholder="What makes your approach unique?"></textarea>
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-technology">What is the core technology?</label>
+            <textarea id="wizard-technology" class="input textarea" rows="3" placeholder="Real-time 3D compositing in browser, Unreal Engine 5"></textarea>
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-insight">What's the key insight or architecture decision that makes you different?</label>
+            <textarea id="wizard-insight" class="input textarea" rows="3" placeholder="What do you understand that others don't?"></textarea>
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-analogy">Analogy: "Our product is like _____ for _____"</label>
+            <input type="text" id="wizard-analogy" class="input" placeholder="e.g., green screen for products">
+            <p class="input-hint">Help journalists understand quickly with a simple comparison</p>
+          </div>
+        </div>
+        
+        <!-- Step 4: Traction & Proof Points -->
+        <div class="wizard-step" data-step="4">
+          <h2 class="wizard-title">Traction & Proof Points</h2>
+          <p class="wizard-subtitle">Numbers make stories real. "50+ brands" is good. "50+ brands including 3 Fortune 500 CPG companies" is better.</p>
+          <div class="wizard-field">
+            <label for="wizard-customers">Number of customers/brands using the product</label>
+            <input type="text" id="wizard-customers" class="input" placeholder="e.g., 50+ brands">
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-revenue">Revenue or pipeline (optional, only used for PR if you choose)</label>
+            <input type="text" id="wizard-revenue" class="input" placeholder="e.g., $200K pipeline">
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-key-metric">Key metric: cost/time reduction for customers</label>
+            <input type="text" id="wizard-key-metric" class="input" placeholder="e.g., 80% reduction in photography costs">
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-notable-customers">Notable customer names (if shareable) or anonymized descriptions</label>
+            <textarea id="wizard-notable-customers" class="input textarea" rows="2" placeholder="e.g., 3 Fortune 500 CPG companies, major fashion brands"></textarea>
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-press">Any press coverage received so far (URLs or descriptions)</label>
+            <textarea id="wizard-press" class="input textarea" rows="2" placeholder="URLs or brief descriptions"></textarea>
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-awards">Awards, accelerator participation, notable investors</label>
+            <textarea id="wizard-awards" class="input textarea" rows="2" placeholder="e.g., Y Combinator, Sequoia-backed"></textarea>
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-features">Features shipped in last 90 days</label>
+            <textarea id="wizard-features" class="input textarea" rows="3" placeholder="List or describe recent feature launches"></textarea>
+          </div>
+        </div>
+        
+        <!-- Step 5: Why Now / Market Timing -->
+        <div class="wizard-step" data-step="5">
+          <h2 class="wizard-title">Why Now / Market Timing</h2>
+          <div class="wizard-field">
+            <label for="wizard-market-urgency">What's happening in your market right now that makes this urgent?</label>
+            <textarea id="wizard-market-urgency" class="input textarea" rows="3" placeholder="What market shifts or trends create urgency?"></textarea>
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-tech-shifts">Are there any technology shifts or trends that validate your approach?</label>
+            <textarea id="wizard-tech-shifts" class="input textarea" rows="3" placeholder="World models from Google and OpenAI are rolling out in 2026"></textarea>
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-moat">Why can't incumbents do what you do?</label>
+            <textarea id="wizard-moat" class="input textarea" rows="3" placeholder="What makes your approach hard to replicate?"></textarea>
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-if-not">What happens if brands don't adopt your approach?</label>
+            <textarea id="wizard-if-not" class="input textarea" rows="3" placeholder="What's the consequence of inaction?"></textarea>
+          </div>
+        </div>
+        
+        <!-- Step 6: Founder Voice -->
+        <div class="wizard-step" data-step="6">
+          <h2 class="wizard-title">Founder Voice</h2>
+          <div class="wizard-field">
+            <label for="wizard-elevator-pitch">If a journalist called you right now, what would you want to say in 30 seconds?</label>
+            <textarea id="wizard-elevator-pitch" class="input textarea" rows="3" placeholder="Your clearest, most confident pitch"></textarea>
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-strong-opinion">What's a strong opinion you hold about your industry?</label>
+            <textarea id="wizard-strong-opinion" class="input textarea" rows="3" placeholder="Most AI tools are wrappers. They don't protect the product."></textarea>
+          </div>
+          <div class="wizard-field">
+            <label for="wizard-investor-pitch">What's the thing you say in investor meetings that always lands?</label>
+            <textarea id="wizard-investor-pitch" class="input textarea" rows="3" placeholder="What resonates most with investors?"></textarea>
+          </div>
+          <div class="wizard-field">
+            <label>Tone Preference</label>
+            <div class="wizard-radio-group">
+              <label class="wizard-radio">
+                <input type="radio" name="wizard-tone" value="understated" checked>
+                <span>Understated and confident (like Linear)</span>
+              </label>
+              <label class="wizard-radio">
+                <input type="radio" name="wizard-tone" value="technical">
+                <span>Technical and precise (like Cursor)</span>
+              </label>
+              <label class="wizard-radio">
+                <input type="radio" name="wizard-tone" value="bold">
+                <span>Bold and direct (like a founder who knows they're right)</span>
+              </label>
+              <label class="wizard-radio">
+                <input type="radio" name="wizard-tone" value="all">
+                <span>All of the above</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="wizard-footer">
+        <button class="wizard-skip" id="wizard-skip">Skip this step</button>
+        <div class="wizard-nav">
+          <button class="btn btn-secondary" id="wizard-back" style="display:none">Back</button>
+          <button class="btn btn-primary" id="wizard-next">Next →</button>
+          <button class="btn btn-primary" id="wizard-finish" style="display:none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Finish
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
@@ -442,21 +732,56 @@
   <script type="module">
     import { PRAgent } from './modules/pr.js';
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       const pr = new PRAgent();
-      pr.init();
+      await pr.init();
       pr.setupFileUpload();
       pr.setupAudio();
 
+      // Left panel tab switching (desktop)
+      document.querySelectorAll('.pr-left-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const target = tab.dataset.leftTab;
+          
+          // Update tab active states
+          document.querySelectorAll('.pr-left-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          // Update content active states
+          document.querySelectorAll('.pr-left-tab-content').forEach(content => {
+            content.classList.remove('active');
+          });
+          document.getElementById(`pr-tab-${target}`)?.classList.add('active');
+        });
+      });
+      
       // Mobile tab switching
       document.querySelectorAll('.pr-mobile-tab').forEach(tab => {
         tab.addEventListener('click', () => {
           document.querySelectorAll('.pr-mobile-tab').forEach(t => t.classList.remove('active'));
           tab.classList.add('active');
           const target = tab.dataset.tab;
-          document.getElementById('pr-sources-panel').classList.toggle('mobile-active', target === 'sources');
-          document.getElementById('pr-workspace-panel').classList.toggle('mobile-active', target === 'workspace');
-          document.getElementById('pr-strategy-panel').classList.toggle('mobile-active', target === 'strategy');
+          
+          // Handle left panel tabs (sources, media, calendar)
+          if (target === 'sources' || target === 'media' || target === 'calendar') {
+            document.getElementById('pr-sources-panel').classList.add('mobile-active');
+            document.getElementById('pr-workspace-panel').classList.remove('mobile-active');
+            document.getElementById('pr-strategy-panel').classList.remove('mobile-active');
+            
+            // Switch to the correct left panel tab
+            document.querySelectorAll('.pr-left-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.pr-left-tab[data-left-tab="${target}"]`)?.classList.add('active');
+            
+            document.querySelectorAll('.pr-left-tab-content').forEach(content => {
+              content.classList.remove('active');
+            });
+            document.getElementById(`pr-tab-${target}`)?.classList.add('active');
+          } else {
+            // Handle workspace and strategy
+            document.getElementById('pr-sources-panel').classList.toggle('mobile-active', false);
+            document.getElementById('pr-workspace-panel').classList.toggle('mobile-active', target === 'workspace');
+            document.getElementById('pr-strategy-panel').classList.toggle('mobile-active', target === 'strategy');
+          }
         });
       });
 
