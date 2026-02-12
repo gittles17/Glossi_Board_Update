@@ -11236,16 +11236,15 @@ a.dropdown-item {
 
 /* Column 1: Sources Panel */
 .pr-sources-panel {
-  width: 280px;
-  min-width: 240px;
-  max-width: 360px;
+  width: var(--panel-left-width, 280px);
+  min-width: 200px;
+  max-width: 500px;
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-top: var(--space-2);
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .pr-sources-header {
@@ -11736,9 +11735,10 @@ a.dropdown-item {
 /* Column 2: Workspace Panel */
 .pr-workspace-panel {
   flex: 1;
+  min-width: 400px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
   background: var(--bg-primary);
 }
 
@@ -12275,14 +12275,16 @@ a.dropdown-item {
 
 /* Column 3: Strategy Panel */
 .pr-strategy-panel {
-  width: 320px;
-  min-width: 260px;
-  max-width: 400px;
+  width: var(--panel-right-width, 320px);
+  min-width: 250px;
+  max-width: 500px;
   border-left: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
 }
 
 .pr-strategy-header {
@@ -14543,48 +14545,6 @@ a.dropdown-item {
 /* ============================================
    RESIZABLE PANELS
    ============================================ */
-
-/* Main layout needs to be flex */
-.pr-layout {
-  display: flex;
-  flex-direction: row;
-  flex: 1;
-  overflow: hidden;
-}
-
-/* Panel widths with CSS variables for dynamic sizing */
-.pr-sources-panel {
-  width: var(--panel-left-width, 280px);
-  min-width: 200px;
-  max-width: 500px;
-  border-right: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-secondary);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.pr-strategy-panel {
-  width: var(--panel-right-width, 320px);
-  min-width: 250px;
-  max-width: 500px;
-  border-left: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-secondary);
-  overflow-y: auto;
-  overflow-x: hidden;
-  flex-shrink: 0;
-}
-
-.pr-workspace-panel {
-  flex: 1;
-  min-width: 400px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
 
 /* Resizer Divider */
 .pr-resizer {
