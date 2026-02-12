@@ -248,19 +248,48 @@
         <!-- Content area -->
         <div class="pr-workspace-content" id="pr-workspace-content">
           <!-- Empty state -->
-          <div class="pr-workspace-empty" id="pr-workspace-empty">
-            <div class="pr-empty-icon">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-              </svg>
+          <div class="pr-workspace-empty pr-command-center" id="pr-workspace-empty">
+            <div class="pr-command-center-header">
+              <h2 class="pr-command-center-title">Welcome to Your PR Command Center</h2>
+              <p class="pr-command-center-subtitle">Everything you need to manage your PR operations</p>
             </div>
-            <p class="pr-empty-title">PR Agent</p>
-            <p class="pr-empty-desc">To get started:</p>
-            <ol class="pr-empty-steps" id="pr-empty-steps">
-              <li id="pr-step-key">Anthropic API key (set in Dashboard Settings)</li>
-              <li id="pr-step-source">Add a source using the left panel</li>
-              <li id="pr-step-select">Select a content type above, then click Generate</li>
-            </ol>
+
+            <div class="pr-command-center-grid">
+              <div class="pr-command-card" data-action="generate">
+                <div class="pr-command-card-icon">📰</div>
+                <h3 class="pr-command-card-title">Generate Content</h3>
+                <p class="pr-command-card-desc">Create press releases, pitches, and social posts</p>
+                <div class="pr-command-card-stat" id="pr-stat-sources">0 sources ready</div>
+              </div>
+
+              <div class="pr-command-card" data-action="media">
+                <div class="pr-command-card-icon">👥</div>
+                <h3 class="pr-command-card-title">Media List</h3>
+                <p class="pr-command-card-desc">Discover journalists and track pitches</p>
+                <div class="pr-command-card-stat" id="pr-stat-journalists">0 journalists saved</div>
+              </div>
+
+              <div class="pr-command-card" data-action="calendar">
+                <div class="pr-command-card-icon">📅</div>
+                <h3 class="pr-command-card-title">Calendar</h3>
+                <p class="pr-command-card-desc">Schedule and track your PR activities</p>
+                <div class="pr-command-card-stat" id="pr-stat-calendar">0 items scheduled</div>
+              </div>
+
+              <div class="pr-command-card" data-action="news">
+                <div class="pr-command-card-icon">🔥</div>
+                <h3 class="pr-command-card-title">News Hooks</h3>
+                <p class="pr-command-card-desc">Find timely story angles to pitch</p>
+                <div class="pr-command-card-stat" id="pr-stat-news">Check for updates</div>
+              </div>
+            </div>
+
+            <div class="pr-command-center-activity">
+              <h3 class="pr-activity-title">Recent Activity</h3>
+              <div class="pr-activity-list" id="pr-activity-list">
+                <div class="pr-activity-empty">No recent activity yet. Start by adding sources or generating content.</div>
+              </div>
+            </div>
           </div>
 
           <!-- Loading state -->

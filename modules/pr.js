@@ -175,6 +175,9 @@ class PRAgent {
     
     // Add "Edit Foundation" button to sources header
     this.addEditFoundationButton();
+    
+    // Setup command center
+    this.setupCommandCenter();
   }
   
   addEditFoundationButton() {
@@ -200,6 +203,159 @@ class PRAgent {
         sourcesHeader.appendChild(editBtn);
       }
     }
+  }
+
+  async setupCommandCenter() {
+    // Update stats
+    await this.updateCommandCenterStats();
+    
+    // Setup card click handlers
+    document.querySelectorAll('.pr-command-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const action = card.dataset.action;
+        this.handleCommandCardClick(action);
+      });
+    });
+    
+    // Build recent activity
+    this.updateRecentActivity();
+  }
+
+  async updateCommandCenterStats() {
+    // Update sources count
+    const sourcesCount = this.sources.length;
+    const sourcesStat = document.getElementById('pr-stat-sources');
+    if (sourcesStat) {
+      sourcesStat.textContent = `${sourcesCount} source${sourcesCount !== 1 ? 's' : ''} ready`;
+    }
+
+    // Update journalists count
+    try {
+      const journalistsStat = document.getElementById('pr-stat-journalists');
+      if (journalistsStat && this.mediaManager) {
+        const count = this.mediaManager.journalists.length;
+        journalistsStat.textContent = `${count} journalist${count !== 1 ? 's' : ''} saved`;
+      }
+    } catch (e) {}
+
+    // Update calendar count
+    try {
+      const calendarStat = document.getElementById('pr-stat-calendar');
+      if (calendarStat && this.calendarManager) {
+        const count = this.calendarManager.calendarItems.length;
+        calendarStat.textContent = `${count} item${count !== 1 ? 's' : ''} scheduled`;
+      }
+    } catch (e) {}
+
+    // Update news hooks
+    try {
+      const newsStat = document.getElementById('pr-stat-news');
+      if (newsStat && this.newsMonitor) {
+        const count = this.newsMonitor.newsHooks.length;
+        if (count > 0) {
+          newsStat.textContent = `${count} hook${count !== 1 ? 's' : ''} found`;
+        } else {
+          newsStat.textContent = 'Check for updates';
+        }
+      }
+    } catch (e) {}
+  }
+
+  handleCommandCardClick(action) {
+    // On mobile, switch to the appropriate tab
+    const isMobile = window.innerWidth < 768;
+    
+    switch (action) {
+      case 'generate':
+        // Stay on workspace, just focus the generate button
+        document.getElementById('pr-generate-btn')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        break;
+        
+      case 'media':
+        const mediaTab = document.querySelector('.pr-left-tab[data-tab="media"]');
+        if (mediaTab) mediaTab.click();
+        if (isMobile) {
+          const mobileMediaTab = document.querySelector('.pr-mobile-tab[data-tab="media"]');
+          if (mobileMediaTab) mobileMediaTab.click();
+        }
+        break;
+        
+      case 'calendar':
+        const calendarTab = document.querySelector('.pr-left-tab[data-tab="calendar"]');
+        if (calendarTab) calendarTab.click();
+        if (isMobile) {
+          const mobileCalendarTab = document.querySelector('.pr-mobile-tab[data-tab="calendar"]');
+          if (mobileCalendarTab) mobileCalendarTab.click();
+        }
+        break;
+        
+      case 'news':
+        // Switch to strategy view
+        if (isMobile) {
+          const mobileStrategyTab = document.querySelector('.pr-mobile-tab[data-tab="strategy"]');
+          if (mobileStrategyTab) mobileStrategyTab.click();
+        }
+        // Scroll to news section
+        setTimeout(() => {
+          document.querySelector('.pr-news-hooks-section')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+        break;
+    }
+  }
+
+  updateRecentActivity() {
+    const activityList = document.getElementById('pr-activity-list');
+    if (!activityList) return;
+
+    const activities = [];
+
+    // Recent outputs
+    if (this.outputs.length > 0) {
+      const recentOutputs = this.outputs.slice(0, 3);
+      recentOutputs.forEach(output => {
+        const time = this.getRelativeTime(output.timestamp);
+        activities.push({
+          icon: '📝',
+          text: `Generated: ${output.title || output.type}`,
+          time
+        });
+      });
+    }
+
+    // Recent sources added
+    if (this.sources.length > 0) {
+      activities.push({
+        icon: '📚',
+        text: `${this.sources.length} sources in foundation`,
+        time: ''
+      });
+    }
+
+    if (activities.length === 0) {
+      activityList.innerHTML = '<div class="pr-activity-empty">No recent activity yet. Start by adding sources or generating content.</div>';
+      return;
+    }
+
+    activityList.innerHTML = activities.map(activity => `
+      <div class="pr-activity-item">
+        <span class="pr-activity-icon">${activity.icon}</span>
+        <span class="pr-activity-text">${activity.text}</span>
+        ${activity.time ? `<span class="pr-activity-time">${activity.time}</span>` : ''}
+      </div>
+    `).join('');
+  }
+
+  getRelativeTime(timestamp) {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
   }
 
   async loadData() {
@@ -1146,6 +1302,9 @@ class PRAgent {
 
     this.setupSourceDrag();
     this.setupFolderDrop();
+    
+    // Update command center stats
+    this.updateCommandCenterStats();
   }
 
   setupSourceDrag() {
@@ -1579,6 +1738,9 @@ class PRAgent {
       this.renderStrategy(output.strategy);
       this.renderHistory();
       this.showWorkspace();
+      
+      // Update command center activity
+      this.updateRecentActivity();
 
     } catch (err) {
       console.error('Generation failed:', err);
