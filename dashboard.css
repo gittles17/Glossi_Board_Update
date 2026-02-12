@@ -11298,6 +11298,8 @@ a.dropdown-item {
   overflow-y: auto;
   padding: var(--space-1) var(--space-2);
   position: relative;
+  min-height: 200px;
+  max-height: 400px;
 }
 
 .pr-sources-list.drag-over {
@@ -14084,6 +14086,13 @@ a.dropdown-item {
 .pr-workflow-section:last-child {
   border-bottom: none;
   margin-bottom: 0;
+}
+
+/* Sources Section - needs flex to allow sources list to expand */
+.pr-sources-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Workflow Header (H2 level - 20px semibold) */
