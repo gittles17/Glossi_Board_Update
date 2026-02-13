@@ -1047,16 +1047,28 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     console.log('Searching for news with Tavily...');
     
     const searchQueries = [
-      'AI machine learning generative AI LLM',
-      '3D rendering visualization computer vision',
-      'e-commerce product visualization retail tech',
-      'marketing technology creative AI tools',
-      'enterprise AI adoption brand technology',
-      'AR VR metaverse spatial computing',
-      'design software CAD 3D modeling',
-      'fashion technology digital innovation',
-      'semiconductor chip manufacturing AI',
-      'robotics automation computer vision'
+      // AI/ML/Generative AI (3 queries)
+      'generative AI marketing creative tools',
+      'large language models enterprise adoption',
+      'AI image generation visual content',
+      // 3D Visualization/Computer Vision (3 queries)
+      '3D product visualization rendering',
+      'computer vision image recognition retail',
+      '3D modeling software AI automation',
+      // E-commerce/Product/Retail (3 queries)
+      'e-commerce product photography AI',
+      'retail technology digital transformation',
+      'online shopping visual merchandising',
+      // Marketing/Creative AI (2 queries)
+      'marketing automation AI content creation',
+      'creative technology advertising tools',
+      // Enterprise AI/Brand Tech (2 queries)
+      'enterprise AI adoption brand strategy',
+      'corporate AI investment digital transformation',
+      // Design Software/CAD (1 query)
+      'design software 3D CAD creative tools',
+      // Fashion/Digital Innovation (1 query)
+      'fashion technology e-commerce digital innovation'
     ];
     
     let allResults = [];
@@ -1068,7 +1080,7 @@ app.post('/api/pr/news-hooks', async (req, res) => {
           searchDepth: 'basic',  // Using basic for speed/reliability - advanced was timing out on Railway
           topic: 'news',
           days: 30,
-          maxResults: 8,
+          maxResults: 6,  // Reduced from 8 since we increased queries from 10 to 15
           includeDomains: ['techcrunch.com', 'theverge.com', 'wired.com', 'venturebeat.com', 'technologyreview.com', 'arstechnica.com', 'fastcompany.com', 'businessinsider.com', 'forbes.com', 'cnbc.com', 'reuters.com', 'bloomberg.com', 'tldr.tech', 'businessoffashion.com', 'theinterline.com']
         });
         
