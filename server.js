@@ -994,12 +994,21 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     
     const newsPrompt = `CRITICAL: Only search for news articles published between ${sevenDaysAgo} and ${today} (within the last 7 days). Do NOT include any articles older than 7 days.
 
-Search topics:
+Search major tech publications including: TechCrunch, The Verge, Wired, VentureBeat, MIT Technology Review, Ars Technica, Protocol, Fast Company, Business Insider, Forbes Tech, CNBC Tech, Reuters Tech, Bloomberg Technology, TLDR Newsletter (tldr.tech).
+
+Search topics (prioritize broader, trending topics):
+- AI and machine learning (general AI news, LLMs, generative AI)
+- Computer vision and image generation (DALL-E, Midjourney, Stable Diffusion, image AI)
+- 3D technology, rendering, visualization, virtual production
+- E-commerce technology and digital commerce innovations
+- Marketing technology (martech) and creative automation
+- Enterprise AI adoption and digital transformation
+- Product photography and visual content creation
+- Brand technology and creative operations
 - World models (Google Genie, World Labs, OpenAI)
-- AI product visualization or 3D commerce
-- Brand consistency and AI-generated content
-- Enterprise adoption of AI creative tools
-- 3D rendering in browser
+- AR/VR/XR and spatial computing
+- Creative tools and design technology
+- CGI, visual effects, real-time rendering
 
 For each result, return:
 - Headline
@@ -1023,7 +1032,7 @@ Return as structured JSON with this exact format:
   ]
 }
 
-Maximum 10 results, sorted by date (newest first), then relevance. ONLY include articles from the past 7 days.`;
+Maximum 15 results, sorted by date (newest first), then relevance. ONLY include articles from the past 7 days.`;
 
     const newsResponse = await axios.post('https://api.anthropic.com/v1/messages', {
       model: 'claude-sonnet-4-20250514',
@@ -1139,13 +1148,15 @@ app.post('/api/pr/articles', async (req, res) => {
       return res.status(500).json({ success: false, error: 'Anthropic API key not configured in environment variables' });
     }
     
-    const articlesPrompt = `Search major tech publications (TechCrunch, The Verge, Wired, VentureBeat, MIT Technology Review, Ars Technica, Protocol, Fast Company) for recent articles from the past 7 days about:
+    const articlesPrompt = `Search major tech publications (TechCrunch, The Verge, Wired, VentureBeat, MIT Technology Review, Ars Technica, Protocol, Fast Company, Business Insider, Forbes Tech, CNBC Tech, Reuters Tech, Bloomberg Technology, TLDR Newsletter) for recent articles from the past 7 days about:
 
 1. Glossi brand mentions or AI product visualization tools
 2. AI-powered 3D rendering, product visualization, and e-commerce technology
 3. Enterprise creative AI adoption, brand consistency, and marketing technology
+4. Computer vision, image generation, and creative AI tools
+5. Digital commerce and retail technology
 
-Return the top 5 most relevant articles as JSON:
+Return the top 8 most relevant articles as JSON:
 {
   "articles": [
     {
@@ -1164,7 +1175,7 @@ Categories:
 - "industry" = AI/3D/visualization tech news
 - "opportunity" = trending topics Glossi could comment on
 
-Only include articles from major tech publications. Maximum 5 results.`;
+Only include articles from major tech publications. Maximum 8 results.`;
 
     const articlesResponse = await axios.post('https://api.anthropic.com/v1/messages', {
       model: 'claude-sonnet-4-20250514',
