@@ -1658,7 +1658,7 @@ class PRAgent {
     this.dom.historyList.innerHTML = sorted.map(output => {
       const date = new Date(output.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const time = new Date(output.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-      const typeLabel = CONTENT_TYPES.find(t => t.id === output.contentType)?.label || output.contentType;
+      const typeLabel = CONTENT_TYPES.find(t => t.id === output.content_type)?.label || output.content_type;
       return `
         <div class="pr-history-item" data-output-id="${output.id}">
           <div class="pr-history-info">
@@ -1711,8 +1711,8 @@ class PRAgent {
 
     this.currentOutput = output;
     if (this.dom.contentType) {
-      this.dom.contentType.value = output.contentType;
-      const isCustom = output.contentType === 'custom';
+      this.dom.contentType.value = output.content_type;
+      const isCustom = output.content_type === 'custom';
       if (this.dom.customPromptWrap) {
         this.dom.customPromptWrap.style.display = isCustom ? 'block' : 'none';
       }
@@ -2691,7 +2691,7 @@ Return ONLY the JSON array, nothing else.`;
 
     // Current content - include all drafts
     if (this.currentOutput) {
-      parts.push(`CONTENT TYPE: ${this.currentOutput.contentType}`);
+      parts.push(`CONTENT TYPE: ${this.currentOutput.content_type}`);
       
       if (this.currentOutput.drafts && this.currentOutput.drafts.length > 0) {
         parts.push(`\nDRAFT VERSIONS (${this.currentOutput.drafts.length} total):`);
