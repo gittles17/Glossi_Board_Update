@@ -3965,8 +3965,11 @@ class NewsMonitor {
   }
   
   showOutletFilter() {
+    // Get outlets that are actually in current news
+    const availableOutlets = [...new Set(this.newsHooks.map(item => item.outlet))].sort();
+    
     // All possible outlets (matching server includeDomains configuration)
-    const allOutlets = [
+    const allPossibleOutlets = [
       'TechCrunch',
       'The Verge',
       'WIRED',
@@ -3982,13 +3985,10 @@ class NewsMonitor {
       'TLDR',
       'Business of Fashion',
       'The Interline'
-    ].sort();
+    ];
     
-    // Get outlets that are actually in current news
-    const availableOutlets = [...new Set(this.newsHooks.map(item => item.outlet))];
-    
-    // Show all outlets, mark unavailable ones
-    const outlets = allOutlets;
+    // Combine available outlets with all possible outlets (prioritize available ones)
+    const outlets = [...new Set([...availableOutlets, ...allPossibleOutlets])].sort();
     
     // Create filter modal
     const modal = document.createElement('div');
@@ -4003,7 +4003,7 @@ class NewsMonitor {
           <div class="pr-outlet-filter-list">
             ${outlets.map(outlet => {
               const isAvailable = availableOutlets.includes(outlet);
-              const count = this.newsHooks.filter(item => item.outlet === outlet).length;
+              const count = isAvailable ? this.newsHooks.filter(item => item.outlet === outlet).length : 0;
               return `
                 <label class="pr-outlet-filter-item ${!isAvailable ? 'disabled' : ''}">
                   <input type="checkbox" value="${this.escapeHtml(outlet)}" ${this.filters.outlets.includes(outlet) ? 'checked' : ''} ${!isAvailable ? 'disabled' : ''}>
