@@ -1097,23 +1097,19 @@ class PRAgent {
   }
 
   async deleteSource(id) {
-    const confirmed = await this.showConfirm('Delete this source? This cannot be undone.', 'Delete Source');
-    if (!confirmed) return;
-
+    // Optimistic delete - remove immediately, no confirmation
     this.sources = this.sources.filter(s => s.id !== id);
-    
-    // Delete from API
-    try {
-      await fetch(`/api/pr/sources/${id}`, {
-        method: 'DELETE'
-      });
-    } catch (error) {
-      console.error('Error deleting source:', error);
-    }
-    
-    this.saveSources();
     this.renderSources();
     this.updateGenerateButton();
+    
+    // Sync delete with API in background
+    fetch(`/api/pr/sources/${id}`, {
+      method: 'DELETE'
+    }).catch(error => {
+      console.error('Error deleting source:', error);
+    });
+    
+    this.saveSources();
   }
 
   async toggleSourceSelection(id) {
@@ -1216,20 +1212,14 @@ class PRAgent {
   }
 
   async deleteFolder(name) {
-    const sourcesInFolder = this.sources.filter(s => s.folder === name);
-    const message = sourcesInFolder.length > 0
-      ? `Delete "${name}"? ${sourcesInFolder.length} source(s) will be moved to ungrouped.`
-      : `Delete folder "${name}"?`;
-    const confirmed = await this.showConfirm(message, 'Delete Folder');
-    if (!confirmed) return;
-
+    // Optimistic delete - remove immediately, no confirmation
     this.folders = this.folders.filter(f => f !== name);
     delete this.expandedFolders[name];
     this.sources.forEach(s => {
       if (s.folder === name) s.folder = null;
     });
-    this.saveSources();
     this.renderSources();
+    this.saveSources();
   }
 
   renameFolder(oldName) {
@@ -1687,22 +1677,19 @@ class PRAgent {
     this.dom.historyList.querySelectorAll('[data-history-delete]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        const confirmed = await this.showConfirm('Delete this output?', 'Delete');
-        if (confirmed) {
-          const outputId = btn.dataset.historyDelete;
-          this.outputs = this.outputs.filter(o => o.id !== outputId);
-          
-          // Delete from API
-          try {
-            await fetch(`/api/pr/outputs/${outputId}`, {
-              method: 'DELETE'
-            });
-          } catch (error) {
-            console.error('Error deleting output:', error);
-          }
-          
-          this.saveOutputs();
-          this.renderHistory();
+        // Optimistic delete - remove immediately, no confirmation
+        const outputId = btn.dataset.historyDelete;
+        this.outputs = this.outputs.filter(o => o.id !== outputId);
+        this.renderHistory();
+        
+        // Sync delete with API in background
+        fetch(`/api/pr/outputs/${outputId}`, {
+          method: 'DELETE'
+        }).catch(error => {
+          console.error('Error deleting output:', error);
+        });
+        
+        this.saveOutputs();
         }
       });
     });
@@ -2519,20 +2506,8 @@ class PRAgent {
   }
 
   showToast(message, type = 'success') {
-    const container = this.dom.toastContainer;
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    container.appendChild(toast);
-
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateX(-20px) scale(0.95)';
-      toast.style.transition = 'all 0.3s ease';
-      setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    // Disabled for cleaner, optimistic UI
+    return;
   }
 
   // =========================================
@@ -3546,19 +3521,17 @@ class MediaManager {
       status: 'new'
     };
 
-    try {
-      await fetch('/api/pr/journalists', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(journalistData)
-      });
-
-      this.journalists.push(journalistData);
-      this.prAgent.showToast(`${journalist.name} saved to media list`, 'success');
-    } catch (error) {
+    // Optimistic add - update UI immediately
+    this.journalists.push(journalistData);
+    
+    // Sync with API in background
+    fetch('/api/pr/journalists', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(journalistData)
+    }).catch(error => {
       console.error('Error saving journalist:', error);
-      this.prAgent.showToast('Failed to save journalist', 'error');
-    }
+    });
   }
 
   renderPitches() {
@@ -3814,21 +3787,21 @@ class MediaManager {
   }
 
   async deleteJournalist(journalistId) {
-    const confirmed = confirm('Delete this journalist from your media list?');
-    if (!confirmed) return;
+    // Optimistic delete - remove immediately, no confirmation
+    this.journalists = this.journalists.filter(j => j.id !== journalistId);
+    
+    // Re-render track view immediately
+    if (this.dom.trackView?.classList.contains('active')) {
+      this.dom.pitchTracker.innerHTML = this.renderJournalistTable();
+      this.setupJournalistTableListeners();
+    }
 
-    try {
-      await fetch(`/api/pr/journalists/${journalistId}`, {
-        method: 'DELETE'
-      });
-
-      this.journalists = this.journalists.filter(j => j.id !== journalistId);
-      
-      // Re-render track view
-      if (this.dom.trackView?.classList.contains('active')) {
-        this.dom.pitchTracker.innerHTML = this.renderJournalistTable();
-        this.setupJournalistTableListeners();
-      }
+    // Sync delete with API in background
+    fetch(`/api/pr/journalists/${journalistId}`, {
+      method: 'DELETE'
+    }).catch(error => {
+      console.error('Error deleting journalist:', error);
+    });
 
       this.prAgent.showToast('Journalist deleted', 'success');
     } catch (error) {
@@ -4005,15 +3978,8 @@ class NewsMonitor {
 
       this.newsHooks = data.news || [];
       this.renderNews();
-      
-      if (this.newsHooks.length > 0) {
-        this.prAgent.showToast(`Found ${this.newsHooks.length} relevant news hooks`, 'success');
-      } else {
-        this.prAgent.showToast('No recent news found', 'info');
-      }
     } catch (error) {
       console.error('Error refreshing news:', error);
-      this.prAgent.showToast('Failed to fetch news: ' + error.message, 'error');
       if (this.dom.newsHooksList) {
         this.dom.newsHooksList.innerHTML = '<p class="pr-news-hooks-empty">Failed to load news. Try again.</p>';
       }
@@ -4415,21 +4381,16 @@ class CalendarManager {
   }
 
   async deleteCalendarItem(itemId) {
-    const confirmed = confirm('Delete this calendar item?');
-    if (!confirmed) return;
-
-    try {
-      await fetch(`/api/pr/calendar/${itemId}`, {
-        method: 'DELETE'
-      });
-
-      this.calendarItems = this.calendarItems.filter(i => i.id !== itemId);
-      this.renderCalendar();
-      this.prAgent.showToast('Calendar item deleted', 'success');
-    } catch (error) {
+    // Optimistic delete - remove immediately, no confirmation
+    this.calendarItems = this.calendarItems.filter(i => i.id !== itemId);
+    this.renderCalendar();
+    
+    // Sync delete with API in background
+    fetch(`/api/pr/calendar/${itemId}`, {
+      method: 'DELETE'
+    }).catch(error => {
       console.error('Error deleting calendar item:', error);
-      this.prAgent.showToast('Failed to delete item', 'error');
-    }
+    });
   }
 
   openCalendarItem(itemId) {

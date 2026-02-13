@@ -8565,45 +8565,8 @@ Respond with just the category name (core, traction, market, or testimonials) an
    * Show toast notification with premium animation
    */
   showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container');
-    
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    
-    const icons = {
-      success: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
-      error: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
-      info: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`
-    };
-    
-    toast.innerHTML = `
-      <span class="toast-icon ${type}">${icons[type] || icons.info}</span>
-      <span class="toast-message">${message}</span>
-      <div class="toast-progress"></div>
-    `;
-
-    container.appendChild(toast);
-
-    // Add progress bar animation
-    const progressBar = toast.querySelector('.toast-progress');
-    if (progressBar) {
-      progressBar.style.cssText = `
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        height: 2px;
-        background: ${type === 'success' ? 'var(--accent-green)' : type === 'error' ? 'var(--accent-red)' : 'var(--accent-blue)'};
-        width: 100%;
-        transform-origin: left;
-        animation: toast-progress 4s linear forwards;
-      `;
-    }
-
-    // Auto remove after 4 seconds with exit animation
-    setTimeout(() => {
-      toast.style.animation = 'toast-out 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
-      setTimeout(() => toast.remove(), 300);
-    }, 4000);
+    // Disabled for cleaner, optimistic UI
+    return;
   }
 
   /**
