@@ -195,66 +195,6 @@
 
       <!-- Create Stage Content -->
       <div class="pr-workspace-panel pr-stage-content" id="pr-workspace-panel" data-stage="create">
-        
-        <!-- Content Type and Generate Button (moved from old mobile controls) -->
-        <div class="pr-generation-controls" style="display:none;">
-            <select class="pr-content-type-select" id="pr-content-type-mobile">
-              <option value="press_release">Press Release</option>
-              <option value="media_pitch">Media Pitch Email</option>
-              <option value="product_announcement">Product Announcement</option>
-              <option value="founder_quote">Founder Quote / Soundbite</option>
-              <option value="blog_post">Blog Post</option>
-              <option value="linkedin_post">LinkedIn Post</option>
-              <option value="tweet_thread">Tweet Thread</option>
-              <option value="briefing_doc">Briefing Document</option>
-              <option value="talking_points">Talking Points</option>
-              <option value="custom">Custom</option>
-            </select>
-            <button class="pr-generate-btn-mobile" id="pr-generate-btn-mobile" disabled>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-              </svg>
-              Generate
-            </button>
-          </div>
-
-          <!-- Sources Section -->
-          <div class="pr-workflow-section pr-sources-section">
-            <div class="pr-workflow-header pr-sources-header">
-              <h2 class="pr-workflow-title pr-sources-label">Sources</h2>
-              <span class="pr-sources-count" id="pr-sources-count">0</span>
-              <button class="pr-create-folder-btn" id="pr-create-folder-btn" title="Create Folder">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-              </button>
-            </div>
-            <div class="pr-source-search-wrap">
-              <input type="text" class="pr-source-search" id="pr-source-search" placeholder="Search sources...">
-            </div>
-            <div class="pr-sources-list pr-drop-zone" id="pr-sources-list">
-              <div class="pr-sources-empty" id="pr-sources-empty">
-                <p>No sources yet</p>
-              </div>
-            </div>
-            <button class="pr-add-source-btn" id="pr-add-source-btn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              <span>Add Source</span>
-            </button>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Resizer between left and center -->
-      <div class="pr-resizer" id="pr-resizer-left" data-resize="left"></div>
-
-      <!-- Create Stage Content -->
-      <div class="pr-workspace-panel pr-stage-content" id="pr-workspace-panel" data-stage="create">
         <!-- Top bar -->
         <div class="pr-workspace-topbar">
           <div class="pr-workspace-controls">
@@ -407,7 +347,6 @@
               </div>
             </div>
           </div>
-        </div>
 
         <!-- Content History Section (moved from Strategy nested tab) -->
         <div class="pr-workflow-section pr-library-section">
@@ -901,41 +840,6 @@
       await pr.init();
       pr.setupFileUpload();
       pr.setupAudio();
-
-      // Mobile tab switching (matches desktop: Strategy/Sources/Library)
-      document.querySelectorAll('.pr-mobile-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-          document.querySelectorAll('.pr-mobile-tab').forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          const target = tab.dataset.tab;
-          
-          // Show correct panel - now matches desktop tab structure
-          if (target === 'strategy' || target === 'sources' || target === 'library') {
-            // Show left panel (sources panel) which contains all three tabs
-            document.getElementById('pr-sources-panel').classList.add('mobile-active');
-            document.getElementById('pr-workspace-panel').classList.remove('mobile-active');
-            document.getElementById('pr-right-panel').classList.remove('mobile-active');
-            
-            // Trigger the corresponding desktop tab click
-            const desktopTab = document.querySelector(`.pr-panel-tab[data-panel-tab="${target}"]`);
-            if (desktopTab) desktopTab.click();
-          }
-        });
-      });
-
-      // Panel tab switching (desktop)
-      document.querySelectorAll('.pr-panel-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-          const targetTab = tab.dataset.panelTab;
-          
-          // Update active states
-          document.querySelectorAll('.pr-panel-tab').forEach(t => t.classList.remove('active'));
-          document.querySelectorAll('.pr-panel-tab-content').forEach(c => c.classList.remove('active'));
-          
-          tab.classList.add('active');
-          document.getElementById(`pr-tab-${targetTab}`).classList.add('active');
-        });
-      });
 
       // Panel Resizer Class
       class PanelResizer {

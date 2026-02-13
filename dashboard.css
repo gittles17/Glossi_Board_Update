@@ -11339,16 +11339,6 @@ a.dropdown-item {
   display: none !important;
 }
 
-/* Old nested tab content wrappers - hide completely */
-.pr-panel-tab-content {
-  display: none !important;
-}
-
-/* Force show all content directly in Strategy stage */
-.pr-sources-panel[data-stage="strategy"] > .pr-workflow-section {
-  display: block !important;
-}
-
 /* Ensure no content leaks between stages */
 .pr-sources-panel[data-stage="strategy"] .pr-media-section,
 .pr-workspace-panel[data-stage="create"] .pr-news-hooks-section,
