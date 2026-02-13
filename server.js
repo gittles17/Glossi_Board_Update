@@ -140,6 +140,19 @@ async function initDatabase() {
           )
         `);
         
+        // Migration: Add phase column if it doesn't exist
+        await pool.query(`
+          DO $$ 
+          BEGIN 
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_name='pr_outputs' AND column_name='phase'
+            ) THEN
+              ALTER TABLE pr_outputs ADD COLUMN phase VARCHAR(20) DEFAULT 'edit';
+            END IF;
+          END $$;
+        `);
+        
         // Media outlets (user-added customs)
         await pool.query(`
           CREATE TABLE IF NOT EXISTS pr_outlets (
