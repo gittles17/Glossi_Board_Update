@@ -1022,7 +1022,7 @@ app.post('/api/pr/news-hooks', async (req, res) => {
           topic: 'news',
           days: 7,
           maxResults: 5,
-          includeDomains: ['techcrunch.com', 'theverge.com', 'wired.com', 'venturebeat.com', 'technologyreview.com', 'arstechnica.com', 'fastcompany.com', 'businessinsider.com', 'forbes.com', 'cnbc.com', 'reuters.com', 'bloomberg.com', 'tldr.tech']
+          includeDomains: ['techcrunch.com', 'theverge.com', 'wired.com', 'venturebeat.com', 'technologyreview.com', 'arstechnica.com', 'fastcompany.com', 'businessinsider.com', 'forbes.com', 'cnbc.com', 'reuters.com', 'bloomberg.com', 'tldr.tech', 'businessoffashion.com', 'theinterline.com']
         });
         
         if (searchResult.results) {

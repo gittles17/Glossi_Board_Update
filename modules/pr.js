@@ -3257,6 +3257,8 @@ const OUTLET_DATABASE = {
     { name: "Hacker News", beats: ["technical", "startups"], url: "news.ycombinator.com", notes: "Developer/technical audience, organic only" },
   ],
   tier3_niche: [
+    { name: "Business of Fashion", beats: ["fashion", "luxury", "retail", "beauty", "sustainability", "marketing"], url: "businessoffashion.com", notes: "Leading fashion industry publication, covers business, technology, and trends" },
+    { name: "The Interline", beats: ["fashion tech", "3D", "digital product creation", "PLM", "AI", "sustainability"], url: "theinterline.com", notes: "Fashion technology magazine, technical depth on digital transformation" },
     { name: "3D World", beats: ["3D", "visualization", "rendering"], url: "3dworldmag.com", notes: "Deep technical audience, 3D professionals" },
     { name: "CGSociety", beats: ["3D", "VFX", "visualization"], url: "cgsociety.org", notes: "CG/VFX community" },
     { name: "Creative Bloq", beats: ["design", "creative tools"], url: "creativebloq.com", notes: "Creative professionals, design tools" },
