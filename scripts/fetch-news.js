@@ -189,23 +189,45 @@ GLOSSI'S MARKET:
 - Use case: Product marketing, e-commerce catalogs, social media content
 
 INCLUDE ARTICLES ABOUT:
-1. **AI creative/marketing tools** - Midjourney, Adobe Firefly, Canva AI, design automation, AI content generation
-2. **E-commerce platforms & tech** - Shopify features, Amazon innovations, 3D/AR product views, visual commerce
-3. **Enterprise SaaS for creative/marketing** - Workflow automation, brand asset management, creative collaboration tools
-4. **Social commerce & visual platforms** - Instagram shopping, Pinterest visual search, TikTok shop, social media content tools
-5. **Enterprise AI adoption** - Companies deploying AI for creative/marketing workflows, AI vendor comparisons
-6. **Big tech moves in creative/commerce** - Apple/Google/Meta features for product visualization, shopping, AR
 
-STRONG EXCLUDE (don't try to connect):
+**Core Topics:**
+1. **AI creative/marketing tools** - Midjourney, Adobe Firefly, Canva AI, design automation, AI content generation
+2. **E-commerce platforms & tech** - Shopify, Amazon, 3D/AR product views, visual commerce innovations
+3. **Creative automation platforms** - Workflow tools, brand asset management, DAM/CMS systems
+4. **AI image generation** - Midjourney, DALL-E, Stable Diffusion for commercial use
+
+**Adjacent Tech:**
+5. **3D engines for commerce** - Unreal Engine, Unity applied to product visualization, browser 3D tech
+6. **Digital twins & virtual showrooms** - Virtual product experiences, immersive brand environments
+7. **Brand AI workflow implementation** - How companies deploy AI in creative/marketing operations
+
+**Customer Industries:**
+8. **DTC brand strategies** - Direct-to-consumer challenges, content production at scale, omnichannel
+9. **Retail digital transformation** - Store tech, online merchandising, customer experience innovation
+10. **Fashion tech** - Digital fashion, virtual samples, sustainability in fashion production
+
+**Buyer Insights:**
+11. **CMO priorities** - Marketing leadership trends, budget allocation, team structure
+12. **Creative operations** - Production workflows, bottlenecks, efficiency improvements
+13. **Marketing tech stack** - Tool consolidation, integration trends, martech evolution
+14. **Agency vs in-house** - Production model shifts, hybrid approaches
+
+**Market Signals:**
+15. **Funding/M&A in creative/martech** - Who's raising, acquisitions, market consolidation
+16. **Pricing model evolution** - Consumption-based pricing, credit systems, enterprise deals
+17. **Platform partnerships** - Shopify apps, marketplace integrations, ecosystem plays
+
+STRONG EXCLUDE:
 - Autonomous vehicles, robotics, IoT, drones
-- Gaming (unless about 3D engines for commerce)
-- Celebrity profiles, entertainment IP
-- Cybersecurity, developer tools
+- Gaming (unless specifically about engines for product visualization)
+- Celebrity profiles, entertainment IP, movies/TV
+- Cybersecurity, developer tools (unless creative workflow related)
 - Healthcare, biotech, fintech, crypto
-- Manufacturing, supply chain, logistics
-- Hardware/chips (unless about AI creative acceleration)
-- Generic AI research without business application
-- Brand partnership scandals with weak commerce connection
+- Manufacturing, supply chain, logistics (unless about product content)
+- Hardware/chips (unless about rendering/AI acceleration)
+- Space tech, infrastructure
+- Generic AI research without clear business application
+- Politics, policy, tariffs (unless directly impacting e-commerce/DTC brands)
 
 TASK: Return ONLY 12-18 articles with direct relevance to Glossi's market. Be ruthlessly selective.
 
@@ -232,12 +254,13 @@ Return articles in this JSON format:
 }
 
 Rules:
-- CRITICAL: Return 10-15 of the BEST articles
+- CRITICAL: Return 12-18 articles (expanded topics = more good articles available)
 - Remove duplicates (same story from different outlets = pick one)
-- Do NOT force connections - if the relevance feels stretched, exclude it
-- Good article has DIRECT connection: "Adobe launches AI tool" vs weak: "Ring cancels partnership because... brand reputation"
-- In 'relevance': be specific and honest - no generic AI adoption statements
-- If you can't explain a clear connection in one sentence, it's too weak
+- With broader topics, you should find MORE quality articles
+- Good relevance: direct and specific. Bad: generic or forced
+- Examples of GOOD articles: "Shopify adds 3D viewer", "CMO survey shows content bottleneck", "DTC brand raises funding", "Canva prices for enterprise"
+- Examples of BAD articles: "Waymo robotaxis", "Space tech", "Generic AI chip news"
+- In 'relevance': explain which of the 17 topic areas this fits and why
 - Prioritize: last 14 days > last 30 days > older
 - Sort by relevance (most direct connection first)
 - Use exact domain from SOURCE field for outlet name`;
