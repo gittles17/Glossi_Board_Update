@@ -11299,7 +11299,7 @@ a.dropdown-item {
   position: relative;
 }
 
-/* Stage Content (Full-Width) */
+/* Stage Content (Full-Width) - FORCE OVERRIDE ALL CONSTRAINTS */
 .pr-stage-content {
   display: none;
   flex-direction: column;
@@ -11315,6 +11315,18 @@ a.dropdown-item {
 
 .pr-stage-content.active {
   display: flex !important;
+}
+
+/* Specific overrides for each panel when used as stage content */
+.pr-sources-panel.pr-stage-content,
+.pr-workspace-panel.pr-stage-content,
+.pr-right-panel.pr-stage-content {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 1400px !important;
+  flex: 1 !important;
+  flex-basis: auto !important;
+  margin: 0 auto !important;
 }
 
 /* Old mobile tabs - hidden in favor of stage tabs */
