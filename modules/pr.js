@@ -3900,7 +3900,7 @@ class NewsMonitor {
     
     // Filter state
     this.filters = {
-      dateRange: 30, // Default: last 30 days
+      dateRange: 60, // Default: last 60 days
       outlets: [] // Empty = all outlets
     };
   }
@@ -3945,9 +3945,9 @@ class NewsMonitor {
   }
   
   clearFilters() {
-    this.filters.dateRange = 30;
+    this.filters.dateRange = 60;
     this.filters.outlets = [];
-    if (this.dom.dateFilter) this.dom.dateFilter.value = '30';
+    if (this.dom.dateFilter) this.dom.dateFilter.value = '60';
     this.renderNews();
     this.updateClearButton();
   }
