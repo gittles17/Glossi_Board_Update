@@ -1047,16 +1047,11 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     console.log('Searching for news with Tavily...');
     
     const searchQueries = [
-      'AI machine learning generative AI LLM',
+      'AI machine learning generative AI',
       '3D rendering visualization computer vision',
-      'e-commerce product visualization retail tech',
+      'e-commerce product visualization retail',
       'marketing technology creative AI tools',
-      'enterprise AI adoption brand technology',
-      'AR VR metaverse spatial computing',
-      'design software CAD 3D modeling',
-      'fashion technology digital innovation',
-      'semiconductor chip manufacturing AI',
-      'robotics automation computer vision'
+      'enterprise AI adoption brand technology'
     ];
     
     let allResults = [];
@@ -1068,7 +1063,7 @@ app.post('/api/pr/news-hooks', async (req, res) => {
           searchDepth: 'basic',  // Using basic for speed/reliability - advanced was timing out on Railway
           topic: 'news',
           days: 30,
-          maxResults: 6,  // 10 queries × 6 results = 60 potential articles
+          maxResults: 10,  // 5 queries × 10 results = 50 potential articles
           includeDomains: ['techcrunch.com', 'theverge.com', 'wired.com', 'venturebeat.com', 'technologyreview.com', 'arstechnica.com', 'fastcompany.com', 'businessinsider.com', 'forbes.com', 'cnbc.com', 'reuters.com', 'bloomberg.com', 'tldr.tech', 'businessoffashion.com', 'theinterline.com']
         });
         
