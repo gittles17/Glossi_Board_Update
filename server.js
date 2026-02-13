@@ -1199,10 +1199,12 @@ Return articles in this JSON format:
       "date": "YYYY-MM-DD format",
       "url": "Original URL",
       "summary": "One sentence summary of the article",
-      "relevance": "ONE sentence explaining how this relates to Glossi or the industry"
+      "relevance": "Topic #X: [explain connection]"
     }
   ]
 }
+
+CRITICAL: Only include articles you're recommending. Do NOT include articles with "EXCLUDED" or "Not relevant" in the relevance field. If you think an article should be excluded, simply don't add it to the JSON array.
 
 Rules:
 - CRITICAL: Return ONLY 12-18 articles that you would actually recommend
