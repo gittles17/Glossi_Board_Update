@@ -180,16 +180,19 @@ async function fetchNews() {
     const finalArticles = articlesToAnalyze.slice(0, 30);
     console.log(`Step 2: Sending ${finalArticles.length} articles from ${Object.keys(articlesByOutlet).length} outlets to Claude for analysis...\n`);
     
-    const analysisPrompt = `You are analyzing news articles for Glossi, an AI-native 3D product visualization platform.
+    const analysisPrompt = `You are analyzing news articles for an AI company. Your job is to include ALMOST ALL articles.
 
-GLOSSI CONTEXT:
-- First AI-native 3D product visualization platform
-- Core tech: compositing (not generation). Product 3D asset stays untouched, AI generates scenes around it
-- Built on Unreal Engine 5, runs in browser
-- Target: enterprise brands, e-commerce, CPG, fashion, beauty
-- Key value: 80% reduction in product photo costs, unlimited variations, brand consistency
+IMPORTANT: Include 90% or more of the articles provided. Only exclude articles that are COMPLETELY unrelated to business or technology (sports, celebrity gossip, hard politics).
 
-TASK: Analyze each article and determine if it's broadly relevant to tech, AI, 3D, visualization, e-commerce, marketing, creative industries, or brand technology. Be INCLUSIVE rather than overly selective.
+INCLUDE articles about:
+- Any technology topic (AI, cloud, software, hardware, internet)
+- Any business news (funding, M&A, leadership, strategy)
+- Any industry news (retail, manufacturing, fashion, finance, healthcare)
+- Marketing, advertising, creative tools, design
+- E-commerce, shopping, consumer products
+- Innovation, startups, entrepreneurship
+
+TASK: Return almost all articles with brief summaries.
 
 ARTICLES:
 ${finalArticles.map((article, i) => `
@@ -214,12 +217,12 @@ Return articles in this JSON format:
 }
 
 Rules:
-- Include MOST articles unless they are completely unrelated (politics, sports, entertainment)
-- Any article about technology, business, innovation, or industry trends should be included
-- Be VERY INCLUSIVE - even tangentially related articles are useful for industry awareness
-- Return ALL relevant articles (aim for 20-30 articles)
+- CRITICAL: Include at least 25 out of 30 articles (83%+ inclusion rate)
+- Only exclude: pure sports, celebrity gossip, hard politics
+- Everything else: INCLUDE IT
+- Technology, business, innovation = automatic include
 - Sort by date (most recent first)
-- Keep summaries and relevance statements concise (one sentence each)
+- Keep summaries and relevance brief (one sentence each)
 - Use the exact domain from the SOURCE field for the outlet name`;
 
     const analysisResponse = await axios.post('https://api.anthropic.com/v1/messages', {
