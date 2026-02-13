@@ -1932,6 +1932,7 @@ class PRAgent {
 
     } catch (err) {
       console.error('Generation failed:', err);
+      alert(`Generation Error: ${err.message || err}`);
       this.hideLoading();
     } finally {
       this.isGenerating = false;
