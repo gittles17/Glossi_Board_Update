@@ -11224,7 +11224,7 @@ a.dropdown-item {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  font: 500 13px var(--font-sans);
+  font: 500 14px var(--font-sans);
   cursor: pointer;
   border-radius: var(--radius-md);
   transition: all var(--duration-fast);
@@ -11252,13 +11252,18 @@ a.dropdown-item {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 0;
+  padding: var(--space-4) var(--space-4) var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-color);
 }
 
 .pr-sources-label {
   flex: 1;
   margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  line-height: 1.3;
 }
 
 .pr-sources-count {
@@ -11281,7 +11286,7 @@ a.dropdown-item {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   color: var(--text-primary);
-  font: 400 13px var(--font-sans);
+  font: 400 14px var(--font-sans);
   outline: none;
   transition: border-color var(--duration-fast);
 }
@@ -11397,7 +11402,7 @@ a.dropdown-item {
 
 .pr-folder-name {
   flex: 1;
-  font: 500 13px var(--font-sans);
+  font: 500 14px var(--font-sans);
   color: var(--text-secondary);
 }
 
@@ -11530,7 +11535,7 @@ a.dropdown-item {
 }
 
 .pr-source-title {
-  font: 500 13px var(--font-sans);
+  font: 500 14px var(--font-sans);
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -11687,8 +11692,8 @@ a.dropdown-item {
 }
 
 .pr-history-title {
-  font: 500 12px var(--font-sans);
-  color: var(--text-secondary);
+  font: 500 14px var(--font-sans);
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -11816,12 +11821,16 @@ a.dropdown-item {
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--space-4);
+  padding-top: var(--space-2);
 }
 
 .pr-news-hooks-title {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  margin: 0;
 }
 
 .pr-news-hooks-list {
@@ -11851,7 +11860,7 @@ a.dropdown-item {
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -11920,7 +11929,7 @@ a.dropdown-item {
 }
 
 .pr-settings-label-text {
-  font: 500 13px var(--font-sans);
+  font: 500 14px var(--font-sans);
   color: var(--text-secondary);
 }
 
@@ -12137,7 +12146,7 @@ a.dropdown-item {
 }
 
 .pr-empty-desc {
-  font: 400 13px var(--font-sans);
+  font: 400 14px var(--font-sans);
   color: var(--text-muted);
 }
 
@@ -12152,7 +12161,7 @@ a.dropdown-item {
 
 .pr-empty-steps li {
   counter-increment: steps;
-  font: 400 13px var(--font-sans);
+  font: 400 14px var(--font-sans);
   color: var(--text-secondary);
   padding: var(--space-2) 0;
   padding-left: var(--space-5);
@@ -12237,19 +12246,19 @@ a.dropdown-item {
 }
 
 .pr-generated-content h1 {
-  font: 600 22px/1.3 var(--font-sans);
+  font: 600 20px/1.3 var(--font-sans);
   color: var(--text-primary);
   margin: var(--space-6) 0 var(--space-3);
 }
 
 .pr-generated-content h2 {
-  font: 600 18px/1.3 var(--font-sans);
+  font: 600 16px/1.3 var(--font-sans);
   color: var(--text-primary);
   margin: var(--space-5) 0 var(--space-2);
 }
 
 .pr-generated-content h3 {
-  font: 600 15px/1.3 var(--font-sans);
+  font: 500 14px/1.3 var(--font-sans);
   color: var(--text-primary);
   margin: var(--space-4) 0 var(--space-2);
 }
@@ -12593,7 +12602,7 @@ a.dropdown-item {
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -12630,9 +12639,11 @@ a.dropdown-item {
 }
 
 .pr-strategy-label {
-  font: 600 15px var(--font-sans);
+  font: 600 20px var(--font-sans);
   color: var(--text-primary);
   letter-spacing: -0.01em;
+  line-height: 1.3;
+  margin: 0;
 }
 
 .pr-strategy-body {
@@ -12673,7 +12684,7 @@ a.dropdown-item {
 }
 
 .pr-strategy-heading {
-  font: 600 13px var(--font-sans);
+  font: 500 14px var(--font-sans);
   color: var(--text-primary);
   margin-bottom: var(--space-2);
 }
@@ -12685,7 +12696,7 @@ a.dropdown-item {
 }
 
 .pr-strategy-text {
-  font: 400 13px var(--font-sans);
+  font: 400 14px var(--font-sans);
   color: var(--text-secondary);
   line-height: 1.5;
   margin-bottom: var(--space-2);
@@ -12704,7 +12715,7 @@ a.dropdown-item {
 }
 
 .pr-strategy-list li {
-  font: 400 13px var(--font-sans);
+  font: 400 14px var(--font-sans);
   color: var(--text-secondary);
   line-height: 1.5;
   margin-bottom: var(--space-1);
@@ -12728,7 +12739,7 @@ a.dropdown-item {
 }
 
 .pr-outlet-name {
-  font: 500 13px var(--font-sans);
+  font: 500 14px var(--font-sans);
   color: var(--text-primary);
 }
 
@@ -12772,7 +12783,7 @@ a.dropdown-item {
   border: none;
   border-radius: var(--radius-md);
   color: var(--text-muted);
-  font: 500 13px var(--font-sans);
+  font: 500 14px var(--font-sans);
   cursor: pointer;
   transition: all var(--duration-fast);
 }
@@ -14520,12 +14531,12 @@ a.dropdown-item {
   flex: 0 0 auto;
 }
 
-/* Workflow Header (H2 level - 20px semibold) */
+/* Workflow Header (H1 level - 20px semibold) */
 .pr-workflow-header {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 0 var(--space-4);
+  padding: var(--space-6) var(--space-4) 0 var(--space-4);
   margin-bottom: var(--space-3);
 }
 
@@ -14561,13 +14572,14 @@ a.dropdown-item {
   padding: 0 var(--space-4);
 }
 
-/* Subsection Title (H3 level - 16px medium) */
+/* Subsection Title (H2 level - 16px semibold) */
 .pr-subsection-title {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
-  margin: var(--space-3) 0 var(--space-2) 0;
+  margin: var(--space-4) 0 var(--space-2) 0;
   letter-spacing: -0.01em;
+  line-height: 1.3;
 }
 
 .pr-secondary-subsection {
@@ -14944,7 +14956,7 @@ a.dropdown-item {
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
