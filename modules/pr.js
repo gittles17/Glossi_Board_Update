@@ -1785,22 +1785,33 @@ class PRAgent {
     console.log('selectedSources count:', selectedSources.length);
     console.log('all sources:', this.sources.map(s => ({id: s.id, title: s.title, selected: s.selected})));
     
+    // TEMPORARY VISIBLE DEBUG
+    const debugInfo = `Generate Debug:\n` +
+      `isGenerating: ${this.isGenerating}\n` +
+      `apiKey: ${this.apiKey}\n` +
+      `selectedSources: ${selectedSources.length}`;
+    alert(debugInfo);
+    
     if (this.isGenerating) {
       console.error('❌ BLOCKED: Already generating');
+      alert('BLOCKED: Already generating');
       return;
     }
 
     if (selectedSources.length === 0) {
       console.error('❌ BLOCKED: No sources selected');
+      alert('BLOCKED: No sources selected');
       return;
     }
 
     if (!this.apiKey) {
       console.error('❌ BLOCKED: No API key');
+      alert('BLOCKED: No API key');
       return;
     }
     
     console.log('✅ All checks passed, proceeding with generation');
+    alert('✅ All checks passed, generating...');
 
     const contentType = this.dom.contentType?.value || 'press_release';
     const typeLabel = CONTENT_TYPES.find(t => t.id === contentType)?.label || contentType;
