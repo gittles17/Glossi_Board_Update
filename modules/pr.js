@@ -1399,7 +1399,6 @@ class PRAgent {
             </div>
             <div class="pr-source-meta">
               <span class="pr-source-date">${date}</span>
-              ${preview ? `<span class="pr-source-preview">${this.escapeHtml(preview)}</span>` : ''}
             </div>
           </div>
           <button class="pr-source-delete" data-action="delete" data-id="${source.id}" title="Delete source" ${source.loading ? 'disabled' : ''}>
