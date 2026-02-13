@@ -3312,6 +3312,16 @@ class WizardManager {
     const data = this.data;
     const sources = [];
     
+    // Helper to find or create source ID
+    const getSourceId = (prefix) => {
+      if (this.isEditing) {
+        // Find existing source with this prefix
+        const existing = this.prAgent.sources.find(s => s.id.startsWith(prefix));
+        if (existing) return existing.id;
+      }
+      return prefix + Date.now();
+    };
+    
     // Source 1: Company Fact Sheet (Step 1 + Step 4)
     const factSheetContent = `
 Company: ${data['wizard-company-name'] || '[Not provided]'}
@@ -3334,7 +3344,7 @@ Recent Features: ${data['wizard-features'] || '[Not provided]'}
     `.trim();
     
     sources.push({
-      id: 'src_wizard_facts_' + Date.now(),
+      id: getSourceId('src_wizard_facts_'),
       title: 'Company Fact Sheet',
       type: 'text',
       content: factSheetContent,
@@ -3358,7 +3368,7 @@ ${data['wizard-cost'] || '[Not provided - add details to improve PR output]'}
     `.trim();
     
     sources.push({
-      id: 'src_wizard_problem_' + Date.now(),
+      id: getSourceId('src_wizard_problem_'),
       title: 'Problem & Market Context',
       type: 'text',
       content: problemContent,
@@ -3382,7 +3392,7 @@ ${data['wizard-analogy'] || '[Not provided - add details to improve PR output]'}
     `.trim();
     
     sources.push({
-      id: 'src_wizard_solution_' + Date.now(),
+      id: getSourceId('src_wizard_solution_'),
       title: 'Solution & Technology',
       type: 'text',
       content: solutionContent,
@@ -3406,7 +3416,7 @@ ${data['wizard-if-not'] || '[Not provided - add details to improve PR output]'}
     `.trim();
     
     sources.push({
-      id: 'src_wizard_timing_' + Date.now(),
+      id: getSourceId('src_wizard_timing_'),
       title: 'Market Timing & Why Now',
       type: 'text',
       content: timingContent,
@@ -3430,13 +3440,34 @@ ${data['wizard-tone'] || 'understated'}
     `.trim();
     
     sources.push({
-      id: 'src_wizard_voice_' + Date.now(),
+      id: getSourceId('src_wizard_voice_'),
       title: 'Founder Voice & Messaging',
       type: 'text',
       content: voiceContent,
       createdAt: new Date().toISOString(),
       selected: true
     });
+    
+    // Add or update sources
+    if (this.isEditing) {
+      // Update existing sources
+      sources.forEach(newSource => {
+        const existingIndex = this.prAgent.sources.findIndex(s => s.id === newSource.id);
+        if (existingIndex >= 0) {
+          // Update existing source
+          this.prAgent.sources[existingIndex] = { 
+            ...this.prAgent.sources[existingIndex], 
+            ...newSource 
+          };
+        } else {
+          // Add if somehow missing
+          this.prAgent.sources.push(newSource);
+        }
+      });
+    } else {
+      // Add new sources for first-time setup
+      this.prAgent.sources.push(...sources);
+    }
     
     // Save all sources to database
     for (const source of sources) {
@@ -3457,7 +3488,6 @@ ${data['wizard-tone'] || 'understated'}
     }
     
     // Refresh sources display
-    await this.prAgent.loadData();
     this.prAgent.renderSources();
     this.prAgent.updateGenerateButton();
   }
