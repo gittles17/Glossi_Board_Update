@@ -41,6 +41,48 @@ if (!useDatabase && !fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
+// Outlet name normalization map (shared across endpoints)
+const OUTLET_NAME_MAP = {
+  'techcrunch.com': 'TechCrunch',
+  'www.techcrunch.com': 'TechCrunch',
+  'theverge.com': 'The Verge',
+  'www.theverge.com': 'The Verge',
+  'wired.com': 'WIRED',
+  'www.wired.com': 'WIRED',
+  'venturebeat.com': 'VentureBeat',
+  'www.venturebeat.com': 'VentureBeat',
+  'technologyreview.com': 'MIT Technology Review',
+  'www.technologyreview.com': 'MIT Technology Review',
+  'arstechnica.com': 'Ars Technica',
+  'www.arstechnica.com': 'Ars Technica',
+  'fastcompany.com': 'Fast Company',
+  'www.fastcompany.com': 'Fast Company',
+  'businessinsider.com': 'Business Insider',
+  'www.businessinsider.com': 'Business Insider',
+  'forbes.com': 'Forbes',
+  'www.forbes.com': 'Forbes',
+  'cnbc.com': 'CNBC',
+  'www.cnbc.com': 'CNBC',
+  'reuters.com': 'Reuters',
+  'www.reuters.com': 'Reuters',
+  'bloomberg.com': 'Bloomberg',
+  'www.bloomberg.com': 'Bloomberg',
+  'tldr.tech': 'TLDR',
+  'www.tldr.tech': 'TLDR',
+  'businessoffashion.com': 'Business of Fashion',
+  'www.businessoffashion.com': 'Business of Fashion',
+  'theinterline.com': 'The Interline',
+  'www.theinterline.com': 'The Interline'
+};
+
+function normalizeOutletName(rawOutlet) {
+  if (!rawOutlet) return 'Unknown';
+  const cleaned = rawOutlet.toLowerCase().trim();
+  return OUTLET_NAME_MAP[cleaned] || 
+         OUTLET_NAME_MAP[cleaned.replace('www.', '')] || 
+         rawOutlet;
+}
+
 // Initialize database table (with timeout so server always starts)
 async function initDatabase() {
   if (!useDatabase) return;
@@ -1123,47 +1165,10 @@ Rules:
       newsData = { news: [] };
     }
     
-    // Outlet name normalization map
-    const OUTLET_MAP = {
-      'techcrunch.com': 'TechCrunch',
-      'www.techcrunch.com': 'TechCrunch',
-      'theverge.com': 'The Verge',
-      'www.theverge.com': 'The Verge',
-      'wired.com': 'WIRED',
-      'www.wired.com': 'WIRED',
-      'venturebeat.com': 'VentureBeat',
-      'www.venturebeat.com': 'VentureBeat',
-      'technologyreview.com': 'MIT Technology Review',
-      'www.technologyreview.com': 'MIT Technology Review',
-      'arstechnica.com': 'Ars Technica',
-      'www.arstechnica.com': 'Ars Technica',
-      'fastcompany.com': 'Fast Company',
-      'www.fastcompany.com': 'Fast Company',
-      'businessinsider.com': 'Business Insider',
-      'www.businessinsider.com': 'Business Insider',
-      'forbes.com': 'Forbes',
-      'www.forbes.com': 'Forbes',
-      'cnbc.com': 'CNBC',
-      'www.cnbc.com': 'CNBC',
-      'reuters.com': 'Reuters',
-      'www.reuters.com': 'Reuters',
-      'bloomberg.com': 'Bloomberg',
-      'www.bloomberg.com': 'Bloomberg',
-      'tldr.tech': 'TLDR',
-      'www.tldr.tech': 'TLDR',
-      'businessoffashion.com': 'Business of Fashion',
-      'www.businessoffashion.com': 'Business of Fashion',
-      'theinterline.com': 'The Interline',
-      'www.theinterline.com': 'The Interline'
-    };
-    
     // Normalize dates, outlet names, and validate
     const normalizedNews = (newsData.news || []).map(item => {
-      // Normalize outlet name
-      const rawOutlet = item.outlet || '';
-      const normalizedOutlet = OUTLET_MAP[rawOutlet.toLowerCase()] || OUTLET_MAP[rawOutlet.replace('www.', '').toLowerCase()] || rawOutlet;
-      
-      item.outlet = normalizedOutlet;
+      // Normalize outlet name using shared function
+      item.outlet = normalizeOutletName(item.outlet);
       let articleDate = item.date;
       
       // Try to parse various date formats
@@ -1244,7 +1249,14 @@ app.get('/api/pr/news-hooks', async (req, res) => {
       WHERE date > NOW() - INTERVAL '30 days'
       ORDER BY date DESC, fetched_at DESC
     `);
-    res.json({ success: true, news: result.rows });
+    
+    // Normalize outlet names on read (handles old cached data with raw domains)
+    const normalizedNews = result.rows.map(item => ({
+      ...item,
+      outlet: normalizeOutletName(item.outlet)
+    }));
+    
+    res.json({ success: true, news: normalizedNews });
   } catch (error) {
     console.error('Error loading news hooks:', error);
     res.status(500).json({ success: false, error: error.message });
