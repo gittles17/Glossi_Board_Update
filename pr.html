@@ -236,6 +236,25 @@
           <div class="pr-workspace-tab-content active" data-tab-content="news-hooks">
             <div class="pr-news-hooks-container" id="pr-news-hooks-container">
               <div class="pr-news-hooks-header">
+                <div class="pr-news-hooks-filters">
+                  <div class="pr-filter-group">
+                    <select class="pr-filter-select" id="pr-news-date-filter">
+                      <option value="7">Last 7 days</option>
+                      <option value="30">Last 30 days</option>
+                      <option value="all">All time</option>
+                    </select>
+                  </div>
+                  <div class="pr-filter-group">
+                    <button class="pr-filter-btn" id="pr-news-outlet-filter-btn">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                      </svg>
+                      Outlets
+                      <span class="pr-filter-count" id="pr-outlet-filter-count"></span>
+                    </button>
+                  </div>
+                  <button class="pr-filter-clear" id="pr-news-clear-filters" style="display: none;">Clear</button>
+                </div>
                 <button class="btn btn-secondary btn-sm" id="pr-fetch-news-btn">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M23 4v6h-6"></path>

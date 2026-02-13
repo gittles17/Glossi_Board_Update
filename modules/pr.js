@@ -3897,6 +3897,12 @@ class NewsMonitor {
     this.prAgent = prAgent;
     this.newsHooks = [];
     this.displayedNewsCount = 10; // Show 10 news items initially
+    
+    // Filter state
+    this.filters = {
+      dateRange: 7, // Default: last 7 days
+      outlets: [] // Empty = all outlets
+    };
   }
 
   async init() {
@@ -3908,17 +3914,130 @@ class NewsMonitor {
   setupDOM() {
     this.dom = {
       fetchNewsBtn: document.getElementById('pr-fetch-news-btn'),
-      newsHooksList: document.getElementById('pr-news-hooks-list')
+      newsHooksList: document.getElementById('pr-news-hooks-list'),
+      dateFilter: document.getElementById('pr-news-date-filter'),
+      outletFilterBtn: document.getElementById('pr-news-outlet-filter-btn'),
+      outletFilterCount: document.getElementById('pr-outlet-filter-count'),
+      clearFilters: document.getElementById('pr-news-clear-filters')
     };
   }
 
   setupEventListeners() {
     this.dom.fetchNewsBtn?.addEventListener('click', () => this.refreshNews());
+    
+    // Date filter
+    this.dom.dateFilter?.addEventListener('change', (e) => {
+      this.filters.dateRange = e.target.value === 'all' ? 'all' : parseInt(e.target.value);
+      this.renderNews();
+      this.updateClearButton();
+    });
+    
+    // Outlet filter button
+    this.dom.outletFilterBtn?.addEventListener('click', () => this.showOutletFilter());
+    
+    // Clear filters
+    this.dom.clearFilters?.addEventListener('click', () => this.clearFilters());
   }
 
   showMoreNews() {
     this.displayedNewsCount += 10;
     this.renderNews();
+  }
+  
+  clearFilters() {
+    this.filters.dateRange = 7;
+    this.filters.outlets = [];
+    if (this.dom.dateFilter) this.dom.dateFilter.value = '7';
+    this.renderNews();
+    this.updateClearButton();
+  }
+  
+  updateClearButton() {
+    const hasFilters = this.filters.dateRange !== 7 || this.filters.outlets.length > 0;
+    if (this.dom.clearFilters) {
+      this.dom.clearFilters.style.display = hasFilters ? 'block' : 'none';
+    }
+    
+    // Update outlet count badge
+    if (this.dom.outletFilterCount) {
+      this.dom.outletFilterCount.textContent = this.filters.outlets.length > 0 ? `(${this.filters.outlets.length})` : '';
+    }
+  }
+  
+  showOutletFilter() {
+    // Get unique outlets from current news
+    const outlets = [...new Set(this.newsHooks.map(item => item.outlet))].sort();
+    
+    // Create filter modal
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay visible';
+    modal.innerHTML = `
+      <div class="modal pr-outlet-filter-modal">
+        <div class="modal-header">
+          <h3>Filter by Outlet</h3>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="pr-outlet-filter-list">
+            ${outlets.map(outlet => `
+              <label class="pr-outlet-filter-item">
+                <input type="checkbox" value="${this.escapeHtml(outlet)}" ${this.filters.outlets.includes(outlet) ? 'checked' : ''}>
+                <span>${this.escapeHtml(outlet)}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+          <button class="btn btn-primary" data-action="apply">Apply Filters</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Event listeners
+    const closeBtn = modal.querySelector('.modal-close');
+    const cancelBtn = modal.querySelector('[data-action="cancel"]');
+    const applyBtn = modal.querySelector('[data-action="apply"]');
+    
+    const closeModal = () => modal.remove();
+    
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    
+    applyBtn.addEventListener('click', () => {
+      const checkboxes = modal.querySelectorAll('input[type="checkbox"]:checked');
+      this.filters.outlets = Array.from(checkboxes).map(cb => cb.value);
+      this.renderNews();
+      this.updateClearButton();
+      closeModal();
+    });
+    
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  }
+  
+  getFilteredNews() {
+    let filtered = [...this.newsHooks];
+    
+    // Apply date filter
+    if (this.filters.dateRange !== 'all') {
+      const now = Date.now();
+      const daysMs = this.filters.dateRange * 24 * 60 * 60 * 1000;
+      filtered = filtered.filter(item => {
+        const itemDate = new Date(item.date || item.fetched_at);
+        return (now - itemDate.getTime()) < daysMs;
+      });
+    }
+    
+    // Apply outlet filter
+    if (this.filters.outlets.length > 0) {
+      filtered = filtered.filter(item => this.filters.outlets.includes(item.outlet));
+    }
+    
+    return filtered;
   }
 
   async loadCachedNews() {
@@ -4004,14 +4123,19 @@ class NewsMonitor {
   renderNews() {
     if (!this.dom.newsHooksList) return;
 
-    if (this.newsHooks.length === 0) {
-      this.dom.newsHooksList.innerHTML = '<p class="pr-news-hooks-empty">No recent news found. Click refresh to search.</p>';
+    // Apply filters
+    const filteredNews = this.getFilteredNews();
+
+    if (filteredNews.length === 0) {
+      this.dom.newsHooksList.innerHTML = this.newsHooks.length === 0 
+        ? '<p class="pr-news-hooks-empty">No recent news found. Click refresh to search.</p>'
+        : '<p class="pr-news-hooks-empty">No news matches your filters. Try adjusting them.</p>';
       return;
     }
 
     // Slice to show only displayed count
-    const displayedItems = this.newsHooks.slice(0, this.displayedNewsCount);
-    const remainingCount = this.newsHooks.length - this.displayedNewsCount;
+    const displayedItems = filteredNews.slice(0, this.displayedNewsCount);
+    const remainingCount = filteredNews.length - this.displayedNewsCount;
     
     let html = '<div class="pr-news-items">';
     
