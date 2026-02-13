@@ -65,9 +65,9 @@
   <main class="pr-main">
     <!-- Mobile Tab Bar -->
     <div class="pr-mobile-tabs" id="pr-mobile-tabs">
-      <button class="pr-mobile-tab active" data-tab="sources">Research</button>
-      <button class="pr-mobile-tab" data-tab="workspace">Workspace</button>
-      <button class="pr-mobile-tab" data-tab="strategy">Strategy</button>
+      <button class="pr-mobile-tab active" data-tab="strategy">Strategy</button>
+      <button class="pr-mobile-tab" data-tab="sources">Sources</button>
+      <button class="pr-mobile-tab" data-tab="library">Library</button>
     </div>
 
     <div class="pr-layout">
@@ -399,7 +399,7 @@
       <div class="pr-resizer" id="pr-resizer-right" data-resize="right"></div>
 
       <!-- Column 3: Right Panel (Media & Distribution) -->
-      <div class="pr-strategy-panel" id="pr-strategy-panel">
+      <div class="pr-right-panel" id="pr-right-panel">
         <!-- Single unified panel for Media & Distribution -->
         <div class="pr-right-panel-body">
           <!-- Media Section -->
@@ -433,7 +433,7 @@
               <h2 class="pr-section-title">Distribution</h2>
             </div>
             <div class="pr-strategy-body">
-              <div class="pr-strategy-content" id="pr-strategy-content"></div>
+              <div class="pr-right-panel-content" id="pr-right-panel-content"></div>
             </div>
           </div>
         </div>
@@ -859,17 +859,24 @@
       pr.setupFileUpload();
       pr.setupAudio();
 
-      // Mobile tab switching (simplified to 3 tabs)
+      // Mobile tab switching (matches desktop: Strategy/Sources/Library)
       document.querySelectorAll('.pr-mobile-tab').forEach(tab => {
         tab.addEventListener('click', () => {
           document.querySelectorAll('.pr-mobile-tab').forEach(t => t.classList.remove('active'));
           tab.classList.add('active');
           const target = tab.dataset.tab;
           
-          // Show correct panel
-          document.getElementById('pr-sources-panel').classList.toggle('mobile-active', target === 'sources');
-          document.getElementById('pr-workspace-panel').classList.toggle('mobile-active', target === 'workspace');
-          document.getElementById('pr-strategy-panel').classList.toggle('mobile-active', target === 'strategy');
+          // Show correct panel - now matches desktop tab structure
+          if (target === 'strategy' || target === 'sources' || target === 'library') {
+            // Show left panel (sources panel) which contains all three tabs
+            document.getElementById('pr-sources-panel').classList.add('mobile-active');
+            document.getElementById('pr-workspace-panel').classList.remove('mobile-active');
+            document.getElementById('pr-right-panel').classList.remove('mobile-active');
+            
+            // Trigger the corresponding desktop tab click
+            const desktopTab = document.querySelector(`.pr-panel-tab[data-panel-tab="${target}"]`);
+            if (desktopTab) desktopTab.click();
+          }
         });
       });
 
@@ -893,7 +900,7 @@
           this.leftResizer = document.getElementById('pr-resizer-left');
           this.rightResizer = document.getElementById('pr-resizer-right');
           this.leftPanel = document.getElementById('pr-sources-panel');
-          this.rightPanel = document.getElementById('pr-strategy-panel');
+          this.rightPanel = document.getElementById('pr-right-panel');
           
           this.init();
           this.loadSavedWidths();

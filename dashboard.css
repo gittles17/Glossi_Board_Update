@@ -12173,6 +12173,45 @@ a.dropdown-item {
   overflow-y: auto;
 }
 
+/* ============================================
+   EMPTY STATES (GLOBAL)
+   ============================================ */
+
+.pr-empty-state {
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  color: var(--text-secondary);
+}
+
+.pr-empty-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-3);
+  opacity: 0.5;
+  line-height: 1;
+}
+
+.pr-empty-state h4 {
+  font: 600 16px var(--font-sans);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2);
+}
+
+.pr-empty-state p {
+  font: 400 14px var(--font-sans);
+  line-height: 1.6;
+  margin: 0 0 var(--space-2);
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.pr-empty-hint {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* Legacy empty state class (for backwards compatibility) */
 .pr-news-hooks-empty {
   text-align: center;
   color: var(--text-muted);
@@ -12925,8 +12964,8 @@ a.dropdown-item {
   transition: width 0.3s ease;
 }
 
-/* Column 3: Strategy Panel */
-.pr-strategy-panel {
+/* Column 3: Right Panel (Media & Distribution) */
+.pr-right-panel {
   width: var(--panel-right-width, 320px);
   min-width: 250px;
   max-width: 500px;
@@ -13270,7 +13309,7 @@ a.dropdown-item {
 
   .pr-sources-panel,
   .pr-workspace-panel,
-  .pr-strategy-panel {
+  .pr-right-panel {
     display: none;
     width: 100%;
     max-width: none;
@@ -13280,7 +13319,7 @@ a.dropdown-item {
 
   .pr-sources-panel.mobile-active,
   .pr-workspace-panel.mobile-active,
-  .pr-strategy-panel.mobile-active {
+  .pr-right-panel.mobile-active {
     display: flex;
     flex: 1;
   }
@@ -13290,7 +13329,7 @@ a.dropdown-item {
     display: flex;
   }
 
-  .pr-strategy-panel {
+  .pr-right-panel {
     border-left: none;
     border-top: 1px solid var(--border-color);
   }
@@ -13674,8 +13713,8 @@ a.dropdown-item {
 }
 
 /* AGGRESSIVE FIX: Remove ALL border-radius and circular elements from Media section */
-.pr-strategy-panel,
-.pr-strategy-panel *,
+.pr-right-panel,
+.pr-right-panel *,
 .pr-right-panel-tabs,
 .pr-right-panel-tabs *,
 .pr-right-panel-tab-content,
@@ -13702,10 +13741,10 @@ a.dropdown-item {
 }
 
 /* Remove all pseudo-elements */
-.pr-strategy-panel::before,
-.pr-strategy-panel::after,
-.pr-strategy-panel *::before,
-.pr-strategy-panel *::after {
+.pr-right-panel::before,
+.pr-right-panel::after,
+.pr-right-panel *::before,
+.pr-right-panel *::after {
   display: none !important;
   content: none !important;
 }
@@ -15404,7 +15443,7 @@ body.pr-resizing * {
   }
   
   .pr-sources-panel,
-  .pr-strategy-panel {
+  .pr-right-panel {
     width: 100%;
     max-width: 100%;
   }

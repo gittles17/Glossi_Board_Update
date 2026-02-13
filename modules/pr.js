@@ -763,7 +763,7 @@ class PRAgent {
       copyBtn: document.getElementById('pr-copy-btn'),
       exportBtn: document.getElementById('pr-export-btn'),
       exportMenu: document.getElementById('pr-export-menu'),
-      strategyPanel: document.getElementById('pr-strategy-content'),
+      strategyPanel: document.getElementById('pr-right-panel-content'),
       strategyEmpty: document.getElementById('pr-strategy-empty'),
       historyList: document.getElementById('pr-history-list'),
       historyEmpty: document.getElementById('pr-history-empty'),
@@ -2435,8 +2435,14 @@ class PRAgent {
     const distributionSection = document.getElementById('pr-distribution-section');
     
     if (!strategy && !this.angleManager?.activeAngle) {
-      this.dom.strategyPanel.innerHTML = '';
-      if (distributionSection) distributionSection.style.display = 'none';
+      this.dom.strategyPanel.innerHTML = `
+        <div class="pr-empty-state">
+          <div class="pr-empty-icon">🎯</div>
+          <h4>No Active Angle Yet</h4>
+          <p>Select a story angle from the Strategy tab (left panel) and click "Create Content →" to see your progress here.</p>
+        </div>
+      `;
+      if (distributionSection) distributionSection.style.display = 'block';
       return;
     }
 
@@ -4480,9 +4486,24 @@ class NewsMonitor {
     const filteredNews = this.getFilteredNews();
 
     if (filteredNews.length === 0) {
-      this.dom.newsHooksList.innerHTML = this.newsHooks.length === 0 
-        ? '<p class="pr-news-hooks-empty">No recent news found. Click refresh to search.</p>'
-        : '<p class="pr-news-hooks-empty">No news matches your filters. Try adjusting them.</p>';
+      if (this.newsHooks.length === 0) {
+        this.dom.newsHooksList.innerHTML = `
+          <div class="pr-empty-state">
+            <div class="pr-empty-icon">📰</div>
+            <h4>No News Hooks Yet</h4>
+            <p>Click the Refresh button above to search for recent AI, product visualization, and startup news that's relevant to Glossi.</p>
+            <p class="pr-empty-hint">💡 News hooks help you spot timely angles for press coverage.</p>
+          </div>
+        `;
+      } else {
+        this.dom.newsHooksList.innerHTML = `
+          <div class="pr-empty-state">
+            <div class="pr-empty-icon">🔍</div>
+            <h4>No News Matches Your Filters</h4>
+            <p>Try adjusting the date range or outlet filters above to see more results.</p>
+          </div>
+        `;
+      }
       return;
     }
 
@@ -5200,7 +5221,14 @@ class AngleManager {
     const anglesToShow = this.angles.length > 0 ? this.angles : (this.prAgent.sources.length === 0 ? this.defaultAngles : []);
 
     if (anglesToShow.length === 0) {
-      this.dom.anglesList.innerHTML = '<p class="pr-angles-empty">Click "Generate Angles" to get strategic recommendations</p>';
+      this.dom.anglesList.innerHTML = `
+        <div class="pr-empty-state">
+          <div class="pr-empty-icon">💡</div>
+          <h4>Generate Custom Angles</h4>
+          <p>Add sources in the Sources tab, then click "Generate Angles" above to get personalized story recommendations based on your company context.</p>
+          <p class="pr-empty-hint">⬆️ Three default angles are shown above to get you started.</p>
+        </div>
+      `;
       return;
     }
 
