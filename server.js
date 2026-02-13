@@ -1113,9 +1113,23 @@ app.post('/api/pr/news-hooks', async (req, res) => {
       return res.json({ success: true, news: [] });
     }
     
-    // Step 2: Use Claude to analyze relevance and generate summaries
-    const articlesToAnalyze = uniqueResults.slice(0, 20);  // Analyze up to 20 articles to stay under Railway timeout
-    console.log(`Sending ${articlesToAnalyze.length} articles to Claude for analysis`);
+    // Step 2: Diversify article selection across outlets
+    const articlesByOutlet = {};
+    uniqueResults.forEach(article => {
+      const outlet = article.domain;
+      if (!articlesByOutlet[outlet]) articlesByOutlet[outlet] = [];
+      articlesByOutlet[outlet].push(article);
+    });
+    
+    // Take 3 articles from each outlet for diversity
+    const articlesToAnalyze = [];
+    Object.values(articlesByOutlet).forEach(outletArticles => {
+      articlesToAnalyze.push(...outletArticles.slice(0, 3));
+    });
+    
+    // Limit to 30 total articles (Haiku 4.5 is fast enough)
+    const finalArticles = articlesToAnalyze.slice(0, 30);
+    console.log(`Sending ${finalArticles.length} articles from ${Object.keys(articlesByOutlet).length} outlets to Claude for analysis`);
     
     const analysisPrompt = `You are analyzing news articles for Glossi, an AI-native 3D product visualization platform.
 
@@ -1129,7 +1143,7 @@ GLOSSI CONTEXT:
 TASK: Analyze each article and determine if it's broadly relevant to tech, AI, 3D, visualization, e-commerce, marketing, creative industries, or brand technology. Be INCLUSIVE rather than overly selective.
 
 ARTICLES:
-${articlesToAnalyze.map((article, i) => `
+${finalArticles.map((article, i) => `
 ${i + 1}. TITLE: ${article.title}
    SOURCE: ${article.domain}
    DATE: ${article.publishedDate || 'Recent'}
@@ -1151,9 +1165,10 @@ Return articles in this JSON format:
 }
 
 Rules:
-- Include articles that are broadly relevant to tech, AI, 3D, visualization, e-commerce, creative industries, marketing, or brand technology
-- Be INCLUSIVE - if there's any connection to these topics, include it
-- Maximum 20 articles
+- Include MOST articles unless they are completely unrelated (politics, sports, entertainment)
+- Any article about technology, business, innovation, or industry trends should be included
+- Be VERY INCLUSIVE - even tangentially related articles are useful for industry awareness
+- Return ALL relevant articles (aim for 20-30 articles)
 - Sort by date (most recent first)
 - Keep summaries and relevance statements concise (one sentence each)
 - Use the exact domain from the SOURCE field for the outlet name`;
