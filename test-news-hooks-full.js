@@ -127,7 +127,7 @@ Rules:
   
   try {
     const analysisResponse = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-opus-4-6',
       max_tokens: 4096,
       system: 'You are a strategic communications analyst. Return only valid JSON.',
       messages: [{ role: 'user', content: analysisPrompt }]
