@@ -992,7 +992,12 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     const today = new Date().toISOString().split('T')[0];
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
-    const newsPrompt = `CRITICAL: Only search for news articles published between ${sevenDaysAgo} and ${today} (within the last 7 days). Do NOT include any articles older than 7 days.
+    const newsPrompt = `CRITICAL INSTRUCTIONS:
+1. Only return REAL news articles published between ${sevenDaysAgo} and ${today} (within the last 7 days)
+2. Do NOT include any articles older than 7 days
+3. Do NOT generate example, placeholder, or hypothetical articles
+4. If you cannot find real articles, return an empty array: {"news": []}
+5. Every article MUST have a real, valid URL
 
 Search major tech publications including: TechCrunch, The Verge, Wired, VentureBeat, MIT Technology Review, Ars Technica, Protocol, Fast Company, Business Insider, Forbes Tech, CNBC Tech, Reuters Tech, Bloomberg Technology, TLDR Newsletter (tldr.tech).
 
@@ -1034,10 +1039,12 @@ Return as structured JSON with this exact format:
 
 Maximum 15 results, sorted by date (newest first), then relevance. ONLY include articles from the past 7 days.`;
 
+    // Note: Claude's Messages API doesn't have built-in web search by default
+    // This will only work if you have Claude Extended Thinking or similar features enabled
     const newsResponse = await axios.post('https://api.anthropic.com/v1/messages', {
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
-      system: 'You are a news research assistant for Glossi, an AI-native 3D product visualization platform. Always return valid JSON.',
+      system: 'You are a news research assistant with web search capabilities. Return ONLY real, verified articles from actual news sources. Always return valid JSON. Never generate example, mock, or placeholder data.',
       messages: [{ role: 'user', content: newsPrompt }]
     }, {
       headers: {
@@ -1048,12 +1055,30 @@ Maximum 15 results, sorted by date (newest first), then relevance. ONLY include 
     });
     
     const newsText = newsResponse.data.content?.[0]?.text || '{}';
+    console.log('Claude response for news hooks:', newsText.substring(0, 500));
+    
     let newsData;
     try {
       const jsonMatch = newsText.match(/\{[\s\S]*\}/);
       newsData = jsonMatch ? JSON.parse(jsonMatch[0]) : { news: [] };
-    } catch {
+    } catch (error) {
+      console.error('Failed to parse news response:', error);
       newsData = { news: [] };
+    }
+    
+    // Check if response contains example/placeholder data
+    const hasExampleData = newsData.news?.some(item => 
+      item.headline?.toLowerCase().includes('example') || 
+      item.headline?.toLowerCase().includes('placeholder') ||
+      item.summary?.toLowerCase().includes('would be')
+    );
+    
+    if (hasExampleData) {
+      console.warn('Claude returned example/placeholder data instead of real news articles');
+      return res.json({ 
+        success: false, 
+        error: 'Claude returned example data. This model may not have web search capabilities. Please check your API configuration or try again.' 
+      });
     }
     
     if (useDatabase) {
