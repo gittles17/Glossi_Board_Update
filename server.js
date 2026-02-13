@@ -1033,7 +1033,7 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     }
     
     const today = new Date().toISOString().split('T')[0];
-    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysAgo = Date.now() - (60 * 24 * 60 * 60 * 1000);
     
     // Initialize RSS parser
     const parser = new Parser({
@@ -1067,11 +1067,11 @@ app.post('/api/pr/news-hooks', async (req, res) => {
       try {
         const feed = await parser.parseURL(feedUrl);
         
-        // Filter for articles from last 30 days
+        // Filter for articles from last 60 days
         const recentArticles = (feed.items || [])
           .filter(item => {
             const pubDate = new Date(item.pubDate || item.isoDate || Date.now());
-            return pubDate.getTime() > thirtyDaysAgo;
+            return pubDate.getTime() > sixtyDaysAgo;
           })
           .slice(0, 10)  // Top 10 per outlet
           .map(item => ({
@@ -1131,19 +1131,35 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     const finalArticles = articlesToAnalyze.slice(0, 30);
     console.log(`Sending ${finalArticles.length} articles from ${Object.keys(articlesByOutlet).length} outlets to Claude for analysis`);
     
-    const analysisPrompt = `You are analyzing news articles for an AI company. Your job is to include ALMOST ALL articles.
+    const analysisPrompt = `You are a strategic analyst curating news for an AI-powered 3D product visualization platform (Glossi). 
 
-IMPORTANT: Include 90% or more of the articles provided. Only exclude articles that are COMPLETELY unrelated to business or technology (sports, celebrity gossip, hard politics).
+COMPANY CONTEXT:
+Glossi helps enterprise brands create unlimited product photos using AI + 3D (no photoshoots needed). Target buyers: CMOs, e-commerce directors at CPG/fashion/beauty brands.
 
-INCLUDE articles about:
-- Any technology topic (AI, cloud, software, hardware, internet)
-- Any business news (funding, M&A, leadership, strategy)
-- Any industry news (retail, manufacturing, fashion, finance, healthcare)
-- Marketing, advertising, creative tools, design
-- E-commerce, shopping, consumer products
-- Innovation, startups, entrepreneurship
+YOUR GOAL: Select ONLY the top 15-20 most relevant articles for PR positioning. Focus on quality over quantity.
 
-TASK: Return almost all articles with brief summaries.
+HIGH-VALUE ARTICLES (prioritize these):
+1. AI adoption in enterprise/creative workflows
+2. E-commerce innovation and product experience trends  
+3. Brand/retail challenges with visual content at scale
+4. Enterprise SaaS buying trends and pain points
+5. Marketing technology and creative automation
+6. CPG, fashion, beauty industry digital transformation
+
+INCLUDE if article shows:
+- Market shifts that make Glossi more relevant
+- Customer pain points Glossi solves
+- Competitor movements in creative/e-commerce tech
+- Enterprise AI adoption accelerating
+
+EXCLUDE:
+- Generic tech news without clear business impact
+- Minor product updates or small features
+- Pure financial/stock market analysis
+- Politics, sports, entertainment
+- Articles older than 45 days (prioritize recency)
+
+TASK: Return 15-20 of the BEST articles with strong PR/positioning angles.
 
 ARTICLES:
 ${finalArticles.map((article, i) => `
@@ -1168,12 +1184,12 @@ Return articles in this JSON format:
 }
 
 Rules:
-- CRITICAL: Include at least 25 out of 30 articles (83%+ inclusion rate)
-- Only exclude: pure sports, celebrity gossip, hard politics
-- Everything else: INCLUDE IT
-- Technology, business, innovation = automatic include
-- Sort by date (most recent first)
-- Keep summaries and relevance brief (one sentence each)
+- CRITICAL: Return only 15-20 articles (top 50-60% by relevance)
+- Each article must have clear PR/positioning value
+- Prioritize articles from last 30 days (older than 45 days = exclude)
+- Focus on WHY this matters for Glossi's market positioning
+- Sort by relevance (most impactful first), then by date
+- In 'relevance' field: explain the specific PR angle or customer insight
 - Use the exact domain from the SOURCE field for the outlet name`;
 
     const analysisResponse = await axios.post('https://api.anthropic.com/v1/messages', {
