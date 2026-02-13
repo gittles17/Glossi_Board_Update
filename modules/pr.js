@@ -737,6 +737,7 @@ class PRAgent {
       customPromptWrap: document.getElementById('pr-custom-prompt-wrap'),
       customPrompt: document.getElementById('pr-custom-prompt'),
       generateBtn: document.getElementById('pr-generate-btn'),
+      generateBtnMobile: document.getElementById('pr-generate-btn-mobile'),
       regenerateBtn: document.getElementById('pr-regenerate-btn'),
       workspace: document.getElementById('pr-workspace-content'),
       workspaceEmpty: document.getElementById('pr-workspace-empty'),
@@ -797,8 +798,9 @@ class PRAgent {
       }
     });
 
-    // Generate button
+    // Generate buttons (desktop and mobile)
     this.dom.generateBtn?.addEventListener('click', () => this.generateContent());
+    this.dom.generateBtnMobile?.addEventListener('click', () => this.generateContent());
 
     // Intercept clicks on disabled generate button via parent container
     const controls = document.querySelector('.pr-workspace-controls');
@@ -1728,6 +1730,7 @@ class PRAgent {
     const hasApiKey = this.apiKey && this.apiKey.length > 0;
     const isDisabled = selectedSources.length === 0 || !hasApiKey || this.isGenerating;
 
+    // Update desktop button
     if (this.dom.generateBtn) {
       this.dom.generateBtn.disabled = isDisabled;
 
@@ -1737,6 +1740,19 @@ class PRAgent {
         this.dom.generateBtn.title = 'Select at least one source to generate content';
       } else {
         this.dom.generateBtn.title = '';
+      }
+    }
+
+    // Update mobile button
+    if (this.dom.generateBtnMobile) {
+      this.dom.generateBtnMobile.disabled = isDisabled;
+
+      if (!hasApiKey) {
+        this.dom.generateBtnMobile.title = 'Configure your Anthropic API key in Settings first';
+      } else if (selectedSources.length === 0) {
+        this.dom.generateBtnMobile.title = 'Select at least one source to generate content';
+      } else {
+        this.dom.generateBtnMobile.title = '';
       }
     }
 
