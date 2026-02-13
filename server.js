@@ -6,6 +6,7 @@ const multer = require('multer');
 const pdfParse = require('pdf-parse');
 const axios = require('axios');
 const FormData = require('form-data');
+const { tavily } = require('@tavily/core');
 
 const compression = require('compression');
 const app = express();
@@ -968,13 +969,18 @@ app.delete('/api/pr/calendar/:id', async (req, res) => {
   }
 });
 
-// Refresh news hooks (Claude web search)
+// Refresh news hooks (Tavily search + Claude analysis)
 app.post('/api/pr/news-hooks', async (req, res) => {
   try {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    const tavilyKey = process.env.TAVILY_API_KEY || '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';
     
-    if (!apiKey) {
+    if (!anthropicKey) {
       return res.status(500).json({ success: false, error: 'Anthropic API key not configured in environment variables' });
+    }
+    
+    if (!tavilyKey) {
+      return res.status(500).json({ success: false, error: 'Tavily API key not configured in environment variables' });
     }
     
     // Clean up old news hooks before fetching new ones (by article date)
@@ -992,133 +998,170 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     const today = new Date().toISOString().split('T')[0];
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
-    const newsPrompt = `CRITICAL INSTRUCTIONS:
-1. Only return REAL news articles published between ${sevenDaysAgo} and ${today} (within the last 7 days)
-2. Do NOT include any articles older than 7 days
-3. Do NOT generate example, placeholder, or hypothetical articles
-4. If you cannot find real articles, return an empty array: {"news": []}
-5. Every article MUST have a real, valid URL
+    // Initialize Tavily client
+    const tvly = tavily({ apiKey: tavilyKey });
+    
+    // Step 1: Use Tavily to search for recent tech news
+    console.log('Searching for news with Tavily...');
+    
+    const searchQueries = [
+      'AI machine learning generative AI LLM',
+      '3D rendering visualization computer vision',
+      'e-commerce product visualization retail tech',
+      'marketing technology creative AI tools',
+      'enterprise AI adoption brand technology'
+    ];
+    
+    let allResults = [];
+    
+    // Search each topic
+    for (const query of searchQueries) {
+      try {
+        const searchResult = await tvly.search(query, {
+          searchDepth: 'basic',
+          topic: 'news',
+          days: 7,
+          maxResults: 5,
+          includeDomains: ['techcrunch.com', 'theverge.com', 'wired.com', 'venturebeat.com', 'technologyreview.com', 'arstechnica.com', 'fastcompany.com', 'businessinsider.com', 'forbes.com', 'cnbc.com', 'reuters.com', 'bloomberg.com', 'tldr.tech']
+        });
+        
+        if (searchResult.results) {
+          allResults = allResults.concat(searchResult.results);
+        }
+      } catch (error) {
+        console.error(`Tavily search error for query "${query}":`, error.message);
+      }
+    }
+    
+    // Remove duplicates by URL
+    const uniqueResults = Array.from(new Map(allResults.map(item => [item.url, item])).values());
+    console.log(`Found ${uniqueResults.length} unique articles from Tavily`);
+    
+    if (uniqueResults.length === 0) {
+      return res.json({ success: true, news: [] });
+    }
+    
+    // Step 2: Use Claude to analyze relevance and generate summaries
+    const analysisPrompt = `You are analyzing news articles for Glossi, an AI-native 3D product visualization platform.
 
-Search major tech publications including: TechCrunch, The Verge, Wired, VentureBeat, MIT Technology Review, Ars Technica, Protocol, Fast Company, Business Insider, Forbes Tech, CNBC Tech, Reuters Tech, Bloomberg Technology, TLDR Newsletter (tldr.tech).
+GLOSSI CONTEXT:
+- First AI-native 3D product visualization platform
+- Core tech: compositing (not generation). Product 3D asset stays untouched, AI generates scenes around it
+- Built on Unreal Engine 5, runs in browser
+- Target: enterprise brands, e-commerce, CPG, fashion, beauty
+- Key value: 80% reduction in product photo costs, unlimited variations, brand consistency
 
-Search topics (prioritize broader, trending topics):
-- AI and machine learning (general AI news, LLMs, generative AI)
-- Computer vision and image generation (DALL-E, Midjourney, Stable Diffusion, image AI)
-- 3D technology, rendering, visualization, virtual production
-- E-commerce technology and digital commerce innovations
-- Marketing technology (martech) and creative automation
-- Enterprise AI adoption and digital transformation
-- Product photography and visual content creation
-- Brand technology and creative operations
-- World models (Google Genie, World Labs, OpenAI)
-- AR/VR/XR and spatial computing
-- Creative tools and design technology
-- CGI, visual effects, real-time rendering
+TASK: For each article below, determine if it's relevant to Glossi and provide a brief relevance statement. Only include articles that are relevant.
 
-For each result, return:
-- Headline
-- Outlet name
-- Date (MUST be between ${sevenDaysAgo} and ${today} in YYYY-MM-DD format)
-- URL
-- One-sentence summary
-- Relevance to Glossi (how Glossi could tie into this story)
+ARTICLES:
+${uniqueResults.slice(0, 20).map((article, i) => `
+${i + 1}. TITLE: ${article.title}
+   SOURCE: ${article.url.match(/https?:\/\/([^\/]+)/)?.[1] || 'Unknown'}
+   DATE: ${article.publishedDate || 'Recent'}
+   SNIPPET: ${article.content?.substring(0, 300) || 'No preview'}
+`).join('\n')}
 
-Return as structured JSON with this exact format:
+Return ONLY articles relevant to Glossi in this JSON format:
 {
   "news": [
     {
-      "headline": "Headline text",
-      "outlet": "Outlet name",
-      "date": "2026-02-12",
-      "url": "https://...",
-      "summary": "One sentence summary",
-      "relevance": "How Glossi ties in"
+      "headline": "Original article title",
+      "outlet": "Source domain",
+      "date": "YYYY-MM-DD format",
+      "url": "Original URL",
+      "summary": "One sentence summary of the article",
+      "relevance": "ONE sentence explaining how Glossi ties into this story"
     }
   ]
 }
 
-Maximum 15 results, sorted by date (newest first), then relevance. ONLY include articles from the past 7 days.`;
+Rules:
+- Only include relevant articles (AI, 3D, visualization, e-commerce, creative tech, marketing tech, brand tech)
+- Maximum 15 articles
+- Sort by relevance to Glossi
+- Keep summaries and relevance statements concise (one sentence each)`;
 
-    // Note: Claude's Messages API doesn't have built-in web search by default
-    // This will only work if you have Claude Extended Thinking or similar features enabled
-    const newsResponse = await axios.post('https://api.anthropic.com/v1/messages', {
+    const analysisResponse = await axios.post('https://api.anthropic.com/v1/messages', {
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
-      system: 'You are a news research assistant with web search capabilities. Return ONLY real, verified articles from actual news sources. Always return valid JSON. Never generate example, mock, or placeholder data.',
-      messages: [{ role: 'user', content: newsPrompt }]
+      system: 'You are a strategic communications analyst. Return only valid JSON.',
+      messages: [{ role: 'user', content: analysisPrompt }]
     }, {
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'x-api-key': anthropicKey,
         'anthropic-version': '2023-06-01'
       }
     });
     
-    const newsText = newsResponse.data.content?.[0]?.text || '{}';
-    console.log('Claude response for news hooks:', newsText.substring(0, 500));
+    const analysisText = analysisResponse.data.content?.[0]?.text || '{}';
+    console.log('Claude analysis complete');
     
     let newsData;
     try {
-      const jsonMatch = newsText.match(/\{[\s\S]*\}/);
+      const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
       newsData = jsonMatch ? JSON.parse(jsonMatch[0]) : { news: [] };
     } catch (error) {
-      console.error('Failed to parse news response:', error);
+      console.error('Failed to parse Claude analysis:', error);
       newsData = { news: [] };
     }
     
-    // Check if response contains example/placeholder data
-    const hasExampleData = newsData.news?.some(item => 
-      item.headline?.toLowerCase().includes('example') || 
-      item.headline?.toLowerCase().includes('placeholder') ||
-      item.summary?.toLowerCase().includes('would be')
-    );
-    
-    if (hasExampleData) {
-      console.warn('Claude returned example/placeholder data instead of real news articles');
-      return res.json({ 
-        success: false, 
-        error: 'Claude returned example data. This model may not have web search capabilities. Please check your API configuration or try again.' 
-      });
-    }
+    // Normalize dates and validate
+    const normalizedNews = (newsData.news || []).map(item => {
+      let articleDate = item.date;
+      
+      // Try to parse various date formats
+      if (!articleDate || articleDate === 'Recent') {
+        articleDate = today;
+      } else if (!/^\d{4}-\d{2}-\d{2}$/.test(articleDate)) {
+        // Try to parse and reformat
+        try {
+          const parsed = new Date(articleDate);
+          if (!isNaN(parsed.getTime())) {
+            articleDate = parsed.toISOString().split('T')[0];
+          } else {
+            articleDate = today;
+          }
+        } catch {
+          articleDate = today;
+        }
+      }
+      
+      return {
+        ...item,
+        date: articleDate
+      };
+    });
     
     if (useDatabase) {
       // Clear old news and insert new
       await pool.query('DELETE FROM pr_news_hooks');
       
-      // Validate and insert only recent articles (within 30 days)
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       let insertedCount = 0;
       
-      for (const item of (newsData.news || [])) {
-        // Validate date
-        if (!item.date) {
-          console.log('Skipping article with no date:', item.headline);
-          continue;
+      for (const item of normalizedNews) {
+        try {
+          await pool.query(`
+            INSERT INTO pr_news_hooks (headline, outlet, date, url, summary, relevance, fetched_at)
+            VALUES ($1, $2, $3, $4, $5, $6, NOW())
+          `, [
+            item.headline || 'No title',
+            item.outlet || 'Unknown',
+            item.date,
+            item.url || '',
+            item.summary || '',
+            item.relevance || ''
+          ]);
+          insertedCount++;
+        } catch (error) {
+          console.error('Error inserting article:', error.message, item.headline);
         }
-        
-        const articleDate = new Date(item.date);
-        if (isNaN(articleDate.getTime())) {
-          console.log('Skipping article with invalid date:', item.date, item.headline);
-          continue;
-        }
-        
-        if (articleDate < thirtyDaysAgo) {
-          console.log('Skipping old article:', item.date, item.headline);
-          continue;
-        }
-        
-        // Insert valid article
-        await pool.query(`
-          INSERT INTO pr_news_hooks (headline, outlet, date, url, summary, relevance, fetched_at)
-          VALUES ($1, $2, $3, $4, $5, $6, NOW())
-        `, [item.headline, item.outlet, item.date, item.url, item.summary, item.relevance]);
-        insertedCount++;
       }
       
-      console.log(`Inserted ${insertedCount} of ${newsData.news?.length || 0} articles (rejected old or invalid articles)`);
+      console.log(`Inserted ${insertedCount} of ${normalizedNews.length} articles into database`);
     }
     
-    res.json({ success: true, news: newsData.news || [] });
+    res.json({ success: true, news: normalizedNews });
   } catch (error) {
     console.error('Error fetching news hooks:', error);
     res.status(500).json({ success: false, error: error.response?.data?.error?.message || error.message });
