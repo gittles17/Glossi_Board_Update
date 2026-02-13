@@ -1047,14 +1047,12 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     console.log('Searching for news with Tavily...');
     
     const searchQueries = [
-      // AI/ML/Generative AI (3 queries)
+      // AI/ML/Generative AI (2 queries)
       'generative AI marketing creative tools',
-      'large language models enterprise adoption',
       'AI image generation visual content',
-      // 3D Visualization/Computer Vision (3 queries)
+      // 3D Visualization/Computer Vision (2 queries)
       '3D product visualization rendering',
       'computer vision image recognition retail',
-      '3D modeling software AI automation',
       // E-commerce/Product/Retail (3 queries)
       'e-commerce product photography AI',
       'retail technology digital transformation',
@@ -1064,9 +1062,6 @@ app.post('/api/pr/news-hooks', async (req, res) => {
       'creative technology advertising tools',
       // Enterprise AI/Brand Tech (2 queries)
       'enterprise AI adoption brand strategy',
-      'corporate AI investment digital transformation',
-      // Design Software/CAD (1 query)
-      'design software 3D CAD creative tools',
       // Fashion/Digital Innovation (1 query)
       'fashion technology e-commerce digital innovation'
     ];
@@ -1080,7 +1075,7 @@ app.post('/api/pr/news-hooks', async (req, res) => {
           searchDepth: 'basic',  // Using basic for speed/reliability - advanced was timing out on Railway
           topic: 'news',
           days: 30,
-          maxResults: 6,  // Reduced from 8 since we increased queries from 10 to 15
+          maxResults: 7,  // 12 queries × 7 results = 84 potential articles
           includeDomains: ['techcrunch.com', 'theverge.com', 'wired.com', 'venturebeat.com', 'technologyreview.com', 'arstechnica.com', 'fastcompany.com', 'businessinsider.com', 'forbes.com', 'cnbc.com', 'reuters.com', 'bloomberg.com', 'tldr.tech', 'businessoffashion.com', 'theinterline.com']
         });
         
