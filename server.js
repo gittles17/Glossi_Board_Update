@@ -1051,7 +1051,12 @@ app.post('/api/pr/news-hooks', async (req, res) => {
       '3D rendering visualization computer vision',
       'e-commerce product visualization retail tech',
       'marketing technology creative AI tools',
-      'enterprise AI adoption brand technology'
+      'enterprise AI adoption brand technology',
+      'AR VR metaverse spatial computing',
+      'design software CAD 3D modeling',
+      'fashion technology digital innovation',
+      'semiconductor chip manufacturing AI',
+      'robotics automation computer vision'
     ];
     
     let allResults = [];
@@ -1060,10 +1065,10 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     for (const query of searchQueries) {
       try {
         const searchResult = await tvly.search(query, {
-          searchDepth: 'basic',
+          searchDepth: 'advanced',  // Changed from 'basic' to get more comprehensive results
           topic: 'news',
-          days: 30,  // Increased from 7 to match frontend filter
-          maxResults: 10,  // Increased from 5 to get more articles
+          days: 30,
+          maxResults: 8,  // Reduced per query since we added more queries
           includeDomains: ['techcrunch.com', 'theverge.com', 'wired.com', 'venturebeat.com', 'technologyreview.com', 'arstechnica.com', 'fastcompany.com', 'businessinsider.com', 'forbes.com', 'cnbc.com', 'reuters.com', 'bloomberg.com', 'tldr.tech', 'businessoffashion.com', 'theinterline.com']
         });
         
