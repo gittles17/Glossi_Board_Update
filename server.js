@@ -1131,35 +1131,32 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     const finalArticles = articlesToAnalyze.slice(0, 30);
     console.log(`Sending ${finalArticles.length} articles from ${Object.keys(articlesByOutlet).length} outlets to Claude for analysis`);
     
-    const analysisPrompt = `You are a strategic analyst curating news for an AI-powered 3D product visualization platform (Glossi). 
+    const analysisPrompt = `You are curating strategic news for Glossi, an AI-powered 3D product visualization platform.
 
-COMPANY CONTEXT:
-Glossi helps enterprise brands create unlimited product photos using AI + 3D (no photoshoots needed). Target buyers: CMOs, e-commerce directors at CPG/fashion/beauty brands.
+GLOSSI'S MARKET:
+- Product: AI + 3D engine that creates unlimited product photos (eliminates photoshoots)
+- Customers: Enterprise brands (CPG, fashion, beauty, e-commerce)
+- Buyers: CMOs, creative directors, e-commerce directors
+- Use case: Product marketing, e-commerce catalogs, social media content
 
-YOUR GOAL: Select ONLY the top 15-20 most relevant articles for PR positioning. Focus on quality over quantity.
+ONLY INCLUDE ARTICLES ABOUT:
+1. **AI in creative/marketing workflows** - generative AI for content, AI creative tools, marketing automation
+2. **E-commerce product experiences** - 3D product views, AR/VR shopping, visual commerce, online merchandising
+3. **Brand content at scale** - social media content creation, product photography pain points, visual content challenges
+4. **Enterprise creative software** - Adobe/Canva competitors, creative workflow tools, design automation
+5. **Retail/CPG digital transformation** - brands going direct-to-consumer, omnichannel strategies
+6. **AI SaaS for enterprises** - enterprise AI adoption, workflow automation, productivity tools
 
-HIGH-VALUE ARTICLES (prioritize these):
-1. AI adoption in enterprise/creative workflows
-2. E-commerce innovation and product experience trends  
-3. Brand/retail challenges with visual content at scale
-4. Enterprise SaaS buying trends and pain points
-5. Marketing technology and creative automation
-6. CPG, fashion, beauty industry digital transformation
+MUST EXCLUDE (even if tech-related):
+- Autonomous vehicles, robotics, space tech
+- Infrastructure, semiconductors, hardware
+- Gaming, entertainment, consumer devices
+- Developer tools, coding, cybersecurity
+- Generic AI research without business application
+- Financial markets, crypto, fintech
+- Articles older than 40 days
 
-INCLUDE if article shows:
-- Market shifts that make Glossi more relevant
-- Customer pain points Glossi solves
-- Competitor movements in creative/e-commerce tech
-- Enterprise AI adoption accelerating
-
-EXCLUDE:
-- Generic tech news without clear business impact
-- Minor product updates or small features
-- Pure financial/stock market analysis
-- Politics, sports, entertainment
-- Articles older than 45 days (prioritize recency)
-
-TASK: Return 15-20 of the BEST articles with strong PR/positioning angles.
+TASK: Return ONLY 12-18 articles with direct relevance to Glossi's market. Be ruthlessly selective.
 
 ARTICLES:
 ${finalArticles.map((article, i) => `
@@ -1184,13 +1181,13 @@ Return articles in this JSON format:
 }
 
 Rules:
-- CRITICAL: Return only 15-20 articles (top 50-60% by relevance)
-- Each article must have clear PR/positioning value
-- Prioritize articles from last 30 days (older than 45 days = exclude)
-- Focus on WHY this matters for Glossi's market positioning
-- Sort by relevance (most impactful first), then by date
-- In 'relevance' field: explain the specific PR angle or customer insight
-- Use the exact domain from the SOURCE field for the outlet name`;
+- CRITICAL: Return only 12-18 articles maximum
+- Every article must relate to creative/marketing/e-commerce AI
+- If unsure, EXCLUDE it (err on side of being selective)
+- In 'relevance' field: explain specific connection to Glossi's market (AI product visualization, creative content, e-commerce)
+- Sort by relevance (most impactful first)
+- Prioritize last 30 days
+- Use exact domain from SOURCE field for outlet name`;
 
     const analysisResponse = await axios.post('https://api.anthropic.com/v1/messages', {
       model: 'claude-haiku-4-5',
