@@ -161,13 +161,13 @@ class PRAgent {
     this.wizard = new WizardManager(this);
     await this.wizard.init();
     
+    // Initialize news monitor FIRST (faster, more relevant content)
+    this.newsMonitor = new NewsMonitor(this);
+    await this.newsMonitor.init();
+    
     // Initialize media manager
     this.mediaManager = new MediaManager(this);
     await this.mediaManager.init();
-    
-    // Initialize news monitor
-    this.newsMonitor = new NewsMonitor(this);
-    await this.newsMonitor.init();
     
     // Initialize calendar manager
     this.calendarManager = new CalendarManager(this);
@@ -3885,6 +3885,7 @@ class NewsMonitor {
   constructor(prAgent) {
     this.prAgent = prAgent;
     this.newsHooks = [];
+    this.displayedNewsCount = 10; // Show 10 news items initially
   }
 
   async init() {
@@ -3902,6 +3903,11 @@ class NewsMonitor {
 
   setupEventListeners() {
     this.dom.fetchNewsBtn?.addEventListener('click', () => this.refreshNews());
+  }
+
+  showMoreNews() {
+    this.displayedNewsCount += 10;
+    this.renderNews();
   }
 
   async loadCachedNews() {
@@ -3992,9 +3998,15 @@ class NewsMonitor {
       return;
     }
 
+    // Slice to show only displayed count
+    const displayedItems = this.newsHooks.slice(0, this.displayedNewsCount);
+    const remainingCount = this.newsHooks.length - this.displayedNewsCount;
+    
     let html = '<div class="pr-news-items">';
     
-    this.newsHooks.forEach((item, index) => {
+    displayedItems.forEach((item, displayIndex) => {
+      // Use actual index from full array for proper data binding
+      const actualIndex = this.newsHooks.indexOf(item);
       const date = new Date(item.date || item.fetched_at);
       const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
       const isStale = daysAgo > 7;
@@ -4014,7 +4026,7 @@ class NewsMonitor {
             <span class="pr-relevance-label">How Glossi ties in:</span>
             <p class="pr-relevance-text">${this.escapeHtml(item.relevance)}</p>
           </div>
-          <button class="btn btn-sm pr-use-hook-btn" data-news-index="${index}">
+          <button class="btn btn-sm pr-use-hook-btn" data-news-index="${actualIndex}">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -4026,8 +4038,26 @@ class NewsMonitor {
     });
     
     html += '</div>';
+    
+    // Add "Show More" button if there are more items
+    if (remainingCount > 0) {
+      html += `
+        <div class="pr-news-show-more">
+          <button class="btn btn-secondary pr-show-more-news-btn">
+            Show More (${remainingCount} remaining)
+          </button>
+        </div>
+      `;
+    }
+    
     this.dom.newsHooksList.innerHTML = html;
     this.attachNewsEventListenersToContainer(this.dom.newsHooksList);
+    
+    // Attach Show More button listener
+    const showMoreBtn = this.dom.newsHooksList.querySelector('.pr-show-more-news-btn');
+    if (showMoreBtn) {
+      showMoreBtn.addEventListener('click', () => this.showMoreNews());
+    }
   }
 
   attachNewsEventListenersToContainer(container) {
