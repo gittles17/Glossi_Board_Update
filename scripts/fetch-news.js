@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-const { tavily } = require('@tavily/core');
+const Parser = require('rss-parser');
 const axios = require('axios');
 
 // Database configuration
@@ -63,14 +63,9 @@ async function fetchNews() {
     console.log('========================================\n');
 
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
-    const tavilyKey = process.env.TAVILY_API_KEY || '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';
     
     if (!anthropicKey) {
       throw new Error('ANTHROPIC_API_KEY not configured');
-    }
-    
-    if (!tavilyKey) {
-      throw new Error('TAVILY_API_KEY not configured');
     }
     
     if (!useDatabase) {
@@ -89,68 +84,86 @@ async function fetchNews() {
     }
     
     const today = new Date().toISOString().split('T')[0];
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
     
-    // Initialize Tavily client
-    const tvly = tavily({ apiKey: tavilyKey });
+    // Initialize RSS parser
+    const parser = new Parser({
+      timeout: 10000,
+      headers: {'User-Agent': 'Glossi News Fetcher/1.0'}
+    });
     
-    // Step 1: Use Tavily to search for recent tech news
-    console.log('Step 1: Searching for news with Tavily...\n');
+    // Step 1: Fetch RSS feeds from outlets
+    console.log('Step 1: Fetching RSS feeds from outlets...\n');
     
-    const searchQueries = [
-      'AI machine learning generative AI',
-      '3D rendering visualization computer vision',
-      'e-commerce product visualization retail',
-      'marketing technology creative AI tools',
-      'enterprise AI adoption brand technology'
-    ];
+    const RSS_FEEDS = {
+      'techcrunch.com': 'https://techcrunch.com/feed/',
+      'www.theverge.com': 'https://www.theverge.com/rss/index.xml',
+      'www.wired.com': 'https://www.wired.com/feed/rss',
+      'arstechnica.com': 'https://feeds.arstechnica.com/arstechnica/index',
+      'www.technologyreview.com': 'https://www.technologyreview.com/feed/',
+      'venturebeat.com': 'http://feeds.venturebeat.com/VentureBeat',
+      'www.forbes.com': 'https://www.forbes.com/innovation/feed2/',
+      'www.cnbc.com': 'https://www.cnbc.com/id/19854910/device/rss/rss.html',
+      'www.businessinsider.com': 'https://www.businessinsider.com/rss',
+      'www.reuters.com': 'https://www.reuters.com/technology',
+      'www.fastcompany.com': 'https://www.fastcompany.com/technology/rss',
+      'www.bloomberg.com': 'https://feeds.bloomberg.com/technology/news.rss',
+      'www.theinterline.com': 'https://www.theinterline.com/feed/'
+    };
     
-    let allResults = [];
+    let allArticles = [];
     
-    // Search each topic
-    for (const query of searchQueries) {
+    // Fetch each RSS feed
+    for (const [domain, feedUrl] of Object.entries(RSS_FEEDS)) {
       try {
-        const searchResult = await tvly.search(query, {
-          searchDepth: 'basic',
-          topic: 'news',
-          days: 30,
-          maxResults: 8,  // 5 queries × 8 = 40 potential, will analyze best 20
-          includeDomains: ['techcrunch.com', 'theverge.com', 'wired.com', 'venturebeat.com', 'technologyreview.com', 'arstechnica.com', 'fastcompany.com', 'businessinsider.com', 'forbes.com', 'cnbc.com', 'reuters.com', 'bloomberg.com', 'tldr.tech', 'businessoffashion.com', 'theinterline.com']
-        });
+        const feed = await parser.parseURL(feedUrl);
         
-        if (searchResult.results) {
-          allResults = allResults.concat(searchResult.results);
-          console.log(`  "${query}": ${searchResult.results.length} articles`);
-        } else {
-          console.log(`  "${query}": No results object returned`);
-        }
+        // Filter for articles from last 30 days
+        const recentArticles = (feed.items || [])
+          .filter(item => {
+            const pubDate = new Date(item.pubDate || item.isoDate || Date.now());
+            return pubDate.getTime() > thirtyDaysAgo;
+          })
+          .slice(0, 10)  // Top 10 per outlet
+          .map(item => ({
+            title: item.title,
+            url: item.link,
+            content: item.contentSnippet || item.summary || item.content || '',
+            publishedDate: item.pubDate || item.isoDate,
+            domain: domain
+          }));
+        
+        allArticles = allArticles.concat(recentArticles);
+        console.log(`  ${domain}: ${recentArticles.length} articles`);
+        
       } catch (error) {
-        console.error(`  Tavily search error for query "${query}":`, error.message);
+        console.log(`  ${domain}: ✗ ${error.message}`);
       }
     }
     
-    console.log(`\n✓ Tavily total: ${allResults.length} articles before dedup`);
+    console.log(`\n✓ RSS total: ${allArticles.length} articles from ${Object.keys(RSS_FEEDS).length} feeds`);
     
     // Remove duplicates by URL
-    const uniqueResults = Array.from(new Map(allResults.map(item => [item.url, item])).values());
+    const uniqueResults = Array.from(new Map(allArticles.map(item => [item.url, item])).values());
     console.log(`✓ After dedup: ${uniqueResults.length} unique articles`);
     
     // Log outlet breakdown
     const outletCounts = {};
     uniqueResults.forEach(item => {
-      const domain = item.url.match(/https?:\/\/([^\/]+)/)?.[1] || 'Unknown';
+      const domain = item.domain || item.url.match(/https?:\/\/([^\/]+)/)?.[1] || 'Unknown';
       outletCounts[domain] = (outletCounts[domain] || 0) + 1;
     });
     console.log('✓ Outlets found:', outletCounts);
     console.log('');
     
     if (uniqueResults.length === 0) {
-      console.log('⚠️  Warning: Tavily returned 0 articles');
+      console.log('⚠️  Warning: No articles found in RSS feeds');
       console.log('   Job will exit without updating database');
       process.exit(0);
     }
     
     // Step 2: Use Claude to analyze relevance and generate summaries
-    const articlesToAnalyze = uniqueResults.slice(0, 20);  // Reduced from 40 to 20 for faster processing
+    const articlesToAnalyze = uniqueResults.slice(0, 50);  // Analyze up to 50 articles from RSS
     console.log(`Step 2: Sending ${articlesToAnalyze.length} articles to Claude for analysis...\n`);
     
     const analysisPrompt = `You are analyzing news articles for Glossi, an AI-native 3D product visualization platform.
@@ -167,7 +180,7 @@ TASK: Analyze each article and determine if it's broadly relevant to tech, AI, 3
 ARTICLES:
 ${articlesToAnalyze.map((article, i) => `
 ${i + 1}. TITLE: ${article.title}
-   SOURCE: ${article.url.match(/https?:\/\/([^\/]+)/)?.[1] || 'Unknown'}
+   SOURCE: ${article.domain}
    DATE: ${article.publishedDate || 'Recent'}
    SNIPPET: ${article.content?.substring(0, 300) || 'No preview'}
 `).join('\n')}
@@ -189,7 +202,7 @@ Return articles in this JSON format:
 Rules:
 - Include articles that are broadly relevant to tech, AI, 3D, visualization, e-commerce, creative industries, marketing, or brand technology
 - Be INCLUSIVE - if there's any connection to these topics, include it
-- Maximum 20 articles
+- Maximum 40 articles
 - Sort by date (most recent first)
 - Keep summaries and relevance statements concise (one sentence each)
 - Use the exact domain from the SOURCE field for the outlet name`;
@@ -221,7 +234,7 @@ Rules:
       console.log(`✓ Claude returned ${newsData.news?.length || 0} articles`);
       
       if ((newsData.news?.length || 0) === 0 && uniqueResults.length > 0) {
-        console.log(`⚠️  Warning: Claude filtered out all ${uniqueResults.length} articles from Tavily`);
+        console.log(`⚠️  Warning: Claude filtered out all ${uniqueResults.length} articles from RSS feeds`);
       }
     } catch (error) {
       console.error('Failed to parse Claude analysis:', error);
