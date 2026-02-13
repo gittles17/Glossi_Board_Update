@@ -569,6 +569,11 @@ class PRAgent {
     }
     
     this.isGenerating = false;
+    
+    // Force button state update after API key is loaded
+    if (this.dom && this.dom.generateBtn) {
+      this.updateGenerateButton();
+    }
   }
 
   async checkAndMigrateData() {
