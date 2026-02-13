@@ -1859,18 +1859,12 @@ class PRAgent {
 
       const output = {
         id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-        contentType,
+        content_type: contentType,
         title: this.extractTitle(parsed.content, typeLabel),
-        drafts: [{
-          content: parsed.content,
-          version: 1,
-          timestamp: Date.now(),
-          prompt: null
-        }],
+        content: parsed.content,
         sources: selectedSources.map(s => s.id),
         citations: parsed.citations || [],
         strategy: parsed.strategy || null,
-        createdAt: new Date().toISOString(),
         status: 'draft'
       };
 
