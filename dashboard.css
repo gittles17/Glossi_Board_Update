@@ -11217,6 +11217,14 @@ a.dropdown-item {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+.pr-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .pr-page .top-nav {
   position: sticky;
   top: 0;
