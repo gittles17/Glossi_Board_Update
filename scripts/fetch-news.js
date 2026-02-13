@@ -207,15 +207,14 @@ INCLUDE ARTICLES ABOUT:
 10. **Fashion tech** - Digital fashion, virtual samples, sustainability in fashion production
 
 **Buyer Insights:**
-11. **CMO priorities** - Marketing leadership trends, budget allocation, team structure
-12. **Creative operations** - Production workflows, bottlenecks, efficiency improvements
-13. **Marketing tech stack** - Tool consolidation, integration trends, martech evolution
-14. **Agency vs in-house** - Production model shifts, hybrid approaches
+11. **Creative operations** - Production workflows, bottlenecks, efficiency improvements
+12. **Marketing tech stack** - Tool consolidation, integration trends, martech evolution
+13. **Agency vs in-house** - Production model shifts, hybrid approaches
 
 **Market Signals:**
-15. **Funding/M&A in creative/martech** - Who's raising, acquisitions, market consolidation
-16. **Pricing model evolution** - Consumption-based pricing, credit systems, enterprise deals
-17. **Platform partnerships** - Shopify apps, marketplace integrations, ecosystem plays
+14. **Funding/M&A in creative/martech** - Who's raising, acquisitions, market consolidation
+15. **Pricing model evolution** - Consumption-based pricing, credit systems, enterprise deals
+16. **Platform partnerships** - Shopify apps, marketplace integrations, ecosystem plays
 
 STRONG EXCLUDE:
 - Autonomous vehicles, robotics, IoT, drones
@@ -263,7 +262,7 @@ Rules:
 - Good articles: direct connection to one of the 17 topics
 - Examples of GOOD: "Shopify adds 3D viewer", "CMO survey shows content bottleneck", "DTC brand raises funding", "Canva prices for enterprise"
 - Examples to EXCLUDE: "Waymo robotaxis", "Wildlife trafficking", "Celebrity fitness", "Generic policy"
-- In 'relevance': state which topic # and explain the connection
+- In 'relevance': state which topic # (1-16) and explain the connection
 - Prioritize: last 14 days > last 30 days > older
 - Sort by relevance (most direct connection first)
 - Use exact domain from SOURCE field for outlet name`;
