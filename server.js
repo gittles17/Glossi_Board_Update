@@ -807,7 +807,7 @@ Return as structured JSON with this exact format:
 Find up to 10 recent, relevant articles.`;
 
     const articlesResponse = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-opus-4-6',
       max_tokens: 4096,
       system: 'You are a research assistant. Always return valid JSON.',
       messages: [{ role: 'user', content: articlesPrompt }]
