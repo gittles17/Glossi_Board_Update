@@ -1075,9 +1075,12 @@ app.post('/api/pr/news-hooks', async (req, res) => {
         if (searchResult.results) {
           allResults = allResults.concat(searchResult.results);
           console.log(`Query "${query}": ${searchResult.results.length} articles`);
+        } else {
+          console.log(`Query "${query}": No results object returned`);
         }
       } catch (error) {
         console.error(`Tavily search error for query "${query}":`, error.message);
+        console.error('Full error:', error);
       }
     }
     
@@ -1096,6 +1099,11 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     console.log('Outlets found:', outletCounts);
     
     if (uniqueResults.length === 0) {
+      console.log('⚠️  Warning: Tavily returned 0 articles. This could be due to:');
+      console.log('   - API rate limit reached');
+      console.log('   - Network connectivity issue');
+      console.log('   - No articles found matching queries in the last 30 days');
+      console.log('   - API key invalid or expired');
       return res.json({ success: true, news: [] });
     }
     
@@ -1165,8 +1173,14 @@ Rules:
       const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
       newsData = jsonMatch ? JSON.parse(jsonMatch[0]) : { news: [] };
       console.log(`Claude returned ${newsData.news?.length || 0} articles`);
+      
+      if ((newsData.news?.length || 0) === 0 && uniqueResults.length > 0) {
+        console.log(`⚠️  Warning: Claude filtered out all ${uniqueResults.length} articles from Tavily`);
+        console.log('   Claude may be filtering too aggressively despite "inclusive" instructions');
+      }
     } catch (error) {
       console.error('Failed to parse Claude analysis:', error);
+      console.error('Claude raw response:', analysisText.substring(0, 500));
       newsData = { news: [] };
     }
     
@@ -1236,8 +1250,13 @@ Rules:
     
     res.json({ success: true, news: normalizedNews });
   } catch (error) {
-    console.error('Error fetching news hooks:', error);
-    res.status(500).json({ success: false, error: error.response?.data?.error?.message || error.message });
+    console.error('❌ Error fetching news hooks:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      error: error.response?.data?.error?.message || error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
