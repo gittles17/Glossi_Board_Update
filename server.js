@@ -1139,22 +1139,25 @@ GLOSSI'S MARKET:
 - Buyers: CMOs, creative directors, e-commerce directors
 - Use case: Product marketing, e-commerce catalogs, social media content
 
-ONLY INCLUDE ARTICLES ABOUT:
-1. **AI in creative/marketing workflows** - generative AI for content, AI creative tools, marketing automation
-2. **E-commerce product experiences** - 3D product views, AR/VR shopping, visual commerce, online merchandising
-3. **Brand content at scale** - social media content creation, product photography pain points, visual content challenges
-4. **Enterprise creative software** - Adobe/Canva competitors, creative workflow tools, design automation
-5. **Retail/CPG digital transformation** - brands going direct-to-consumer, omnichannel strategies
-6. **AI SaaS for enterprises** - enterprise AI adoption, workflow automation, productivity tools
+MUST BE ABOUT ONE OF THESE EXACT TOPICS:
+1. **Generative AI for creative content** - AI image generation, AI video, AI design tools, creative automation platforms
+2. **E-commerce visual technology** - 3D product viewers, AR try-on, virtual photography, product visualization
+3. **Marketing/advertising automation** - content creation at scale, social media automation, brand asset management
+4. **Enterprise creative software** - Adobe, Canva, Figma competitors; creative workflow tools for brands
+5. **DTC brand challenges** - CPG/fashion/beauty brands' content production, visual merchandising, omnichannel needs
+6. **E-commerce platforms** - Shopify, Amazon, marketplace innovations in product presentation
 
-MUST EXCLUDE (even if tech-related):
-- Autonomous vehicles, robotics, space tech
-- Infrastructure, semiconductors, hardware
-- Gaming, entertainment, consumer devices
-- Developer tools, coding, cybersecurity
-- Generic AI research without business application
-- Financial markets, crypto, fintech
-- Articles older than 40 days
+AUTOMATIC EXCLUDE (do not try to make connections):
+- Robotics, autonomous vehicles, drones, IoT devices
+- Healthcare, biotech, medical devices
+- Financial services, payments, crypto
+- Gaming, movies, music, entertainment IP
+- Developer/coding tools, cybersecurity
+- Hardware, chips, manufacturing tech
+- Supply chain, logistics, infrastructure
+- Personality profiles, celebrity content
+- Trade policy, tariffs (unless specifically about e-commerce/DTC)
+- Generic AI research (unless about creative/marketing applications)
 
 TASK: Return ONLY 12-18 articles with direct relevance to Glossi's market. Be ruthlessly selective.
 
@@ -1181,10 +1184,11 @@ Return articles in this JSON format:
 }
 
 Rules:
-- CRITICAL: Return only 12-18 articles maximum
-- Every article must relate to creative/marketing/e-commerce AI
-- If unsure, EXCLUDE it (err on side of being selective)
-- In 'relevance' field: explain specific connection to Glossi's market (AI product visualization, creative content, e-commerce)
+- CRITICAL: Return only 10-15 articles (the absolute best)
+- Ask yourself: "Would a CMO of a beauty/fashion/CPG brand care about this?" If no, EXCLUDE
+- Do NOT force connections - if article doesn't clearly fit the 6 topics above, skip it
+- In 'relevance' field: be specific about how this affects Glossi's exact market (avoid generic statements)
+- Remove duplicates (same story from multiple outlets)
 - Sort by relevance (most impactful first)
 - Prioritize last 30 days
 - Use exact domain from SOURCE field for outlet name`;
