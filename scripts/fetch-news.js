@@ -212,7 +212,11 @@ Rules:
     
     let newsData;
     try {
-      const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+      // Remove markdown code fences if present
+      let cleanedText = analysisText.trim();
+      cleanedText = cleanedText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+      
+      const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
       newsData = jsonMatch ? JSON.parse(jsonMatch[0]) : { news: [] };
       console.log(`✓ Claude returned ${newsData.news?.length || 0} articles`);
       
