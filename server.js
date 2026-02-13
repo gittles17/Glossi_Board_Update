@@ -1502,6 +1502,205 @@ app.get('/api/pr/articles', async (req, res) => {
 });
 
 // ============================================
+// PR ANGLES ENDPOINTS
+// ============================================
+
+app.get('/api/pr/angles', async (req, res) => {
+  try {
+    if (useDatabase) {
+      const result = await pool.query(
+        "SELECT data FROM app_data WHERE key = 'pr_angles' LIMIT 1"
+      );
+      const angles = result.rows.length > 0 ? result.rows[0].data : [];
+      res.json({ success: true, angles });
+    } else {
+      const anglesPath = path.join(DATA_DIR, 'pr-angles.json');
+      if (fs.existsSync(anglesPath)) {
+        const angles = JSON.parse(fs.readFileSync(anglesPath, 'utf8'));
+        res.json({ success: true, angles });
+      } else {
+        res.json({ success: true, angles: [] });
+      }
+    }
+  } catch (error) {
+    console.error('Error loading angles:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/pr/angles', async (req, res) => {
+  try {
+    const { sources, newsHooks, pastOutputs, highlightedHook } = req.body;
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+
+    if (!anthropicKey) {
+      return res.status(400).json({
+        success: false,
+        error: 'Anthropic API key not configured'
+      });
+    }
+
+    const sourcesContent = sources && sources.length > 0
+      ? sources.map((s, i) => `SOURCE ${i + 1}: ${s.title}\n${s.content}`).join('\n\n')
+      : 'No sources provided yet.';
+
+    const hooksContent = newsHooks && newsHooks.length > 0
+      ? JSON.stringify(newsHooks.slice(0, 5), null, 2)
+      : 'No recent news hooks.';
+
+    const pastOutputsList = pastOutputs && pastOutputs.length > 0
+      ? pastOutputs.slice(0, 10).map(o => o.title || o.contentType).join(', ')
+      : 'No content created yet.';
+
+    const highlightedHookText = highlightedHook 
+      ? `\n\nPRIORITY: User clicked "Build Angle" on this news hook: "${highlightedHook}". Make sure at least one angle directly addresses this news item.`
+      : '';
+
+    const prompt = `You are Glossi's PR strategist. Based on company source materials and the current news environment, recommend 3-4 story angles that would generate press coverage or social engagement right now.${highlightedHookText}
+
+COMPANY SOURCES:
+${sourcesContent}
+
+CURRENT NEWS HOOKS:
+${hooksContent}
+
+CONTENT ALREADY CREATED (avoid repeating these angles):
+${pastOutputsList}
+
+Each angle should be a clear NARRATIVE, not a content type. Something a journalist or LinkedIn audience would find interesting.
+
+For each angle, include a content plan: what specific pieces to create and where to publish them, in priority order.
+
+Return ONLY valid JSON in this exact structure:
+{
+  "angles": [
+    {
+      "title": "Short punchy name (5-8 words)",
+      "narrative": "2-3 sentences describing the story",
+      "tied_to_hook": "headline of the related news hook, or null",
+      "urgency": "high" | "medium" | "low",
+      "why_now": "One sentence on timing",
+      "content_plan": [
+        { "type": "linkedin_post", "description": "Founder perspective on...", "target": "LinkedIn", "priority": 1 },
+        { "type": "media_pitch", "description": "Pitch to AI reporters about...", "target": "TechCrunch", "priority": 2 }
+      ]
+    }
+  ]
+}`;
+
+    const response = await axios.post(
+      'https://api.anthropic.com/v1/messages',
+      {
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }]
+      },
+      {
+        headers: {
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json'
+        }
+      }
+    );
+
+    const content = response.data.content[0].text;
+    let parsed;
+
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        parsed = JSON.parse(content);
+      }
+    } catch (parseError) {
+      console.error('Failed to parse Claude response:', content);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to parse angle recommendations'
+      });
+    }
+
+    const angles = parsed.angles || [];
+    angles.forEach(angle => {
+      angle.id = 'angle_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+      angle.generatedAt = new Date().toISOString();
+      angle.isDefault = false;
+    });
+
+    res.json({ success: true, angles });
+  } catch (error) {
+    console.error('Error generating angles:', error);
+    res.status(500).json({
+      success: false,
+      error: error.response?.data?.error?.message || error.message
+    });
+  }
+});
+
+app.post('/api/pr/angles/save', async (req, res) => {
+  try {
+    const { angles } = req.body;
+
+    if (useDatabase) {
+      await pool.query(
+        `INSERT INTO app_data (key, data, updated_at)
+         VALUES ('pr_angles', $1, NOW())
+         ON CONFLICT (key) DO UPDATE SET data = $1, updated_at = NOW()`,
+        [JSON.stringify(angles)]
+      );
+    } else {
+      const anglesPath = path.join(DATA_DIR, 'pr-angles.json');
+      fs.writeFileSync(anglesPath, JSON.stringify(angles, null, 2));
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error saving angles:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/pr/angles/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    let angles = [];
+    if (useDatabase) {
+      const result = await pool.query(
+        "SELECT data FROM app_data WHERE key = 'pr_angles' LIMIT 1"
+      );
+      angles = result.rows.length > 0 ? result.rows[0].data : [];
+    } else {
+      const anglesPath = path.join(DATA_DIR, 'pr-angles.json');
+      if (fs.existsSync(anglesPath)) {
+        angles = JSON.parse(fs.readFileSync(anglesPath, 'utf8'));
+      }
+    }
+
+    angles = angles.filter(a => a.id !== id);
+
+    if (useDatabase) {
+      await pool.query(
+        `INSERT INTO app_data (key, data, updated_at)
+         VALUES ('pr_angles', $1, NOW())
+         ON CONFLICT (key) DO UPDATE SET data = $1, updated_at = NOW()`,
+        [JSON.stringify(angles)]
+      );
+    } else {
+      const anglesPath = path.join(DATA_DIR, 'pr-angles.json');
+      fs.writeFileSync(anglesPath, JSON.stringify(angles, null, 2));
+    }
+
+    res.json({ success: true, angles });
+  } catch (error) {
+    console.error('Error deleting angle:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
 // FILE PROCESSING ENDPOINTS
 // ============================================
 

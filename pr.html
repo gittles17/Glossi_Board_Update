@@ -76,12 +76,82 @@
         
         <!-- Tab Navigation -->
         <div class="pr-panel-tabs">
-          <button class="pr-panel-tab active" data-panel-tab="research">Research</button>
+          <button class="pr-panel-tab active" data-panel-tab="strategy">Strategy</button>
+          <button class="pr-panel-tab" data-panel-tab="sources">Sources</button>
           <button class="pr-panel-tab" data-panel-tab="library">Library</button>
         </div>
 
-        <!-- Tab Content: Research -->
-        <div class="pr-panel-tab-content active" id="pr-tab-research">
+        <!-- Tab Content: Strategy -->
+        <div class="pr-panel-tab-content active" id="pr-tab-strategy">
+          <!-- News Hooks Section -->
+          <div class="pr-workflow-section pr-news-hooks-section">
+            <div class="pr-workflow-header">
+              <h2 class="pr-workflow-title">What's Happening Now</h2>
+              <button class="btn btn-secondary btn-sm" id="pr-fetch-news-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6"></path>
+                  <path d="M1 20v-6h6"></path>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+                Refresh
+              </button>
+            </div>
+            <div class="pr-news-hooks-header">
+              <div class="pr-news-hooks-filters">
+                <div class="pr-filter-group">
+                  <select class="pr-filter-select" id="pr-news-date-filter">
+                    <option value="7">Last 7 days</option>
+                    <option value="30">Last 30 days</option>
+                    <option value="60" selected>Last 60 days</option>
+                    <option value="all">All time</option>
+                  </select>
+                </div>
+                <div class="pr-filter-group">
+                  <button class="pr-filter-btn" id="pr-news-outlet-filter-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    Outlets
+                    <span class="pr-filter-count" id="pr-outlet-filter-count"></span>
+                  </button>
+                </div>
+                <button class="pr-filter-clear" id="pr-news-clear-filters" style="display: none;">Clear</button>
+              </div>
+            </div>
+            <div class="pr-news-hooks-list" id="pr-news-hooks-list">
+              <div class="pr-news-hooks-empty">No news hooks yet</div>
+            </div>
+          </div>
+
+          <!-- Recommended Angles Section -->
+          <div class="pr-workflow-section pr-angles-section">
+            <div class="pr-workflow-header">
+              <h2 class="pr-workflow-title">Story Angles</h2>
+              <button class="btn btn-secondary btn-sm" id="pr-generate-angles-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+                Generate Angles
+              </button>
+            </div>
+            <div class="pr-angles-list" id="pr-angles-list">
+              <div class="pr-angles-empty">Click "Generate Angles" to get strategic recommendations</div>
+            </div>
+          </div>
+
+          <!-- Active Angle Tracker Section -->
+          <div class="pr-workflow-section pr-angle-tracker-section" id="pr-angle-tracker-section" style="display: none;">
+            <div class="pr-workflow-header">
+              <h2 class="pr-workflow-title">Active Angle</h2>
+            </div>
+            <div class="pr-angle-tracker" id="pr-angle-tracker">
+              <!-- Tracker content populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Content: Sources (formerly Research) -->
+        <div class="pr-panel-tab-content" id="pr-tab-sources">
           <!-- Content Type and Generate Button -->
           <div class="pr-generation-controls">
             <select class="pr-content-type-select" id="pr-content-type-mobile">
@@ -240,53 +310,6 @@
 
         <!-- Content area -->
         <div class="pr-workspace-content" id="pr-workspace-content">
-          <!-- Workspace Tabs -->
-          <div class="pr-workspace-tabs">
-            <button class="pr-workspace-tab active" data-workspace-tab="news-hooks">News Hooks</button>
-            <button class="pr-workspace-tab" data-workspace-tab="content">Workspace</button>
-          </div>
-
-          <!-- Tab Content: News Hooks -->
-          <div class="pr-workspace-tab-content active" data-tab-content="news-hooks">
-            <div class="pr-news-hooks-container" id="pr-news-hooks-container">
-              <div class="pr-news-hooks-header">
-                <div class="pr-news-hooks-filters">
-                  <div class="pr-filter-group">
-                    <select class="pr-filter-select" id="pr-news-date-filter">
-                      <option value="7">Last 7 days</option>
-                      <option value="30">Last 30 days</option>
-                      <option value="60" selected>Last 60 days</option>
-                      <option value="all">All time</option>
-                    </select>
-                  </div>
-                  <div class="pr-filter-group">
-                    <button class="pr-filter-btn" id="pr-news-outlet-filter-btn">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                      </svg>
-                      Outlets
-                      <span class="pr-filter-count" id="pr-outlet-filter-count"></span>
-                    </button>
-                  </div>
-                  <button class="pr-filter-clear" id="pr-news-clear-filters" style="display: none;">Clear</button>
-                </div>
-                <button class="btn btn-secondary btn-sm" id="pr-fetch-news-btn">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M23 4v6h-6"></path>
-                    <path d="M1 20v-6h6"></path>
-                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                  </svg>
-                  Refresh
-                </button>
-              </div>
-              <div class="pr-news-hooks-list" id="pr-news-hooks-list">
-                <div class="pr-news-hooks-empty">No news hooks yet</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Tab Content: Workspace -->
-          <div class="pr-workspace-tab-content" data-tab-content="content">
             <!-- Empty state -->
             <div class="pr-workspace-empty" id="pr-workspace-empty">
               <div class="pr-empty-message">
@@ -375,17 +398,15 @@
       <!-- Resizer between center and right -->
       <div class="pr-resizer" id="pr-resizer-right" data-resize="right"></div>
 
-      <!-- Column 3: Right Panel (Media & Strategy) -->
+      <!-- Column 3: Right Panel (Media & Distribution) -->
       <div class="pr-strategy-panel" id="pr-strategy-panel">
-        <!-- Tab Navigation -->
-        <div class="pr-right-panel-tabs">
-          <button class="pr-right-panel-tab active" data-right-tab="strategy">Strategy</button>
-          <button class="pr-right-panel-tab" data-right-tab="media">Media</button>
-        </div>
-        
-        <!-- Tab Content: Media -->
-        <div class="pr-right-panel-tab-content" data-right-content="media">
-          <div class="pr-media-panel-body">
+        <!-- Single unified panel for Media & Distribution -->
+        <div class="pr-right-panel-body">
+          <!-- Media Section -->
+          <div class="pr-media-section">
+            <div class="pr-section-header">
+              <h2 class="pr-section-title">Media</h2>
+            </div>
             <div class="pr-media-view">
               <div class="pr-media-header">
                 <div class="pr-media-toggle">
@@ -405,14 +426,14 @@
               </div>
             </div>
           </div>
-        </div>
-        
-        <!-- Tab Content: Strategy -->
-        <div class="pr-right-panel-tab-content active" data-right-content="strategy">
-          <div class="pr-strategy-body">
-            <div class="pr-strategy-content" id="pr-strategy-content"></div>
-            <div class="pr-strategy-empty" id="pr-strategy-empty">
-              <p>Strategy appears after generating content</p>
+          
+          <!-- Distribution Strategy Section (appears after generation) -->
+          <div class="pr-distribution-section" id="pr-distribution-section" style="display: none;">
+            <div class="pr-section-header">
+              <h2 class="pr-section-title">Distribution</h2>
+            </div>
+            <div class="pr-strategy-body">
+              <div class="pr-strategy-content" id="pr-strategy-content"></div>
             </div>
           </div>
         </div>
@@ -963,72 +984,6 @@
 
       // Initialize panel resizer
       const panelResizer = new PanelResizer();
-
-      // Workspace tab switching
-      const workspaceTabs = document.querySelectorAll('.pr-workspace-tab');
-      const workspaceTabContents = document.querySelectorAll('.pr-workspace-tab-content');
-
-      workspaceTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-          const targetTab = tab.dataset.workspaceTab;
-          
-          // Update tabs
-          workspaceTabs.forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          
-          // Update content
-          workspaceTabContents.forEach(content => {
-            if (content.dataset.tabContent === targetTab) {
-              content.classList.add('active');
-            } else {
-              content.classList.remove('active');
-            }
-          });
-          
-          // Save active tab
-          localStorage.setItem('pr_active_workspace_tab', targetTab);
-        });
-      });
-
-      // Restore active workspace tab
-      const savedWorkspaceTab = localStorage.getItem('pr_active_workspace_tab');
-      if (savedWorkspaceTab) {
-        const targetTab = document.querySelector(`[data-workspace-tab="${savedWorkspaceTab}"]`);
-        if (targetTab) targetTab.click();
-      }
-
-      // Right panel tab switching
-      const rightPanelTabs = document.querySelectorAll('.pr-right-panel-tab');
-      const rightPanelTabContents = document.querySelectorAll('.pr-right-panel-tab-content');
-
-      rightPanelTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-          const targetTab = tab.dataset.rightTab;
-          
-          // Update tabs
-          rightPanelTabs.forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          
-          // Update content
-          rightPanelTabContents.forEach(content => {
-            if (content.dataset.rightContent === targetTab) {
-              content.classList.add('active');
-            } else {
-              content.classList.remove('active');
-            }
-          });
-          
-          // Save active tab
-          localStorage.setItem('pr_active_right_tab', targetTab);
-        });
-      });
-
-      // Restore active right panel tab
-      const savedRightTab = localStorage.getItem('pr_active_right_tab');
-      if (savedRightTab) {
-        const targetRightTab = document.querySelector(`[data-right-tab="${savedRightTab}"]`);
-        if (targetRightTab) targetRightTab.click();
-      }
 
       // Sync content type between mobile and desktop dropdowns
       const contentTypeMobile = document.getElementById('pr-content-type-mobile');

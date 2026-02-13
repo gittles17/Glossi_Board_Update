@@ -177,6 +177,10 @@ class PRAgent {
     this.calendarManager = new CalendarManager(this);
     await this.calendarManager.init();
     
+    // Initialize angle manager
+    this.angleManager = new AngleManager(this);
+    await this.angleManager.init();
+    
     // Add "Edit Foundation" button to sources header
     this.addEditFoundationButton();
     
@@ -1987,6 +1991,14 @@ class PRAgent {
     }).join('\n\n');
 
     let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
+    
+    if (this.angleContext) {
+      userMessage += `STORY ANGLE (use this as your narrative framework):\n${this.angleContext.narrative}\n\n`;
+      if (this.angleContext.target) {
+        userMessage += `Target: ${this.angleContext.target}\n\n`;
+      }
+    }
+    
     if (customPrompt) {
       userMessage += `Custom instructions: ${customPrompt}\n\n`;
     }
@@ -2078,6 +2090,11 @@ class PRAgent {
       this.renderStrategy(output.strategy);
       this.renderHistory();
       this.showWorkspace();
+      
+      // Track angle progress if active
+      if (this.angleManager && this.angleContext) {
+        this.angleManager.trackContentCreation(contentType);
+      }
       
       // Show save confirmation
       this.showSaveConfirmation();
@@ -2415,18 +2432,47 @@ class PRAgent {
   renderStrategy(strategy) {
     if (!this.dom.strategyPanel) return;
 
-    if (!strategy) {
+    const distributionSection = document.getElementById('pr-distribution-section');
+    
+    if (!strategy && !this.angleManager?.activeAngle) {
       this.dom.strategyPanel.innerHTML = '';
-      if (this.dom.strategyEmpty) this.dom.strategyEmpty.style.display = 'block';
+      if (distributionSection) distributionSection.style.display = 'none';
       return;
     }
 
-    if (this.dom.strategyEmpty) this.dom.strategyEmpty.style.display = 'none';
+    if (distributionSection) distributionSection.style.display = 'block';
 
     let html = '';
+    
+    // Active Angle Tracker (appears when angle is active)
+    if (this.angleManager?.activeAngle) {
+      const angle = this.angleManager.activeAngle;
+      const completedCount = angle.content_plan.filter(item => item.completed).length;
+      const totalCount = angle.content_plan.length;
+      
+      html += `
+        <div class="pr-active-angle-display">
+          <h4 class="pr-section-subtitle">Active Angle</h4>
+          <div class="pr-angle-progress-card">
+            <h3 class="pr-angle-progress-title">📋 ${this.escapeHtml(angle.title)}</h3>
+            <div class="pr-angle-progress-bar-wrap">
+              <div class="pr-angle-progress-bar" style="width: ${(completedCount / totalCount) * 100}%"></div>
+            </div>
+            <div class="pr-plan-checklist">
+              ${angle.content_plan.map(item => `
+                <div class="pr-plan-check ${item.completed ? 'done' : ''}">
+                  <span class="pr-plan-icon">${item.completed ? '✅' : item.priority === 1 ? '➡️' : '⬜'}</span>
+                  <span class="pr-plan-text">${this.angleManager.formatContentType(item.type)} — ${this.escapeHtml(item.description)}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
 
     // Distribution Strategy
-    if (strategy.outlets && strategy.outlets.length > 0) {
+    if (strategy && strategy.outlets && strategy.outlets.length > 0) {
       html += `<div class="pr-strategy-section">
         <h4 class="pr-strategy-heading">Distribution Strategy</h4>
         <div class="pr-strategy-outlets">
@@ -4468,13 +4514,21 @@ class NewsMonitor {
             <span class="pr-relevance-label">How Glossi ties in:</span>
             <p class="pr-relevance-text">${this.escapeHtml(item.relevance)}</p>
           </div>
-          <button class="btn btn-sm pr-use-hook-btn" data-news-index="${actualIndex}">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Use as Hook
-          </button>
+          <div class="pr-news-actions">
+            <button class="btn btn-sm btn-secondary pr-use-hook-btn" data-news-index="${actualIndex}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Use as Source
+            </button>
+            <button class="btn btn-sm btn-primary pr-build-angle-btn" data-news-index="${actualIndex}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              Build Angle →
+            </button>
+          </div>
         </div>
       `;
     });
@@ -4520,6 +4574,44 @@ class NewsMonitor {
         this.useAsHook(this.newsHooks[index], btn);
       });
     });
+    
+    container.querySelectorAll('.pr-build-angle-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const index = parseInt(btn.dataset.newsIndex);
+        const newsItem = this.newsHooks[index];
+        
+        // Visual feedback
+        btn.disabled = true;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = `
+          <svg class="spinning" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" opacity="0.25"></circle>
+            <path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path>
+          </svg>
+          Building...
+        `;
+        
+        // Trigger angle generation with this hook highlighted
+        await this.buildAngleFromHook(newsItem);
+        
+        // Restore button
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+      });
+    });
+  }
+
+  async buildAngleFromHook(newsItem) {
+    // Scroll to angles section
+    const anglesSection = document.querySelector('.pr-angles-section');
+    if (anglesSection) {
+      anglesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    // Highlight this news hook in the angle generation
+    if (this.prAgent.angleManager) {
+      await this.prAgent.angleManager.generateAngles(newsItem);
+    }
   }
 
   attachNewsEventListeners() {
@@ -4528,7 +4620,7 @@ class NewsMonitor {
 
   async useAsHook(newsItem, btn) {
     // 1. IMMEDIATELY switch to Sources tab (instant navigation)
-    const sourcesTab = document.querySelector('.pr-left-tab[data-left-tab="sources"]');
+    const sourcesTab = document.querySelector('.pr-panel-tab[data-panel-tab="sources"]');
     if (sourcesTab) sourcesTab.click();
     
     // 2. Build source object
@@ -4914,4 +5006,467 @@ class CalendarManager {
   }
 }
 
-export { PRAgent, CONTENT_TYPES, WizardManager, MediaManager, NewsMonitor, CalendarManager };
+/**
+ * AngleManager
+ * Manages strategic story angles and tracks content creation progress
+ */
+class AngleManager {
+  constructor(prAgent) {
+    this.prAgent = prAgent;
+    this.angles = [];
+    this.activeAngle = null;
+    this.defaultAngles = this.getDefaultAngles();
+  }
+
+  getDefaultAngles() {
+    return [
+      {
+        id: 'default_brand_decay',
+        title: 'Brand Decay at Scale',
+        narrative: 'AI image generators are destroying brand consistency. Colors shift, logos warp, products distort. Glossi fixes this with compositing, not generation.',
+        tied_to_hook: null,
+        urgency: 'low',
+        why_now: 'Persistent problem, always relevant',
+        content_plan: [
+          { type: 'linkedin_post', description: 'Why AI-generated product images break your brand', target: 'LinkedIn', priority: 1, completed: false },
+          { type: 'blog_post', description: 'The brand decay problem in AI imagery', target: 'Company blog', priority: 2, completed: false }
+        ],
+        isDefault: true,
+        generatedAt: new Date().toISOString()
+      },
+      {
+        id: 'default_world_models',
+        title: 'World Models Validate Our Bet',
+        narrative: 'Google Genie 3, World Labs Marble, NVIDIA Cosmos. The world model wave proves the market Glossi has been building for. Our compositing architecture was designed for this moment.',
+        tied_to_hook: null,
+        urgency: 'high',
+        why_now: 'World model announcements and funding rounds happening now',
+        content_plan: [
+          { type: 'linkedin_post', description: 'Founder take on world model funding wave', target: 'LinkedIn', priority: 1, completed: false },
+          { type: 'media_pitch', description: 'How Glossi\'s architecture was built for world models', target: 'TechCrunch / VentureBeat', priority: 2, completed: false },
+          { type: 'tweet_thread', description: 'What world models mean for product visualization', target: 'Twitter/X', priority: 3, completed: false }
+        ],
+        isDefault: true,
+        generatedAt: new Date().toISOString()
+      },
+      {
+        id: 'default_green_screen',
+        title: 'Green Screen for Products',
+        narrative: 'A simple analogy that explains everything. The product is the actor. Sacred. Untouchable. Everything around it is where AI plays.',
+        tied_to_hook: null,
+        urgency: 'low',
+        why_now: 'Evergreen explainer angle',
+        content_plan: [
+          { type: 'linkedin_post', description: 'The green screen analogy for AI product viz', target: 'LinkedIn', priority: 1, completed: false },
+          { type: 'talking_points', description: 'Elevator pitch using the analogy', target: 'General', priority: 2, completed: false }
+        ],
+        isDefault: true,
+        generatedAt: new Date().toISOString()
+      }
+    ];
+  }
+
+  async init() {
+    this.setupDOM();
+    this.setupEventListeners();
+    await this.loadCachedAngles();
+    this.renderAngles();
+    this.updateTracker();
+  }
+
+  setupDOM() {
+    this.dom = {
+      generateAnglesBtn: document.getElementById('pr-generate-angles-btn'),
+      anglesList: document.getElementById('pr-angles-list'),
+      angleTracker: document.getElementById('pr-angle-tracker'),
+      angleTrackerSection: document.getElementById('pr-angle-tracker-section')
+    };
+  }
+
+  setupEventListeners() {
+    this.dom.generateAnglesBtn?.addEventListener('click', () => this.generateAngles());
+  }
+
+  async loadCachedAngles() {
+    try {
+      const response = await fetch('/api/pr/angles');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.angles && data.angles.length > 0) {
+          this.angles = data.angles;
+        } else {
+          this.angles = this.prAgent.sources.length > 0 ? [] : this.defaultAngles;
+        }
+      } else {
+        this.angles = this.prAgent.sources.length > 0 ? [] : this.defaultAngles;
+      }
+    } catch (error) {
+      console.error('Error loading cached angles:', error);
+      this.angles = this.prAgent.sources.length > 0 ? [] : this.defaultAngles;
+    }
+
+    const savedActiveAngle = localStorage.getItem('pr_active_angle');
+    if (savedActiveAngle) {
+      try {
+        this.activeAngle = JSON.parse(savedActiveAngle);
+      } catch (e) {}
+    }
+  }
+
+  async generateAngles(triggeredByNewsHook = null) {
+    if (!this.dom.generateAnglesBtn) return;
+
+    this.dom.generateAnglesBtn.disabled = true;
+    this.dom.generateAnglesBtn.classList.add('spinning');
+    
+    if (this.dom.anglesList) {
+      const hookText = triggeredByNewsHook ? ` based on "${triggeredByNewsHook.headline}"` : '';
+      this.dom.anglesList.innerHTML = `<p class="pr-angles-empty">Generating strategic angles${hookText}...</p>`;
+    }
+
+    try {
+      const sources = this.prAgent.sources.filter(s => s.selected).map(s => ({
+        title: s.title,
+        content: s.content
+      }));
+
+      const newsHooks = this.prAgent.newsMonitor?.newsHooks || [];
+      
+      if (triggeredByNewsHook) {
+        const hookIndex = newsHooks.findIndex(h => h.headline === triggeredByNewsHook.headline);
+        if (hookIndex !== -1) {
+          newsHooks.splice(hookIndex, 1);
+          newsHooks.unshift(triggeredByNewsHook);
+        } else {
+          newsHooks.unshift(triggeredByNewsHook);
+        }
+      }
+
+      const pastOutputs = this.prAgent.outputs.map(o => ({
+        title: o.title || o.contentType,
+        contentType: o.contentType
+      }));
+
+      const response = await fetch('/api/pr/angles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          sources, 
+          newsHooks: newsHooks.slice(0, 5),
+          pastOutputs,
+          highlightedHook: triggeredByNewsHook ? triggeredByNewsHook.headline : null
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to generate angles');
+      }
+
+      this.angles = data.angles || [];
+      await this.saveAngles();
+      this.renderAngles();
+      this.prAgent.showToast('Story angles generated', 'success');
+    } catch (error) {
+      console.error('Error generating angles:', error);
+      if (this.dom.anglesList) {
+        this.dom.anglesList.innerHTML = '<p class="pr-angles-empty">Failed to generate angles. Try again.</p>';
+      }
+      this.prAgent.showToast(error.message || 'Failed to generate angles', 'error');
+    } finally {
+      if (this.dom.generateAnglesBtn) {
+        this.dom.generateAnglesBtn.disabled = false;
+        this.dom.generateAnglesBtn.classList.remove('spinning');
+      }
+    }
+  }
+
+  async saveAngles() {
+    try {
+      await fetch('/api/pr/angles/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ angles: this.angles })
+      });
+    } catch (error) {
+      console.error('Error saving angles:', error);
+    }
+  }
+
+  renderAngles() {
+    if (!this.dom.anglesList) return;
+
+    const anglesToShow = this.angles.length > 0 ? this.angles : (this.prAgent.sources.length === 0 ? this.defaultAngles : []);
+
+    if (anglesToShow.length === 0) {
+      this.dom.anglesList.innerHTML = '<p class="pr-angles-empty">Click "Generate Angles" to get strategic recommendations</p>';
+      return;
+    }
+
+    let html = '<div class="pr-angles-items">';
+    
+    anglesToShow.forEach(angle => {
+      const urgencyClass = angle.urgency === 'high' ? 'high' : angle.urgency === 'medium' ? 'medium' : 'low';
+      const urgencyIcon = angle.urgency === 'high' ? '🔴' : angle.urgency === 'medium' ? '🟡' : '🟢';
+      const expandedClass = this.isAngleExpanded(angle.id) ? 'expanded' : '';
+      
+      html += `
+        <div class="pr-angle-card ${expandedClass}" data-angle-id="${angle.id}">
+          <div class="pr-angle-header">
+            <h3 class="pr-angle-title">${this.escapeHtml(angle.title)}</h3>
+            <span class="pr-angle-urgency ${urgencyClass}">${urgencyIcon} ${angle.urgency.toUpperCase()}</span>
+          </div>
+          ${angle.tied_to_hook ? `<div class="pr-angle-hook">Tied to: ${this.escapeHtml(angle.tied_to_hook)}</div>` : ''}
+          <p class="pr-angle-narrative">${this.escapeHtml(angle.narrative)}</p>
+          <p class="pr-angle-why-now"><strong>Why now:</strong> ${this.escapeHtml(angle.why_now)}</p>
+          
+          <button class="pr-angle-expand-btn" data-angle-id="${angle.id}">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            Content Plan (${angle.content_plan.length} pieces)
+          </button>
+          
+          <div class="pr-angle-content-plan">
+            <ul class="pr-content-plan-list">
+              ${angle.content_plan.map((item, idx) => `
+                <li class="${item.completed ? 'completed' : ''}">
+                  ${item.completed ? '✅' : `${item.priority}.`} <strong>${this.formatContentType(item.type)}</strong> — ${this.escapeHtml(item.description)}
+                  ${item.target ? `<br><span class="pr-plan-target">Target: ${this.escapeHtml(item.target)}</span>` : ''}
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+          
+          <button class="btn btn-primary pr-create-from-angle-btn" data-angle-id="${angle.id}">
+            Create Content →
+          </button>
+          
+          ${!angle.isDefault ? `
+            <button class="btn-icon pr-delete-angle-btn" data-angle-id="${angle.id}" title="Delete angle">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          ` : ''}
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+    this.dom.anglesList.innerHTML = html;
+    this.attachAngleEventListeners();
+  }
+
+  attachAngleEventListeners() {
+    document.querySelectorAll('.pr-angle-expand-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const angleId = btn.dataset.angleId;
+        this.toggleAngleExpand(angleId);
+      });
+    });
+
+    document.querySelectorAll('.pr-create-from-angle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const angleId = btn.dataset.angleId;
+        this.createContentFromAngle(angleId);
+      });
+    });
+
+    document.querySelectorAll('.pr-delete-angle-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const angleId = btn.dataset.angleId;
+        await this.deleteAngle(angleId);
+      });
+    });
+  }
+
+  isAngleExpanded(angleId) {
+    const expanded = localStorage.getItem('pr_expanded_angles');
+    if (!expanded) return false;
+    try {
+      const expandedIds = JSON.parse(expanded);
+      return expandedIds.includes(angleId);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  toggleAngleExpand(angleId) {
+    const card = document.querySelector(`.pr-angle-card[data-angle-id="${angleId}"]`);
+    if (!card) return;
+
+    let expandedIds = [];
+    try {
+      const stored = localStorage.getItem('pr_expanded_angles');
+      if (stored) expandedIds = JSON.parse(stored);
+    } catch (e) {}
+
+    if (expandedIds.includes(angleId)) {
+      expandedIds = expandedIds.filter(id => id !== angleId);
+      card.classList.remove('expanded');
+    } else {
+      expandedIds.push(angleId);
+      card.classList.add('expanded');
+    }
+
+    localStorage.setItem('pr_expanded_angles', JSON.stringify(expandedIds));
+  }
+
+  createContentFromAngle(angleId) {
+    const angle = this.angles.find(a => a.id === angleId) || this.defaultAngles.find(a => a.id === angleId);
+    if (!angle) return;
+
+    this.activeAngle = angle;
+    localStorage.setItem('pr_active_angle', JSON.stringify(angle));
+
+    const firstPlanItem = angle.content_plan.find(item => !item.completed) || angle.content_plan[0];
+    if (!firstPlanItem) return;
+
+    const contentTypeDropdown = document.getElementById('pr-content-type');
+    const mobileContentTypeDropdown = document.getElementById('pr-content-type-mobile');
+    
+    if (contentTypeDropdown) {
+      contentTypeDropdown.value = firstPlanItem.type;
+      const changeEvent = new Event('change');
+      contentTypeDropdown.dispatchEvent(changeEvent);
+    }
+    
+    if (mobileContentTypeDropdown) {
+      mobileContentTypeDropdown.value = firstPlanItem.type;
+    }
+
+    this.prAgent.angleContext = {
+      narrative: angle.narrative,
+      target: firstPlanItem.target || '',
+      description: firstPlanItem.description || ''
+    };
+
+    this.updateTracker();
+    
+    this.prAgent.renderStrategy(null);
+
+    const workspaceTab = document.querySelector('.pr-mobile-tab[data-tab="workspace"]');
+    if (workspaceTab && window.innerWidth < 768) {
+      workspaceTab.click();
+    }
+
+    this.prAgent.showToast(`Ready to create: ${this.formatContentType(firstPlanItem.type)}`, 'success');
+  }
+
+  trackContentCreation(contentType) {
+    if (!this.activeAngle) return;
+
+    const matchingItem = this.activeAngle.content_plan.find(
+      item => item.type === contentType && !item.completed
+    );
+
+    if (matchingItem) {
+      matchingItem.completed = true;
+      
+      const angleInList = this.angles.find(a => a.id === this.activeAngle.id);
+      if (angleInList) {
+        const itemInList = angleInList.content_plan.find(i => i.type === contentType);
+        if (itemInList) itemInList.completed = true;
+      }
+
+      this.saveAngles();
+      this.renderAngles();
+      this.updateTracker();
+      
+      this.prAgent.renderStrategy(null);
+
+      const allCompleted = this.activeAngle.content_plan.every(item => item.completed);
+      if (allCompleted) {
+        this.prAgent.showToast('Angle content plan completed!', 'success');
+        this.activeAngle = null;
+        localStorage.removeItem('pr_active_angle');
+        this.updateTracker();
+        this.prAgent.renderStrategy(null);
+      }
+    }
+  }
+
+  updateTracker() {
+    if (!this.dom.angleTracker || !this.dom.angleTrackerSection) return;
+
+    if (!this.activeAngle) {
+      this.dom.angleTrackerSection.style.display = 'none';
+      return;
+    }
+
+    this.dom.angleTrackerSection.style.display = 'block';
+    
+    const completedCount = this.activeAngle.content_plan.filter(item => item.completed).length;
+    const totalCount = this.activeAngle.content_plan.length;
+    
+    let html = `
+      <div class="pr-tracker-header">
+        <h3 class="pr-tracker-title">${this.escapeHtml(this.activeAngle.title)}</h3>
+        <span class="pr-tracker-progress">${completedCount} of ${totalCount} completed</span>
+      </div>
+      <ul class="pr-tracker-list">
+        ${this.activeAngle.content_plan.map(item => `
+          <li class="pr-tracker-item ${item.completed ? 'completed' : ''}">
+            <span class="pr-tracker-checkbox">${item.completed ? '✅' : '⬜'}</span>
+            <span class="pr-tracker-text">${this.formatContentType(item.type)} — ${this.escapeHtml(item.description)}</span>
+          </li>
+        `).join('')}
+      </ul>
+    `;
+    
+    this.dom.angleTracker.innerHTML = html;
+  }
+
+  async deleteAngle(angleId) {
+    try {
+      const response = await fetch(`/api/pr/angles/${angleId}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        this.angles = this.angles.filter(a => a.id !== angleId);
+        
+        if (this.activeAngle && this.activeAngle.id === angleId) {
+          this.activeAngle = null;
+          localStorage.removeItem('pr_active_angle');
+        }
+        
+        this.renderAngles();
+        this.updateTracker();
+        this.prAgent.showToast('Angle deleted', 'success');
+      }
+    } catch (error) {
+      console.error('Error deleting angle:', error);
+      this.prAgent.showToast('Failed to delete angle', 'error');
+    }
+  }
+
+  formatContentType(type) {
+    const typeMap = {
+      'press_release': 'Press Release',
+      'media_pitch': 'Media Pitch',
+      'product_announcement': 'Product Announcement',
+      'founder_quote': 'Founder Quote',
+      'blog_post': 'Blog Post',
+      'linkedin_post': 'LinkedIn Post',
+      'tweet_thread': 'Tweet Thread',
+      'briefing_doc': 'Briefing Doc',
+      'talking_points': 'Talking Points'
+    };
+    return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+}
+
+export { PRAgent, CONTENT_TYPES, WizardManager, MediaManager, NewsMonitor, CalendarManager, AngleManager };
