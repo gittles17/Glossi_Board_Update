@@ -1114,7 +1114,7 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     }
     
     // Step 2: Use Claude to analyze relevance and generate summaries
-    const articlesToAnalyze = uniqueResults.slice(0, 30);  // Analyze up to 30 articles for faster response
+    const articlesToAnalyze = uniqueResults.slice(0, 20);  // Analyze up to 20 articles to stay under Railway timeout
     console.log(`Sending ${articlesToAnalyze.length} articles to Claude for analysis`);
     
     const analysisPrompt = `You are analyzing news articles for Glossi, an AI-native 3D product visualization platform.
@@ -1153,7 +1153,7 @@ Return articles in this JSON format:
 Rules:
 - Include articles that are broadly relevant to tech, AI, 3D, visualization, e-commerce, creative industries, marketing, or brand technology
 - Be INCLUSIVE - if there's any connection to these topics, include it
-- Maximum 30 articles
+- Maximum 20 articles
 - Sort by date (most recent first)
 - Keep summaries and relevance statements concise (one sentence each)
 - Use the exact domain from the SOURCE field for the outlet name`;
