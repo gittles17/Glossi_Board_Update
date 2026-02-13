@@ -208,7 +208,7 @@ Rules:
 - Use the exact domain from the SOURCE field for the outlet name`;
 
     const analysisResponse = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 8192,
       system: 'You are a strategic communications analyst. Return only valid JSON.',
       messages: [{ role: 'user', content: analysisPrompt }]
