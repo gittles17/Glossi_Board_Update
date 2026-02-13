@@ -1020,28 +1020,42 @@ app.post('/api/pr/news-hooks', async (req, res) => {
         const searchResult = await tvly.search(query, {
           searchDepth: 'basic',
           topic: 'news',
-          days: 7,
-          maxResults: 5,
+          days: 30,  // Increased from 7 to match frontend filter
+          maxResults: 10,  // Increased from 5 to get more articles
           includeDomains: ['techcrunch.com', 'theverge.com', 'wired.com', 'venturebeat.com', 'technologyreview.com', 'arstechnica.com', 'fastcompany.com', 'businessinsider.com', 'forbes.com', 'cnbc.com', 'reuters.com', 'bloomberg.com', 'tldr.tech', 'businessoffashion.com', 'theinterline.com']
         });
         
         if (searchResult.results) {
           allResults = allResults.concat(searchResult.results);
+          console.log(`Query "${query}": ${searchResult.results.length} articles`);
         }
       } catch (error) {
         console.error(`Tavily search error for query "${query}":`, error.message);
       }
     }
     
+    console.log(`Tavily total: ${allResults.length} articles before dedup`);
+    
     // Remove duplicates by URL
     const uniqueResults = Array.from(new Map(allResults.map(item => [item.url, item])).values());
-    console.log(`Found ${uniqueResults.length} unique articles from Tavily`);
+    console.log(`After dedup: ${uniqueResults.length} unique articles`);
+    
+    // Log outlet breakdown
+    const outletCounts = {};
+    uniqueResults.forEach(item => {
+      const domain = item.url.match(/https?:\/\/([^\/]+)/)?.[1] || 'Unknown';
+      outletCounts[domain] = (outletCounts[domain] || 0) + 1;
+    });
+    console.log('Outlets found:', outletCounts);
     
     if (uniqueResults.length === 0) {
       return res.json({ success: true, news: [] });
     }
     
     // Step 2: Use Claude to analyze relevance and generate summaries
+    const articlesToAnalyze = uniqueResults.slice(0, 40);  // Increased from 20 to 40
+    console.log(`Sending ${articlesToAnalyze.length} articles to Claude for analysis`);
+    
     const analysisPrompt = `You are analyzing news articles for Glossi, an AI-native 3D product visualization platform.
 
 GLOSSI CONTEXT:
@@ -1051,35 +1065,37 @@ GLOSSI CONTEXT:
 - Target: enterprise brands, e-commerce, CPG, fashion, beauty
 - Key value: 80% reduction in product photo costs, unlimited variations, brand consistency
 
-TASK: For each article below, determine if it's relevant to Glossi and provide a brief relevance statement. Only include articles that are relevant.
+TASK: Analyze each article and determine if it's broadly relevant to tech, AI, 3D, visualization, e-commerce, marketing, creative industries, or brand technology. Be INCLUSIVE rather than overly selective.
 
 ARTICLES:
-${uniqueResults.slice(0, 20).map((article, i) => `
+${articlesToAnalyze.map((article, i) => `
 ${i + 1}. TITLE: ${article.title}
    SOURCE: ${article.url.match(/https?:\/\/([^\/]+)/)?.[1] || 'Unknown'}
    DATE: ${article.publishedDate || 'Recent'}
    SNIPPET: ${article.content?.substring(0, 300) || 'No preview'}
 `).join('\n')}
 
-Return ONLY articles relevant to Glossi in this JSON format:
+Return articles in this JSON format:
 {
   "news": [
     {
       "headline": "Original article title",
-      "outlet": "Source domain",
+      "outlet": "Source domain (use the raw domain from SOURCE field)",
       "date": "YYYY-MM-DD format",
       "url": "Original URL",
       "summary": "One sentence summary of the article",
-      "relevance": "ONE sentence explaining how Glossi ties into this story"
+      "relevance": "ONE sentence explaining how this relates to Glossi or the industry"
     }
   ]
 }
 
 Rules:
-- Only include relevant articles (AI, 3D, visualization, e-commerce, creative tech, marketing tech, brand tech)
-- Maximum 15 articles
-- Sort by relevance to Glossi
-- Keep summaries and relevance statements concise (one sentence each)`;
+- Include articles that are broadly relevant to tech, AI, 3D, visualization, e-commerce, creative industries, marketing, or brand technology
+- Be INCLUSIVE - if there's any connection to these topics, include it
+- Maximum 40 articles (increased from 15)
+- Sort by date (most recent first)
+- Keep summaries and relevance statements concise (one sentence each)
+- Use the exact domain from the SOURCE field for the outlet name`;
 
     const analysisResponse = await axios.post('https://api.anthropic.com/v1/messages', {
       model: 'claude-sonnet-4-20250514',
@@ -1101,13 +1117,53 @@ Rules:
     try {
       const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
       newsData = jsonMatch ? JSON.parse(jsonMatch[0]) : { news: [] };
+      console.log(`Claude returned ${newsData.news?.length || 0} articles`);
     } catch (error) {
       console.error('Failed to parse Claude analysis:', error);
       newsData = { news: [] };
     }
     
-    // Normalize dates and validate
+    // Outlet name normalization map
+    const OUTLET_MAP = {
+      'techcrunch.com': 'TechCrunch',
+      'www.techcrunch.com': 'TechCrunch',
+      'theverge.com': 'The Verge',
+      'www.theverge.com': 'The Verge',
+      'wired.com': 'WIRED',
+      'www.wired.com': 'WIRED',
+      'venturebeat.com': 'VentureBeat',
+      'www.venturebeat.com': 'VentureBeat',
+      'technologyreview.com': 'MIT Technology Review',
+      'www.technologyreview.com': 'MIT Technology Review',
+      'arstechnica.com': 'Ars Technica',
+      'www.arstechnica.com': 'Ars Technica',
+      'fastcompany.com': 'Fast Company',
+      'www.fastcompany.com': 'Fast Company',
+      'businessinsider.com': 'Business Insider',
+      'www.businessinsider.com': 'Business Insider',
+      'forbes.com': 'Forbes',
+      'www.forbes.com': 'Forbes',
+      'cnbc.com': 'CNBC',
+      'www.cnbc.com': 'CNBC',
+      'reuters.com': 'Reuters',
+      'www.reuters.com': 'Reuters',
+      'bloomberg.com': 'Bloomberg',
+      'www.bloomberg.com': 'Bloomberg',
+      'tldr.tech': 'TLDR',
+      'www.tldr.tech': 'TLDR',
+      'businessoffashion.com': 'Business of Fashion',
+      'www.businessoffashion.com': 'Business of Fashion',
+      'theinterline.com': 'The Interline',
+      'www.theinterline.com': 'The Interline'
+    };
+    
+    // Normalize dates, outlet names, and validate
     const normalizedNews = (newsData.news || []).map(item => {
+      // Normalize outlet name
+      const rawOutlet = item.outlet || '';
+      const normalizedOutlet = OUTLET_MAP[rawOutlet.toLowerCase()] || OUTLET_MAP[rawOutlet.replace('www.', '').toLowerCase()] || rawOutlet;
+      
+      item.outlet = normalizedOutlet;
       let articleDate = item.date;
       
       // Try to parse various date formats
@@ -1160,6 +1216,13 @@ Rules:
       
       console.log(`Inserted ${insertedCount} of ${normalizedNews.length} articles into database`);
     }
+    
+    // Log final outlet distribution
+    const finalOutletCounts = {};
+    normalizedNews.forEach(item => {
+      finalOutletCounts[item.outlet] = (finalOutletCounts[item.outlet] || 0) + 1;
+    });
+    console.log(`✓ Returning ${normalizedNews.length} news hooks by outlet:`, JSON.stringify(finalOutletCounts, null, 2));
     
     res.json({ success: true, news: normalizedNews });
   } catch (error) {
