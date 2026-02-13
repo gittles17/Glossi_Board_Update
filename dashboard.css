@@ -11236,6 +11236,8 @@ a.dropdown-item {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+  height: calc(100vh - 64px);
 }
 
 .pr-layout {
