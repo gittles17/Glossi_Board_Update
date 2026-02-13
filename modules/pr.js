@@ -3896,11 +3896,11 @@ class NewsMonitor {
   constructor(prAgent) {
     this.prAgent = prAgent;
     this.newsHooks = [];
-    this.displayedNewsCount = 6; // Show 6 news items initially (2 rows of 3)
+    this.displayedNewsCount = 8; // Show 8 news items initially (4 rows of 2)
     
     // Filter state
     this.filters = {
-      dateRange: 7, // Default: last 7 days
+      dateRange: 'all', // Default: show all news (no date filter)
       outlets: [] // Empty = all outlets
     };
   }
@@ -3940,20 +3940,20 @@ class NewsMonitor {
   }
 
   showMoreNews() {
-    this.displayedNewsCount += 6; // Load 6 more items (2 rows of 3)
+    this.displayedNewsCount += 8; // Load 8 more items (4 rows of 2)
     this.renderNews();
   }
   
   clearFilters() {
-    this.filters.dateRange = 7;
+    this.filters.dateRange = 'all';
     this.filters.outlets = [];
-    if (this.dom.dateFilter) this.dom.dateFilter.value = '7';
+    if (this.dom.dateFilter) this.dom.dateFilter.value = 'all';
     this.renderNews();
     this.updateClearButton();
   }
   
   updateClearButton() {
-    const hasFilters = this.filters.dateRange !== 7 || this.filters.outlets.length > 0;
+    const hasFilters = this.filters.dateRange !== 'all' || this.filters.outlets.length > 0;
     if (this.dom.clearFilters) {
       this.dom.clearFilters.style.display = hasFilters ? 'block' : 'none';
     }
