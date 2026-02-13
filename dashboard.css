@@ -11306,14 +11306,15 @@ a.dropdown-item {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100% !important;
+  max-width: 1400px !important;
+  min-width: 0 !important;
+  margin: 0 auto !important;
   padding: var(--space-6);
 }
 
 .pr-stage-content.active {
-  display: flex;
+  display: flex !important;
 }
 
 /* Old mobile tabs - hidden in favor of stage tabs */
@@ -11345,7 +11346,9 @@ a.dropdown-item {
 
 /* Column 1: Sources Panel */
 .pr-sources-panel {
-  width: 100%;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
   border: none;
   display: flex;
   flex-direction: column;
@@ -12021,7 +12024,9 @@ a.dropdown-item {
 
 /* Column 2: Workspace Panel */
 .pr-workspace-panel {
-  width: 100%;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
   display: flex;
   flex-direction: column;
   overflow: visible;
@@ -13044,7 +13049,9 @@ a.dropdown-item {
 
 /* Column 3: Right Panel (Media & Distribution) */
 .pr-right-panel {
-  width: 100%;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
   border: none;
   display: flex;
   flex-direction: column;
@@ -16074,35 +16081,10 @@ body.pr-resizing * {
   align-items: center;
 }
 
-/* Laptop Responsive (1280px-1440px screens) */
+/* Laptop Responsive - DISABLED for stage layout */
+/* Old 3-column constraints removed for full-width stages */
 @media (min-width: 641px) and (max-width: 1440px) {
-  .pr-sources-panel {
-    width: 240px;
-    min-width: 240px;
-  }
-  
-  .pr-right-panel {
-    width: 280px;
-    min-width: 280px;
-  }
-  
-  .pr-workspace-panel {
-    min-width: 280px;
-  }
-  
-  .pr-tab-content {
-    padding: var(--space-3);
-  }
-  
-  .pr-right-panel-content {
-    padding: var(--space-3);
-  }
-  
-  .pr-left-tab {
-    padding: 10px 12px;
-    font-size: 13px;
-  }
-  
+  /* Typography adjustments only */
   .pr-angle-card {
     padding: 16px;
   }
