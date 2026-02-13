@@ -1141,28 +1141,30 @@ GLOSSI'S MARKET:
 
 INCLUDE ARTICLES ABOUT:
 
-**Core Topics:**
+**CORE TOPICS (HIGHEST PRIORITY - aim for 8-10 articles from these):**
 1. **AI creative/marketing tools** - Midjourney, Adobe Firefly, Canva AI, design automation, AI content generation
 2. **E-commerce platforms & tech** - Shopify, Amazon, 3D/AR product views, visual commerce innovations
 3. **Creative automation platforms** - Workflow tools, brand asset management, DAM/CMS systems
 4. **AI image generation** - Midjourney, DALL-E, Stable Diffusion for commercial use
 
-**Adjacent Tech:**
+**SUPPORTING TOPICS (fill remaining 4-8 slots from these):**
+
+Adjacent Tech:
 5. **3D engines for commerce** - Unreal Engine, Unity applied to product visualization, browser 3D tech
 6. **Digital twins & virtual showrooms** - Virtual product experiences, immersive brand environments
 7. **Brand AI workflow implementation** - How companies deploy AI in creative/marketing operations
 
-**Customer Industries:**
+Customer Industries:
 8. **DTC brand strategies** - Direct-to-consumer challenges, content production at scale, omnichannel
 9. **Retail digital transformation** - Store tech, online merchandising, customer experience innovation
 10. **Fashion tech** - Digital fashion, virtual samples, sustainability in fashion production
 
-**Buyer Insights:**
+Buyer Insights:
 11. **Creative operations** - Production workflows, bottlenecks, efficiency improvements
 12. **Marketing tech stack** - Tool consolidation, integration trends, martech evolution
 13. **Agency vs in-house** - Production model shifts, hybrid approaches
 
-**Market Signals:**
+Market Signals:
 14. **Funding/M&A in creative/martech** - Who's raising, acquisitions, market consolidation
 15. **Pricing model evolution** - Consumption-based pricing, credit systems, enterprise deals
 16. **Platform partnerships** - Shopify apps, marketplace integrations, ecosystem plays
@@ -1206,16 +1208,17 @@ Return articles in this JSON format:
 CRITICAL: Only include articles you're recommending. Do NOT include articles with "EXCLUDED" or "Not relevant" in the relevance field. If you think an article should be excluded, simply don't add it to the JSON array.
 
 Rules:
-- CRITICAL: Return ONLY 12-18 articles that you would actually recommend
-- Do NOT include articles you're marking as "Excluded", "Minimal relevance", or questionable fit
-- If an article doesn't clearly fit one of the 17 topics, DON'T RETURN IT (don't include it with "excluded" note)
+- CRITICAL: Return ONLY 12-18 articles total
+- PRIORITY DISTRIBUTION: Aim for 8-10 from Core Topics (1-4), then fill remaining 4-8 from Supporting Topics (5-16)
+- Core topics (1-4) are most valuable - if you find good core articles, include them even if you have many
+- Do NOT include articles marked as "Excluded" or "Minimal relevance"
 - Remove duplicates (same story from different outlets = pick one)
-- Good articles: direct connection to one of the 17 topics
-- Examples of GOOD: "Shopify adds 3D viewer", "CMO survey shows content bottleneck", "DTC brand raises funding", "Canva prices for enterprise"
-- Examples to EXCLUDE: "Waymo robotaxis", "Wildlife trafficking", "Celebrity fitness", "Generic policy"
-- In 'relevance': state which topic # (1-16) and explain the connection
+- Examples of BEST (Core): "Adobe launches Firefly", "Shopify adds 3D viewer", "Canva AI pricing", "Midjourney for brands"
+- Examples of GOOD (Supporting): "DTC brand raises funding", "Retail AR adoption", "Agency production model shifts"
+- Examples to EXCLUDE: "Waymo robotaxis", "Wildlife", "Celebrity", "Generic policy"
+- In 'relevance': state which topic # (1-16) and why it matters
+- Sort by priority: Core topics first (1-4), then Supporting (5-16), then by recency
 - Prioritize: last 14 days > last 30 days > older
-- Sort by relevance (most direct connection first)
 - Use exact domain from SOURCE field for outlet name`;
 
     const analysisResponse = await axios.post('https://api.anthropic.com/v1/messages', {
