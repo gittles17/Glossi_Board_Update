@@ -2740,7 +2740,7 @@ Return ONLY the JSON array, nothing else.`;
       const suggestions = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
 
       // Render suggestions
-      container.innerHTML = suggestions.map(suggestion => 
+      container.innerHTML = suggestions.map(suggestion =>
         `<button class="pr-suggestion-btn" data-suggestion="${this.escapeHtml(suggestion)}">${this.escapeHtml(suggestion)}</button>`
       ).join('');
 
@@ -2752,6 +2752,30 @@ Return ONLY the JSON array, nothing else.`;
         <button class="pr-suggestion-btn" data-suggestion="Shorten by 20%">Shorten by 20%</button>
         <button class="pr-suggestion-btn" data-suggestion="Add specific metrics">Add specific metrics</button>
       `;
+    }
+    
+    // Attach click handlers to suggestion buttons
+    this.attachSuggestionHandlers();
+  }
+  
+  attachSuggestionHandlers() {
+    const buttons = document.querySelectorAll('.pr-suggestion-btn');
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const suggestion = btn.getAttribute('data-suggestion');
+        if (suggestion) {
+          this.applySuggestion(suggestion);
+        }
+      });
+    });
+  }
+  
+  async applySuggestion(suggestion) {
+    const chatInput = document.getElementById('pr-chat-input');
+    if (chatInput) {
+      chatInput.value = suggestion;
+      // Trigger the refinement
+      this.refineContent(suggestion);
     }
   }
 
