@@ -539,20 +539,26 @@ class PRAgent {
     
     // Check server for environment-configured API keys first
     try {
+      console.log('🔑 Checking server for API keys...');
       const response = await fetch('/api/settings');
       if (response.ok) {
         const serverSettings = await response.json();
+        console.log('🔑 Server settings:', serverSettings);
         // If server has API keys configured via environment, we're done
         if (serverSettings.hasAnthropicKey) {
           this.apiKey = 'env'; // Placeholder to indicate env key exists
+          console.log('✅ Anthropic API key found in environment');
         }
         if (serverSettings.hasOpenAIKey) {
           this.openaiApiKey = 'env'; // Placeholder to indicate env key exists
+          console.log('✅ OpenAI API key found in environment');
         }
       }
     } catch (e) {
-      console.warn('Could not check server for API keys');
+      console.warn('Could not check server for API keys', e);
     }
+    
+    console.log('🔑 Final API key state:', { apiKey: this.apiKey, openaiApiKey: this.openaiApiKey });
     
     // Fall back to localStorage if no environment keys
     if (!this.apiKey || !this.openaiApiKey) {
@@ -1770,16 +1776,31 @@ class PRAgent {
   // =========================================
 
   async generateContent() {
-    if (this.isGenerating) return;
-
+    console.log('=== Generate Content Debug ===');
+    console.log('isGenerating:', this.isGenerating);
+    console.log('apiKey exists:', !!this.apiKey);
+    console.log('apiKey value:', this.apiKey);
+    
     const selectedSources = this.sources.filter(s => s.selected);
+    console.log('selectedSources count:', selectedSources.length);
+    console.log('all sources:', this.sources.map(s => ({id: s.id, title: s.title, selected: s.selected})));
+    
+    if (this.isGenerating) {
+      console.error('❌ BLOCKED: Already generating');
+      return;
+    }
+
     if (selectedSources.length === 0) {
+      console.error('❌ BLOCKED: No sources selected');
       return;
     }
 
     if (!this.apiKey) {
+      console.error('❌ BLOCKED: No API key');
       return;
     }
+    
+    console.log('✅ All checks passed, proceeding with generation');
 
     const contentType = this.dom.contentType?.value || 'press_release';
     const typeLabel = CONTENT_TYPES.find(t => t.id === contentType)?.label || contentType;
