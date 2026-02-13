@@ -5106,6 +5106,38 @@ class AngleManager {
 
   setupEventListeners() {
     this.dom.generateAnglesBtn?.addEventListener('click', () => this.generateAngles());
+    
+    // EVENT DELEGATION: Handle all angle card button clicks
+    // This attaches ONCE and works for all current and future buttons
+    this.dom.anglesList?.addEventListener('click', (e) => {
+      // Expand/collapse button
+      const expandBtn = e.target.closest('.pr-angle-expand-btn');
+      if (expandBtn) {
+        e.stopPropagation();
+        const angleId = expandBtn.dataset.angleId;
+        this.toggleAngleExpand(angleId);
+        return;
+      }
+      
+      // Create Content button
+      const createBtn = e.target.closest('.pr-create-from-angle-btn');
+      if (createBtn) {
+        e.stopPropagation();
+        const angleId = createBtn.dataset.angleId;
+        console.log('✅ Create Content clicked for angle:', angleId);
+        this.createContentFromAngle(angleId);
+        return;
+      }
+      
+      // Delete button
+      const deleteBtn = e.target.closest('.pr-delete-angle-btn');
+      if (deleteBtn) {
+        e.stopPropagation();
+        const angleId = deleteBtn.dataset.angleId;
+        this.deleteAngle(angleId);
+        return;
+      }
+    });
   }
 
   async loadCachedAngles() {
@@ -5289,28 +5321,8 @@ class AngleManager {
   }
 
   attachAngleEventListeners() {
-    document.querySelectorAll('.pr-angle-expand-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const angleId = btn.dataset.angleId;
-        this.toggleAngleExpand(angleId);
-      });
-    });
-
-    document.querySelectorAll('.pr-create-from-angle-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const angleId = btn.dataset.angleId;
-        this.createContentFromAngle(angleId);
-      });
-    });
-
-    document.querySelectorAll('.pr-delete-angle-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const angleId = btn.dataset.angleId;
-        await this.deleteAngle(angleId);
-      });
-    });
+    // Event listeners now handled by delegation in setupEventListeners()
+    // This method is no longer needed but kept to avoid breaking calls
   }
 
   isAngleExpanded(angleId) {
@@ -5346,8 +5358,15 @@ class AngleManager {
   }
 
   createContentFromAngle(angleId) {
+    console.log('🎯 createContentFromAngle called with ID:', angleId);
+    
     const angle = this.angles.find(a => a.id === angleId) || this.defaultAngles.find(a => a.id === angleId);
-    if (!angle) return;
+    if (!angle) {
+      console.error('❌ Angle not found for ID:', angleId);
+      return;
+    }
+    
+    console.log('✅ Found angle:', angle.title);
 
     this.activeAngle = angle;
     localStorage.setItem('pr_active_angle', JSON.stringify(angle));
