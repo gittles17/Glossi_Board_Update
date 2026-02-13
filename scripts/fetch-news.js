@@ -113,7 +113,7 @@ async function fetchNews() {
           searchDepth: 'basic',
           topic: 'news',
           days: 30,
-          maxResults: 10,
+          maxResults: 8,  // 5 queries × 8 = 40 potential, will analyze best 20
           includeDomains: ['techcrunch.com', 'theverge.com', 'wired.com', 'venturebeat.com', 'technologyreview.com', 'arstechnica.com', 'fastcompany.com', 'businessinsider.com', 'forbes.com', 'cnbc.com', 'reuters.com', 'bloomberg.com', 'tldr.tech', 'businessoffashion.com', 'theinterline.com']
         });
         
@@ -150,7 +150,7 @@ async function fetchNews() {
     }
     
     // Step 2: Use Claude to analyze relevance and generate summaries
-    const articlesToAnalyze = uniqueResults.slice(0, 40);
+    const articlesToAnalyze = uniqueResults.slice(0, 20);  // Reduced from 40 to 20 for faster processing
     console.log(`Step 2: Sending ${articlesToAnalyze.length} articles to Claude for analysis...\n`);
     
     const analysisPrompt = `You are analyzing news articles for Glossi, an AI-native 3D product visualization platform.
@@ -189,7 +189,7 @@ Return articles in this JSON format:
 Rules:
 - Include articles that are broadly relevant to tech, AI, 3D, visualization, e-commerce, creative industries, marketing, or brand technology
 - Be INCLUSIVE - if there's any connection to these topics, include it
-- Maximum 40 articles (increased from 15)
+- Maximum 20 articles
 - Sort by date (most recent first)
 - Keep summaries and relevance statements concise (one sentence each)
 - Use the exact domain from the SOURCE field for the outlet name`;
