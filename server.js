@@ -282,7 +282,7 @@ app.post('/api/chat', async (req, res) => {
     }
     
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: model || 'claude-sonnet-4-20250514',
+      model: model || 'claude-opus-4-6',
       max_tokens: max_tokens || 4096,
       system: system || '',
       messages
@@ -869,7 +869,7 @@ Return as structured JSON with this exact format:
 }`;
 
         const contactResponse = await axios.post('https://api.anthropic.com/v1/messages', {
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-opus-4-6',
           max_tokens: 1024,
           system: 'You are a research assistant. Always return valid JSON. Only return verified contact information.',
           messages: [{ role: 'user', content: contactPrompt }]
@@ -1418,7 +1418,7 @@ Categories:
 Only include articles from major tech publications. Maximum 8 results.`;
 
     const articlesResponse = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-opus-4-6',
       max_tokens: 4096,
       system: 'You are a research assistant for Glossi, an AI-native 3D product visualization platform. Always return valid JSON.',
       messages: [{ role: 'user', content: articlesPrompt }]

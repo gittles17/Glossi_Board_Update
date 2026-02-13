@@ -4782,7 +4782,7 @@ TONE RULES:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-opus-4-6',
         max_tokens: 4000,
         messages
       })
@@ -4891,7 +4891,7 @@ RULES:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-opus-4-6',
         max_tokens: 2000,
         messages: [{ role: 'user', content: prompt }]
       })
@@ -4997,7 +4997,7 @@ Return JSON:
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-opus-4-6',
           max_tokens: 4000,
           messages: [{ role: 'user', content: prompt }]
         })
@@ -5355,7 +5355,7 @@ Return JSON (only include items that need action):
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-opus-4-6',
           max_tokens: 2000,
           messages: [{ role: 'user', content: prompt }]
         })
@@ -5459,7 +5459,7 @@ RULES:
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-opus-4-6',
           max_tokens: 3000,
           messages: [{ role: 'user', content: prompt }]
         })
@@ -5610,7 +5610,7 @@ RULES:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-opus-4-6',
         max_tokens: 4000,
         messages
       })
@@ -6720,7 +6720,7 @@ RULES:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-opus-4-6',
         max_tokens: 1000,
         messages: [{
           role: 'user',
@@ -6769,7 +6769,7 @@ KEY POINTS:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-opus-4-6',
         max_tokens: 1000,
         messages: [{
           role: 'user',
@@ -6977,7 +6977,7 @@ Rules:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-opus-4-6',
         max_tokens: 4000,
         messages
       })
@@ -7040,7 +7040,7 @@ Respond with JSON:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-opus-4-6',
         max_tokens: 4000,
         messages: [{ role: 'user', content: prompt }]
       })
@@ -7077,7 +7077,7 @@ Respond with JSON:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-opus-4-6',
         max_tokens: 4000,
         messages: [{
           role: 'user',
@@ -7503,7 +7503,7 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-opus-4-6',
           max_tokens: 50,
           messages: [{
             role: 'user',
@@ -7843,7 +7843,7 @@ Content: "${content.substring(0, 300)}"`
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-opus-4-6',
           max_tokens: 100,
           messages: [{
             role: 'user',

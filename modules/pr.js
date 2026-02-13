@@ -1810,7 +1810,7 @@ class PRAgent {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-opus-4-6',
           max_tokens: 8192,
           system: PR_SYSTEM_PROMPT,
           messages: [{ role: 'user', content: userMessage }]
@@ -2569,7 +2569,7 @@ Apply the requested refinement and return ONLY the complete refined content (no 
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-opus-4-6',
           max_tokens: 4096,
           system: systemPrompt,
           messages: [{ role: 'user', content: message }]
@@ -2659,7 +2659,7 @@ Return ONLY the JSON array, nothing else.`;
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-opus-4-6',
           max_tokens: 1024,
           system: systemPrompt,
           messages: [{ role: 'user', content: 'Generate refinement suggestions for this content.' }]
