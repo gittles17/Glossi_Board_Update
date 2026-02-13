@@ -11666,6 +11666,13 @@ a.dropdown-item {
   color: var(--text-secondary);
 }
 
+.pr-history-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
 .pr-history-badge {
   display: inline-flex;
   align-items: center;
@@ -11678,7 +11685,63 @@ a.dropdown-item {
   font-size: 11px;
   font-weight: 600;
   border-radius: 9px;
-  margin-left: auto;
+}
+
+.pr-phase-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.pr-phase-filter-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-color-light);
+}
+
+.pr-phase-filter-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.pr-phase-filter-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  min-width: 120px;
+}
+
+.pr-phase-filter-option {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pr-phase-filter-option:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
 }
 
 .pr-history-chevron {
@@ -11770,6 +11833,81 @@ a.dropdown-item {
 
 .pr-history-delete:hover {
   color: var(--accent-red);
+}
+
+/* Phase Badges */
+.pr-phase-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.pr-phase-badge svg {
+  flex-shrink: 0;
+}
+
+.pr-phase-badge:hover {
+  transform: translateY(-1px);
+  border-color: currentColor;
+}
+
+.pr-phase-edit {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.pr-phase-review {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.pr-phase-publish {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+/* Phase Menu */
+.pr-phase-menu {
+  position: fixed;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  min-width: 100px;
+}
+
+.pr-phase-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pr-phase-menu-item:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.pr-phase-menu-item svg {
+  flex-shrink: 0;
 }
 
 /* Column 2: Workspace Panel */

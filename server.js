@@ -135,6 +135,7 @@ async function initDatabase() {
             citations JSONB,
             strategy JSONB,
             status VARCHAR(20) DEFAULT 'draft',
+            phase VARCHAR(20) DEFAULT 'edit',
             created_at TIMESTAMP DEFAULT NOW()
           )
         `);
@@ -679,18 +680,18 @@ app.get('/api/pr/outputs', async (req, res) => {
 // Save output
 app.post('/api/pr/outputs', async (req, res) => {
   try {
-    const { id, content_type, title, content, sources, citations, strategy, status } = req.body;
+    const { id, content_type, title, content, sources, citations, strategy, status, phase } = req.body;
     
     if (!useDatabase) {
       return res.json({ success: true });
     }
     
     await pool.query(`
-      INSERT INTO pr_outputs (id, content_type, title, content, sources, citations, strategy, status, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+      INSERT INTO pr_outputs (id, content_type, title, content, sources, citations, strategy, status, phase, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
       ON CONFLICT (id) DO UPDATE SET
-        content_type = $2, title = $3, content = $4, sources = $5, citations = $6, strategy = $7, status = $8
-    `, [id, content_type, title, content, JSON.stringify(sources), JSON.stringify(citations), JSON.stringify(strategy), status]);
+        content_type = $2, title = $3, content = $4, sources = $5, citations = $6, strategy = $7, status = $8, phase = $9
+    `, [id, content_type, title, content, JSON.stringify(sources), JSON.stringify(citations), JSON.stringify(strategy), status, phase || 'edit']);
     
     res.json({ success: true });
   } catch (error) {

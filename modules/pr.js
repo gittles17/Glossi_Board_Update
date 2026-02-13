@@ -120,6 +120,7 @@ class PRAgent {
     this.folders = [];
     this.expandedFolders = {};
     this.isDraggingSource = false;
+    this.phaseFilter = 'edit';
   }
 
   async apiCall(url, options = {}, retries = 2) {
@@ -805,6 +806,34 @@ class PRAgent {
         this.dom.customPromptWrap.style.display = isCustom ? 'block' : 'none';
       }
     });
+    
+    // Phase filter button
+    const phaseFilterBtn = document.getElementById('pr-phase-filter-btn');
+    const phaseFilterMenu = document.getElementById('pr-phase-filter-menu');
+    const phaseFilterText = document.getElementById('pr-phase-filter-text');
+    
+    if (phaseFilterBtn && phaseFilterMenu) {
+      phaseFilterBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isVisible = phaseFilterMenu.style.display === 'block';
+        phaseFilterMenu.style.display = isVisible ? 'none' : 'block';
+      });
+      
+      phaseFilterMenu.querySelectorAll('.pr-phase-filter-option').forEach(option => {
+        option.addEventListener('click', () => {
+          this.phaseFilter = option.dataset.phase;
+          const labels = { all: 'All Phases', edit: 'Edit', review: 'Review', publish: 'Publish' };
+          phaseFilterText.textContent = labels[this.phaseFilter];
+          phaseFilterMenu.style.display = 'none';
+          this.renderHistory();
+        });
+      });
+      
+      // Close menu on outside click
+      document.addEventListener('click', () => {
+        phaseFilterMenu.style.display = 'none';
+      });
+    }
 
     // Generate buttons (desktop and mobile)
     this.dom.generateBtn?.addEventListener('click', () => this.generateContent());
@@ -1648,14 +1677,19 @@ class PRAgent {
   renderHistory() {
     if (!this.dom.historyList) return;
 
+    // Filter outputs by phase
+    const filtered = this.phaseFilter === 'all' 
+      ? this.outputs 
+      : this.outputs.filter(o => (o.phase || 'edit') === this.phaseFilter);
+
     // Update count badge
     const countBadge = document.getElementById('pr-history-count');
     if (countBadge) {
-      countBadge.textContent = this.outputs.length;
-      countBadge.style.display = this.outputs.length > 0 ? 'inline-flex' : 'none';
+      countBadge.textContent = filtered.length;
+      countBadge.style.display = filtered.length > 0 ? 'inline-flex' : 'none';
     }
 
-    if (this.outputs.length === 0) {
+    if (filtered.length === 0) {
       this.dom.historyList.innerHTML = '';
       if (this.dom.historyEmpty) this.dom.historyEmpty.style.display = 'block';
       return;
@@ -1663,17 +1697,24 @@ class PRAgent {
 
     if (this.dom.historyEmpty) this.dom.historyEmpty.style.display = 'none';
 
-    const sorted = [...this.outputs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const sorted = [...filtered].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     this.dom.historyList.innerHTML = sorted.map(output => {
       const date = new Date(output.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const time = new Date(output.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
       const typeLabel = CONTENT_TYPES.find(t => t.id === output.content_type)?.label || output.content_type;
+      const phase = output.phase || 'edit';
+      const phaseConfig = this.getPhaseConfig(phase);
+      
       return `
         <div class="pr-history-item" data-output-id="${output.id}">
           <div class="pr-history-info">
             <span class="pr-history-title">${this.escapeHtml(output.title || 'Untitled')}</span>
             <span class="pr-history-meta">
+              <span class="pr-phase-badge pr-phase-${phase}" data-output-id="${output.id}" title="Click to change phase">
+                ${phaseConfig.icon}
+                <span>${phaseConfig.label}</span>
+              </span>
               <span class="pr-history-type">${typeLabel}</span>
               <span class="pr-history-date">${date} at ${time}</span>
             </span>
@@ -1691,6 +1732,7 @@ class PRAgent {
     this.dom.historyList.querySelectorAll('.pr-history-item').forEach(item => {
       item.addEventListener('click', (e) => {
         if (e.target.closest('[data-history-delete]')) return;
+        if (e.target.closest('.pr-phase-badge')) return;
         this.loadOutput(item.dataset.outputId);
       });
     });
@@ -1713,6 +1755,93 @@ class PRAgent {
         this.saveOutputs();
       });
     });
+    
+    // Phase badge click handlers
+    this.dom.historyList.querySelectorAll('.pr-phase-badge').forEach(badge => {
+      badge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const outputId = badge.dataset.outputId;
+        this.showPhaseMenu(outputId, badge);
+      });
+    });
+  }
+  
+  getPhaseConfig(phase) {
+    const configs = {
+      edit: {
+        label: 'Edit',
+        icon: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
+        color: '#f59e0b'
+      },
+      review: {
+        label: 'Review',
+        icon: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+        color: '#3b82f6'
+      },
+      publish: {
+        label: 'Publish',
+        icon: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+        color: '#10b981'
+      }
+    };
+    return configs[phase] || configs.edit;
+  }
+  
+  showPhaseMenu(outputId, badge) {
+    const existingMenu = document.querySelector('.pr-phase-menu');
+    if (existingMenu) existingMenu.remove();
+    
+    const menu = document.createElement('div');
+    menu.className = 'pr-phase-menu';
+    menu.innerHTML = `
+      <button class="pr-phase-menu-item" data-phase="edit">
+        ${this.getPhaseConfig('edit').icon} Edit
+      </button>
+      <button class="pr-phase-menu-item" data-phase="review">
+        ${this.getPhaseConfig('review').icon} Review
+      </button>
+      <button class="pr-phase-menu-item" data-phase="publish">
+        ${this.getPhaseConfig('publish').icon} Publish
+      </button>
+    `;
+    
+    const rect = badge.getBoundingClientRect();
+    menu.style.top = rect.bottom + 5 + 'px';
+    menu.style.left = rect.left + 'px';
+    document.body.appendChild(menu);
+    
+    menu.querySelectorAll('.pr-phase-menu-item').forEach(item => {
+      item.addEventListener('click', () => {
+        this.changePhase(outputId, item.dataset.phase);
+        menu.remove();
+      });
+    });
+    
+    // Close menu on outside click
+    setTimeout(() => {
+      document.addEventListener('click', () => menu.remove(), { once: true });
+    }, 0);
+  }
+  
+  async changePhase(outputId, newPhase) {
+    const output = this.outputs.find(o => o.id === outputId);
+    if (!output) return;
+    
+    output.phase = newPhase;
+    this.renderHistory();
+    
+    // Save to API
+    try {
+      await fetch('/api/pr/outputs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(output)
+      });
+    } catch (error) {
+      console.error('Error updating phase:', error);
+    }
+    
+    this.saveOutputs();
   }
 
   loadOutput(id) {
@@ -1901,7 +2030,8 @@ class PRAgent {
         sources: selectedSources.map(s => s.id),
         citations: parsed.citations || [],
         strategy: parsed.strategy || null,
-        status: 'draft'
+        status: 'draft',
+        phase: 'edit'
       };
 
       this.currentOutput = output;
