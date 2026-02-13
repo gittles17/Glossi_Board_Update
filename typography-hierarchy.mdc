@@ -1,0 +1,41 @@
+---
+description: Typography hierarchy and visual usability rules applied to all UI work
+alwaysApply: true
+---
+
+# Typography Hierarchy Rules
+
+Apply these principles whenever generating, reviewing, or modifying UI code. Source: [Raw.Studio - How Typography Hierarchy Boosts UI Usability](https://raw.studio/blog/how-typography-hierarchy-boosts-ui-usability/)
+
+## Core Principle
+
+Users scan, they do not read. ~79% of users scan pages. Typography hierarchy must guide attention, reduce cognitive load, and support instant orientation.
+
+## Hierarchy Levels (always maintain clear separation)
+
+1. **Primary (Page Title / H1)**: Largest, semibold. Defines the screen's purpose. Use once per screen.
+2. **Secondary (Section Heading / H2)**: Clearly smaller than H1, semibold. Breaks content into scannable sections.
+3. **Tertiary (Subheading / H3)**: Medium weight, smaller than H2. Groups content within sections.
+4. **Body**: Regular weight, optimized for readability with generous line-height (~1.5-1.6).
+5. **Supporting / Meta**: Smallest, muted color. Used for labels, captions, helper text, timestamps.
+
+## Rules to Follow
+
+- **Distinct size steps**: Each hierarchy level must be visually distinct. Avoid subtle differences that require interpretation. Minimum 4px step between adjacent levels.
+- **Limit font sizes**: Use no more than 5-6 text sizes across an interface. Each additional size increases ambiguity.
+- **Restrained emphasis**: Use bold and accent colors sparingly. When emphasis is everywhere, hierarchy collapses.
+- **Consistent heading styles**: Heading styles must be identical across all screens. Users learn scanning patterns; inconsistency breaks them.
+- **Spacing signals importance**: Add generous whitespace above headings. Vertical rhythm should reinforce grouping (more space between sections, less within).
+- **Contrast for readability**: Primary text must have high contrast against backgrounds. Supporting text can be lower contrast but must remain readable (WCAG AA minimum).
+- **One font family max two**: Limit to one primary family (plus optionally one monospace for data). More families add noise.
+- **Position matters**: Place key text where scanning patterns expect it (top, left-aligned). Primary headings near the top of the viewport.
+- **Actions stand out**: Primary actions must be visually distinct from secondary details. Typography hierarchy should make the intended next step obvious.
+
+## Anti-Patterns (never do these)
+
+- Too many font sizes or weights competing for attention
+- Bold or colored text used so frequently it loses meaning
+- Inconsistent heading styles between pages or sections
+- Low-contrast text that looks subtle in design tools but fails in real conditions
+- Dense layouts with insufficient spacing between hierarchy levels
+- Body text that is too large or heavy, collapsing the gap with headings
