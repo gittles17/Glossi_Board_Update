@@ -1205,13 +1205,14 @@ Return articles in this JSON format:
 }
 
 Rules:
-- CRITICAL: Return 12-18 articles (expanded topics = more good articles available)
+- CRITICAL: Return ONLY 12-18 articles that you would actually recommend
+- Do NOT include articles you're marking as "Excluded", "Minimal relevance", or questionable fit
+- If an article doesn't clearly fit one of the 17 topics, DON'T RETURN IT (don't include it with "excluded" note)
 - Remove duplicates (same story from different outlets = pick one)
-- With broader topics, you should find MORE quality articles
-- Good relevance: direct and specific. Bad: generic or forced
-- Examples of GOOD articles: "Shopify adds 3D viewer", "CMO survey shows content bottleneck", "DTC brand raises funding", "Canva prices for enterprise"
-- Examples of BAD articles: "Waymo robotaxis", "Space tech", "Generic AI chip news"
-- In 'relevance': explain which of the 17 topic areas this fits and why
+- Good articles: direct connection to one of the 17 topics
+- Examples of GOOD: "Shopify adds 3D viewer", "CMO survey shows content bottleneck", "DTC brand raises funding", "Canva prices for enterprise"
+- Examples to EXCLUDE: "Waymo robotaxis", "Wildlife trafficking", "Celebrity fitness", "Generic policy"
+- In 'relevance': state which topic # and explain the connection
 - Prioritize: last 14 days > last 30 days > older
 - Sort by relevance (most direct connection first)
 - Use exact domain from SOURCE field for outlet name`;
