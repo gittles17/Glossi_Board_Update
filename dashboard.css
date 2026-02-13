@@ -13297,8 +13297,22 @@ a.dropdown-item {
   white-space: pre-wrap;
 }
 
-/* PR page responsive */
-@media screen and (max-width: 900px) {
+/* PR page responsive - DESKTOP SAFEGUARD */
+@media screen and (min-width: 641px) {
+  /* Force desktop layout above 640px */
+  .pr-sources-panel,
+  .pr-workspace-panel,
+  .pr-right-panel {
+    display: flex !important;
+  }
+  
+  .pr-mobile-tabs {
+    display: none !important;
+  }
+}
+
+/* PR page responsive - MOBILE ONLY */
+@media screen and (max-width: 640px) {
   .pr-mobile-tabs {
     display: flex;
   }
@@ -13326,7 +13340,7 @@ a.dropdown-item {
 
   /* Default: sources visible on mobile */
   .pr-sources-panel {
-    display: flex;
+    display: flex !important;
   }
 
   .pr-right-panel {
