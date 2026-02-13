@@ -1065,10 +1065,10 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     for (const query of searchQueries) {
       try {
         const searchResult = await tvly.search(query, {
-          searchDepth: 'advanced',  // Changed from 'basic' to get more comprehensive results
+          searchDepth: 'basic',  // Using basic for speed/reliability - advanced was timing out on Railway
           topic: 'news',
           days: 30,
-          maxResults: 8,  // Reduced per query since we added more queries
+          maxResults: 8,
           includeDomains: ['techcrunch.com', 'theverge.com', 'wired.com', 'venturebeat.com', 'technologyreview.com', 'arstechnica.com', 'fastcompany.com', 'businessinsider.com', 'forbes.com', 'cnbc.com', 'reuters.com', 'bloomberg.com', 'tldr.tech', 'businessoffashion.com', 'theinterline.com']
         });
         
