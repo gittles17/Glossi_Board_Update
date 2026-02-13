@@ -1700,11 +1700,36 @@ class PRAgent {
     const sorted = [...filtered].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     this.dom.historyList.innerHTML = sorted.map(output => {
-      const date = new Date(output.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const time = new Date(output.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
       const typeLabel = CONTENT_TYPES.find(t => t.id === output.content_type)?.label || output.content_type;
       const phase = output.phase || 'edit';
       const phaseConfig = this.getPhaseConfig(phase);
+      
+      // Format date
+      let dateText = 'Recently';
+      try {
+        const date = new Date(output.createdAt);
+        if (!isNaN(date.getTime())) {
+          const now = new Date();
+          const diffMs = now - date;
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffHours = Math.floor(diffMs / 3600000);
+          const diffDays = Math.floor(diffMs / 86400000);
+          
+          if (diffMins < 1) {
+            dateText = 'Just now';
+          } else if (diffMins < 60) {
+            dateText = `${diffMins}m ago`;
+          } else if (diffHours < 24) {
+            dateText = `${diffHours}h ago`;
+          } else if (diffDays < 7) {
+            dateText = `${diffDays}d ago`;
+          } else {
+            dateText = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          }
+        }
+      } catch (e) {
+        dateText = 'Recently';
+      }
       
       return `
         <div class="pr-history-item" data-output-id="${output.id}">
@@ -1716,7 +1741,7 @@ class PRAgent {
                 <span>${phaseConfig.label}</span>
               </span>
               <span class="pr-history-type">${typeLabel}</span>
-              <span class="pr-history-date">${date} at ${time}</span>
+              <span class="pr-history-date">${dateText}</span>
             </span>
           </div>
           <button class="pr-history-delete" data-history-delete="${output.id}" title="Delete">
