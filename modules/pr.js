@@ -1337,10 +1337,21 @@ class PRAgent {
     const renderSourceItem = (source) => {
       const date = new Date(source.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const preview = (source.content || '').substring(0, 100);
+      const loadingClass = source.loading ? 'loading' : '';
+      const loadingIndicator = source.loading ? `
+        <div class="pr-source-loading-overlay">
+          <svg class="spinning" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" opacity="0.25"></circle>
+            <path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path>
+          </svg>
+          <span>Saving...</span>
+        </div>
+      ` : '';
       return `
-        <div class="pr-source-item ${source.selected ? 'selected' : ''}" data-source-id="${source.id}" draggable="true">
+        <div class="pr-source-item ${source.selected ? 'selected' : ''} ${loadingClass}" data-source-id="${source.id}" draggable="true">
+          ${loadingIndicator}
           <label class="pr-source-checkbox">
-            <input type="checkbox" ${source.selected ? 'checked' : ''} data-action="toggle" data-id="${source.id}">
+            <input type="checkbox" ${source.selected ? 'checked' : ''} data-action="toggle" data-id="${source.id}" ${source.loading ? 'disabled' : ''}>
           </label>
           <div class="pr-source-info" data-action="open-wizard" data-id="${source.id}">
             <div class="pr-source-header">
@@ -1352,7 +1363,7 @@ class PRAgent {
               ${preview ? `<span class="pr-source-preview">${this.escapeHtml(preview)}</span>` : ''}
             </div>
           </div>
-          <button class="pr-source-delete" data-action="delete" data-id="${source.id}" title="Delete source">
+          <button class="pr-source-delete" data-action="delete" data-id="${source.id}" title="Delete source" ${source.loading ? 'disabled' : ''}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -4064,7 +4075,18 @@ class NewsMonitor {
     container.querySelectorAll('.pr-use-hook-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const index = parseInt(btn.dataset.newsIndex);
-        this.useAsHook(this.newsHooks[index]);
+        
+        // Immediate visual feedback
+        btn.disabled = true;
+        btn.innerHTML = `
+          <svg class="spinning" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" opacity="0.25"></circle>
+            <path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path>
+          </svg>
+          Adding...
+        `;
+        
+        this.useAsHook(this.newsHooks[index], btn);
       });
     });
   }
@@ -4073,7 +4095,12 @@ class NewsMonitor {
     // Deprecated - kept for compatibility
   }
 
-  async useAsHook(newsItem) {
+  async useAsHook(newsItem, btn) {
+    // 1. IMMEDIATELY switch to Sources tab (instant navigation)
+    const sourcesTab = document.querySelector('.pr-left-tab[data-left-tab="sources"]');
+    if (sourcesTab) sourcesTab.click();
+    
+    // 2. Build source object
     const sourceContent = `
 NEWS HOOK: ${newsItem.headline}
 
@@ -4095,31 +4122,46 @@ ${newsItem.relevance}
       content: sourceContent,
       url: newsItem.url,
       createdAt: new Date().toISOString(),
-      selected: true
+      selected: true,
+      loading: true
     };
 
-    // Save to API
-    try {
-      await fetch('/api/pr/sources', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(source)
-      });
+    // 3. Add to sources IMMEDIATELY (optimistic update)
+    this.prAgent.sources.unshift(source);
+    this.prAgent.renderSources();
+    this.prAgent.updateGenerateButton();
 
-      this.prAgent.sources.push(source);
-      await this.prAgent.loadData();
+    // 4. Sync with API in background (non-blocking)
+    fetch('/api/pr/sources', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(source)
+    })
+    .then(() => {
+      // Mark as successfully saved
+      delete source.loading;
+      this.prAgent.renderSources();
+    })
+    .catch(error => {
+      console.error('Error saving news hook as source:', error);
+      // Remove from UI on error
+      this.prAgent.sources = this.prAgent.sources.filter(s => s.id !== source.id);
       this.prAgent.renderSources();
       this.prAgent.updateGenerateButton();
-      
-      this.prAgent.showToast('News hook added to sources', 'success');
-      
-      // Switch to Sources tab to show the new source
-      const sourcesTab = document.querySelector('.pr-left-tab[data-left-tab="sources"]');
-      if (sourcesTab) sourcesTab.click();
-    } catch (error) {
-      console.error('Error saving news hook as source:', error);
-      this.prAgent.showToast('Failed to add news hook', 'error');
-    }
+    })
+    .finally(() => {
+      // Re-enable button
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Use as Hook
+        `;
+      }
+    });
   }
 
   escapeHtml(str) {

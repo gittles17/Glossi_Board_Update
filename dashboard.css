@@ -11583,6 +11583,40 @@ a.dropdown-item {
   flex-shrink: 0;
 }
 
+/* Loading state for sources */
+.pr-source-item.loading {
+  position: relative;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.pr-source-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius-md);
+  z-index: 1;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .pr-source-item:hover .pr-source-delete {
   opacity: 1;
 }
