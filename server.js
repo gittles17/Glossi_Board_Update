@@ -292,7 +292,7 @@ app.post('/api/chat', async (req, res) => {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
-      timeout: 60000
+      timeout: 180000
     });
     
     res.json(response.data);
