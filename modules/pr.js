@@ -2496,8 +2496,8 @@ class PRAgent {
       </div>`;
     }
 
-    // Timing & Hooks
-    if (strategy.timing || (strategy.hooks && strategy.hooks.length > 0)) {
+    // Timing & Hooks (only if strategy exists)
+    if (strategy && (strategy.timing || (strategy.hooks && strategy.hooks.length > 0))) {
       html += `<div class="pr-strategy-section">
         <h4 class="pr-strategy-heading">Timing & Hooks</h4>
         ${strategy.timing ? `<p class="pr-strategy-text">${this.escapeHtml(strategy.timing)}</p>` : ''}
@@ -2509,8 +2509,8 @@ class PRAgent {
       </div>`;
     }
 
-    // Journalist Targets
-    if (strategy.journalistBeats && strategy.journalistBeats.length > 0) {
+    // Journalist Targets (only if strategy exists)
+    if (strategy && strategy.journalistBeats && strategy.journalistBeats.length > 0) {
       html += `<div class="pr-strategy-section">
         <h4 class="pr-strategy-heading">Journalist Targets</h4>
         <p class="pr-strategy-subtext">Look for reporters covering:</p>
@@ -2520,8 +2520,8 @@ class PRAgent {
       </div>`;
     }
 
-    // Amplification Playbook
-    if (strategy.amplification) {
+    // Amplification Playbook (only if strategy exists)
+    if (strategy && strategy.amplification) {
       const amp = strategy.amplification;
       html += `<div class="pr-strategy-section">
         <h4 class="pr-strategy-heading">Amplification Playbook</h4>`;
