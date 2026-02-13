@@ -3896,7 +3896,7 @@ class NewsMonitor {
   constructor(prAgent) {
     this.prAgent = prAgent;
     this.newsHooks = [];
-    this.displayedNewsCount = 10; // Show 10 news items initially
+    this.displayedNewsCount = 6; // Show 6 news items initially (2 rows of 3)
     
     // Filter state
     this.filters = {
@@ -3940,7 +3940,7 @@ class NewsMonitor {
   }
 
   showMoreNews() {
-    this.displayedNewsCount += 10;
+    this.displayedNewsCount += 6; // Load 6 more items (2 rows of 3)
     this.renderNews();
   }
   
@@ -3965,8 +3965,30 @@ class NewsMonitor {
   }
   
   showOutletFilter() {
-    // Get unique outlets from current news
-    const outlets = [...new Set(this.newsHooks.map(item => item.outlet))].sort();
+    // All possible outlets (matching server includeDomains configuration)
+    const allOutlets = [
+      'TechCrunch',
+      'The Verge',
+      'WIRED',
+      'VentureBeat',
+      'MIT Technology Review',
+      'Ars Technica',
+      'Fast Company',
+      'Business Insider',
+      'Forbes',
+      'CNBC',
+      'Reuters',
+      'Bloomberg',
+      'TLDR',
+      'Business of Fashion',
+      'The Interline'
+    ].sort();
+    
+    // Get outlets that are actually in current news
+    const availableOutlets = [...new Set(this.newsHooks.map(item => item.outlet))];
+    
+    // Show all outlets, mark unavailable ones
+    const outlets = allOutlets;
     
     // Create filter modal
     const modal = document.createElement('div');
@@ -3979,12 +4001,17 @@ class NewsMonitor {
         </div>
         <div class="modal-body">
           <div class="pr-outlet-filter-list">
-            ${outlets.map(outlet => `
-              <label class="pr-outlet-filter-item">
-                <input type="checkbox" value="${this.escapeHtml(outlet)}" ${this.filters.outlets.includes(outlet) ? 'checked' : ''}>
-                <span>${this.escapeHtml(outlet)}</span>
-              </label>
-            `).join('')}
+            ${outlets.map(outlet => {
+              const isAvailable = availableOutlets.includes(outlet);
+              const count = this.newsHooks.filter(item => item.outlet === outlet).length;
+              return `
+                <label class="pr-outlet-filter-item ${!isAvailable ? 'disabled' : ''}">
+                  <input type="checkbox" value="${this.escapeHtml(outlet)}" ${this.filters.outlets.includes(outlet) ? 'checked' : ''} ${!isAvailable ? 'disabled' : ''}>
+                  <span>${this.escapeHtml(outlet)}</span>
+                  ${isAvailable ? `<span class="pr-outlet-count">(${count})</span>` : '<span class="pr-outlet-unavailable">No news</span>'}
+                </label>
+              `;
+            }).join('')}
           </div>
         </div>
         <div class="modal-footer">
