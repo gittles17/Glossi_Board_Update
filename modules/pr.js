@@ -1812,6 +1812,18 @@ class PRAgent {
 
     this.isGenerating = true;
     this.updateGenerateButton();
+    
+    // Switch to workspace tab immediately
+    const workspaceTab = document.querySelector('[data-workspace-tab="content"]');
+    if (workspaceTab) {
+      workspaceTab.click();
+    }
+    // Also handle mobile tab switch
+    const mobileWorkspaceTab = document.querySelector('.pr-mobile-tab[data-tab="workspace"]');
+    if (mobileWorkspaceTab) {
+      mobileWorkspaceTab.click();
+    }
+    
     this.showLoading();
 
     const sourcesContext = selectedSources.map((s, i) => {
@@ -1934,10 +1946,52 @@ class PRAgent {
     if (this.dom.workspaceEmpty) this.dom.workspaceEmpty.style.display = 'none';
     if (this.dom.workspaceGenerated) this.dom.workspaceGenerated.style.display = 'none';
     if (this.dom.loadingState) this.dom.loadingState.style.display = 'flex';
+    
+    // Animate progress bar
+    this.startProgressBar();
   }
 
   hideLoading() {
     if (this.dom.loadingState) this.dom.loadingState.style.display = 'none';
+    
+    // Clear progress bar
+    this.stopProgressBar();
+  }
+  
+  startProgressBar() {
+    const progressBar = document.getElementById('pr-progress-bar');
+    if (!progressBar) return;
+    
+    // Reset
+    progressBar.style.width = '0%';
+    
+    // Simulate progress over ~90 seconds (typical generation time)
+    let progress = 0;
+    this.progressInterval = setInterval(() => {
+      // Slow down as it gets closer to 95%
+      const increment = progress < 50 ? 1.5 : progress < 80 ? 0.8 : 0.3;
+      progress = Math.min(95, progress + increment);
+      progressBar.style.width = progress + '%';
+      
+      if (progress >= 95) {
+        clearInterval(this.progressInterval);
+      }
+    }, 1000);
+  }
+  
+  stopProgressBar() {
+    const progressBar = document.getElementById('pr-progress-bar');
+    if (this.progressInterval) {
+      clearInterval(this.progressInterval);
+      this.progressInterval = null;
+    }
+    if (progressBar) {
+      // Complete the progress bar
+      progressBar.style.width = '100%';
+      setTimeout(() => {
+        progressBar.style.width = '0%';
+      }, 500);
+    }
   }
 
   showWorkspace() {

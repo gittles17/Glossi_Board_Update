@@ -12392,6 +12392,23 @@ a.dropdown-item {
   to { transform: rotate(360deg); }
 }
 
+.pr-progress-bar-container {
+  width: 200px;
+  height: 3px;
+  background: var(--border-color);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: var(--space-2);
+}
+
+.pr-progress-bar {
+  height: 100%;
+  background: var(--accent-green);
+  width: 0%;
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
 /* Generated content */
 .pr-workspace-generated {
   position: relative;
