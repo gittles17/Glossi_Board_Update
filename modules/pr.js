@@ -3900,7 +3900,7 @@ class NewsMonitor {
     
     // Filter state
     this.filters = {
-      dateRange: 'all', // Default: show all news (no date filter)
+      dateRange: 30, // Default: last 30 days
       outlets: [] // Empty = all outlets
     };
   }
@@ -3945,15 +3945,15 @@ class NewsMonitor {
   }
   
   clearFilters() {
-    this.filters.dateRange = 'all';
+    this.filters.dateRange = 30;
     this.filters.outlets = [];
-    if (this.dom.dateFilter) this.dom.dateFilter.value = 'all';
+    if (this.dom.dateFilter) this.dom.dateFilter.value = '30';
     this.renderNews();
     this.updateClearButton();
   }
   
   updateClearButton() {
-    const hasFilters = this.filters.dateRange !== 'all' || this.filters.outlets.length > 0;
+    const hasFilters = this.filters.dateRange !== 30 || this.filters.outlets.length > 0;
     if (this.dom.clearFilters) {
       this.dom.clearFilters.style.display = hasFilters ? 'block' : 'none';
     }
