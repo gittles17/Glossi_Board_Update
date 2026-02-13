@@ -1690,7 +1690,6 @@ class PRAgent {
         });
         
         this.saveOutputs();
-        }
       });
     });
   }
@@ -3802,12 +3801,6 @@ class MediaManager {
     }).catch(error => {
       console.error('Error deleting journalist:', error);
     });
-
-      this.prAgent.showToast('Journalist deleted', 'success');
-    } catch (error) {
-      console.error('Error deleting journalist:', error);
-      this.prAgent.showToast('Failed to delete journalist', 'error');
-    }
   }
 
   viewJournalistDetails(journalistId) {
