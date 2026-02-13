@@ -1153,14 +1153,14 @@ Return articles in this JSON format:
 Rules:
 - Include articles that are broadly relevant to tech, AI, 3D, visualization, e-commerce, creative industries, marketing, or brand technology
 - Be INCLUSIVE - if there's any connection to these topics, include it
-- Maximum 40 articles
+- Maximum 30 articles
 - Sort by date (most recent first)
 - Keep summaries and relevance statements concise (one sentence each)
 - Use the exact domain from the SOURCE field for the outlet name`;
 
     const analysisResponse = await axios.post('https://api.anthropic.com/v1/messages', {
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: 'You are a strategic communications analyst. Return only valid JSON.',
       messages: [{ role: 'user', content: analysisPrompt }]
     }, {
