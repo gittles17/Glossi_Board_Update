@@ -13310,25 +13310,41 @@ a.dropdown-item {
   padding: var(--space-3);
 }
 
-/* Prevent any circular overlays or artifacts */
-.pr-strategy-panel *::before,
-.pr-strategy-panel *::after,
-.pr-media-panel-body *::before,
-.pr-media-panel-body *::after {
+/* AGGRESSIVE FIX: Remove ALL border-radius and circular elements from Media section */
+.pr-strategy-panel,
+.pr-strategy-panel *,
+.pr-right-panel-tabs,
+.pr-right-panel-tabs *,
+.pr-right-panel-tab-content,
+.pr-right-panel-tab-content *,
+.pr-media-panel-body,
+.pr-media-panel-body *,
+.pr-media-view,
+.pr-media-view *,
+.pr-media-header,
+.pr-media-header *,
+.pr-media-toggle,
+.pr-media-toggle *,
+.pr-media-discover,
+.pr-media-discover *,
+.pr-media-outlets,
+.pr-media-outlets *,
+.pr-outlet-tier,
+.pr-outlet-tier *,
+.pr-outlet-cards,
+.pr-outlet-cards *,
+.pr-outlet-card,
+.pr-outlet-card * {
   border-radius: 0 !important;
 }
 
+/* Remove all pseudo-elements */
 .pr-strategy-panel::before,
 .pr-strategy-panel::after,
-.pr-right-panel-tab-content::before,
-.pr-right-panel-tab-content::after,
-.pr-media-panel-body::before,
-.pr-media-panel-body::after,
-.pr-media-view::before,
-.pr-media-view::after,
-.pr-media-discover::before,
-.pr-media-discover::after {
+.pr-strategy-panel *::before,
+.pr-strategy-panel *::after {
   display: none !important;
+  content: none !important;
 }
 
 .pr-loading-text,
