@@ -1047,23 +1047,16 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     console.log('Searching for news with Tavily...');
     
     const searchQueries = [
-      // AI/ML/Generative AI (2 queries)
-      'generative AI marketing creative tools',
-      'AI image generation visual content',
-      // 3D Visualization/Computer Vision (2 queries)
-      '3D product visualization rendering',
-      'computer vision image recognition retail',
-      // E-commerce/Product/Retail (3 queries)
-      'e-commerce product photography AI',
-      'retail technology digital transformation',
-      'online shopping visual merchandising',
-      // Marketing/Creative AI (2 queries)
-      'marketing automation AI content creation',
-      'creative technology advertising tools',
-      // Enterprise AI/Brand Tech (2 queries)
-      'enterprise AI adoption brand strategy',
-      // Fashion/Digital Innovation (1 query)
-      'fashion technology e-commerce digital innovation'
+      'AI machine learning generative AI LLM',
+      '3D rendering visualization computer vision',
+      'e-commerce product visualization retail tech',
+      'marketing technology creative AI tools',
+      'enterprise AI adoption brand technology',
+      'AR VR metaverse spatial computing',
+      'design software CAD 3D modeling',
+      'fashion technology digital innovation',
+      'semiconductor chip manufacturing AI',
+      'robotics automation computer vision'
     ];
     
     let allResults = [];
@@ -1075,7 +1068,7 @@ app.post('/api/pr/news-hooks', async (req, res) => {
           searchDepth: 'basic',  // Using basic for speed/reliability - advanced was timing out on Railway
           topic: 'news',
           days: 30,
-          maxResults: 7,  // 12 queries × 7 results = 84 potential articles
+          maxResults: 6,  // 10 queries × 6 results = 60 potential articles
           includeDomains: ['techcrunch.com', 'theverge.com', 'wired.com', 'venturebeat.com', 'technologyreview.com', 'arstechnica.com', 'fastcompany.com', 'businessinsider.com', 'forbes.com', 'cnbc.com', 'reuters.com', 'bloomberg.com', 'tldr.tech', 'businessoffashion.com', 'theinterline.com']
         });
         
