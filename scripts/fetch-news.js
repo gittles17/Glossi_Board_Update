@@ -163,7 +163,7 @@ async function fetchNews() {
     }
     
     // Step 2: Use Claude to analyze relevance and generate summaries
-    const articlesToAnalyze = uniqueResults.slice(0, 50);  // Analyze up to 50 articles from RSS
+    const articlesToAnalyze = uniqueResults.slice(0, 30);  // Analyze up to 30 articles for faster processing
     console.log(`Step 2: Sending ${articlesToAnalyze.length} articles to Claude for analysis...\n`);
     
     const analysisPrompt = `You are analyzing news articles for Glossi, an AI-native 3D product visualization platform.

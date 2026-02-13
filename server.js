@@ -1114,7 +1114,7 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     }
     
     // Step 2: Use Claude to analyze relevance and generate summaries
-    const articlesToAnalyze = uniqueResults.slice(0, 50);  // Analyze up to 50 articles
+    const articlesToAnalyze = uniqueResults.slice(0, 30);  // Analyze up to 30 articles for faster response
     console.log(`Sending ${articlesToAnalyze.length} articles to Claude for analysis`);
     
     const analysisPrompt = `You are analyzing news articles for Glossi, an AI-native 3D product visualization platform.
