@@ -93,16 +93,7 @@
       <!-- Strategy Stage Content -->
       <div class="pr-sources-panel pr-stage-content active" id="pr-sources-panel" data-stage="strategy">
         
-        <!-- Tab Navigation -->
-        <div class="pr-panel-tabs">
-          <button class="pr-panel-tab active" data-panel-tab="strategy">Strategy</button>
-          <button class="pr-panel-tab" data-panel-tab="sources">Sources</button>
-          <button class="pr-panel-tab" data-panel-tab="library">Library</button>
-        </div>
-
-        <!-- Tab Content: Strategy -->
-        <div class="pr-panel-tab-content active" id="pr-tab-strategy">
-          <!-- News Hooks Section -->
+        <!-- News Hooks Section -->
           <div class="pr-workflow-section pr-news-hooks-section">
             <div class="pr-workflow-header">
               <h2 class="pr-workflow-title">What's Happening Now</h2>
@@ -167,12 +158,46 @@
               <!-- Tracker content populated by JS -->
             </div>
           </div>
+
+        <!-- Sources Section (moved from nested tab) -->
+        <div class="pr-workflow-section pr-sources-section">
+          <div class="pr-workflow-header pr-sources-header">
+            <h2 class="pr-workflow-title pr-sources-label">Sources</h2>
+            <span class="pr-sources-count" id="pr-sources-count">0</span>
+            <button class="pr-create-folder-btn" id="pr-create-folder-btn" title="Create Folder">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="pr-source-search-wrap">
+            <input type="text" class="pr-source-search" id="pr-source-search" placeholder="Search sources...">
+          </div>
+          <div class="pr-sources-list pr-drop-zone" id="pr-sources-list">
+            <div class="pr-sources-empty" id="pr-sources-empty">
+              <p>No sources yet</p>
+            </div>
+          </div>
+          <button class="pr-add-source-btn" id="pr-add-source-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Add Source</span>
+          </button>
         </div>
 
-        <!-- Tab Content: Sources (formerly Research) -->
-        <div class="pr-panel-tab-content" id="pr-tab-sources">
-          <!-- Content Type and Generate Button -->
-          <div class="pr-generation-controls">
+      </div>
+
+      <!-- Resizer between left and center -->
+      <div class="pr-resizer" id="pr-resizer-left" data-resize="left"></div>
+
+      <!-- Create Stage Content -->
+      <div class="pr-workspace-panel pr-stage-content" id="pr-workspace-panel" data-stage="create">
+        
+        <!-- Content Type and Generate Button (moved from old mobile controls) -->
+        <div class="pr-generation-controls" style="display:none;">
             <select class="pr-content-type-select" id="pr-content-type-mobile">
               <option value="press_release">Press Release</option>
               <option value="media_pitch">Media Pitch Email</option>
@@ -220,35 +245,6 @@
               </svg>
               <span>Add Source</span>
             </button>
-          </div>
-        </div>
-
-        <!-- Tab Content: Library -->
-        <div class="pr-panel-tab-content" id="pr-tab-library">
-          <div class="pr-workflow-section pr-library-section">
-            <div class="pr-workflow-header pr-history-header">
-              <h2 class="pr-workflow-title">Content Library</h2>
-              <div class="pr-history-controls">
-                <span class="pr-history-badge" id="pr-history-count">0</span>
-                <button class="pr-phase-filter-btn" id="pr-phase-filter-btn">
-                  <span id="pr-phase-filter-text">Edit</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </button>
-                <div class="pr-phase-filter-menu" id="pr-phase-filter-menu" style="display:none">
-                  <button class="pr-phase-filter-option" data-phase="all">All Phases</button>
-                  <button class="pr-phase-filter-option" data-phase="edit">Edit</button>
-                  <button class="pr-phase-filter-option" data-phase="review">Review</button>
-                  <button class="pr-phase-filter-option" data-phase="publish">Publish</button>
-                </div>
-              </div>
-            </div>
-            <div class="pr-history-list" id="pr-history-list">
-              <div class="pr-history-empty" id="pr-history-empty">
-                <p>No content saved</p>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -412,6 +408,34 @@
             </div>
           </div>
         </div>
+
+        <!-- Content History Section (moved from Strategy nested tab) -->
+        <div class="pr-workflow-section pr-library-section">
+          <div class="pr-workflow-header pr-history-header">
+            <h2 class="pr-workflow-title">Content History</h2>
+            <div class="pr-history-controls">
+              <span class="pr-history-badge" id="pr-history-count">0</span>
+              <button class="pr-phase-filter-btn" id="pr-phase-filter-btn">
+                <span id="pr-phase-filter-text">Edit</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+              <div class="pr-phase-filter-menu" id="pr-phase-filter-menu" style="display:none">
+                <button class="pr-phase-filter-option" data-phase="all">All Phases</button>
+                <button class="pr-phase-filter-option" data-phase="edit">Edit</button>
+                <button class="pr-phase-filter-option" data-phase="review">Review</button>
+                <button class="pr-phase-filter-option" data-phase="publish">Publish</button>
+              </div>
+            </div>
+          </div>
+          <div class="pr-history-list" id="pr-history-list">
+            <div class="pr-history-empty" id="pr-history-empty">
+              <p>No content saved</p>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <!-- Resizer between center and right -->
