@@ -1208,17 +1208,31 @@ Return articles in this JSON format:
 CRITICAL: Only include articles you're recommending. Do NOT include articles with "EXCLUDED" or "Not relevant" in the relevance field. If you think an article should be excluded, simply don't add it to the JSON array.
 
 Rules:
-- CRITICAL: Return ONLY 12-18 articles total
-- PRIORITY DISTRIBUTION: Aim for 8-10 from Core Topics (1-4), then fill remaining 4-8 from Supporting Topics (5-16)
-- Core topics (1-4) are most valuable - if you find good core articles, include them even if you have many
-- Do NOT include articles marked as "Excluded" or "Minimal relevance"
-- Remove duplicates (same story from different outlets = pick one)
-- Examples of BEST (Core): "Adobe launches Firefly", "Shopify adds 3D viewer", "Canva AI pricing", "Midjourney for brands"
-- Examples of GOOD (Supporting): "DTC brand raises funding", "Retail AR adoption", "Agency production model shifts"
-- Examples to EXCLUDE: "Waymo robotaxis", "Wildlife", "Celebrity", "Generic policy"
-- In 'relevance': state which topic # (1-16) and why it matters
-- Sort by priority: Core topics first (1-4), then Supporting (5-16), then by recency
-- Prioritize: last 14 days > last 30 days > older
+- CRITICAL: Return ONLY 5-10 EXCELLENT articles (quality over quantity)
+- STRICT STANDARD: Every article must have DIRECT, OBVIOUS connection to Glossi's market
+- Focus heavily on Core Topics (1-4) - these are the best articles
+- Only include Supporting Topics (5-16) if they're exceptional
+
+INCLUDE (specific examples):
+✅ "Adobe launches Firefly Image 5" - Topic 1, direct competitor
+✅ "Shopify adds 3D product viewer" - Topic 2, exact same use case
+✅ "Canva raises AI tool pricing for enterprise" - Topic 1, market validation
+✅ "Midjourney introduces business tier" - Topic 4, commercial AI generation
+✅ "Instagram adds AR try-on for products" - Topic 2, visual commerce
+✅ "Meta launches 3D ads for e-commerce" - Topic 2, direct market move
+
+EXCLUDE (specific examples):
+❌ "Anthropic CEO talks about AI adoption" - Too generic, not about creative tools
+❌ "OpenAI launches coding chips" - Developer tools, not creative/marketing
+❌ "Trade deal impacts tariffs" - Macro policy, too distant
+❌ "Brand cancels partnership" - Corporate drama, not tech
+❌ "Indian Hotels CEO outlook" - Not tech, not relevant
+❌ "AI agent behavior study" - Research, not business application
+
+- Remove duplicates (same story = pick best outlet)
+- In 'relevance': state topic # and be brutally honest about connection quality
+- Sort: Core topics (1-4) first, recency second
+- If fewer than 5 articles meet standard, that's OK - quality over quantity
 - Use exact domain from SOURCE field for outlet name`;
 
     const analysisResponse = await axios.post('https://api.anthropic.com/v1/messages', {
