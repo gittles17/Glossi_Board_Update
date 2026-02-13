@@ -11687,6 +11687,10 @@ a.dropdown-item {
   border-radius: 9px;
 }
 
+.pr-history-controls {
+  position: relative;
+}
+
 .pr-phase-filter-btn {
   display: flex;
   align-items: center;
@@ -11700,7 +11704,6 @@ a.dropdown-item {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
-  position: relative;
 }
 
 .pr-phase-filter-btn:hover {
