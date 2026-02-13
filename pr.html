@@ -63,16 +63,35 @@
 
   <!-- Main PR Layout -->
   <main class="pr-main">
-    <!-- Mobile Tab Bar -->
-    <div class="pr-mobile-tabs" id="pr-mobile-tabs">
-      <button class="pr-mobile-tab active" data-tab="strategy">Strategy</button>
-      <button class="pr-mobile-tab" data-tab="sources">Sources</button>
-      <button class="pr-mobile-tab" data-tab="library">Library</button>
+    <!-- Main Stage Tabs (Desktop & Mobile) -->
+    <div class="pr-stage-tabs" id="pr-stage-tabs">
+      <button class="pr-stage-tab active" data-stage="strategy">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        Strategy
+      </button>
+      <button class="pr-stage-tab" data-stage="create">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+        Create
+      </button>
+      <button class="pr-stage-tab" data-stage="distribute">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="18" cy="18" r="3"></circle>
+          <circle cx="6" cy="6" r="3"></circle>
+          <path d="M13 6h3a2 2 0 0 1 2 2v7"></path>
+          <line x1="6" y1="9" x2="6" y2="21"></line>
+        </svg>
+        Distribute
+      </button>
     </div>
 
     <div class="pr-layout">
-      <!-- Column 1: Tabbed Panel -->
-      <div class="pr-sources-panel" id="pr-sources-panel">
+      <!-- Strategy Stage Content -->
+      <div class="pr-sources-panel pr-stage-content active" id="pr-sources-panel" data-stage="strategy">
         
         <!-- Tab Navigation -->
         <div class="pr-panel-tabs">
@@ -238,8 +257,8 @@
       <!-- Resizer between left and center -->
       <div class="pr-resizer" id="pr-resizer-left" data-resize="left"></div>
 
-      <!-- Column 2: Workspace -->
-      <div class="pr-workspace-panel" id="pr-workspace-panel">
+      <!-- Create Stage Content -->
+      <div class="pr-workspace-panel pr-stage-content" id="pr-workspace-panel" data-stage="create">
         <!-- Top bar -->
         <div class="pr-workspace-topbar">
           <div class="pr-workspace-controls">
@@ -398,8 +417,8 @@
       <!-- Resizer between center and right -->
       <div class="pr-resizer" id="pr-resizer-right" data-resize="right"></div>
 
-      <!-- Column 3: Right Panel (Media & Distribution) -->
-      <div class="pr-right-panel" id="pr-right-panel">
+      <!-- Distribute Stage Content -->
+      <div class="pr-right-panel pr-stage-content" id="pr-right-panel" data-stage="distribute">
         <!-- Single unified panel for Media & Distribution -->
         <div class="pr-right-panel-body">
           <!-- Media Section -->
@@ -1155,6 +1174,38 @@
       settingsModal?.addEventListener('click', (e) => {
         if (e.target === settingsModal) settingsModal.classList.remove('visible');
       });
+    });
+
+    // Stage Tab Switching
+    document.querySelectorAll('.pr-stage-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const stage = tab.dataset.stage;
+        
+        // Update active tab
+        document.querySelectorAll('.pr-stage-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // Show corresponding stage content, hide others
+        document.querySelectorAll('.pr-stage-content').forEach(content => {
+          if (content.dataset.stage === stage) {
+            content.classList.add('active');
+          } else {
+            content.classList.remove('active');
+          }
+        });
+        
+        // Save active stage
+        localStorage.setItem('pr_active_stage', stage);
+      });
+    });
+    
+    // Restore last active stage on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedStage = localStorage.getItem('pr_active_stage') || 'strategy';
+      const savedTab = document.querySelector(`.pr-stage-tab[data-stage="${savedStage}"]`);
+      if (savedTab) {
+        savedTab.click();
+      }
     });
   </script>
 </body>

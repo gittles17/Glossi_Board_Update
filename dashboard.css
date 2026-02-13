@@ -11240,23 +11240,90 @@ a.dropdown-item {
   height: calc(100vh - 64px);
 }
 
+/* Stage Tabs (Full-Width Navigation) */
+.pr-stage-tabs {
+  display: flex;
+  gap: 0;
+  background: var(--bg-card);
+  border-bottom: 2px solid var(--border-color);
+  padding: 0 var(--space-4);
+  flex-shrink: 0;
+}
+
+.pr-stage-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  font: 600 15px var(--font-sans);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.pr-stage-tab svg {
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.pr-stage-tab:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.pr-stage-tab:hover svg {
+  opacity: 1;
+}
+
+.pr-stage-tab.active {
+  color: var(--accent-green);
+  border-bottom-color: var(--accent-green);
+  background: var(--bg-primary);
+}
+
+.pr-stage-tab.active svg {
+  opacity: 1;
+}
+
 .pr-layout {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   flex: 1;
-  min-height: 600px;
   height: 100%;
   overflow: hidden;
   position: relative;
 }
 
-/* Mobile tabs */
-.pr-mobile-tabs {
+/* Stage Content (Full-Width) */
+.pr-stage-content {
   display: none;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
-  padding: var(--space-1) var(--space-2);
-  gap: var(--space-1);
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+
+.pr-stage-content.active {
+  display: flex;
+}
+
+/* Old mobile tabs - hidden in favor of stage tabs */
+.pr-mobile-tabs {
+  display: none !important;
+}
+
+/* Old panel tabs (Strategy/Sources/Library) - hide in favor of stage tabs */
+.pr-panel-tabs {
+  display: none !important;
 }
 
 .pr-mobile-tab {
@@ -11278,16 +11345,13 @@ a.dropdown-item {
 
 /* Column 1: Sources Panel */
 .pr-sources-panel {
-  width: var(--panel-left-width, 280px);
-  min-width: 200px;
-  max-width: 500px;
-  border-right: 1px solid var(--border-color);
+  width: 100%;
+  border: none;
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary);
-  overflow: hidden;
-  flex-shrink: 0;
-  height: 100%;
+  background: var(--bg-primary);
+  overflow: visible;
+  height: auto;
 }
 
 .pr-sources-header {
@@ -11957,13 +12021,12 @@ a.dropdown-item {
 
 /* Column 2: Workspace Panel */
 .pr-workspace-panel {
-  flex: 1;
-  min-width: 300px;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   background: var(--bg-primary);
-  height: 100%;
+  height: auto;
 }
 
 /* Generation controls in left panel */
@@ -12981,17 +13044,15 @@ a.dropdown-item {
 
 /* Column 3: Right Panel (Media & Distribution) */
 .pr-right-panel {
-  width: var(--panel-right-width, 320px);
-  min-width: 250px;
-  max-width: 500px;
-  border-left: 1px solid var(--border-color);
+  width: 100%;
+  border: none;
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary);
-  overflow: hidden;
-  flex-shrink: 0;
+  background: var(--bg-primary);
+  overflow: visible;
   border-radius: 0;
   position: relative;
+  height: auto;
 }
 
 /* Right panel tabs */
@@ -15423,13 +15484,7 @@ a.dropdown-item {
 
 /* Resizer Divider */
 .pr-resizer {
-  width: 4px;
-  background: transparent;
-  cursor: col-resize;
-  position: relative;
-  flex-shrink: 0;
-  transition: background 0.15s ease;
-  z-index: 10;
+  display: none !important; /* No resizers needed in full-width layout */
 }
 
 .pr-resizer:hover,
