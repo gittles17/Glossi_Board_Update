@@ -14920,7 +14920,7 @@ svg.spinning,
 }
 
 .pr-news-item.expanded .pr-news-angle-body {
-  max-height: 200px;
+  max-height: 500px;
   padding-top: var(--space-2);
 }
 
