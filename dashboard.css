@@ -13071,10 +13071,8 @@ a.dropdown-item {
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
-  overflow: visible;
   border-radius: 0;
   position: relative;
-  height: auto;
 }
 
 /* Right panel tabs */
