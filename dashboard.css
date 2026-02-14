@@ -11369,7 +11369,6 @@ a.dropdown-item {
   max-width: none !important;
   min-width: 0 !important;
   border: none;
-  display: flex;
   flex-direction: column;
   background: var(--bg-primary);
 }
@@ -12124,7 +12123,6 @@ a.dropdown-item {
   width: 100% !important;
   max-width: none !important;
   min-width: 0 !important;
-  display: flex;
   flex-direction: column;
   background: var(--bg-primary);
 }
@@ -13148,7 +13146,6 @@ a.dropdown-item {
   max-width: none !important;
   min-width: 0 !important;
   border: none;
-  display: flex;
   flex-direction: column;
   background: var(--bg-primary);
   border-radius: 0;
