@@ -851,6 +851,14 @@ body::after {
   font-size: 13px;
 }
 
+.btn-icon-only {
+  padding: 6px;
+  line-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .btn-icon {
   width: 40px;
   height: 40px;
@@ -12305,23 +12313,7 @@ svg.spinning,
   padding: var(--space-6);
 }
 
-.pr-news-hooks-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-  padding-top: var(--space-2);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.pr-news-hooks-filters {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex: 1;
-}
+/* .pr-news-hooks-header and .pr-news-hooks-filters removed; replaced by .pr-news-hooks-toolbar + .pr-news-hooks-controls */
 
 .pr-filter-group {
   position: relative;
@@ -14391,16 +14383,9 @@ svg.spinning,
   /* Styles inherited from .pr-workflow-section */
 }
 
-.pr-news-hooks-header {
-  /* Styles inherited from .pr-workflow-header */
-  justify-content: space-between;
-}
+/* .pr-news-hooks-header removed; replaced by .pr-news-hooks-toolbar */
 
-.pr-news-hooks-title {
-  /* Styles inherited from .pr-workflow-title */
-}
-
-.pr-news-hooks-header .btn-icon.spinning svg {
+.pr-news-hooks-toolbar .btn-icon.spinning svg {
   animation: spin 1s linear infinite;
 }
 
@@ -16120,6 +16105,158 @@ body.pr-resizing * {
 }
 
 /* ============================================
+   UNIFIED CONTENT SECTION
+   ============================================ */
+
+.pr-content-section {
+  margin-top: var(--space-4);
+}
+
+.pr-content-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.pr-content-empty {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  border: 1px dashed var(--border-color);
+}
+
+.pr-content-empty p {
+  margin: 0;
+}
+
+/* Active Angle (expanded, highlighted) */
+.pr-content-active-angle {
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent-blue);
+  border-radius: 8px;
+  padding: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.pr-content-angle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.pr-content-angle-title {
+  font: 600 14px var(--font-sans);
+  color: var(--text-primary);
+}
+
+.pr-content-angle-progress {
+  font: 500 12px var(--font-mono);
+  color: var(--accent-blue);
+  white-space: nowrap;
+}
+
+.pr-content-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.pr-content-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.pr-content-check-item.completed {
+  opacity: 0.6;
+}
+
+.pr-content-checkbox {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.pr-content-check-text {
+  line-height: 1.5;
+}
+
+/* Past Angles (collapsed, compact) */
+.pr-content-past-angle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pr-content-past-angle:hover {
+  border-color: var(--accent-blue);
+  background: var(--bg-hover);
+}
+
+.pr-content-past-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pr-content-past-title {
+  font: 500 13px var(--font-sans);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pr-content-past-meta {
+  display: flex;
+  gap: var(--space-2);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.pr-content-past-pieces {
+  font-weight: 500;
+}
+
+.pr-content-past-delete {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  padding: 4px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.pr-content-past-angle:hover .pr-content-past-delete {
+  opacity: 1;
+}
+
+.pr-content-past-delete:hover {
+  color: var(--accent-red, #ef4444);
+}
+
+/* ============================================
    STRATEGY TAB - NEWS HOOKS (UPDATED)
    ============================================ */
 
@@ -16131,6 +16268,19 @@ body.pr-resizing * {
 .pr-news-hooks-section .pr-workflow-header {
   margin-bottom: 0;
   border-bottom: none;
+}
+
+.pr-news-hooks-toolbar {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pr-news-hooks-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .pr-news-actions {
@@ -16163,13 +16313,7 @@ body.pr-resizing * {
   border-color: #2563eb;
 }
 
-.pr-news-hooks-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 var(--space-3);
-  margin-bottom: var(--space-2);
-}
+/* .pr-news-hooks-header removed; see .pr-news-hooks-toolbar */
 
 /* ============================================
    RIGHT PANEL - UNIFIED LAYOUT
@@ -16321,19 +16465,7 @@ body.pr-resizing * {
   letter-spacing: -0.01em;
 }
 
-/* News Hooks compact styling */
-.pr-news-hooks-header {
-  padding: var(--space-2) var(--space-3);
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.pr-news-hooks-filters {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  flex-wrap: wrap;
-}
+/* News Hooks compact styling - .pr-news-hooks-header and .pr-news-hooks-filters removed; see .pr-news-hooks-toolbar + .pr-news-hooks-controls */
 
 .pr-filter-select {
   font-size: 13px;

@@ -65,28 +65,9 @@
   <main class="pr-main">
     <!-- Main Stage Tabs (Desktop & Mobile) -->
     <div class="pr-stage-tabs" id="pr-stage-tabs">
-      <button class="pr-stage-tab active" data-stage="strategy">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-        </svg>
-        Strategy
-      </button>
-      <button class="pr-stage-tab" data-stage="create">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 20h9"></path>
-          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-        </svg>
-        Create
-      </button>
-      <button class="pr-stage-tab" data-stage="distribute">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="18" cy="18" r="3"></circle>
-          <circle cx="6" cy="6" r="3"></circle>
-          <path d="M13 6h3a2 2 0 0 1 2 2v7"></path>
-          <line x1="6" y1="9" x2="6" y2="21"></line>
-        </svg>
-        Distribute
-      </button>
+      <button class="pr-stage-tab active" data-stage="strategy">Strategy</button>
+      <button class="pr-stage-tab" data-stage="create">Create</button>
+      <button class="pr-stage-tab" data-stage="distribute">Distribute</button>
     </div>
 
     <div class="pr-layout">
@@ -132,37 +113,30 @@
             
             <!-- News Hooks Section -->
             <div class="pr-workflow-section pr-news-hooks-section">
-              <div class="pr-workflow-header">
+              <div class="pr-workflow-header pr-news-hooks-toolbar">
                 <h2 class="pr-workflow-title">What's Happening Now</h2>
-                <button class="btn btn-secondary btn-sm" id="pr-fetch-news-btn">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M23 4v6h-6"></path>
-                    <path d="M1 20v-6h6"></path>
-                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                  </svg>
-                  Refresh
-                </button>
-              </div>
-              <div class="pr-news-hooks-header">
-                <div class="pr-news-hooks-filters">
-                  <div class="pr-filter-group">
-                    <select class="pr-filter-select" id="pr-news-date-filter">
-                      <option value="7">Last 7 days</option>
-                      <option value="30">Last 30 days</option>
-                      <option value="60" selected>Last 60 days</option>
-                      <option value="all">All time</option>
-                    </select>
-                  </div>
-                  <div class="pr-filter-group">
-                    <button class="pr-filter-btn" id="pr-news-outlet-filter-btn">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                      </svg>
-                      Outlets
-                      <span class="pr-filter-count" id="pr-outlet-filter-count"></span>
-                    </button>
-                  </div>
+                <div class="pr-news-hooks-controls">
+                  <select class="pr-filter-select" id="pr-news-date-filter">
+                    <option value="7">Last 7 days</option>
+                    <option value="30">Last 30 days</option>
+                    <option value="60" selected>Last 60 days</option>
+                    <option value="all">All time</option>
+                  </select>
+                  <button class="pr-filter-btn" id="pr-news-outlet-filter-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    Outlets
+                    <span class="pr-filter-count" id="pr-outlet-filter-count"></span>
+                  </button>
                   <button class="pr-filter-clear" id="pr-news-clear-filters" style="display: none;">Clear</button>
+                  <button class="btn btn-secondary btn-sm btn-icon-only" id="pr-fetch-news-btn" title="Refresh">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M23 4v6h-6"></path>
+                      <path d="M1 20v-6h6"></path>
+                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
+                  </button>
                 </div>
               </div>
               <div class="pr-news-hooks-list" id="pr-news-hooks-list">
@@ -194,11 +168,10 @@
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
                 <h2 class="pr-workflow-title">Story Angles</h2>
-                <button class="btn btn-secondary btn-sm" id="pr-generate-angles-btn">
+                <button class="btn btn-secondary btn-sm btn-icon-only" id="pr-generate-angles-btn" title="Generate Angles">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                   </svg>
-                  Generate Angles
                 </button>
               </div>
               <div class="pr-section-body" id="pr-angles-body">
@@ -208,47 +181,18 @@
               </div>
             </div>
 
-            <!-- Active Angle Tracker Section (collapsible, collapsed by default) -->
-            <div class="pr-workflow-section pr-angle-tracker-section" id="pr-angle-tracker-section" style="display: none;">
-              <div class="pr-workflow-header pr-collapsible-header" data-collapse-target="pr-tracker-body">
+            <!-- Content (collapsible, unified active angle + history) -->
+            <div class="pr-workflow-section pr-content-section">
+              <div class="pr-workflow-header pr-collapsible-header" data-collapse-target="pr-content-body">
                 <svg class="pr-collapse-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
-                <h2 class="pr-workflow-title">Active Angle</h2>
+                <h2 class="pr-workflow-title">Content</h2>
               </div>
-              <div class="pr-section-body" id="pr-tracker-body">
-                <div class="pr-angle-tracker" id="pr-angle-tracker">
-                </div>
-              </div>
-            </div>
-
-            <!-- Content History (collapsible, collapsed by default) -->
-            <div class="pr-workflow-section pr-library-section">
-              <div class="pr-workflow-header pr-history-header pr-collapsible-header" data-collapse-target="pr-history-body">
-                <svg class="pr-collapse-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-                <h2 class="pr-workflow-title">Content History</h2>
-                <div class="pr-history-controls">
-                  <span class="pr-history-badge" id="pr-history-count">0</span>
-                  <button class="pr-phase-filter-btn" id="pr-phase-filter-btn">
-                    <span id="pr-phase-filter-text">Edit</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                  </button>
-                  <div class="pr-phase-filter-menu" id="pr-phase-filter-menu" style="display:none">
-                    <button class="pr-phase-filter-option" data-phase="all">All Phases</button>
-                    <button class="pr-phase-filter-option" data-phase="edit">Edit</button>
-                    <button class="pr-phase-filter-option" data-phase="review">Review</button>
-                    <button class="pr-phase-filter-option" data-phase="publish">Publish</button>
-                  </div>
-                </div>
-              </div>
-              <div class="pr-section-body" id="pr-history-body">
-                <div class="pr-history-list" id="pr-history-list">
-                  <div class="pr-history-empty" id="pr-history-empty">
-                    <p>No content saved</p>
+              <div class="pr-section-body" id="pr-content-body">
+                <div class="pr-content-list" id="pr-content-list">
+                  <div class="pr-content-empty" id="pr-content-empty">
+                    <p>No content yet. Generate angles to get started.</p>
                   </div>
                 </div>
               </div>

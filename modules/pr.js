@@ -158,7 +158,6 @@ class PRAgent {
     this.setupDOM();
     this.setupEventListeners();
     this.renderSources();
-    this.renderHistory();
     this.updateGenerateButton();
     
     // Initialize wizard
@@ -765,9 +764,8 @@ class PRAgent {
       exportMenu: document.getElementById('pr-export-menu'),
       strategyPanel: document.getElementById('pr-right-panel-content'),
       strategyEmpty: document.getElementById('pr-strategy-empty'),
-      historyList: document.getElementById('pr-history-list'),
-      historyEmpty: document.getElementById('pr-history-empty'),
-      historySection: document.getElementById('pr-history-section'),
+      contentList: document.getElementById('pr-content-list'),
+      contentEmpty: document.getElementById('pr-content-empty'),
       toastContainer: document.getElementById('toast-container')
     };
   }
@@ -829,7 +827,7 @@ class PRAgent {
           const labels = { all: 'All Phases', edit: 'Edit', review: 'Review', publish: 'Publish' };
           phaseFilterText.textContent = labels[this.phaseFilter];
           phaseFilterMenu.style.display = 'none';
-          this.renderHistory();
+          if (this.angleManager) this.angleManager.renderContentSection();
         });
       });
       
@@ -1925,7 +1923,7 @@ class PRAgent {
     if (!output) return;
     
     output.phase = newPhase;
-    this.renderHistory();
+    if (this.angleManager) this.angleManager.renderContentSection();
     
     // Save to API
     try {
@@ -1966,16 +1964,14 @@ class PRAgent {
       if (angle) {
         this.angleManager.activeAngle = angle;
         localStorage.setItem('pr_active_angle', JSON.stringify(angle));
-        this.angleManager.updateTracker();
+        this.angleManager.renderContentSection();
         // Select the angle card
         document.querySelectorAll('.pr-angle-card').forEach(card => {
           card.classList.toggle('selected', card.dataset.angleId === angle.id);
         });
-        // Show tracker section
-        const trackerSection = document.getElementById('pr-angle-tracker-section');
-        if (trackerSection) trackerSection.style.display = '';
+        // Show content section
         if (this.angleManager.collapseSection) {
-          this.angleManager.collapseSection('pr-tracker-body', false);
+          this.angleManager.collapseSection('pr-content-body', false);
         }
       }
     }
@@ -2183,7 +2179,7 @@ class PRAgent {
 
       this.renderGeneratedContent(output);
       this.renderStrategy(output.strategy);
-      this.renderHistory();
+      if (this.angleManager) this.angleManager.renderContentSection();
       this.showWorkspace();
       
       // Track angle progress if active
@@ -4583,20 +4579,11 @@ class NewsMonitor {
     if (filteredNews.length === 0) {
       if (this.newsHooks.length === 0) {
         this.dom.newsHooksList.innerHTML = `
-          <div class="pr-empty-state">
-            <div class="pr-empty-icon">📰</div>
-            <h4>No News Hooks Yet</h4>
-            <p>Click the Refresh button above to search for recent AI, product visualization, and startup news that's relevant to Glossi.</p>
-            <p class="pr-empty-hint">💡 News hooks help you spot timely angles for press coverage.</p>
-          </div>
+          <p class="pr-news-hooks-empty">No news hooks yet. Click Refresh to search.</p>
         `;
       } else {
         this.dom.newsHooksList.innerHTML = `
-          <div class="pr-empty-state">
-            <div class="pr-empty-icon">🔍</div>
-            <h4>No News Matches Your Filters</h4>
-            <p>Try adjusting the date range or outlet filters above to see more results.</p>
-          </div>
+          <p class="pr-news-hooks-empty">No news matches your filters. Try adjusting above.</p>
         `;
       }
       return;
@@ -5197,7 +5184,7 @@ class AngleManager {
     this.setupEventListeners();
     await this.loadCachedAngles();
     this.renderAngles();
-    this.updateTracker();
+    this.renderContentSection();
     this.setupCollapsibleSections();
   }
 
@@ -5205,8 +5192,8 @@ class AngleManager {
     this.dom = {
       generateAnglesBtn: document.getElementById('pr-generate-angles-btn'),
       anglesList: document.getElementById('pr-angles-list'),
-      angleTracker: document.getElementById('pr-angle-tracker'),
-      angleTrackerSection: document.getElementById('pr-angle-tracker-section')
+      contentList: document.getElementById('pr-content-list'),
+      contentEmpty: document.getElementById('pr-content-empty')
     };
   }
 
@@ -5504,7 +5491,7 @@ class AngleManager {
       this.toggleAngleExpand(angleId);
     }
 
-    this.updateTracker();
+    this.renderContentSection();
   }
 
   generateSinglePiece(angleId, planIndex) {
@@ -5525,11 +5512,11 @@ class AngleManager {
     this.openAngleTab(angle, planIndex, tabLabel);
 
     const tabId = `${angle.id}_${planIndex}`;
-    this.updateTracker();
+    this.renderContentSection();
 
-    // Auto-collapse Story Angles, expand Active Angle
+    // Auto-collapse Story Angles, expand Content
     this.collapseSection('pr-angles-body', true);
-    this.collapseSection('pr-tracker-body', false);
+    this.collapseSection('pr-content-body', false);
 
     // Generate content directly for this tab
     this.generatePieceContent(angle, planItem, tabId);
@@ -5548,11 +5535,11 @@ class AngleManager {
       card.classList.toggle('selected', card.dataset.angleId === angleId);
     });
 
-    this.updateTracker();
+    this.renderContentSection();
 
-    // Auto-collapse Story Angles, expand Active Angle
+    // Auto-collapse Story Angles, expand Content
     this.collapseSection('pr-angles-body', true);
-    this.collapseSection('pr-tracker-body', false);
+    this.collapseSection('pr-content-body', false);
 
     const pieceCount = angle.content_plan.length;
     this.prAgent.showToast(`Generating all ${pieceCount} pieces in parallel...`, 'success');
@@ -5676,10 +5663,10 @@ class AngleManager {
 
       // Track angle progress
       this.trackContentCreation(planItem.type);
-      this.prAgent.renderHistory();
+      this.renderContentSection();
 
-      // Auto-expand Content History after generation
-      this.collapseSection('pr-history-body', false);
+      // Auto-expand Content section after generation
+      this.collapseSection('pr-content-body', false);
 
     } catch (err) {
       this.tabContent.set(tabId, { loading: false, output: null, error: err.message });
@@ -5785,7 +5772,7 @@ class AngleManager {
         }
       }
 
-      this.updateTracker();
+      this.renderContentSection();
     }
 
     // Restore this tab's content
@@ -5864,7 +5851,7 @@ class AngleManager {
 
       this.saveAngles();
       this.renderAngles();
-      this.updateTracker();
+      this.renderContentSection();
       
       this.prAgent.renderStrategy(null);
 
@@ -5873,41 +5860,189 @@ class AngleManager {
         this.prAgent.showToast('Angle content plan completed!', 'success');
         this.activeAngle = null;
         localStorage.removeItem('pr_active_angle');
-        this.updateTracker();
+        this.renderContentSection();
         this.prAgent.renderStrategy(null);
       }
     }
   }
 
-  updateTracker() {
-    if (!this.dom.angleTracker || !this.dom.angleTrackerSection) return;
+  renderContentSection() {
+    if (!this.dom.contentList) return;
 
-    if (!this.activeAngle) {
-      this.dom.angleTrackerSection.style.display = 'none';
+    const outputs = this.prAgent.outputs || [];
+    const hasActive = !!this.activeAngle;
+
+    // Group past outputs by angleId (exclude active angle's outputs from "past" if still active)
+    const groups = new Map();
+    const ungrouped = [];
+    outputs.forEach(output => {
+      if (output.angleId) {
+        // Skip outputs belonging to the currently active angle
+        if (hasActive && output.angleId === this.activeAngle.id) return;
+        if (!groups.has(output.angleId)) {
+          groups.set(output.angleId, { angleId: output.angleId, outputs: [], title: null, latestDate: 0 });
+        }
+        const group = groups.get(output.angleId);
+        group.outputs.push(output);
+        if (!group.title) {
+          group.title = output.angleTitle || this.prAgent.getAngleTitle(output.angleId) || output.title;
+        }
+        const created = new Date(output.createdAt).getTime() || 0;
+        if (created > group.latestDate) group.latestDate = created;
+      } else {
+        ungrouped.push(output);
+      }
+    });
+
+    // Build past entries sorted by most recent
+    const pastEntries = [];
+    groups.forEach(group => pastEntries.push({ type: 'angle', ...group }));
+    ungrouped.forEach(output => pastEntries.push({
+      type: 'single',
+      output,
+      latestDate: new Date(output.createdAt).getTime() || 0
+    }));
+    pastEntries.sort((a, b) => b.latestDate - a.latestDate);
+
+    // Determine if we have anything to show
+    if (!hasActive && pastEntries.length === 0) {
+      this.dom.contentList.innerHTML = '';
+      if (this.dom.contentEmpty) this.dom.contentEmpty.style.display = 'block';
       return;
     }
 
-    this.dom.angleTrackerSection.style.display = 'block';
-    
-    const completedCount = this.activeAngle.content_plan.filter(item => item.completed).length;
-    const totalCount = this.activeAngle.content_plan.length;
-    
-    let html = `
-      <div class="pr-tracker-header">
-        <h3 class="pr-tracker-title">${this.escapeHtml(this.activeAngle.title)}</h3>
-        <span class="pr-tracker-progress">${completedCount} of ${totalCount} completed</span>
-      </div>
-      <ul class="pr-tracker-list">
-        ${this.activeAngle.content_plan.map(item => `
-          <li class="pr-tracker-item ${item.completed ? 'completed' : ''}">
-            <span class="pr-tracker-checkbox">${item.completed ? '✅' : '⬜'}</span>
-            <span class="pr-tracker-text">${this.formatContentType(item.type)} — ${this.escapeHtml(item.description)}</span>
-          </li>
-        `).join('')}
-      </ul>
-    `;
-    
-    this.dom.angleTracker.innerHTML = html;
+    if (this.dom.contentEmpty) this.dom.contentEmpty.style.display = 'none';
+
+    let html = '';
+
+    // Active angle (expanded, pinned to top)
+    if (hasActive) {
+      const completedCount = this.activeAngle.content_plan.filter(item => item.completed).length;
+      const totalCount = this.activeAngle.content_plan.length;
+      html += `
+        <div class="pr-content-active-angle">
+          <div class="pr-content-angle-header">
+            <span class="pr-content-angle-title">${this.escapeHtml(this.activeAngle.title)}</span>
+            <span class="pr-content-angle-progress">${completedCount} of ${totalCount} completed</span>
+          </div>
+          <ul class="pr-content-checklist">
+            ${this.activeAngle.content_plan.map(item => `
+              <li class="pr-content-check-item ${item.completed ? 'completed' : ''}">
+                <span class="pr-content-checkbox">${item.completed ? '✅' : '⬜'}</span>
+                <span class="pr-content-check-text">${this.formatContentType(item.type)} - ${this.escapeHtml(item.description)}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>`;
+    }
+
+    // Past angles (collapsed, compact)
+    html += pastEntries.map(entry => {
+      if (entry.type === 'angle') {
+        const pieceCount = entry.outputs.length;
+        const pieceTypes = entry.outputs.map(o => {
+          const label = CONTENT_TYPES.find(t => t.id === o.content_type)?.label || o.content_type;
+          return label;
+        }).join(', ');
+        const dateText = this.prAgent.formatHistoryDate(entry.latestDate);
+        return `
+          <div class="pr-content-past-angle" data-angle-id="${entry.angleId}">
+            <div class="pr-content-past-info">
+              <span class="pr-content-past-title">${this.escapeHtml(entry.title || 'Untitled Angle')}</span>
+              <span class="pr-content-past-meta">
+                <span class="pr-content-past-pieces">${pieceCount} piece${pieceCount !== 1 ? 's' : ''}</span>
+                <span class="pr-content-past-date">${dateText}</span>
+              </span>
+            </div>
+            <button class="pr-content-past-delete" data-angle-delete="${entry.angleId}" title="Delete all pieces">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>`;
+      } else {
+        const output = entry.output;
+        const typeLabel = CONTENT_TYPES.find(t => t.id === output.content_type)?.label || output.content_type;
+        const dateText = this.prAgent.formatHistoryDate(entry.latestDate);
+        return `
+          <div class="pr-content-past-angle pr-content-past-single" data-output-id="${output.id}">
+            <div class="pr-content-past-info">
+              <span class="pr-content-past-title">${this.escapeHtml(output.title || 'Untitled')}</span>
+              <span class="pr-content-past-meta">
+                <span class="pr-content-past-pieces">${typeLabel}</span>
+                <span class="pr-content-past-date">${dateText}</span>
+              </span>
+            </div>
+            <button class="pr-content-past-delete" data-history-delete="${output.id}" title="Delete">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>`;
+      }
+    }).join('');
+
+    this.dom.contentList.innerHTML = html;
+
+    // Click handlers for past angle groups (restore all tabs)
+    this.dom.contentList.querySelectorAll('.pr-content-past-angle[data-angle-id]').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('[data-angle-delete]')) return;
+        const angleId = item.dataset.angleId;
+        const group = groups.get(angleId);
+        if (group) {
+          this.restoreAngleFromHistory(angleId, group.outputs);
+        }
+      });
+    });
+
+    // Click handlers for single (ungrouped) items
+    this.dom.contentList.querySelectorAll('.pr-content-past-single[data-output-id]').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('[data-history-delete]')) return;
+        const outputId = item.dataset.outputId;
+        if (outputId) this.prAgent.loadOutput(outputId);
+      });
+    });
+
+    // Delete handlers for angle groups
+    this.dom.contentList.querySelectorAll('[data-angle-delete]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const angleId = btn.dataset.angleDelete;
+        const toDelete = this.prAgent.outputs.filter(o => o.angleId === angleId);
+        this.prAgent.outputs = this.prAgent.outputs.filter(o => o.angleId !== angleId);
+
+        if (this.activeAngle && this.activeAngle.id === angleId) {
+          this.resetWorkspace();
+        }
+
+        this.renderContentSection();
+        toDelete.forEach(output => {
+          fetch(`/api/pr/outputs/${output.id}`, { method: 'DELETE' }).catch(() => {});
+        });
+        this.prAgent.saveOutputs();
+      });
+    });
+
+    // Delete handlers for single items
+    this.dom.contentList.querySelectorAll('[data-history-delete]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const outputId = btn.dataset.historyDelete;
+        if (!outputId) return;
+        this.prAgent.outputs = this.prAgent.outputs.filter(o => o.id !== outputId);
+        this.renderContentSection();
+        fetch(`/api/pr/outputs/${outputId}`, { method: 'DELETE' }).catch(() => {});
+        this.prAgent.saveOutputs();
+
+        if (this.prAgent.outputs.length === 0 && !this.activeAngle) {
+          this.resetWorkspace();
+        }
+      });
+    });
   }
 
   async deleteAngle(angleId) {
@@ -5925,7 +6060,7 @@ class AngleManager {
         }
         
         this.renderAngles();
-        this.updateTracker();
+        this.renderContentSection();
         this.prAgent.showToast('Angle deleted', 'success');
       }
     } catch (error) {
@@ -5963,8 +6098,8 @@ class AngleManager {
     this.activeAngle = null;
     localStorage.removeItem('pr_active_angle');
 
-    // Hide tracker
-    this.updateTracker();
+    // Re-render content section
+    this.renderContentSection();
 
     // Deselect all angle cards
     document.querySelectorAll('.pr-angle-card').forEach(card => card.classList.remove('selected'));
@@ -5975,10 +6110,9 @@ class AngleManager {
     this.prAgent.hideLoading();
     this.prAgent.currentOutput = null;
 
-    // Re-expand Story Angles, collapse others
+    // Re-expand Story Angles, collapse Content
     this.collapseSection('pr-angles-body', false);
-    this.collapseSection('pr-tracker-body', true);
-    this.collapseSection('pr-history-body', true);
+    this.collapseSection('pr-content-body', true);
   }
 
   restoreAngleFromHistory(angleId, outputs) {
@@ -6020,9 +6154,9 @@ class AngleManager {
       this.switchAngleTab(firstTabId);
     }
 
-    this.updateTracker();
+    this.renderContentSection();
     this.collapseSection('pr-angles-body', true);
-    this.collapseSection('pr-tracker-body', false);
+    this.collapseSection('pr-content-body', false);
   }
 
   collapseSection(sectionId, collapsed) {
@@ -6057,10 +6191,10 @@ class AngleManager {
       });
     });
 
-    // Restore saved states, with defaults: angles expanded, tracker and history collapsed
+    // Restore saved states, with defaults: angles expanded, content collapsed
     try {
       const states = JSON.parse(localStorage.getItem('pr_collapse_states') || '{}');
-      const defaults = { 'pr-angles-body': false, 'pr-tracker-body': true, 'pr-history-body': true };
+      const defaults = { 'pr-angles-body': false, 'pr-content-body': true };
       const merged = { ...defaults, ...states };
       Object.entries(merged).forEach(([id, collapsed]) => {
         this.collapseSection(id, collapsed);
