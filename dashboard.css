@@ -11372,8 +11372,6 @@ a.dropdown-item {
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
-  overflow: visible;
-  height: auto;
 }
 
 .pr-sources-header {
@@ -12048,9 +12046,7 @@ a.dropdown-item {
   min-width: 0 !important;
   display: flex;
   flex-direction: column;
-  overflow: visible;
   background: var(--bg-primary);
-  height: auto;
 }
 
 /* Generation controls in left panel */
