@@ -1460,7 +1460,9 @@ class PRAgent {
     };
 
     const renderSourceItem = (source) => {
-      const date = new Date(source.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const rawDate = source.createdAt || source.created_at || source.addedAt;
+      const parsed = rawDate ? new Date(rawDate) : null;
+      const date = parsed && !isNaN(parsed.getTime()) ? parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
       const preview = (source.content || '').substring(0, 100);
       const loadingClass = source.loading ? 'loading' : '';
       const loadingIndicator = source.loading ? `
@@ -1483,9 +1485,7 @@ class PRAgent {
               <span class="pr-source-type-icon">${typeIcons[source.type] || typeIcons.text}</span>
               <span class="pr-source-title">${this.escapeHtml(source.title)}</span>
             </div>
-            <div class="pr-source-meta">
-              <span class="pr-source-date">${date}</span>
-            </div>
+            ${date ? `<div class="pr-source-meta"><span class="pr-source-date">${date}</span></div>` : ''}
           </div>
           <button class="pr-source-delete" data-action="delete" data-id="${source.id}" title="Delete source" ${source.loading ? 'disabled' : ''}>
             <i class="ph-light ph-x"></i>
@@ -5017,6 +5017,50 @@ class NewsMonitor {
     }
   }
 
+  deleteContentPiece(storyKey, planIndex) {
+    const story = this._stories.get(storyKey);
+    if (!story || !story.contentPlan || planIndex >= story.contentPlan.length) return;
+
+    const isActive = storyKey === this._activeStoryKey;
+    const oldLength = story.contentPlan.length;
+
+    // Rebuild tabContent map with shifted indices (remove deleted, shift later ones down)
+    const oldTabContent = isActive ? this._tabContent : (story.tabContent || new Map());
+    const newTabContent = new Map();
+    for (let i = 0; i < oldLength; i++) {
+      if (i === planIndex) continue;
+      const entry = oldTabContent.get(`plan_${i}`);
+      const newIdx = i < planIndex ? i : i - 1;
+      if (entry) newTabContent.set(`plan_${newIdx}`, entry);
+    }
+
+    // Remove from content plan
+    story.contentPlan.splice(planIndex, 1);
+    story.tabContent = newTabContent;
+
+    if (isActive) {
+      this._tabContent = newTabContent;
+      this._activeContentPlan = story.contentPlan;
+    }
+
+    // If no pieces remain, close the story
+    if (story.contentPlan.length === 0) {
+      this.closeStory(storyKey);
+      return;
+    }
+
+    // If this is the active story, update tabs and switch if needed
+    if (isActive) {
+      const newTabId = 'plan_0';
+      this._activeTabId = newTabId;
+      story.activeTabId = newTabId;
+      this.renderContentPlanTabs(story.contentPlan);
+      this.switchContentTab(newTabId);
+    }
+
+    this.renderFileTree();
+  }
+
   renderFileTree() {
     const container = document.getElementById('pr-file-tree');
     if (!container) return;
@@ -5039,6 +5083,9 @@ class NewsMonitor {
         return `
           <div class="pr-file-tree-leaf ${isActiveLeaf ? 'active' : ''}" data-story-key="${this.escapeHtml(key)}" data-tab-id="${tabId}">
             <span class="pr-file-tree-leaf-label">${this.escapeHtml(typeLabel)}</span>
+            <button class="pr-file-tree-leaf-delete" data-delete-story="${this.escapeHtml(key)}" data-delete-plan-index="${i}" title="Remove piece">
+              <i class="ph-light ph-x"></i>
+            </button>
           </div>
         `;
       }).join('');
@@ -5103,6 +5150,16 @@ class NewsMonitor {
       if (angleToggle) {
         const angle = angleToggle.closest('.pr-tree-angle');
         if (angle) angle.classList.toggle('expanded');
+        return;
+      }
+
+      // Delete content piece button
+      const deleteBtn = e.target.closest('.pr-file-tree-leaf-delete');
+      if (deleteBtn) {
+        e.stopPropagation();
+        const storyKey = deleteBtn.dataset.deleteStory;
+        const planIndex = parseInt(deleteBtn.dataset.deletePlanIndex, 10);
+        this.deleteContentPiece(storyKey, planIndex);
         return;
       }
 

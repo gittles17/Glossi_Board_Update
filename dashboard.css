@@ -11874,6 +11874,39 @@ a.dropdown-item {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.pr-file-tree-leaf-delete {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  opacity: 0.5;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.pr-file-tree-leaf:hover .pr-file-tree-leaf-delete {
+  display: flex;
+}
+
+.pr-file-tree-leaf-delete:hover {
+  opacity: 1;
+  color: var(--accent-red);
+}
+
+.pr-file-tree-leaf-delete i {
+  font-size: 10px;
 }
 
 /* Inline angle inside file tree children */
