@@ -1214,7 +1214,8 @@ Return articles in this JSON format:
       "date": "YYYY-MM-DD format",
       "url": "Original URL",
       "summary": "One sentence summary of the article",
-      "relevance": "Topic #X: [explain connection]"
+      "relevance": "Topic #X: [explain connection]",
+      "suggested_angle": "A concise story angle title Glossi could pitch based on this article (1 sentence, e.g. 'How AI-powered product visualization is replacing traditional photoshoots')"
     }
   ]
 }

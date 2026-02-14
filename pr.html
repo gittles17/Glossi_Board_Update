@@ -74,11 +74,9 @@
       <!-- Strategy Stage Content -->
       <div class="pr-sources-panel pr-stage-content active" id="pr-sources-panel" data-stage="strategy">
         
-        <!-- 2-Panel Strategy Layout -->
-        <div class="pr-strategy-layout">
-          
-          <!-- Left Panel: Sources -->
-          <div class="pr-strategy-left">
+        <!-- Sources Drawer (overlay) -->
+        <div class="pr-sources-drawer" id="pr-sources-drawer">
+          <div class="pr-sources-drawer-inner">
             <div class="pr-workflow-section pr-sources-section">
               <div class="pr-workflow-header pr-sources-header">
                 <h2 class="pr-workflow-title pr-sources-label">Sources</h2>
@@ -87,6 +85,12 @@
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+                <button class="pr-sources-drawer-close" id="pr-sources-drawer-close" title="Close">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
                   </svg>
                 </button>
               </div>
@@ -107,43 +111,48 @@
               </button>
             </div>
           </div>
+        </div>
+        <div class="pr-sources-backdrop" id="pr-sources-backdrop"></div>
 
-          <!-- Right Panel: News Hooks -->
-          <div class="pr-strategy-right">
-            
-            <!-- News Hooks Section -->
-            <div class="pr-workflow-section pr-news-hooks-section">
-              <div class="pr-workflow-header pr-news-hooks-toolbar">
-                <h2 class="pr-workflow-title">What's Happening Now</h2>
-                <div class="pr-news-hooks-controls">
-                  <select class="pr-filter-select" id="pr-news-date-filter">
-                    <option value="7">Last 7 days</option>
-                    <option value="30">Last 30 days</option>
-                    <option value="60" selected>Last 60 days</option>
-                    <option value="all">All time</option>
-                  </select>
-                  <button class="pr-filter-btn" id="pr-news-outlet-filter-btn">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                    </svg>
-                    Outlets
-                    <span class="pr-filter-count" id="pr-outlet-filter-count"></span>
-                  </button>
-                  <button class="pr-filter-clear" id="pr-news-clear-filters" style="display: none;">Clear</button>
-                  <button class="btn btn-secondary btn-sm btn-icon-only" id="pr-fetch-news-btn" title="Refresh">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M23 4v6h-6"></path>
-                      <path d="M1 20v-6h6"></path>
-                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <div class="pr-news-hooks-list" id="pr-news-hooks-list">
-                <div class="pr-news-hooks-empty">No news hooks yet</div>
+        <!-- Full-Width News Hooks -->
+        <div class="pr-strategy-layout">
+          <div class="pr-workflow-section pr-news-hooks-section">
+            <div class="pr-workflow-header pr-news-hooks-toolbar">
+              <h2 class="pr-workflow-title">What's Happening Now</h2>
+              <div class="pr-news-hooks-controls">
+                <button class="pr-filter-btn" id="pr-sources-toggle-btn" title="Toggle Sources">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  Sources
+                  <span class="pr-filter-count" id="pr-sources-toggle-count"></span>
+                </button>
+                <select class="pr-filter-select" id="pr-news-date-filter">
+                  <option value="7">Last 7 days</option>
+                  <option value="30">Last 30 days</option>
+                  <option value="60" selected>Last 60 days</option>
+                  <option value="all">All time</option>
+                </select>
+                <button class="pr-filter-btn" id="pr-news-outlet-filter-btn">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                  </svg>
+                  Outlets
+                  <span class="pr-filter-count" id="pr-outlet-filter-count"></span>
+                </button>
+                <button class="pr-filter-clear" id="pr-news-clear-filters" style="display: none;">Clear</button>
+                <button class="btn btn-secondary btn-sm btn-icon-only" id="pr-fetch-news-btn" title="Refresh">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M1 20v-6h6"></path>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                </button>
               </div>
             </div>
-
+            <div class="pr-news-hooks-list" id="pr-news-hooks-list">
+              <div class="pr-news-hooks-empty">No news hooks yet</div>
+            </div>
           </div>
         </div>
 

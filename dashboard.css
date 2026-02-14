@@ -11377,24 +11377,83 @@ a.dropdown-item {
   min-width: 0 !important;
   border: none;
   flex-direction: column;
+  position: relative;
   background: var(--bg-primary);
 }
 
 /* 2-Panel Strategy Layout */
 .pr-strategy-layout {
   display: flex;
-  gap: 24px;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   min-height: 0;
 }
 
+/* Sources Drawer (overlay from left) */
+.pr-sources-drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 320px;
+  height: 100%;
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-color);
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.2);
+  z-index: 20;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+  overflow-y: auto;
+}
+
+.pr-sources-drawer.open {
+  transform: translateX(0);
+}
+
+.pr-sources-drawer-inner {
+  padding: var(--space-4);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.pr-sources-drawer-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  padding: 4px;
+  border-radius: 4px;
+  margin-left: auto;
+  transition: color 0.15s ease;
+}
+
+.pr-sources-drawer-close:hover {
+  color: var(--text-primary);
+}
+
+.pr-sources-backdrop {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 19;
+}
+
+.pr-sources-backdrop.visible {
+  display: block;
+}
+
+/* Strategy left panel - now hidden (drawer replaces it) */
 .pr-strategy-left {
+  display: none;
   width: 280px;
   min-width: 280px;
   max-width: 280px;
   flex-shrink: 0;
-  display: flex;
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
@@ -14509,6 +14568,31 @@ svg.spinning,
   color: var(--text-primary);
   line-height: 1.6;
   margin: 0;
+}
+
+/* Inline story angle on news card */
+.pr-news-angle {
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--accent-blue);
+  padding: var(--space-2) var(--space-3);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  margin-bottom: var(--space-2);
+}
+
+.pr-angle-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--accent-blue);
+  display: block;
+  margin-bottom: var(--space-1);
+}
+
+.pr-angle-text {
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  margin: 0;
+  font-style: italic;
 }
 
 .pr-use-hook-btn {

@@ -1359,6 +1359,7 @@ class PRAgent {
     if (this.dom.sourcesCount) {
       this.dom.sourcesCount.textContent = this.sources.length;
     }
+    if (this.newsMonitor) this.newsMonitor.updateSourcesCount();
 
     if (this.sources.length === 0) {
       this.dom.sourcesList.innerHTML = '';
@@ -4341,7 +4342,12 @@ class NewsMonitor {
       dateFilter: document.getElementById('pr-news-date-filter'),
       outletFilterBtn: document.getElementById('pr-news-outlet-filter-btn'),
       outletFilterCount: document.getElementById('pr-outlet-filter-count'),
-      clearFilters: document.getElementById('pr-news-clear-filters')
+      clearFilters: document.getElementById('pr-news-clear-filters'),
+      sourcesDrawer: document.getElementById('pr-sources-drawer'),
+      sourcesBackdrop: document.getElementById('pr-sources-backdrop'),
+      sourcesToggleBtn: document.getElementById('pr-sources-toggle-btn'),
+      sourcesDrawerClose: document.getElementById('pr-sources-drawer-close'),
+      sourcesToggleCount: document.getElementById('pr-sources-toggle-count')
     };
   }
 
@@ -4360,6 +4366,36 @@ class NewsMonitor {
     
     // Clear filters
     this.dom.clearFilters?.addEventListener('click', () => this.clearFilters());
+
+    // Sources drawer toggle
+    this.dom.sourcesToggleBtn?.addEventListener('click', () => this.toggleSourcesDrawer());
+    this.dom.sourcesDrawerClose?.addEventListener('click', () => this.closeSourcesDrawer());
+    this.dom.sourcesBackdrop?.addEventListener('click', () => this.closeSourcesDrawer());
+  }
+
+  toggleSourcesDrawer() {
+    if (this.dom.sourcesDrawer) {
+      const isOpen = this.dom.sourcesDrawer.classList.contains('open');
+      if (isOpen) {
+        this.closeSourcesDrawer();
+      } else {
+        this.dom.sourcesDrawer.classList.add('open');
+        if (this.dom.sourcesBackdrop) this.dom.sourcesBackdrop.classList.add('visible');
+      }
+    }
+  }
+
+  closeSourcesDrawer() {
+    if (this.dom.sourcesDrawer) this.dom.sourcesDrawer.classList.remove('open');
+    if (this.dom.sourcesBackdrop) this.dom.sourcesBackdrop.classList.remove('visible');
+  }
+
+  updateSourcesCount() {
+    if (this.dom.sourcesToggleCount) {
+      const count = this.prAgent.sources ? this.prAgent.sources.length : 0;
+      this.dom.sourcesToggleCount.textContent = count > 0 ? count : '';
+      this.dom.sourcesToggleCount.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
   }
 
   showMoreNews() {
@@ -4602,6 +4638,7 @@ class NewsMonitor {
       const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
       const isStale = daysAgo > 7;
       
+      const angleText = item.suggested_angle ? this.escapeHtml(item.suggested_angle) : '';
       html += `
         <div class="pr-news-item ${isStale ? 'stale' : ''}">
           <div class="pr-news-header">
@@ -4617,19 +4654,15 @@ class NewsMonitor {
             <span class="pr-relevance-label">How Glossi ties in:</span>
             <p class="pr-relevance-text">${this.escapeHtml(item.relevance)}</p>
           </div>
+          ${angleText ? `
+          <div class="pr-news-angle">
+            <span class="pr-angle-label">Story Angle:</span>
+            <p class="pr-angle-text">${angleText}</p>
+          </div>
+          ` : ''}
           <div class="pr-news-actions">
-            <button class="btn btn-sm btn-secondary pr-use-hook-btn" data-news-index="${actualIndex}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              Use as Source
-            </button>
-            <button class="btn btn-sm btn-primary pr-build-angle-btn" data-news-index="${actualIndex}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-              </svg>
-              Build Angle →
+            <button class="btn btn-sm btn-primary pr-create-content-btn" data-news-index="${actualIndex}">
+              Create Content
             </button>
           </div>
         </div>
@@ -4660,30 +4693,12 @@ class NewsMonitor {
   }
 
   attachNewsEventListenersToContainer(container) {
-    container.querySelectorAll('.pr-use-hook-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const index = parseInt(btn.dataset.newsIndex);
-        
-        // Immediate visual feedback
-        btn.disabled = true;
-        btn.innerHTML = `
-          <svg class="spinning" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" opacity="0.25"></circle>
-            <path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path>
-          </svg>
-          Adding...
-        `;
-        
-        this.useAsHook(this.newsHooks[index], btn);
-      });
-    });
-    
-    container.querySelectorAll('.pr-build-angle-btn').forEach(btn => {
+    container.querySelectorAll('.pr-create-content-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const index = parseInt(btn.dataset.newsIndex);
         const newsItem = this.newsHooks[index];
-        
-        // Visual feedback
+        if (!newsItem) return;
+
         btn.disabled = true;
         const originalHTML = btn.innerHTML;
         btn.innerHTML = `
@@ -4691,13 +4706,13 @@ class NewsMonitor {
             <circle cx="12" cy="12" r="10" opacity="0.25"></circle>
             <path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path>
           </svg>
-          Building...
+          Creating...
         `;
-        
-        // Trigger angle generation with this hook highlighted
+
+        // Add as source silently, then build angle (switches to Create tab)
+        this.useAsHook(newsItem, null);
         await this.buildAngleFromHook(newsItem);
-        
-        // Restore button
+
         btn.disabled = false;
         btn.innerHTML = originalHTML;
       });
