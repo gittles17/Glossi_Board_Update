@@ -12106,6 +12106,23 @@ svg.spinning,
   align-items: center;
 }
 
+.pr-history-pieces {
+  color: var(--accent-blue);
+  font-weight: 500;
+}
+
+.pr-history-piece-types {
+  display: block;
+  font: 400 11px var(--font-sans);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.pr-history-angle-group {
+  border-left: 2px solid var(--accent-blue);
+}
+
 .pr-history-type {
   color: var(--accent-green);
   font-weight: 500;

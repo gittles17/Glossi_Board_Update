@@ -1685,113 +1685,182 @@ class PRAgent {
       ? this.outputs 
       : this.outputs.filter(o => (o.phase || 'edit') === this.phaseFilter);
 
-    // Update count badge
+    // Group outputs by angleId
+    const groups = new Map();
+    const ungrouped = [];
+    filtered.forEach(output => {
+      if (output.angleId) {
+        if (!groups.has(output.angleId)) {
+          groups.set(output.angleId, { angleId: output.angleId, outputs: [], title: null, latestDate: 0 });
+        }
+        const group = groups.get(output.angleId);
+        group.outputs.push(output);
+        // Use angleTitle from output, or look up from angle manager
+        if (!group.title) {
+          group.title = output.angleTitle || this.getAngleTitle(output.angleId) || output.title;
+        }
+        const created = new Date(output.createdAt).getTime() || 0;
+        if (created > group.latestDate) group.latestDate = created;
+      } else {
+        ungrouped.push(output);
+      }
+    });
+
+    // Combine groups and ungrouped, sort by most recent
+    const allEntries = [];
+    groups.forEach(group => allEntries.push({ type: 'angle', ...group }));
+    ungrouped.forEach(output => allEntries.push({ 
+      type: 'single', 
+      output, 
+      latestDate: new Date(output.createdAt).getTime() || 0 
+    }));
+    allEntries.sort((a, b) => b.latestDate - a.latestDate);
+
+    // Update count badge (number of angle groups + ungrouped items)
     const countBadge = document.getElementById('pr-history-count');
     if (countBadge) {
-      countBadge.textContent = filtered.length;
-      countBadge.style.display = filtered.length > 0 ? 'inline-flex' : 'none';
+      countBadge.textContent = allEntries.length;
+      countBadge.style.display = allEntries.length > 0 ? 'inline-flex' : 'none';
     }
 
-    if (filtered.length === 0) {
+    if (allEntries.length === 0) {
       this.dom.historyList.innerHTML = '';
       if (this.dom.historyEmpty) this.dom.historyEmpty.style.display = 'block';
+      // Reset workspace when no history remains
+      if (this.angleManager) this.angleManager.resetWorkspace();
       return;
     }
 
     if (this.dom.historyEmpty) this.dom.historyEmpty.style.display = 'none';
 
-    const sorted = [...filtered].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    this.dom.historyList.innerHTML = sorted.map(output => {
-      const typeLabel = CONTENT_TYPES.find(t => t.id === output.content_type)?.label || output.content_type;
-      const phase = output.phase || 'edit';
-      const phaseConfig = this.getPhaseConfig(phase);
-      
-      // Format date
-      let dateText = 'Recently';
-      try {
-        const date = new Date(output.createdAt);
-        if (!isNaN(date.getTime())) {
-          const now = new Date();
-          const diffMs = now - date;
-          const diffMins = Math.floor(diffMs / 60000);
-          const diffHours = Math.floor(diffMs / 3600000);
-          const diffDays = Math.floor(diffMs / 86400000);
-          
-          if (diffMins < 1) {
-            dateText = 'Just now';
-          } else if (diffMins < 60) {
-            dateText = `${diffMins}m ago`;
-          } else if (diffHours < 24) {
-            dateText = `${diffHours}h ago`;
-          } else if (diffDays < 7) {
-            dateText = `${diffDays}d ago`;
-          } else {
-            dateText = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          }
-        }
-      } catch (e) {
-        dateText = 'Recently';
-      }
-      
-      return `
-        <div class="pr-history-item" data-output-id="${output.id}">
-          <div class="pr-history-info">
-            <span class="pr-history-title">${this.escapeHtml(output.title || 'Untitled')}</span>
-            <span class="pr-history-meta">
-              <span class="pr-phase-badge pr-phase-${phase}" data-output-id="${output.id}" title="Click to change phase">
-                ${phaseConfig.icon}
-                <span>${phaseConfig.label}</span>
+    this.dom.historyList.innerHTML = allEntries.map(entry => {
+      if (entry.type === 'angle') {
+        const pieceCount = entry.outputs.length;
+        const pieceTypes = entry.outputs.map(o => {
+          const label = CONTENT_TYPES.find(t => t.id === o.content_type)?.label || o.content_type;
+          return label;
+        }).join(', ');
+        const dateText = this.formatHistoryDate(entry.latestDate);
+        return `
+          <div class="pr-history-item pr-history-angle-group" data-angle-id="${entry.angleId}">
+            <div class="pr-history-info">
+              <span class="pr-history-title">${this.escapeHtml(entry.title || 'Untitled Angle')}</span>
+              <span class="pr-history-meta">
+                <span class="pr-history-pieces">${pieceCount} piece${pieceCount !== 1 ? 's' : ''}</span>
+                <span class="pr-history-date">${dateText}</span>
               </span>
-              <span class="pr-history-type">${typeLabel}</span>
-              <span class="pr-history-date">${dateText}</span>
-            </span>
-          </div>
-          <button class="pr-history-delete" data-history-delete="${output.id}" title="Delete">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>`;
+              <span class="pr-history-piece-types">${this.escapeHtml(pieceTypes)}</span>
+            </div>
+            <button class="pr-history-delete" data-angle-delete="${entry.angleId}" title="Delete all pieces">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>`;
+      } else {
+        const output = entry.output;
+        const typeLabel = CONTENT_TYPES.find(t => t.id === output.content_type)?.label || output.content_type;
+        const dateText = this.formatHistoryDate(entry.latestDate);
+        return `
+          <div class="pr-history-item" data-output-id="${output.id}">
+            <div class="pr-history-info">
+              <span class="pr-history-title">${this.escapeHtml(output.title || 'Untitled')}</span>
+              <span class="pr-history-meta">
+                <span class="pr-history-type">${typeLabel}</span>
+                <span class="pr-history-date">${dateText}</span>
+              </span>
+            </div>
+            <button class="pr-history-delete" data-history-delete="${output.id}" title="Delete">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>`;
+      }
     }).join('');
 
-    // Event listeners for history items
-    this.dom.historyList.querySelectorAll('.pr-history-item').forEach(item => {
+    // Click handlers for angle groups (restore all tabs)
+    this.dom.historyList.querySelectorAll('.pr-history-angle-group').forEach(item => {
       item.addEventListener('click', (e) => {
-        if (e.target.closest('[data-history-delete]')) return;
-        if (e.target.closest('.pr-phase-badge')) return;
-        this.loadOutput(item.dataset.outputId);
+        if (e.target.closest('[data-angle-delete]')) return;
+        const angleId = item.dataset.angleId;
+        const group = groups.get(angleId);
+        if (group && this.angleManager) {
+          this.angleManager.restoreAngleFromHistory(angleId, group.outputs);
+        }
       });
     });
 
-    this.dom.historyList.querySelectorAll('[data-history-delete]').forEach(btn => {
+    // Click handlers for single (ungrouped) items
+    this.dom.historyList.querySelectorAll('.pr-history-item:not(.pr-history-angle-group)').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('[data-history-delete]')) return;
+        const outputId = item.dataset.outputId;
+        if (outputId) this.loadOutput(outputId);
+      });
+    });
+
+    // Delete handlers for angle groups (delete all outputs for that angle)
+    this.dom.historyList.querySelectorAll('[data-angle-delete]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        // Optimistic delete - remove immediately, no confirmation
-        const outputId = btn.dataset.historyDelete;
-        this.outputs = this.outputs.filter(o => o.id !== outputId);
+        const angleId = btn.dataset.angleDelete;
+        const toDelete = this.outputs.filter(o => o.angleId === angleId);
+        this.outputs = this.outputs.filter(o => o.angleId !== angleId);
         this.renderHistory();
-        
-        // Sync delete with API in background
-        fetch(`/api/pr/outputs/${outputId}`, {
-          method: 'DELETE'
-        }).catch(error => {
-          console.error('Error deleting output:', error);
+
+        // If the active angle is the one being deleted, reset
+        if (this.angleManager && this.angleManager.activeAngle && this.angleManager.activeAngle.id === angleId) {
+          this.angleManager.resetWorkspace();
+        }
+
+        // Sync deletes with API
+        toDelete.forEach(output => {
+          fetch(`/api/pr/outputs/${output.id}`, { method: 'DELETE' }).catch(() => {});
         });
-        
         this.saveOutputs();
       });
     });
-    
-    // Phase badge click handlers
-    this.dom.historyList.querySelectorAll('.pr-phase-badge').forEach(badge => {
-      badge.addEventListener('click', (e) => {
+
+    // Delete handlers for single items
+    this.dom.historyList.querySelectorAll('[data-history-delete]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        const outputId = badge.dataset.outputId;
-        this.showPhaseMenu(outputId, badge);
+        const outputId = btn.dataset.historyDelete;
+        if (!outputId) return;
+        this.outputs = this.outputs.filter(o => o.id !== outputId);
+        this.renderHistory();
+        fetch(`/api/pr/outputs/${outputId}`, { method: 'DELETE' }).catch(() => {});
+        this.saveOutputs();
       });
     });
+  }
+
+  getAngleTitle(angleId) {
+    if (!this.angleManager) return null;
+    const angle = this.angleManager.angles.find(a => a.id === angleId) ||
+                  this.angleManager.defaultAngles.find(a => a.id === angleId);
+    return angle ? angle.title : null;
+  }
+
+  formatHistoryDate(timestamp) {
+    if (!timestamp) return 'Recently';
+    try {
+      const now = Date.now();
+      const diffMs = now - timestamp;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch (e) {
+      return 'Recently';
+    }
   }
   
   getPhaseConfig(phase) {
@@ -5582,6 +5651,7 @@ class AngleManager {
         status: 'draft',
         phase: 'edit',
         angleId: angle.id,
+        angleTitle: angle.title,
         drafts: [{ content: parsed.content, version: 1, timestamp: Date.now(), prompt: null }]
       };
 
@@ -5877,6 +5947,82 @@ class AngleManager {
       'talking_points': 'Talking Points'
     };
     return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  resetWorkspace() {
+    // Close all tabs
+    const tabsContainer = document.getElementById('pr-angle-tabs');
+    if (tabsContainer) {
+      tabsContainer.innerHTML = '';
+      tabsContainer.style.display = 'none';
+    }
+
+    // Clear stored content
+    this.tabContent.clear();
+    this.activeTabId = null;
+    this.activeAngle = null;
+    localStorage.removeItem('pr_active_angle');
+
+    // Hide tracker
+    this.updateTracker();
+
+    // Deselect all angle cards
+    document.querySelectorAll('.pr-angle-card').forEach(card => card.classList.remove('selected'));
+
+    // Reset workspace to empty state
+    if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
+    if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
+    this.prAgent.hideLoading();
+    this.prAgent.currentOutput = null;
+
+    // Re-expand Story Angles, collapse others
+    this.collapseSection('pr-angles-body', false);
+    this.collapseSection('pr-tracker-body', true);
+    this.collapseSection('pr-history-body', true);
+  }
+
+  restoreAngleFromHistory(angleId, outputs) {
+    // Reset current workspace first
+    this.resetWorkspace();
+
+    // Find the angle
+    const angle = this.angles.find(a => a.id === angleId) || this.defaultAngles.find(a => a.id === angleId);
+    if (!angle) return;
+
+    this.activeAngle = angle;
+    localStorage.setItem('pr_active_angle', JSON.stringify(angle));
+
+    // Select the angle card
+    document.querySelectorAll('.pr-angle-card').forEach(card => {
+      card.classList.toggle('selected', card.dataset.angleId === angleId);
+    });
+
+    // Open tabs for each output and store content
+    outputs.forEach((output, i) => {
+      const planIndex = angle.content_plan
+        ? angle.content_plan.findIndex(p => p.type === output.content_type)
+        : i;
+      const idx = planIndex >= 0 ? planIndex : i;
+      const tabLabel = CONTENT_TYPES.find(t => t.id === output.content_type)?.label || output.content_type;
+      const tabId = `${angle.id}_${idx}`;
+
+      this.openAngleTab(angle, idx, tabLabel);
+      this.tabContent.set(tabId, { loading: false, output });
+    });
+
+    // Switch to first tab and render its content
+    const firstOutput = outputs[0];
+    if (firstOutput) {
+      const firstPlanIndex = angle.content_plan
+        ? angle.content_plan.findIndex(p => p.type === firstOutput.content_type)
+        : 0;
+      const firstTabId = `${angle.id}_${firstPlanIndex >= 0 ? firstPlanIndex : 0}`;
+      this.switchAngleTab(firstTabId);
+    }
+
+    this.updateTracker();
+    this.collapseSection('pr-angles-body', true);
+    this.collapseSection('pr-tracker-body', false);
   }
 
   collapseSection(sectionId, collapsed) {
