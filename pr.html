@@ -175,14 +175,6 @@
               </div>
             </div>
 
-            <!-- Compact chat input -->
-            <div class="pr-left-chat" id="pr-left-chat" style="display:none">
-              <input type="text" id="pr-chat-input" class="pr-left-chat-input" placeholder="Refine further..." autocomplete="off" />
-              <button class="pr-left-chat-send" id="pr-send-btn" title="Send">
-                <i class="ph-light ph-paper-plane-tilt"></i>
-              </button>
-            </div>
-
             <!-- Legacy: hidden elements for backward compat -->
             <div style="display:none">
               <div id="pr-angles-list"></div>
@@ -294,6 +286,14 @@
                   </div>
                 </div>
               </div>
+            </div>
+
+            <!-- Compact chat input (sticky bottom) -->
+            <div class="pr-workspace-chat" id="pr-workspace-chat" style="display:none">
+              <input type="text" id="pr-chat-input" class="pr-workspace-chat-input" placeholder="Refine further..." autocomplete="off" />
+              <button class="pr-workspace-chat-send" id="pr-send-btn" title="Send">
+                <i class="ph-light ph-paper-plane-tilt"></i>
+              </button>
             </div>
 
           </div>

@@ -751,7 +751,7 @@ class PRAgent {
       workspaceGenerated: document.getElementById('pr-workspace-generated'),
       generatedContent: document.getElementById('pr-generated-content'),
       loadingState: document.getElementById('pr-loading-state'),
-      leftChat: document.getElementById('pr-left-chat'),
+      workspaceChat: document.getElementById('pr-workspace-chat'),
       copyBtn: document.getElementById('pr-copy-btn'),
       exportBtn: document.getElementById('pr-export-btn'),
       exportMenu: document.getElementById('pr-export-menu'),
@@ -2294,7 +2294,7 @@ class PRAgent {
     if (this.dom.workspaceEmpty) this.dom.workspaceEmpty.style.display = 'none';
     if (this.dom.workspaceGenerated) this.dom.workspaceGenerated.style.display = 'block';
     if (this.dom.regenerateBtn) this.dom.regenerateBtn.style.display = 'inline-flex';
-    if (this.dom.leftChat) this.dom.leftChat.style.display = 'flex';
+    if (this.dom.workspaceChat) this.dom.workspaceChat.style.display = 'flex';
     
     // Switch to workspace tab after generation
     const workspaceTab = document.querySelector('[data-workspace-tab="content"]');
@@ -4924,8 +4924,8 @@ class NewsMonitor {
     const suggestionsEl = document.getElementById('pr-suggestions');
     if (suggestionsEl && story.suggestionsHTML) suggestionsEl.innerHTML = story.suggestionsHTML;
     // Show left panel chat if content exists
-    if (this.prAgent.dom.leftChat && story.currentOutput) {
-      this.prAgent.dom.leftChat.style.display = 'flex';
+    if (this.prAgent.dom.workspaceChat && story.currentOutput) {
+      this.prAgent.dom.workspaceChat.style.display = 'flex';
     }
 
     // Set angle context
@@ -4960,7 +4960,7 @@ class NewsMonitor {
         if (tabsEl) { tabsEl.style.display = 'none'; tabsEl.innerHTML = ''; }
         if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
         if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
-        if (this.prAgent.dom.leftChat) this.prAgent.dom.leftChat.style.display = 'none';
+        if (this.prAgent.dom.workspaceChat) this.prAgent.dom.workspaceChat.style.display = 'none';
         this.renderStorySelector();
       }
     } else {
