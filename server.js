@@ -1339,13 +1339,24 @@ EXCLUDE (specific examples):
     });
     
     if (useDatabase) {
-      // Clear old news and insert new
-      await pool.query('DELETE FROM pr_news_hooks');
-      
+      // Accumulate articles: only insert new ones, skip duplicates (match by URL or headline)
+      // Old articles are cleaned up by the 30-day retention policy on the GET endpoint
       let insertedCount = 0;
+      let skippedCount = 0;
       
       for (const item of normalizedNews) {
         try {
+          // Check for existing article by URL or headline
+          const existing = await pool.query(
+            `SELECT id FROM pr_news_hooks WHERE url = $1 OR headline = $2 LIMIT 1`,
+            [item.url || '', item.headline || '']
+          );
+          
+          if (existing.rows.length > 0) {
+            skippedCount++;
+            continue;
+          }
+          
           await pool.query(`
             INSERT INTO pr_news_hooks (headline, outlet, date, url, summary, relevance, angle_title, angle_narrative, content_plan, fetched_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
@@ -1366,7 +1377,29 @@ EXCLUDE (specific examples):
         }
       }
       
-      console.log(`Inserted ${insertedCount} of ${normalizedNews.length} articles into database`);
+      if (skippedCount > 0) {
+        console.log(`Skipped ${skippedCount} duplicate articles`);
+      }
+      
+      console.log(`Inserted ${insertedCount} new, skipped ${skippedCount} duplicates out of ${normalizedNews.length} analyzed`);
+      
+      // Return ALL articles from DB (accumulated, not just new ones)
+      const allNews = await pool.query(`
+        SELECT * FROM pr_news_hooks 
+        WHERE date > NOW() - INTERVAL '30 days'
+        ORDER BY date DESC, fetched_at DESC
+      `);
+      
+      const allNormalized = allNews.rows.map(item => ({
+        ...item,
+        outlet: normalizeOutletName(item.outlet)
+      }));
+      
+      console.log(`Returning ${allNormalized.length} total articles (${insertedCount} new)`);
+      res.json({ success: true, news: allNormalized, newCount: insertedCount });
+    } else {
+      // No database, return just the fetched news
+      res.json({ success: true, news: normalizedNews });
     }
     
     // Log final outlet distribution
@@ -1374,9 +1407,7 @@ EXCLUDE (specific examples):
     normalizedNews.forEach(item => {
       finalOutletCounts[item.outlet] = (finalOutletCounts[item.outlet] || 0) + 1;
     });
-    console.log(`✓ Returning ${normalizedNews.length} news hooks by outlet:`, JSON.stringify(finalOutletCounts, null, 2));
-    
-    res.json({ success: true, news: normalizedNews });
+    console.log(`Analyzed ${normalizedNews.length} articles by outlet:`, JSON.stringify(finalOutletCounts, null, 2));
   } catch (error) {
     console.error('❌ Error fetching news hooks:', error);
     console.error('Error stack:', error.stack);
