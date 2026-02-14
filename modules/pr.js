@@ -4765,36 +4765,51 @@ class NewsMonitor {
       const angleTitle = item.angle_title || '';
       const angleNarrative = item.angle_narrative || '';
       const hasAngle = angleTitle || angleNarrative;
-      // For cached data without new angle fields, fall back to relevance with a label
       const isFallback = !angleTitle && !angleNarrative && item.relevance;
+      const displayAngleTitle = angleTitle || (isFallback ? 'Glossi tie-in' : '');
+      const displayAngleNarrative = angleNarrative || (isFallback ? item.relevance : '');
+      const showAngleRow = displayAngleTitle || displayAngleNarrative;
       
       html += `
         <div class="pr-news-item ${isStale ? 'stale' : ''}">
-          <div class="pr-news-header">
-            <a href="${item.url}" target="_blank" class="pr-news-headline">${this.escapeHtml(item.headline)}</a>
-            ${isStale ? '<span class="pr-news-stale-badge">Old</span>' : ''}
-          </div>
+          <a href="${item.url}" target="_blank" class="pr-news-headline">${this.escapeHtml(item.headline)}</a>
           <div class="pr-news-meta">
             <span class="pr-news-outlet">${this.escapeHtml(item.outlet)}</span>
             <span class="pr-news-date">${daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`}</span>
           </div>
           <p class="pr-news-summary">${this.escapeHtml(item.summary)}</p>
-          ${hasAngle ? `
+          ${showAngleRow ? `
           <div class="pr-news-angle">
-            ${angleTitle ? `<span class="pr-news-angle-title">${this.escapeHtml(angleTitle)}</span>` : ''}
-            ${angleNarrative ? `<p class="pr-news-angle-narrative">${this.escapeHtml(angleNarrative)}</p>` : ''}
+            <div class="pr-news-angle-row">
+              <svg class="pr-angle-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              <span class="pr-news-angle-title">${this.escapeHtml(displayAngleTitle)}</span>
+              <button class="pr-create-content-btn" data-news-index="${actualIndex}">
+                Create
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </div>
+            ${displayAngleNarrative ? `
+            <div class="pr-news-angle-body">
+              <p class="pr-news-angle-narrative">${this.escapeHtml(displayAngleNarrative)}</p>
+            </div>
+            ` : ''}
           </div>
-          ` : isFallback ? `
-          <div class="pr-news-angle pr-news-angle-fallback">
-            <span class="pr-news-angle-title">Glossi tie-in</span>
-            <p class="pr-news-angle-narrative">${this.escapeHtml(item.relevance)}</p>
-          </div>
-          ` : ''}
-          <div class="pr-news-actions">
-            <button class="btn btn-sm btn-primary pr-create-content-btn" data-news-index="${actualIndex}">
+          ` : `
+          <div class="pr-news-angle-row pr-news-angle-row-noangle">
+            <button class="pr-create-content-btn" data-news-index="${actualIndex}">
               Create Content
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
             </button>
           </div>
+          `}
         </div>
       `;
     });
@@ -4823,8 +4838,20 @@ class NewsMonitor {
   }
 
   attachNewsEventListenersToContainer(container) {
+    // Angle row expand/collapse toggle
+    container.querySelectorAll('.pr-news-angle-row').forEach(row => {
+      row.addEventListener('click', (e) => {
+        // Don't toggle when clicking the Create button
+        if (e.target.closest('.pr-create-content-btn')) return;
+        const card = row.closest('.pr-news-item');
+        if (card) card.classList.toggle('expanded');
+      });
+    });
+
+    // Create Content button
     container.querySelectorAll('.pr-create-content-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
         const index = parseInt(btn.dataset.newsIndex);
         const newsItem = this.newsHooks[index];
         if (!newsItem) return;
@@ -4839,10 +4866,7 @@ class NewsMonitor {
           Creating...
         `;
 
-        // Add as source silently
         this.useAsHook(newsItem, null);
-        
-        // Switch to Create tab and populate with angle context
         await this.launchCreateWorkspace(newsItem);
 
         btn.disabled = false;
