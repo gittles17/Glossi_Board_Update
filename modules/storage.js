@@ -108,10 +108,9 @@ class Storage {
   }
 
   /**
-   * Initialize storage - load from server files first, then localStorage as fallback
+   * Initialize storage - load from PostgreSQL via server API
    */
   async init() {
-    // Try to load from server files first
     try {
       const response = await fetch('/api/data');
       if (response.ok) {
@@ -135,126 +134,38 @@ class Storage {
             this.statHistory = result.data.stat_history;
           }
           if (result.data.todos) {
-            this._serverTodos = result.data.todos;
+            this.todos = result.data.todos;
           }
           if (result.data.team_members) {
             this.teamMembers = result.data.team_members;
           }
         }
+      } else {
+        this.serverAvailable = false;
       }
     } catch (e) {
       this.serverAvailable = false;
     }
 
-    // Helper to safely parse JSON from localStorage
-    const safeJsonParse = (key, fallback) => {
-      try {
-        const stored = localStorage.getItem(key);
-        return stored ? JSON.parse(stored) : fallback;
-      } catch (e) {
-        console.warn(`Failed to parse ${key} from localStorage, using default:`, e);
-        return fallback;
-      }
-    };
-
-    // Only use localStorage if server is unavailable or returned no data
-    const useLocalStorageFallback = !this.serverAvailable;
-    
+    // If server is unavailable, use defaults (no localStorage fallback)
     if (!this.data) {
-      const localData = safeJsonParse('glossi_data', null);
-      this.data = localData || { ...DEFAULT_DATA };
-      // Migrate: if localStorage has data but server doesn't, push to server
-      if (localData && this.serverAvailable) {
-        this.scheduleSave();
-      }
+      this.data = { ...DEFAULT_DATA };
     }
     if (!this.settings) {
-      const localSettings = safeJsonParse('glossi_settings', null);
-      this.settings = localSettings || { ...DEFAULT_SETTINGS };
-      // Migrate: if localStorage has settings but server doesn't, push to server
-      if (localSettings && this.serverAvailable) {
-        this.saveSettings();
-      }
+      this.settings = { ...DEFAULT_SETTINGS };
     }
-    if (!this.meetings || this.meetings.length === 0) {
-      const localMeetings = safeJsonParse('glossi_meetings', []);
-      if (localMeetings.length > 0) {
-        this.meetings = localMeetings;
-        // Migrate: if localStorage has meetings but server doesn't, push to server
-        if (this.serverAvailable) {
-          this.scheduleSave();
-        }
-      }
+    if (!this.meetings) {
+      this.meetings = [];
     }
-    // Merge todos: localStorage is the authoritative local source,
-    // server may have data from other devices or be stale
-    const localTodos = safeJsonParse('glossi_todos', []);
-    const serverTodos = this._serverTodos || [];
-    delete this._serverTodos;
-    
-    if (localTodos.length > 0) {
-      // localStorage always has the most recent local edits
-      const localMap = new Map(localTodos.map(t => [t.id, t]));
-      const merged = [...localTodos];
-      // Add any server-only todos (e.g., from another device)
-      serverTodos.forEach(t => {
-        if (!localMap.has(t.id)) merged.push(t);
-      });
-      this.todos = merged;
-    } else if (serverTodos.length > 0) {
-      this.todos = serverTodos;
-    } else {
+    if (!this.todos) {
       this.todos = [];
     }
-    const todosFromServer = serverTodos.length > 0 && localTodos.length === 0;
-    
-    // Migration: Copy todos from meetings to independent storage (one-time)
-    if (this.todos.length === 0 && this.meetings && this.meetings.length > 0) {
-      const migratedTodos = [];
-      this.meetings.forEach(meeting => {
-        if (meeting.todos && meeting.todos.length > 0) {
-          meeting.todos.forEach(todo => {
-            migratedTodos.push({
-              id: todo.id || `todo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              text: todo.text,
-              owner: todo.owner || 'Unassigned',
-              completed: todo.completed || false,
-              createdAt: meeting.date || new Date().toISOString()
-            });
-          });
-        }
-      });
-      if (migratedTodos.length > 0) {
-        this.todos = migratedTodos;
-        this.saveTodos();
-      }
+    if (!this.pipelineHistory) {
+      this.pipelineHistory = [];
     }
-    
-    // One-time sync: push localStorage todos to server if server had none
-    if (!todosFromServer && this.todos.length > 0 && this.serverAvailable) {
-      this.saveTodos();
+    if (!this.statHistory) {
+      this.statHistory = [];
     }
-    if (!this.pipelineHistory || this.pipelineHistory.length === 0) {
-      const localPipelineHistory = safeJsonParse('glossi_pipeline_history', []);
-      if (localPipelineHistory.length > 0) {
-        this.pipelineHistory = localPipelineHistory;
-        // Migrate: push to server if available
-        if (this.serverAvailable) {
-          this.savePipelineHistory();
-        }
-      }
-    }
-    if (!this.statHistory || this.statHistory.length === 0) {
-      const localStatHistory = safeJsonParse('glossi_stat_history', []);
-      if (localStatHistory.length > 0) {
-        this.statHistory = localStatHistory;
-        // Migrate: push to server if available
-        if (this.serverAvailable) {
-          this.saveStatHistory();
-        }
-      }
-    }
-
 
     // Ensure all required fields exist
     this.data = { ...DEFAULT_DATA, ...this.data };
@@ -418,11 +329,10 @@ class Storage {
   }
 
   /**
-   * Save todos to localStorage
+   * Save todos to server
    */
   saveTodos() {
     try {
-      localStorage.setItem('glossi_todos', JSON.stringify(this.todos));
       this.syncToServer();
     } catch (e) {
       console.error('Failed to save todos:', e);
@@ -1117,23 +1027,9 @@ class Storage {
   }
 
   /**
-   * Get Google Sheet pipeline deals (reads fresh from localStorage for cross-page sync)
+   * Get Google Sheet pipeline deals from in-memory data (synced via server)
    */
   getGoogleSheetPipeline() {
-    // Try to get fresh data from localStorage in case another page updated it
-    try {
-      const freshData = localStorage.getItem('glossi_data');
-      if (freshData) {
-        const parsed = JSON.parse(freshData);
-        if (parsed.googleSheetPipeline) {
-          // Update in-memory cache with fresh data
-          this.data.googleSheetPipeline = parsed.googleSheetPipeline;
-          return parsed.googleSheetPipeline;
-        }
-      }
-    } catch (e) {
-      // Fall back to in-memory data
-    }
     return this.data.googleSheetPipeline || null;
   }
 
@@ -1742,11 +1638,10 @@ class Storage {
   }
 
   /**
-   * Save pipeline history to localStorage and sync to server
+   * Save pipeline history to server
    */
   savePipelineHistory() {
     try {
-      localStorage.setItem('glossi_pipeline_history', JSON.stringify(this.pipelineHistory));
       this.syncToServer();
       return true;
     } catch (e) {
@@ -1880,11 +1775,10 @@ class Storage {
   }
 
   /**
-   * Save stat history to localStorage and sync to server
+   * Save stat history to server
    */
   saveStatHistory() {
     try {
-      localStorage.setItem('glossi_stat_history', JSON.stringify(this.statHistory));
       this.syncToServer();
       return true;
     } catch (e) {
@@ -1926,17 +1820,11 @@ class Storage {
   }
 
   /**
-   * Save all data to localStorage and sync to server
+   * Save all data to server (PostgreSQL)
    */
   save() {
     try {
-      localStorage.setItem('glossi_data', JSON.stringify(this.data));
-      localStorage.setItem('glossi_meetings', JSON.stringify(this.meetings));
-      localStorage.setItem('glossi_todos', JSON.stringify(this.todos));
-      
-      // Sync to server
       this.syncToServer();
-      
       return true;
     } catch (e) {
       console.error('Failed to save data:', e);

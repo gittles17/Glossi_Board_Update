@@ -107,7 +107,7 @@ function glossiLoaderSVG(extraClass = '') {
     const y2 = (50 + 48 * Math.sin(rad)).toFixed(1);
     return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#fff" stroke-width="1" stroke-linecap="round" class="gl-tick gl-tick-${i}"/>`;
   }).join('');
-  return `<div class="${cls}"><svg class="glossi-loader-dots" viewBox="0 0 100 100">${ticks}</svg><img src="assets/glossi-logo.svg" class="glossi-loader-logo" alt="" /></div>`;
+  return `<div class="${cls}"><svg class="glossi-loader-dots" viewBox="0 0 100 100">${ticks}</svg></div>`;
 }
 
 const CONTENT_TYPES = [
@@ -5369,9 +5369,10 @@ class NewsMonitor {
       tab.className = `pr-content-tab ${index === 0 ? 'active' : ''}`;
       tab.dataset.tabId = tabId;
       tab.dataset.planIndex = index;
-      tab.innerHTML = `<span>${label}</span>`;
+      tab.innerHTML = `<span>${label}</span><button class="pr-tab-close" title="Close tab" aria-label="Close tab">&times;</button>`;
       
-      tab.addEventListener('click', () => {
+      tab.addEventListener('click', (e) => {
+        if (e.target.closest('.pr-tab-close')) return;
         this.switchContentTab(tabId);
         
         // Generate if not already generated
@@ -5379,6 +5380,11 @@ class NewsMonitor {
         if (!entry) {
           this.generateTabContent(tabId, this._activeContentPlan[index], this._activeNewsItem);
         }
+      });
+
+      tab.querySelector('.pr-tab-close').addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.closeContentTab(tabId);
       });
 
       if (actionsEl) {
@@ -5442,6 +5448,33 @@ class NewsMonitor {
       if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
       if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
       this.prAgent.hideLoading();
+    }
+  }
+
+  closeContentTab(tabId) {
+    const tabsContainer = document.getElementById('pr-content-tabs');
+    if (!tabsContainer) return;
+
+    const allTabs = Array.from(tabsContainer.querySelectorAll('.pr-content-tab'));
+    const tabEl = allTabs.find(t => t.dataset.tabId === tabId);
+    if (!tabEl) return;
+
+    const wasActive = tabEl.classList.contains('active');
+    const tabIndex = allTabs.indexOf(tabEl);
+
+    tabEl.remove();
+
+    if (wasActive) {
+      const remainingTabs = Array.from(tabsContainer.querySelectorAll('.pr-content-tab'));
+      if (remainingTabs.length > 0) {
+        const nextTab = remainingTabs[Math.min(tabIndex, remainingTabs.length - 1)];
+        this.switchContentTab(nextTab.dataset.tabId);
+      } else {
+        this._activeTabId = null;
+        if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
+        if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
+        this.prAgent.hideLoading();
+      }
     }
   }
 
