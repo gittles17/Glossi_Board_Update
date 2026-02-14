@@ -446,32 +446,32 @@ class PRAgent {
   setupApiKeyMonitoring() {
     // Clear previous interval if re-initialized
     if (this._apiKeyInterval) clearInterval(this._apiKeyInterval);
-    // Check for API key updates every 3 seconds
-    this._apiKeyInterval = setInterval(() => {
+    // Check server for API key updates every 10 seconds
+    this._apiKeyInterval = setInterval(async () => {
       const previousKey = this.apiKey;
       
       try {
-        const glossiSettings = localStorage.getItem('glossi_settings');
-        if (glossiSettings) {
-          const gs = JSON.parse(glossiSettings);
-          this.apiKey = gs.apiKey || null;
-          this.openaiApiKey = gs.openaiApiKey || null;
-          
+        const response = await fetch('/api/settings');
+        if (response.ok) {
+          const serverSettings = await response.json();
+          if (serverSettings.hasAnthropicKey) {
+            this.apiKey = this.apiKey || 'env';
+          }
+          if (serverSettings.hasOpenAIKey) {
+            this.openaiApiKey = this.openaiApiKey || 'env';
+          }
           // If key status changed, update UI
           if ((previousKey === null && this.apiKey) || (previousKey && !this.apiKey)) {
             this.updateGenerateButton();
           }
         }
       } catch (e) {
-        // Ignore parsing errors
+        // Ignore network errors during polling
       }
-    }, 3000);
+    }, 10000);
   }
 
   async loadData() {
-    // Check if migration is needed (localStorage has data but API doesn't)
-    await this.checkAndMigrateData();
-    
     // Load sources from API
     try {
       const response = await fetch('/api/pr/sources');
@@ -486,17 +486,7 @@ class PRAgent {
       }
     } catch (e) {
       console.error('Error loading sources from API:', e);
-      // Fallback to localStorage
-      try {
-        const sourcesRaw = localStorage.getItem('pr_sources');
-        const parsed = sourcesRaw ? JSON.parse(sourcesRaw) : [];
-        this.sources = Array.isArray(parsed) ? parsed.map(s => ({
-          ...s,
-          selected: s.selected !== false
-        })) : [];
-      } catch (e2) {
-        this.sources = [];
-      }
+      this.sources = [];
     }
 
     // Clean up auto-added news hook sources (one-time migration)
@@ -517,16 +507,10 @@ class PRAgent {
       }
     } catch (e) {
       console.error('Error loading outputs from API:', e);
-      // Fallback to localStorage
-      try {
-        const outputsRaw = localStorage.getItem('pr_outputs');
-        this.outputs = outputsRaw ? JSON.parse(outputsRaw) : [];
-      } catch (e2) {
-        this.outputs = [];
-      }
+      this.outputs = [];
     }
     
-    // Load PR settings from API first, fallback to localStorage
+    // Load PR settings from API
     try {
       const response = await fetch('/api/pr/settings');
       if (response.ok) {
@@ -536,33 +520,19 @@ class PRAgent {
           this.folders = result.settings.folders || [];
           this.expandedFolders = result.settings.expandedFolders || {};
         } else {
-          // Fallback to localStorage if no server settings
-          const settingsRaw = localStorage.getItem('pr_settings');
-          const settings = settingsRaw ? JSON.parse(settingsRaw) : {};
-          this.settings = settings;
-          this.folders = settings.folders || [];
-          this.expandedFolders = settings.expandedFolders || {};
-          // Migrate to server if we have local data
-          if (settingsRaw) {
-            this.saveSettings();
-          }
+          this.settings = {};
+          this.folders = [];
+          this.expandedFolders = {};
         }
       } else {
-        throw new Error('API not available');
-      }
-    } catch (e) {
-      // Fallback to localStorage on error
-      try {
-        const settingsRaw = localStorage.getItem('pr_settings');
-        const settings = settingsRaw ? JSON.parse(settingsRaw) : {};
-        this.settings = settings;
-        this.folders = settings.folders || [];
-        this.expandedFolders = settings.expandedFolders || {};
-      } catch (e2) {
         this.settings = {};
         this.folders = [];
         this.expandedFolders = {};
       }
+    } catch (e) {
+      this.settings = {};
+      this.folders = [];
+      this.expandedFolders = {};
     }
     
     // Check server for environment-configured API keys first
@@ -582,19 +552,8 @@ class PRAgent {
       console.warn('Could not check server for API keys');
     }
     
-    // Fall back to localStorage if no environment keys
-    if (!this.apiKey || !this.openaiApiKey) {
-      try {
-        const glossiSettings = localStorage.getItem('glossi_settings');
-        if (glossiSettings) {
-          const gs = JSON.parse(glossiSettings);
-          if (!this.apiKey) this.apiKey = gs.apiKey || null;
-          if (!this.openaiApiKey) this.openaiApiKey = gs.openaiApiKey || null;
-        }
-      } catch (e) {
-        console.error('Error loading API keys from localStorage:', e);
-      }
-    }
+    // If no environment keys, settings will be loaded from server via storage module
+    // (no localStorage fallback)
     
     this.isGenerating = false;
     
@@ -604,129 +563,17 @@ class PRAgent {
     }
   }
 
-  async checkAndMigrateData() {
-    // Check if localStorage has data
-    const localSources = localStorage.getItem('pr_sources');
-    const localOutputs = localStorage.getItem('pr_outputs');
-    
-    if (!localSources && !localOutputs) {
-      // No local data to migrate
-      return;
-    }
-
-    try {
-      // Check if API already has data
-      const sourcesResponse = await fetch('/api/pr/sources');
-      const sourcesData = await sourcesResponse.json();
-      
-      const outputsResponse = await fetch('/api/pr/outputs');
-      const outputsData = await outputsResponse.json();
-      
-      // If API has data, skip migration (already done)
-      if ((sourcesData.sources && sourcesData.sources.length > 0) || 
-          (outputsData.outputs && outputsData.outputs.length > 0)) {
-        return;
-      }
-      
-      // Show migration modal
-      let parsedSources, parsedOutputs;
-      try { parsedSources = localSources ? JSON.parse(localSources) : []; } catch (e) { parsedSources = []; }
-      try { parsedOutputs = localOutputs ? JSON.parse(localOutputs) : []; } catch (e) { parsedOutputs = []; }
-      const migrationNeeded = (localSources && parsedSources.length > 0) ||
-                             (localOutputs && parsedOutputs.length > 0);
-      
-      if (!migrationNeeded) return;
-      
-      // Create migration modal
-      const modal = document.createElement('div');
-      modal.className = 'pr-migration-modal';
-      modal.innerHTML = `
-        <div class="pr-migration-content">
-          ${glossiLoaderSVG()}
-          <h3>Migrating your PR data...</h3>
-          <p class="pr-migration-progress" id="pr-migration-progress">Preparing migration...</p>
-          <div class="pr-migration-bar">
-            <div class="pr-migration-bar-fill" id="pr-migration-bar-fill"></div>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(modal);
-      
-      const progressText = document.getElementById('pr-migration-progress');
-      const progressBar = document.getElementById('pr-migration-bar-fill');
-      
-      let migratedCount = 0;
-      let totalCount = 0;
-      
-      // Migrate sources
-      if (localSources) {
-        let sources;
-        try { sources = JSON.parse(localSources); } catch (e) { sources = []; }
-        totalCount += sources.length;
-        
-        for (let i = 0; i < sources.length; i++) {
-          const source = sources[i];
-          await fetch('/api/pr/sources', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(source)
-          });
-          migratedCount++;
-          if (progressText) progressText.textContent = `Migrated ${migratedCount} of ${totalCount} items...`;
-          if (progressBar) progressBar.style.width = `${(migratedCount / totalCount) * 100}%`;
-        }
-      }
-      
-      // Migrate outputs
-      if (localOutputs) {
-        let outputs;
-        try { outputs = JSON.parse(localOutputs); } catch (e) { outputs = []; }
-        totalCount += outputs.length;
-        
-        for (let i = 0; i < outputs.length; i++) {
-          const output = outputs[i];
-          await fetch('/api/pr/outputs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(output)
-          });
-          migratedCount++;
-          if (progressText) progressText.textContent = `Migrated ${migratedCount} of ${totalCount} items...`;
-          if (progressBar) progressBar.style.width = `${(migratedCount / totalCount) * 100}%`;
-        }
-      }
-      
-      if (progressText) progressText.textContent = 'Migration complete!';
-      if (progressBar) progressBar.style.width = '100%';
-      
-      setTimeout(() => {
-        modal.remove();
-      }, 1500);
-      
-    } catch (error) {
-      console.error('Migration error:', error);
-    }
-  }
-
   async saveSources() {
-    // Save folder settings to API and localStorage
+    // Save folder settings to API
     try {
       this.settings.folders = this.folders;
       this.settings.expandedFolders = this.expandedFolders;
       
-      // Save to API first
-      try {
-        await fetch('/api/pr/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ settings: this.settings })
-        });
-      } catch (apiError) {
-        console.warn('Failed to save settings to server, using localStorage fallback');
-      }
-      
-      // Also save to localStorage as fallback
-      localStorage.setItem('pr_settings', JSON.stringify(this.settings));
+      await fetch('/api/pr/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: this.settings })
+      });
     } catch (e) {
       console.error('Failed to save settings:', e);
     }
@@ -740,19 +587,11 @@ class PRAgent {
 
   async saveSettings() {
     try {
-      // Save to API first
-      try {
-        await fetch('/api/pr/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ settings: this.settings })
-        });
-      } catch (apiError) {
-        console.warn('Failed to save settings to server, using localStorage fallback');
-      }
-      
-      // Also save to localStorage as fallback
-      localStorage.setItem('pr_settings', JSON.stringify(this.settings));
+      await fetch('/api/pr/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: this.settings })
+      });
     } catch (e) {
       console.error('Failed to save settings:', e);
     }

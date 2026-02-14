@@ -57,10 +57,9 @@ class GlossiDashboard {
   }
   
   /**
-   * Save team members to storage and sync
+   * Save team members to storage (PostgreSQL via server)
    */
   saveTeamMembers() {
-    localStorage.setItem('glossi_team_members', JSON.stringify(this.teamMembers));
     if (storage) {
       storage.setTeamMembers(this.teamMembers);
     }
@@ -225,15 +224,10 @@ class GlossiDashboard {
     this.data = data;
     this.settings = settings;
     
-    // Load team members from server data or localStorage
+    // Load team members from server data (PostgreSQL)
     const serverTeamMembers = storage.getTeamMembers?.();
     if (serverTeamMembers && serverTeamMembers.length > 0) {
       this.teamMembers = serverTeamMembers;
-    } else {
-      try {
-        const saved = localStorage.getItem('glossi_team_members');
-        if (saved) this.teamMembers = JSON.parse(saved);
-      } catch (e) { /* use defaults */ }
     }
 
     // Initialize AI processor with API key

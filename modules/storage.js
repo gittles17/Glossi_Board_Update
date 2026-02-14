@@ -1,6 +1,6 @@
 /**
  * Storage Module
- * Handles file-based persistence for the Glossi Dashboard
+ * Handles server-backed persistence (PostgreSQL) for the Glossi Dashboard
  */
 
 // Default data structure - Clean slate ready for rebuild
@@ -1021,7 +1021,7 @@ class Storage {
       syncedAt: syncTime || new Date().toISOString()
     };
     this.data.lastUpdated = new Date().toISOString();
-    // Save immediately to localStorage for cross-page access
+    // Save immediately to server for cross-page access
     this.save();
     return this.data.googleSheetPipeline;
   }
@@ -1243,10 +1243,7 @@ class Storage {
 
 
     // Save immediately for meetings (no debounce)
-    const saved = this.save();
-    
-    // Verify it was saved
-    const verify = localStorage.getItem('glossi_meetings');
+    this.save();
     
     return meetingData;
   }
@@ -1833,15 +1830,11 @@ class Storage {
   }
 
   /**
-   * Save settings to localStorage and sync to server
+   * Save settings to server (PostgreSQL)
    */
   saveSettings() {
     try {
-      localStorage.setItem('glossi_settings', JSON.stringify(this.settings));
-      
-      // Sync to server
       this.syncToServer();
-      
       return true;
     } catch (e) {
       console.error('Failed to save settings:', e);
@@ -1850,7 +1843,7 @@ class Storage {
   }
 
   /**
-   * Sync all data to server files (debounced to prevent race conditions)
+   * Sync all data to server / PostgreSQL (debounced to prevent race conditions)
    */
   syncToServer() {
     if (this._syncTimeout) {

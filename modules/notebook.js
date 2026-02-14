@@ -1580,18 +1580,8 @@ ${milestonesData}
   getPipelineData() {
     const lines = [];
     
-    // Primary source: Google Sheet pipeline data (synced from spreadsheet)
-    // Force fresh read from localStorage
-    let googleSheetPipeline = null;
-    try {
-      const freshData = localStorage.getItem('glossi_data');
-      if (freshData) {
-        const parsed = JSON.parse(freshData);
-        googleSheetPipeline = parsed.googleSheetPipeline;
-      }
-    } catch (e) {
-      googleSheetPipeline = this.storage.getGoogleSheetPipeline?.() || this.storage.getData()?.googleSheetPipeline;
-    }
+    // Primary source: Google Sheet pipeline data (synced from spreadsheet via server)
+    let googleSheetPipeline = this.storage.getGoogleSheetPipeline?.() || this.storage.getData()?.googleSheetPipeline || null;
     
     if (googleSheetPipeline && googleSheetPipeline.deals && googleSheetPipeline.deals.length > 0) {
       const allDeals = googleSheetPipeline.deals;

@@ -915,20 +915,21 @@
       const settingsClose = document.getElementById('settings-modal-close');
       const settingsCancel = document.getElementById('settings-cancel');
 
-      function openSettings() {
+      async function openSettings() {
         const anthropicBadge = document.getElementById('pr-anthropic-status');
         const openaiBadge = document.getElementById('pr-openai-status');
         try {
-          const settings = JSON.parse(localStorage.getItem('glossi_settings') || '{}');
-          if (anthropicBadge) {
-            const hasKey = settings.apiKey && settings.apiKey.length > 0;
-            anthropicBadge.textContent = hasKey ? 'Connected' : 'Not set';
-            anthropicBadge.classList.toggle('connected', hasKey);
-          }
-          if (openaiBadge) {
-            const hasKey = settings.openaiApiKey && settings.openaiApiKey.length > 0;
-            openaiBadge.textContent = hasKey ? 'Connected' : 'Not set';
-            openaiBadge.classList.toggle('connected', hasKey);
+          const response = await fetch('/api/settings');
+          if (response.ok) {
+            const serverSettings = await response.json();
+            if (anthropicBadge) {
+              anthropicBadge.textContent = serverSettings.hasAnthropicKey ? 'Connected' : 'Not set';
+              anthropicBadge.classList.toggle('connected', !!serverSettings.hasAnthropicKey);
+            }
+            if (openaiBadge) {
+              openaiBadge.textContent = serverSettings.hasOpenAIKey ? 'Connected' : 'Not set';
+              openaiBadge.classList.toggle('connected', !!serverSettings.hasOpenAIKey);
+            }
           }
         } catch {}
         settingsModal?.classList.add('visible');

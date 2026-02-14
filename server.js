@@ -1,6 +1,4 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const { Pool } = require('pg');
 const multer = require('multer');
 const pdfParse = require('pdf-parse');
@@ -47,13 +45,7 @@ function isAllowedUrl(urlString) {
   }
 }
 
-// Data directory for local development
-const DATA_DIR = path.join(__dirname, 'data');
-
-// Ensure data directory exists (for local dev)
-if (!useDatabase && !fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+// Database is required for all data persistence (PostgreSQL via DATABASE_URL)
 
 // Outlet name normalization map (shared across endpoints)
 const OUTLET_NAME_MAP = {
@@ -358,115 +350,49 @@ app.post('/api/chat', async (req, res) => {
 // Load all data
 app.get('/api/data', async (req, res) => {
   try {
-    const data = {};
-    
-    if (useDatabase) {
-      // Load from PostgreSQL
-      const result = await pool.query('SELECT key, data FROM app_data');
-      result.rows.forEach(row => {
-        data[row.key] = row.data;
-      });
-    } else {
-      // Load from files
-      const files = ['dashboard-data.json', 'meetings.json', 'settings.json', 'pipeline-history.json', 'stat-history.json', 'todos.json', 'team-members.json'];
-      
-      files.forEach(file => {
-        const filePath = path.join(DATA_DIR, file);
-        if (fs.existsSync(filePath)) {
-          try {
-            const key = file.replace('.json', '').replace(/-/g, '_');
-            data[key] = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-          } catch (e) {
-            console.warn(`Failed to parse ${file}:`, e.message);
-          }
-        }
-      });
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
+    
+    const data = {};
+    const result = await pool.query('SELECT key, data FROM app_data');
+    result.rows.forEach(row => {
+      data[row.key] = row.data;
+    });
     
     res.json({ success: true, data });
   } catch (error) {
     console.error('Error loading data:', error.message);
-    res.json({ success: true, data: {}, databaseUnavailable: true });
+    res.status(503).json({ success: false, error: 'Database unavailable' });
   }
 });
 
 // Save all data
 app.post('/api/data', async (req, res) => {
   try {
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    
     const { data, meetings, settings, pipelineHistory, statHistory, todos, teamMembers } = req.body;
     
-    if (useDatabase) {
-      // Save to PostgreSQL using upsert
-      const saveData = async (key, value) => {
-        if (value === undefined) return;
-        await pool.query(`
-          INSERT INTO app_data (key, data, updated_at)
-          VALUES ($1, $2, NOW())
-          ON CONFLICT (key) 
-          DO UPDATE SET data = $2, updated_at = NOW()
-        `, [key, JSON.stringify(value)]);
-      };
-      
-      await saveData('dashboard_data', data);
-      await saveData('meetings', meetings);
-      await saveData('settings', settings);
-      await saveData('pipeline_history', pipelineHistory);
-      await saveData('stat_history', statHistory);
-      await saveData('todos', todos);
-      await saveData('team_members', teamMembers);
-      
-    } else {
-      // Save to files
-      if (data) {
-        await fs.promises.writeFile(
-          path.join(DATA_DIR, 'dashboard-data.json'),
-          JSON.stringify(data, null, 2)
-        );
-      }
-      
-      if (meetings) {
-        await fs.promises.writeFile(
-          path.join(DATA_DIR, 'meetings.json'),
-          JSON.stringify(meetings, null, 2)
-        );
-      }
-      
-      if (settings) {
-        await fs.promises.writeFile(
-          path.join(DATA_DIR, 'settings.json'),
-          JSON.stringify(settings, null, 2)
-        );
-      }
-      
-      if (pipelineHistory) {
-        await fs.promises.writeFile(
-          path.join(DATA_DIR, 'pipeline-history.json'),
-          JSON.stringify(pipelineHistory, null, 2)
-        );
-      }
-      
-      if (statHistory) {
-        await fs.promises.writeFile(
-          path.join(DATA_DIR, 'stat-history.json'),
-          JSON.stringify(statHistory, null, 2)
-        );
-      }
-      
-      if (todos) {
-        await fs.promises.writeFile(
-          path.join(DATA_DIR, 'todos.json'),
-          JSON.stringify(todos, null, 2)
-        );
-      }
-      
-      if (teamMembers) {
-        await fs.promises.writeFile(
-          path.join(DATA_DIR, 'team-members.json'),
-          JSON.stringify(teamMembers, null, 2)
-        );
-      }
-      
-    }
+    const saveData = async (key, value) => {
+      if (value === undefined) return;
+      await pool.query(`
+        INSERT INTO app_data (key, data, updated_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT (key) 
+        DO UPDATE SET data = $2, updated_at = NOW()
+      `, [key, JSON.stringify(value)]);
+    };
+    
+    await saveData('dashboard_data', data);
+    await saveData('meetings', meetings);
+    await saveData('settings', settings);
+    await saveData('pipeline_history', pipelineHistory);
+    await saveData('stat_history', statHistory);
+    await saveData('todos', todos);
+    await saveData('team_members', teamMembers);
     
     res.json({ success: true });
   } catch (error) {
@@ -478,39 +404,23 @@ app.post('/api/data', async (req, res) => {
 // Clear quotes from database
 app.post('/api/clear-quotes', async (req, res) => {
   try {
-    if (useDatabase) {
-      // Get current dashboard data
-      const result = await pool.query("SELECT data FROM app_data WHERE key = 'dashboard_data'");
-      if (result.rows.length > 0 && result.rows[0]?.data) {
-        const data = result.rows[0].data;
-        data.quotes = []; // Clear quotes
-        
-        // Save back
-        await pool.query(`
-          UPDATE app_data SET data = $1, updated_at = NOW()
-          WHERE key = 'dashboard_data'
-        `, [JSON.stringify(data)]);
-        
-        res.json({ success: true, message: 'Quotes cleared from PostgreSQL' });
-      } else {
-        res.json({ success: true, message: 'No dashboard data found' });
-      }
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    
+    const result = await pool.query("SELECT data FROM app_data WHERE key = 'dashboard_data'");
+    if (result.rows.length > 0 && result.rows[0]?.data) {
+      const data = result.rows[0].data;
+      data.quotes = [];
+      
+      await pool.query(`
+        UPDATE app_data SET data = $1, updated_at = NOW()
+        WHERE key = 'dashboard_data'
+      `, [JSON.stringify(data)]);
+      
+      res.json({ success: true, message: 'Quotes cleared' });
     } else {
-      // Clear from local file
-      const filePath = path.join(DATA_DIR, 'dashboard-data.json');
-      if (fs.existsSync(filePath)) {
-        try {
-          const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-          data.quotes = [];
-          fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-          res.json({ success: true, message: 'Quotes cleared from local storage' });
-        } catch (e) {
-          console.error('Failed to parse dashboard file:', e.message);
-          res.status(500).json({ success: false, error: 'Failed to parse dashboard file' });
-        }
-      } else {
-        res.json({ success: true, message: 'No dashboard data file found' });
-      }
+      res.json({ success: true, message: 'No dashboard data found' });
     }
   } catch (error) {
     console.error('Error clearing quotes:', error);
@@ -552,24 +462,21 @@ app.post('/api/reset', async (req, res) => {
       lastUpdated: new Date().toISOString()
     };
 
-    if (useDatabase) {
-      // Clear database and set defaults
-      await pool.query(`DELETE FROM app_data WHERE key IN ('dashboard_data', 'meetings', 'pipeline_history', 'stat_history')`);
-      await pool.query(`
-        INSERT INTO app_data (key, data, updated_at)
-        VALUES ('dashboard_data', $1, NOW())
-        ON CONFLICT (key) DO UPDATE SET data = $1, updated_at = NOW()
-      `, [JSON.stringify(defaultData)]);
-      await pool.query(`
-        INSERT INTO app_data (key, data, updated_at)
-        VALUES ('meetings', $1, NOW())
-        ON CONFLICT (key) DO UPDATE SET data = $1, updated_at = NOW()
-      `, [JSON.stringify([])]);
-    } else {
-      // Reset files
-      fs.writeFileSync(path.join(DATA_DIR, 'dashboard-data.json'), JSON.stringify(defaultData, null, 2));
-      fs.writeFileSync(path.join(DATA_DIR, 'meetings.json'), '[]');
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
+    
+    await pool.query(`DELETE FROM app_data WHERE key IN ('dashboard_data', 'meetings', 'pipeline_history', 'stat_history')`);
+    await pool.query(`
+      INSERT INTO app_data (key, data, updated_at)
+      VALUES ('dashboard_data', $1, NOW())
+      ON CONFLICT (key) DO UPDATE SET data = $1, updated_at = NOW()
+    `, [JSON.stringify(defaultData)]);
+    await pool.query(`
+      INSERT INTO app_data (key, data, updated_at)
+      VALUES ('meetings', $1, NOW())
+      ON CONFLICT (key) DO UPDATE SET data = $1, updated_at = NOW()
+    `, [JSON.stringify([])]);
     
     res.json({ success: true, message: 'Data reset to defaults' });
   } catch (error) {
@@ -586,7 +493,7 @@ app.post('/api/reset', async (req, res) => {
 app.get('/api/pr/wizard', async (req, res) => {
   try {
     if (!useDatabase) {
-      return res.json({ success: true, data: null });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     const result = await pool.query('SELECT data FROM pr_wizard ORDER BY id DESC LIMIT 1');
@@ -605,7 +512,7 @@ app.post('/api/pr/wizard', async (req, res) => {
     const { data } = req.body;
     
     if (!useDatabase) {
-      return res.json({ success: true });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     // Delete existing and insert new
@@ -623,7 +530,7 @@ app.post('/api/pr/wizard', async (req, res) => {
 app.get('/api/pr/settings', async (req, res) => {
   try {
     if (!useDatabase) {
-      return res.json({ success: true, settings: null });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     const result = await pool.query('SELECT settings FROM pr_settings WHERE user_id = $1 ORDER BY id DESC LIMIT 1', ['default']);
@@ -642,7 +549,7 @@ app.post('/api/pr/settings', async (req, res) => {
     const { settings } = req.body;
     
     if (!useDatabase) {
-      return res.json({ success: true });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     // Delete existing and insert new for this user
@@ -660,7 +567,7 @@ app.post('/api/pr/settings', async (req, res) => {
 app.get('/api/pr/sources', async (req, res) => {
   try {
     if (!useDatabase) {
-      return res.json({ success: true, sources: [] });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     const result = await pool.query('SELECT * FROM pr_sources ORDER BY created_at DESC');
@@ -677,7 +584,7 @@ app.post('/api/pr/sources', async (req, res) => {
     const { id, title, type, content, url, file_name, folder, selected } = req.body;
     
     if (!useDatabase) {
-      return res.json({ success: true });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     await pool.query(`
@@ -700,7 +607,7 @@ app.delete('/api/pr/sources/:id', async (req, res) => {
     const { id } = req.params;
     
     if (!useDatabase) {
-      return res.json({ success: true });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     await pool.query('DELETE FROM pr_sources WHERE id = $1', [id]);
@@ -715,7 +622,7 @@ app.delete('/api/pr/sources/:id', async (req, res) => {
 app.get('/api/pr/outputs', async (req, res) => {
   try {
     if (!useDatabase) {
-      return res.json({ success: true, outputs: [] });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     const result = await pool.query('SELECT * FROM pr_outputs ORDER BY created_at DESC');
@@ -732,7 +639,7 @@ app.post('/api/pr/outputs', async (req, res) => {
     const { id, content_type, title, content, sources, citations, strategy, status, phase } = req.body;
     
     if (!useDatabase) {
-      return res.json({ success: true });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     await pool.query(`
@@ -755,7 +662,7 @@ app.delete('/api/pr/outputs/:id', async (req, res) => {
     const { id } = req.params;
     
     if (!useDatabase) {
-      return res.json({ success: true });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     await pool.query('DELETE FROM pr_outputs WHERE id = $1', [id]);
@@ -770,7 +677,7 @@ app.delete('/api/pr/outputs/:id', async (req, res) => {
 app.get('/api/pr/journalists', async (req, res) => {
   try {
     if (!useDatabase) {
-      return res.json({ success: true, journalists: [] });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     const result = await pool.query('SELECT * FROM pr_journalists ORDER BY created_at DESC');
@@ -787,7 +694,7 @@ app.post('/api/pr/journalists', async (req, res) => {
     const { id, name, outlet, outlet_url, beat, recent_articles, email, twitter, linkedin, notes, last_pitched, status } = req.body;
     
     if (!useDatabase) {
-      return res.json({ success: true });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     await pool.query(`
@@ -810,7 +717,7 @@ app.delete('/api/pr/journalists/:id', async (req, res) => {
     const { id } = req.params;
     
     if (!useDatabase) {
-      return res.json({ success: true });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     await pool.query('DELETE FROM pr_journalists WHERE id = $1', [id]);
@@ -972,7 +879,7 @@ Return as structured JSON with this exact format:
 app.get('/api/pr/pitches', async (req, res) => {
   try {
     if (!useDatabase) {
-      return res.json({ success: true, pitches: [] });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     const result = await pool.query('SELECT * FROM pr_pitches ORDER BY created_at DESC');
@@ -989,7 +896,7 @@ app.post('/api/pr/pitches', async (req, res) => {
     const { id, journalist_id, content_id, content_type, sent_date, follow_up_date, status, notes, coverage_url } = req.body;
     
     if (!useDatabase) {
-      return res.json({ success: true });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     await pool.query(`
@@ -1010,7 +917,7 @@ app.post('/api/pr/pitches', async (req, res) => {
 app.get('/api/pr/calendar', async (req, res) => {
   try {
     if (!useDatabase) {
-      return res.json({ success: true, items: [] });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     const result = await pool.query('SELECT * FROM pr_calendar ORDER BY date ASC');
@@ -1027,7 +934,7 @@ app.post('/api/pr/calendar', async (req, res) => {
     const { id, date, type, title, content_id, pitch_id, status, notes } = req.body;
     
     if (!useDatabase) {
-      return res.json({ success: true });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     await pool.query(`
@@ -1050,7 +957,7 @@ app.delete('/api/pr/calendar/:id', async (req, res) => {
     const { id } = req.params;
     
     if (!useDatabase) {
-      return res.json({ success: true });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     await pool.query('DELETE FROM pr_calendar WHERE id = $1', [id]);
@@ -1160,7 +1067,7 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     
     if (uniqueResults.length === 0) {
       console.log('⚠️  Warning: No articles found in RSS feeds');
-      return res.json({ success: true, news: [] });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     // Step 2: Diversify article selection across outlets
@@ -1447,7 +1354,7 @@ EXCLUDE (specific examples):
 app.get('/api/pr/news-hooks', async (req, res) => {
   try {
     if (!useDatabase) {
-      return res.json({ success: true, news: [] });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     // Only return news from the last 30 days (by article date, not fetch date)
@@ -1474,7 +1381,7 @@ app.get('/api/pr/news-hooks', async (req, res) => {
 app.delete('/api/pr/news-hooks/old', async (req, res) => {
   try {
     if (!useDatabase) {
-      return res.json({ success: true, deleted: 0 });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     // Delete news older than 30 days (by article date)
@@ -1718,7 +1625,7 @@ Only include articles from major tech publications. Maximum 8 results.`;
 app.get('/api/pr/articles', async (req, res) => {
   try {
     if (!useDatabase) {
-      return res.json({ success: true, articles: [] });
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     const result = await pool.query('SELECT * FROM pr_articles ORDER BY fetched_at DESC LIMIT 5');
@@ -1735,21 +1642,15 @@ app.get('/api/pr/articles', async (req, res) => {
 
 app.get('/api/pr/angles', async (req, res) => {
   try {
-    if (useDatabase) {
-      const result = await pool.query(
-        "SELECT data FROM app_data WHERE key = 'pr_angles' LIMIT 1"
-      );
-      const angles = result.rows.length > 0 ? result.rows[0].data : [];
-      res.json({ success: true, angles });
-    } else {
-      const anglesPath = path.join(DATA_DIR, 'pr-angles.json');
-      if (fs.existsSync(anglesPath)) {
-        const angles = JSON.parse(fs.readFileSync(anglesPath, 'utf8'));
-        res.json({ success: true, angles });
-      } else {
-        res.json({ success: true, angles: [] });
-      }
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
     }
+    
+    const result = await pool.query(
+      "SELECT data FROM app_data WHERE key = 'pr_angles' LIMIT 1"
+    );
+    const angles = result.rows.length > 0 ? result.rows[0].data : [];
+    res.json({ success: true, angles });
   } catch (error) {
     console.error('Error loading angles:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -1869,19 +1770,18 @@ Return ONLY valid JSON in this exact structure:
 
 app.post('/api/pr/angles/save', async (req, res) => {
   try {
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    
     const { angles } = req.body;
 
-    if (useDatabase) {
-      await pool.query(
-        `INSERT INTO app_data (key, data, updated_at)
-         VALUES ('pr_angles', $1, NOW())
-         ON CONFLICT (key) DO UPDATE SET data = $1, updated_at = NOW()`,
-        [JSON.stringify(angles)]
-      );
-    } else {
-      const anglesPath = path.join(DATA_DIR, 'pr-angles.json');
-      fs.writeFileSync(anglesPath, JSON.stringify(angles, null, 2));
-    }
+    await pool.query(
+      `INSERT INTO app_data (key, data, updated_at)
+       VALUES ('pr_angles', $1, NOW())
+       ON CONFLICT (key) DO UPDATE SET data = $1, updated_at = NOW()`,
+      [JSON.stringify(angles)]
+    );
 
     res.json({ success: true });
   } catch (error) {
@@ -1892,34 +1792,25 @@ app.post('/api/pr/angles/save', async (req, res) => {
 
 app.delete('/api/pr/angles/:id', async (req, res) => {
   try {
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    
     const { id } = req.params;
 
-    let angles = [];
-    if (useDatabase) {
-      const result = await pool.query(
-        "SELECT data FROM app_data WHERE key = 'pr_angles' LIMIT 1"
-      );
-      angles = result.rows.length > 0 ? result.rows[0].data : [];
-    } else {
-      const anglesPath = path.join(DATA_DIR, 'pr-angles.json');
-      if (fs.existsSync(anglesPath)) {
-        angles = JSON.parse(fs.readFileSync(anglesPath, 'utf8'));
-      }
-    }
+    const result = await pool.query(
+      "SELECT data FROM app_data WHERE key = 'pr_angles' LIMIT 1"
+    );
+    let angles = result.rows.length > 0 ? result.rows[0].data : [];
 
     angles = angles.filter(a => a.id !== id);
 
-    if (useDatabase) {
-      await pool.query(
-        `INSERT INTO app_data (key, data, updated_at)
-         VALUES ('pr_angles', $1, NOW())
-         ON CONFLICT (key) DO UPDATE SET data = $1, updated_at = NOW()`,
-        [JSON.stringify(angles)]
-      );
-    } else {
-      const anglesPath = path.join(DATA_DIR, 'pr-angles.json');
-      fs.writeFileSync(anglesPath, JSON.stringify(angles, null, 2));
-    }
+    await pool.query(
+      `INSERT INTO app_data (key, data, updated_at)
+       VALUES ('pr_angles', $1, NOW())
+       ON CONFLICT (key) DO UPDATE SET data = $1, updated_at = NOW()`,
+      [JSON.stringify(angles)]
+    );
 
     res.json({ success: true, angles });
   } catch (error) {
