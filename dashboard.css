@@ -13912,6 +13912,19 @@ svg.spinning,
   .pr-version-prompt {
     max-width: 80px;
   }
+
+  /* Search and URL input on mobile */
+  .pr-news-search {
+    width: 120px;
+  }
+
+  .pr-news-search:focus {
+    width: 160px;
+  }
+
+  .pr-add-url-input {
+    width: 180px;
+  }
 }
 
 /* Fallback for all devices with notches/Dynamic Island */
@@ -16576,6 +16589,139 @@ body.pr-resizing * {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/* Search input in news hooks toolbar */
+.pr-news-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pr-news-search-icon {
+  position: absolute;
+  left: 8px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.pr-news-search {
+  padding: 6px 28px 6px 28px;
+  font-size: 13px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  width: 180px;
+  transition: width 0.2s ease, border-color 0.15s;
+}
+
+.pr-news-search:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  width: 240px;
+}
+
+.pr-news-search::placeholder {
+  color: var(--text-muted);
+}
+
+.pr-news-search-clear {
+  position: absolute;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0;
+}
+
+.pr-news-search-clear:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Add URL button and inline input */
+.pr-add-url-btn {
+  gap: 4px;
+}
+
+.pr-add-url-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pr-add-url-input {
+  padding: 6px 10px;
+  font-size: 13px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  width: 280px;
+  transition: border-color 0.15s;
+}
+
+.pr-add-url-input:focus {
+  outline: none;
+  border-color: var(--accent-green, #4ade80);
+}
+
+.pr-add-url-input::placeholder {
+  color: var(--text-muted);
+}
+
+.pr-add-url-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: var(--accent-green, #4ade80);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--bg-primary);
+  cursor: pointer;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.pr-add-url-submit:hover {
+  opacity: 0.85;
+}
+
+.pr-add-url-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pr-add-url-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.pr-add-url-cancel:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .pr-news-actions {

@@ -120,6 +120,31 @@
             <div class="pr-workflow-header pr-news-hooks-toolbar">
               <h2 class="pr-workflow-title">What's Happening Now</h2>
               <div class="pr-news-hooks-controls">
+                <div class="pr-news-search-wrap">
+                  <svg class="pr-news-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input type="text" class="pr-news-search" id="pr-news-search" placeholder="Search articles..." autocomplete="off">
+                  <button class="pr-news-search-clear" id="pr-news-search-clear" style="display:none" title="Clear search">&times;</button>
+                </div>
+                <button class="pr-filter-btn pr-add-url-btn" id="pr-add-url-btn" title="Add article by URL">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  Add URL
+                </button>
+                <div class="pr-add-url-input-wrap" id="pr-add-url-input-wrap" style="display:none">
+                  <input type="url" class="pr-add-url-input" id="pr-add-url-input" placeholder="Paste article URL and press Enter..." autocomplete="off">
+                  <button class="pr-add-url-submit" id="pr-add-url-submit" title="Analyze">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
+                  <button class="pr-add-url-cancel" id="pr-add-url-cancel" title="Cancel">&times;</button>
+                </div>
                 <button class="pr-filter-btn" id="pr-sources-toggle-btn" title="Toggle Sources">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>

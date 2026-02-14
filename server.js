@@ -1465,6 +1465,149 @@ app.delete('/api/pr/news-hooks/old', async (req, res) => {
   }
 });
 
+// Analyze a single article URL - fetch content, analyze with Claude, store as news hook
+app.post('/api/pr/analyze-url', async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'No URL provided' });
+    }
+
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicKey) {
+      return res.status(500).json({ success: false, error: 'Anthropic API key not configured' });
+    }
+
+    // Check for duplicate
+    if (useDatabase) {
+      const existing = await pool.query('SELECT id FROM pr_news_hooks WHERE url = $1 LIMIT 1', [url]);
+      if (existing.rows.length > 0) {
+        return res.status(409).json({ success: false, error: 'This article is already in your news feed' });
+      }
+    }
+
+    // Fetch article content
+    const fetchResponse = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      timeout: 30000
+    });
+
+    const html = fetchResponse.data;
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const articleTitle = titleMatch ? titleMatch[1].trim() : new URL(url).hostname;
+
+    // Extract text content
+    let text = html;
+    text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+    text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+    text = text.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '');
+    text = text.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '');
+    text = text.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
+    text = text.replace(/<[^>]+>/g, ' ');
+    text = text.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+    text = text.replace(/\s+/g, ' ').trim();
+    const articleContent = text.substring(0, 3000);
+
+    // Extract domain for outlet name
+    const domain = new URL(url).hostname.replace('www.', '');
+    const outlet = normalizeOutletName(domain);
+
+    // Analyze with Claude
+    const analysisPrompt = `You are analyzing a single article for Glossi, an AI-powered 3D product visualization platform.
+
+GLOSSI'S MARKET:
+- Product: AI + 3D engine that creates unlimited product photos (eliminates photoshoots)
+- Customers: Enterprise brands (CPG, fashion, beauty, e-commerce)
+- Buyers: CMOs, creative directors, e-commerce directors
+
+ARTICLE:
+Title: ${articleTitle}
+Source: ${outlet}
+URL: ${url}
+Content: ${articleContent}
+
+Analyze this article and return a JSON object with:
+{
+  "headline": "The article's actual headline (clean it up if needed)",
+  "summary": "One clear sentence summarizing the article",
+  "angle_title": "Short story angle name for Glossi (3-6 words)",
+  "angle_narrative": "1-2 sentences explaining the story angle AND how it connects to Glossi. Weave in the Glossi tie-in naturally.",
+  "content_plan": [
+    {"type": "linkedin_post", "description": "Brief description", "priority": 1},
+    {"type": "media_pitch", "description": "Brief description", "priority": 2}
+  ],
+  "relevance": "Topic connection explanation"
+}
+
+CONTENT PLAN: Include 2-3 content pieces. Valid types: linkedin_post, media_pitch, blog_post, press_release, tweet_thread, founder_quote, talking_points.
+
+Return ONLY valid JSON.`;
+
+    const analysisResponse = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: 'claude-haiku-4-5',
+      max_tokens: 2048,
+      system: 'You are a strategic communications analyst. Return only valid JSON.',
+      messages: [{ role: 'user', content: analysisPrompt }]
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01'
+      }
+    });
+
+    const analysisText = analysisResponse.data.content?.[0]?.text || '{}';
+    let analysis;
+    try {
+      const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+      analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+    } catch {
+      analysis = {};
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const newsItem = {
+      headline: analysis.headline || articleTitle,
+      outlet: outlet,
+      date: today,
+      url: url,
+      summary: analysis.summary || '',
+      relevance: analysis.relevance || '',
+      angle_title: analysis.angle_title || '',
+      angle_narrative: analysis.angle_narrative || '',
+      content_plan: analysis.content_plan || []
+    };
+
+    // Store in database
+    if (useDatabase) {
+      await pool.query(`
+        INSERT INTO pr_news_hooks (headline, outlet, date, url, summary, relevance, angle_title, angle_narrative, content_plan, fetched_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      `, [
+        newsItem.headline,
+        newsItem.outlet,
+        newsItem.date,
+        newsItem.url,
+        newsItem.summary,
+        newsItem.relevance,
+        newsItem.angle_title,
+        newsItem.angle_narrative,
+        JSON.stringify(newsItem.content_plan)
+      ]);
+    }
+
+    res.json({ success: true, article: newsItem });
+  } catch (error) {
+    console.error('Error analyzing URL:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.response?.data?.error?.message || error.message || 'Failed to analyze article'
+    });
+  }
+});
+
 // Fetch fresh articles (Claude web search)
 app.post('/api/pr/articles', async (req, res) => {
   try {

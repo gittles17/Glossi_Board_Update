@@ -4326,6 +4326,8 @@ class NewsMonitor {
     this.prAgent = prAgent;
     this.newsHooks = [];
     this.displayedNewsCount = 8; // Show 8 news items initially (4 rows of 2)
+    this.searchQuery = '';
+    this._searchDebounce = null;
     
     // Filter state
     this.filters = {
@@ -4352,7 +4354,14 @@ class NewsMonitor {
       sourcesBackdrop: document.getElementById('pr-sources-backdrop'),
       sourcesToggleBtn: document.getElementById('pr-sources-toggle-btn'),
       sourcesDrawerClose: document.getElementById('pr-sources-drawer-close'),
-      sourcesToggleCount: document.getElementById('pr-sources-toggle-count')
+      sourcesToggleCount: document.getElementById('pr-sources-toggle-count'),
+      searchInput: document.getElementById('pr-news-search'),
+      searchClear: document.getElementById('pr-news-search-clear'),
+      addUrlBtn: document.getElementById('pr-add-url-btn'),
+      addUrlWrap: document.getElementById('pr-add-url-input-wrap'),
+      addUrlInput: document.getElementById('pr-add-url-input'),
+      addUrlSubmit: document.getElementById('pr-add-url-submit'),
+      addUrlCancel: document.getElementById('pr-add-url-cancel')
     };
   }
 
@@ -4376,6 +4385,92 @@ class NewsMonitor {
     this.dom.sourcesToggleBtn?.addEventListener('click', () => this.toggleSourcesDrawer());
     this.dom.sourcesDrawerClose?.addEventListener('click', () => this.closeSourcesDrawer());
     this.dom.sourcesBackdrop?.addEventListener('click', () => this.closeSourcesDrawer());
+
+    // Search input (debounced)
+    this.dom.searchInput?.addEventListener('input', () => {
+      clearTimeout(this._searchDebounce);
+      this._searchDebounce = setTimeout(() => {
+        this.searchQuery = (this.dom.searchInput.value || '').trim().toLowerCase();
+        this.dom.searchClear.style.display = this.searchQuery ? 'flex' : 'none';
+        this.renderNews();
+      }, 300);
+    });
+
+    this.dom.searchClear?.addEventListener('click', () => {
+      this.searchQuery = '';
+      if (this.dom.searchInput) this.dom.searchInput.value = '';
+      this.dom.searchClear.style.display = 'none';
+      this.renderNews();
+    });
+
+    // Add URL: toggle input
+    this.dom.addUrlBtn?.addEventListener('click', () => this.showAddUrlInput());
+    this.dom.addUrlCancel?.addEventListener('click', () => this.hideAddUrlInput());
+    this.dom.addUrlSubmit?.addEventListener('click', () => this.submitUrl());
+    this.dom.addUrlInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.submitUrl();
+      if (e.key === 'Escape') this.hideAddUrlInput();
+    });
+  }
+
+  showAddUrlInput() {
+    if (this.dom.addUrlBtn) this.dom.addUrlBtn.style.display = 'none';
+    if (this.dom.addUrlWrap) {
+      this.dom.addUrlWrap.style.display = 'flex';
+      this.dom.addUrlInput?.focus();
+    }
+  }
+
+  hideAddUrlInput() {
+    if (this.dom.addUrlWrap) this.dom.addUrlWrap.style.display = 'none';
+    if (this.dom.addUrlBtn) this.dom.addUrlBtn.style.display = 'inline-flex';
+    if (this.dom.addUrlInput) this.dom.addUrlInput.value = '';
+  }
+
+  async submitUrl() {
+    const url = this.dom.addUrlInput?.value?.trim();
+    if (!url) return;
+
+    // Basic URL validation
+    try { new URL(url); } catch {
+      this.prAgent.showToast('Please enter a valid URL', 'error');
+      return;
+    }
+
+    // Show loading state
+    if (this.dom.addUrlSubmit) {
+      this.dom.addUrlSubmit.disabled = true;
+      this.dom.addUrlSubmit.innerHTML = '<svg class="spinning" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path></svg>';
+    }
+    if (this.dom.addUrlInput) this.dom.addUrlInput.disabled = true;
+
+    try {
+      const response = await fetch('/api/pr/analyze-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to analyze article');
+      }
+
+      // Add to news hooks and re-render
+      this.newsHooks.unshift(data.article);
+      this.renderNews();
+      this.hideAddUrlInput();
+      this.prAgent.showToast('Article added successfully', 'success');
+    } catch (error) {
+      this.prAgent.showToast(error.message || 'Failed to add article', 'error');
+    } finally {
+      if (this.dom.addUrlSubmit) {
+        this.dom.addUrlSubmit.disabled = false;
+        this.dom.addUrlSubmit.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>';
+      }
+      if (this.dom.addUrlInput) this.dom.addUrlInput.disabled = false;
+    }
   }
 
   toggleSourcesDrawer() {
@@ -4411,13 +4506,16 @@ class NewsMonitor {
   clearFilters() {
     this.filters.dateRange = 60;
     this.filters.outlets = [];
+    this.searchQuery = '';
     if (this.dom.dateFilter) this.dom.dateFilter.value = '60';
+    if (this.dom.searchInput) this.dom.searchInput.value = '';
+    if (this.dom.searchClear) this.dom.searchClear.style.display = 'none';
     this.renderNews();
     this.updateClearButton();
   }
   
   updateClearButton() {
-    const hasFilters = this.filters.dateRange !== 30 || this.filters.outlets.length > 0;
+    const hasFilters = this.filters.dateRange !== 60 || this.filters.outlets.length > 0 || this.searchQuery;
     if (this.dom.clearFilters) {
       this.dom.clearFilters.style.display = hasFilters ? 'block' : 'none';
     }
@@ -4512,6 +4610,22 @@ class NewsMonitor {
   
   getFilteredNews() {
     let filtered = [...this.newsHooks];
+    
+    // Apply search filter
+    if (this.searchQuery) {
+      const q = this.searchQuery;
+      filtered = filtered.filter(item => {
+        const fields = [
+          item.headline || '',
+          item.summary || '',
+          item.angle_title || '',
+          item.angle_narrative || '',
+          item.relevance || '',
+          item.outlet || ''
+        ].join(' ').toLowerCase();
+        return fields.includes(q);
+      });
+    }
     
     // Apply date filter
     if (this.filters.dateRange !== 'all') {
@@ -4621,6 +4735,10 @@ class NewsMonitor {
       if (this.newsHooks.length === 0) {
         this.dom.newsHooksList.innerHTML = `
           <p class="pr-news-hooks-empty">No news hooks yet. Click Refresh to search.</p>
+        `;
+      } else if (this.searchQuery) {
+        this.dom.newsHooksList.innerHTML = `
+          <p class="pr-news-hooks-empty">No articles match "${this.escapeHtml(this.searchQuery)}". Try a different search.</p>
         `;
       } else {
         this.dom.newsHooksList.innerHTML = `
