@@ -95,6 +95,11 @@ Return your response in this exact JSON structure:
   }
 }`;
 
+function glossiLoaderSVG(extraClass = '') {
+  const cls = extraClass ? `glossi-loader ${extraClass}` : 'glossi-loader';
+  return `<img src="assets/glossi-logo.svg" class="${cls}" alt="Loading" />`;
+}
+
 const CONTENT_TYPES = [
   { id: 'press_release', label: 'Press Release' },
   { id: 'media_pitch', label: 'Media Pitch Email' },
@@ -613,7 +618,7 @@ class PRAgent {
       modal.className = 'pr-migration-modal';
       modal.innerHTML = `
         <div class="pr-migration-content">
-          <img src="assets/glossi-logo.svg" class="glossi-loader" alt="Loading" />
+          ${glossiLoaderSVG()}
           <h3>Migrating your PR data...</h3>
           <p class="pr-migration-progress" id="pr-migration-progress">Preparing migration...</p>
           <div class="pr-migration-bar">
@@ -3884,7 +3889,7 @@ class MediaManager {
     modal.className = 'pr-loading-modal';
     modal.innerHTML = `
       <div class="pr-loading-modal-content">
-        <img src="assets/glossi-logo.svg" class="glossi-loader" alt="Loading" />
+        ${glossiLoaderSVG()}
         <p>${message}</p>
       </div>
     `;
@@ -4959,7 +4964,7 @@ class NewsMonitor {
         this.prAgent.currentOutput = null;
         // Reset UI to empty state
         const tabsEl = document.getElementById('pr-content-tabs');
-        if (tabsEl) { tabsEl.style.display = 'none'; tabsEl.innerHTML = ''; }
+        if (tabsEl) { tabsEl.style.display = 'none'; tabsEl.querySelectorAll('.pr-content-tab').forEach(t => t.remove()); }
         if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
         if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
         if (this.prAgent.dom.workspaceChat) this.prAgent.dom.workspaceChat.style.display = 'none';
@@ -5240,7 +5245,8 @@ class NewsMonitor {
     if (!tabsContainer) return;
 
     tabsContainer.style.display = 'flex';
-    tabsContainer.innerHTML = '';
+    const actionsEl = tabsContainer.querySelector('.pr-workspace-actions');
+    tabsContainer.querySelectorAll('.pr-content-tab').forEach(t => t.remove());
 
     contentPlan.forEach((item, index) => {
       const tabId = `plan_${index}`;
@@ -5261,7 +5267,11 @@ class NewsMonitor {
         }
       });
 
-      tabsContainer.appendChild(tab);
+      if (actionsEl) {
+        tabsContainer.insertBefore(tab, actionsEl);
+      } else {
+        tabsContainer.appendChild(tab);
+      }
     });
   }
 

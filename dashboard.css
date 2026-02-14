@@ -116,32 +116,25 @@ i[class*="ph-"] {
 }
 
 /* ============================================
-   GLOSSI LOGO LOADER
+   GLOSSI LOGO LOADER (bottom-up fill)
    ============================================ */
 .glossi-loader {
   width: 40px;
-  height: 40px;
+  height: 46px;
   object-fit: contain;
-  animation: glossi-breathe 2s ease-in-out infinite;
-  opacity: 0.6;
+  animation: gl-fill 2s ease-in-out infinite;
 }
 
 .glossi-loader-sm {
   width: 24px;
-  height: 24px;
+  height: 28px;
 }
 
-@keyframes glossi-breathe {
-  0%, 100% {
-    opacity: 0.3;
-    filter: brightness(0.8) drop-shadow(0 0 0 transparent);
-    transform: scale(0.95);
-  }
-  50% {
-    opacity: 1;
-    filter: brightness(1.2) drop-shadow(0 0 8px rgba(91, 176, 154, 0.4));
-    transform: scale(1.05);
-  }
+@keyframes gl-fill {
+  0% { clip-path: inset(100% 0 0 0); opacity: 0.4; }
+  60% { clip-path: inset(0 0 0 0); opacity: 1; }
+  80% { clip-path: inset(0 0 0 0); opacity: 1; }
+  100% { clip-path: inset(0 0 0 0); opacity: 0.3; }
 }
 
 /* ============================================
@@ -11978,13 +11971,16 @@ a.dropdown-item {
    ============================================ */
 .pr-content-tabs {
   display: flex;
+  align-items: center;
   gap: 2px;
   padding: 0;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
-  overflow-x: auto;
   flex-shrink: 0;
-  margin-bottom: 16px;
+  margin-bottom: 0;
+  position: sticky;
+  top: 0;
+  z-index: 12;
 }
 
 .pr-content-tab {
@@ -13290,7 +13286,9 @@ svg.spinning,
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-2) 0;
+  margin-left: auto;
+  padding: 0 var(--space-3);
+  flex-shrink: 0;
 }
 
 .pr-action-btn {

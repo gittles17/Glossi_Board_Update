@@ -193,10 +193,33 @@
           <!-- Right Panel (2/3): Workspace -->
           <div class="pr-create-right">
 
-            <!-- Content Plan Tabs -->
-            <div class="pr-content-tabs" id="pr-content-tabs" style="display:none"></div>
+            <!-- Content Plan Tabs + Actions -->
+            <div class="pr-content-tabs" id="pr-content-tabs" style="display:none">
+              <!-- tabs are rendered dynamically -->
+              <div class="pr-workspace-actions" style="display:none" id="pr-workspace-actions">
+                <div class="pr-version-pill-wrap">
+                  <button class="pr-version-pill" id="pr-version-pill" title="Version history">
+                    <span id="pr-version-pill-label">Latest</span>
+                    <i class="ph-light ph-caret-down"></i>
+                  </button>
+                  <div class="pr-version-menu" id="pr-version-menu" style="display:none"></div>
+                </div>
+                <button class="pr-action-btn" id="pr-copy-btn" title="Copy to clipboard">
+                  <i class="ph-light ph-copy"></i>
+                </button>
+                <div class="pr-export-wrap">
+                  <button class="pr-action-btn" id="pr-export-btn" title="Export">
+                    <i class="ph-light ph-download-simple"></i>
+                  </button>
+                  <div class="pr-export-menu" id="pr-export-menu">
+                    <button class="pr-export-item" id="pr-export-text">Copy as text</button>
+                    <button class="pr-export-item" id="pr-export-html">Download as HTML</button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-            <!-- Top bar -->
+            <!-- Top bar (generate controls) -->
             <div class="pr-workspace-topbar">
               <div class="pr-workspace-controls">
                 <select class="pr-content-type" id="pr-content-type" style="display:none">
@@ -219,27 +242,6 @@
                   <i class="ph-light ph-arrows-clockwise"></i>
                   Regenerate
                 </button>
-              </div>
-              <div class="pr-workspace-actions" style="display:none" id="pr-workspace-actions">
-                <div class="pr-version-pill-wrap">
-                  <button class="pr-version-pill" id="pr-version-pill" title="Version history">
-                    <span id="pr-version-pill-label">Latest</span>
-                    <i class="ph-light ph-caret-down"></i>
-                  </button>
-                  <div class="pr-version-menu" id="pr-version-menu" style="display:none"></div>
-                </div>
-                <button class="pr-action-btn" id="pr-copy-btn" title="Copy to clipboard">
-                  <i class="ph-light ph-copy"></i>
-                </button>
-                <div class="pr-export-wrap">
-                  <button class="pr-action-btn" id="pr-export-btn" title="Export">
-                    <i class="ph-light ph-download-simple"></i>
-                  </button>
-                  <div class="pr-export-menu" id="pr-export-menu">
-                    <button class="pr-export-item" id="pr-export-text">Copy as text</button>
-                    <button class="pr-export-item" id="pr-export-html">Download as HTML</button>
-                  </div>
-                </div>
               </div>
             </div>
 
