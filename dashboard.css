@@ -11416,6 +11416,44 @@ a.dropdown-item {
   padding-top: 0;
 }
 
+/* 2-Panel Create Layout (matches Strategy layout) */
+.pr-create-layout {
+  display: flex;
+  gap: 24px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.pr-create-left {
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-right: 1px solid var(--border-subtle);
+  padding-right: 24px;
+}
+
+.pr-create-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+/* Remove extra padding from sections inside create panels */
+.pr-create-left .pr-workflow-section {
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0;
+}
+
 .pr-sources-header {
   display: flex;
   align-items: center;
@@ -13503,6 +13541,26 @@ a.dropdown-item {
   }
 
   .pr-strategy-right {
+    width: 100%;
+  }
+
+  /* Create 2-panel layout becomes stacked on mobile */
+  .pr-create-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .pr-create-left {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-right: 0;
+    padding-bottom: 16px;
+  }
+
+  .pr-create-right {
     width: 100%;
   }
 }

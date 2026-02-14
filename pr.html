@@ -206,6 +206,42 @@
 
       <!-- Create Stage Content -->
       <div class="pr-workspace-panel pr-stage-content" id="pr-workspace-panel" data-stage="create">
+        
+        <!-- 2-Panel Create Layout -->
+        <div class="pr-create-layout">
+          
+          <!-- Left Panel: Content History -->
+          <div class="pr-create-left">
+            <div class="pr-workflow-section pr-library-section">
+              <div class="pr-workflow-header pr-history-header">
+                <h2 class="pr-workflow-title">Content History</h2>
+                <div class="pr-history-controls">
+                  <span class="pr-history-badge" id="pr-history-count">0</span>
+                  <button class="pr-phase-filter-btn" id="pr-phase-filter-btn">
+                    <span id="pr-phase-filter-text">Edit</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
+                  <div class="pr-phase-filter-menu" id="pr-phase-filter-menu" style="display:none">
+                    <button class="pr-phase-filter-option" data-phase="all">All Phases</button>
+                    <button class="pr-phase-filter-option" data-phase="edit">Edit</button>
+                    <button class="pr-phase-filter-option" data-phase="review">Review</button>
+                    <button class="pr-phase-filter-option" data-phase="publish">Publish</button>
+                  </div>
+                </div>
+              </div>
+              <div class="pr-history-list" id="pr-history-list">
+                <div class="pr-history-empty" id="pr-history-empty">
+                  <p>No content saved</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Panel: Workspace -->
+          <div class="pr-create-right">
+            
         <!-- Top bar -->
         <div class="pr-workspace-topbar">
           <div class="pr-workspace-controls">
@@ -359,30 +395,6 @@
             </div>
           </div>
 
-        <!-- Content History Section (moved from Strategy nested tab) -->
-        <div class="pr-workflow-section pr-library-section">
-          <div class="pr-workflow-header pr-history-header">
-            <h2 class="pr-workflow-title">Content History</h2>
-            <div class="pr-history-controls">
-              <span class="pr-history-badge" id="pr-history-count">0</span>
-              <button class="pr-phase-filter-btn" id="pr-phase-filter-btn">
-                <span id="pr-phase-filter-text">Edit</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </button>
-              <div class="pr-phase-filter-menu" id="pr-phase-filter-menu" style="display:none">
-                <button class="pr-phase-filter-option" data-phase="all">All Phases</button>
-                <button class="pr-phase-filter-option" data-phase="edit">Edit</button>
-                <button class="pr-phase-filter-option" data-phase="review">Review</button>
-                <button class="pr-phase-filter-option" data-phase="publish">Publish</button>
-              </div>
-            </div>
-          </div>
-          <div class="pr-history-list" id="pr-history-list">
-            <div class="pr-history-empty" id="pr-history-empty">
-              <p>No content saved</p>
-            </div>
           </div>
         </div>
 
