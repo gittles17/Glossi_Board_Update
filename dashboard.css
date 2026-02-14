@@ -13472,12 +13472,8 @@ a.dropdown-item {
 
 /* PR page responsive - DESKTOP SAFEGUARD */
 @media screen and (min-width: 641px) {
-  /* Force desktop layout above 640px */
-  .pr-sources-panel,
-  .pr-workspace-panel,
-  .pr-right-panel {
-    display: flex !important;
-  }
+  /* Stage content visibility controlled by .pr-stage-content.active */
+  /* Don't force display on individual panels */
   
   .pr-mobile-tabs {
     display: none !important;
