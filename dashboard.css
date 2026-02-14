@@ -11882,7 +11882,8 @@ a.dropdown-item {
   font-weight: 500;
 }
 
-.spinning {
+svg.spinning,
+.spinning svg {
   animation: spin 1s linear infinite;
 }
 
