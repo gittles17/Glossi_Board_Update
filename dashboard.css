@@ -122,7 +122,8 @@ i[class*="ph-"] {
   width: 40px;
   height: 46px;
   object-fit: contain;
-  animation: gl-fill 2s ease-in-out infinite;
+  opacity: 1;
+  animation: gl-fill 2.2s ease-in-out infinite;
 }
 
 .glossi-loader-sm {
@@ -131,10 +132,10 @@ i[class*="ph-"] {
 }
 
 @keyframes gl-fill {
-  0% { clip-path: inset(100% 0 0 0); opacity: 0.4; }
-  60% { clip-path: inset(0 0 0 0); opacity: 1; }
-  80% { clip-path: inset(0 0 0 0); opacity: 1; }
-  100% { clip-path: inset(0 0 0 0); opacity: 0.3; }
+  0%   { clip-path: inset(100% 0 0 0); }
+  50%  { clip-path: inset(0 0 0 0); }
+  85%  { clip-path: inset(0 0 0 0); }
+  100% { clip-path: inset(100% 0 0 0); }
 }
 
 /* ============================================
