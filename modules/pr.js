@@ -4645,8 +4645,10 @@ class NewsMonitor {
       
       // Build angle display with fallback chain
       const angleTitle = item.angle_title || '';
-      const angleNarrative = item.angle_narrative || item.relevance || '';
+      const angleNarrative = item.angle_narrative || '';
       const hasAngle = angleTitle || angleNarrative;
+      // For cached data without new angle fields, fall back to relevance with a label
+      const isFallback = !angleTitle && !angleNarrative && item.relevance;
       
       html += `
         <div class="pr-news-item ${isStale ? 'stale' : ''}">
@@ -4663,6 +4665,11 @@ class NewsMonitor {
           <div class="pr-news-angle">
             ${angleTitle ? `<span class="pr-news-angle-title">${this.escapeHtml(angleTitle)}</span>` : ''}
             ${angleNarrative ? `<p class="pr-news-angle-narrative">${this.escapeHtml(angleNarrative)}</p>` : ''}
+          </div>
+          ` : isFallback ? `
+          <div class="pr-news-angle pr-news-angle-fallback">
+            <span class="pr-news-angle-title">Glossi tie-in</span>
+            <p class="pr-news-angle-narrative">${this.escapeHtml(item.relevance)}</p>
           </div>
           ` : ''}
           <div class="pr-news-actions">
