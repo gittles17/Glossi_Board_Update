@@ -97,7 +97,7 @@ Return your response in this exact JSON structure:
 
 function glossiLoaderSVG(extraClass = '') {
   const cls = extraClass ? `glossi-loader ${extraClass}` : 'glossi-loader';
-  const count = 12;
+  const count = 24;
   const ticks = Array.from({length: count}, (_, i) => {
     const angle = (i / count) * 360;
     const rad = angle * Math.PI / 180;
@@ -105,7 +105,7 @@ function glossiLoaderSVG(extraClass = '') {
     const y1 = (50 + 40 * Math.sin(rad)).toFixed(1);
     const x2 = (50 + 48 * Math.cos(rad)).toFixed(1);
     const y2 = (50 + 48 * Math.sin(rad)).toFixed(1);
-    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#fff" stroke-width="1.5" stroke-linecap="round" class="gl-tick gl-tick-${i}"/>`;
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#fff" stroke-width="1" stroke-linecap="round" class="gl-tick gl-tick-${i}"/>`;
   }).join('');
   return `<div class="${cls}"><svg class="glossi-loader-dots" viewBox="0 0 100 100">${ticks}</svg><img src="assets/glossi-logo.svg" class="glossi-loader-logo" alt="" /></div>`;
 }
@@ -4834,6 +4834,22 @@ class NewsMonitor {
             ${displayAngleNarrative ? `
             <div class="pr-news-angle-body">
               <p class="pr-news-angle-narrative">${this.escapeHtml(displayAngleNarrative)}</p>
+              ${(() => {
+                let cp = item.content_plan;
+                if (typeof cp === 'string') { try { cp = JSON.parse(cp); } catch (e) { cp = null; } }
+                if (!cp || !Array.isArray(cp) || cp.length === 0) return '';
+                return `<div class="pr-news-plan-list">${cp.map((p, pi) => {
+                  const label = CONTENT_TYPES.find(t => t.id === p.type)?.label || p.type;
+                  return `
+                    <div class="pr-news-plan-item" data-plan-index="${pi}">
+                      <div class="pr-news-plan-header">
+                        <i class="ph-light ph-caret-right pr-plan-item-chevron"></i>
+                        <span class="pr-news-plan-label">${this.escapeHtml(label)}</span>
+                      </div>
+                      ${p.description ? `<div class="pr-news-plan-desc"><p>${this.escapeHtml(p.description)}</p></div>` : ''}
+                    </div>`;
+                }).join('')}</div>`;
+              })()}
             </div>
             ` : ''}
           </div>
@@ -4879,6 +4895,15 @@ class NewsMonitor {
         if (e.target.closest('.pr-create-content-btn')) return;
         const card = row.closest('.pr-news-item');
         if (card) card.classList.toggle('expanded');
+      });
+    });
+
+    // Content plan item expand/collapse
+    container.querySelectorAll('.pr-news-plan-header').forEach(header => {
+      header.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const item = header.closest('.pr-news-plan-item');
+        if (item) item.classList.toggle('expanded');
       });
     });
 
