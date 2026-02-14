@@ -4352,9 +4352,9 @@ class NewsMonitor {
       clearFilters: document.getElementById('pr-news-clear-filters'),
       sourcesDrawer: document.getElementById('pr-sources-drawer'),
       sourcesBackdrop: document.getElementById('pr-sources-backdrop'),
-      sourcesToggleBtn: document.getElementById('pr-sources-toggle-btn'),
+      sourcesToggleBtn: document.getElementById('pr-nav-sources-btn'),
       sourcesDrawerClose: document.getElementById('pr-sources-drawer-close'),
-      sourcesToggleCount: document.getElementById('pr-sources-toggle-count'),
+      sourcesToggleCount: document.getElementById('pr-nav-sources-badge'),
       searchInput: document.getElementById('pr-news-search'),
       searchClear: document.getElementById('pr-news-search-clear'),
       addUrlBtn: document.getElementById('pr-add-url-btn'),
@@ -4853,7 +4853,7 @@ class NewsMonitor {
 
   async launchCreateWorkspace(newsItem) {
     // Switch to Create tab
-    const createTab = document.querySelector('.pr-stage-tab[data-stage="create"]');
+    const createTab = document.querySelector('.pr-nav-item[data-stage="create"]');
     if (createTab) {
       createTab.click();
     }

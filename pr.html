@@ -63,12 +63,38 @@
 
   <!-- Main PR Layout -->
   <main class="pr-main">
-    <!-- Main Stage Tabs (Desktop & Mobile) -->
-    <div class="pr-stage-tabs" id="pr-stage-tabs">
-      <button class="pr-stage-tab active" data-stage="strategy">Strategy</button>
-      <button class="pr-stage-tab" data-stage="create">Create</button>
-      <button class="pr-stage-tab" data-stage="distribute">Distribute</button>
-    </div>
+    <!-- Vertical Nav Rail -->
+    <nav class="pr-nav-rail" id="pr-nav-rail">
+      <button class="pr-nav-item active" data-stage="strategy" title="Strategy">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <circle cx="12" cy="12" r="6"></circle>
+          <circle cx="12" cy="12" r="2"></circle>
+        </svg>
+      </button>
+      <button class="pr-nav-item" data-stage="create" title="Create">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+      </button>
+      <button class="pr-nav-item" data-stage="distribute" title="Distribute">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="5" r="3"></circle>
+          <circle cx="6" cy="12" r="3"></circle>
+          <circle cx="18" cy="19" r="3"></circle>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+        </svg>
+      </button>
+      <div class="pr-nav-spacer"></div>
+      <button class="pr-nav-item pr-nav-sources" id="pr-nav-sources-btn" title="Sources">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span class="pr-nav-badge" id="pr-nav-sources-badge"></span>
+      </button>
+    </nav>
 
     <div class="pr-layout">
       <!-- Strategy Stage Content -->
@@ -145,13 +171,6 @@
                   </button>
                   <button class="pr-add-url-cancel" id="pr-add-url-cancel" title="Cancel">&times;</button>
                 </div>
-                <button class="pr-filter-btn" id="pr-sources-toggle-btn" title="Toggle Sources">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                  </svg>
-                  Sources
-                  <span class="pr-filter-count" id="pr-sources-toggle-count"></span>
-                </button>
                 <select class="pr-filter-select" id="pr-news-date-filter">
                   <option value="7">Last 7 days</option>
                   <option value="30">Last 30 days</option>
@@ -1099,13 +1118,13 @@
       });
     });
 
-    // Stage Tab Switching
-    document.querySelectorAll('.pr-stage-tab').forEach(tab => {
+    // Stage Nav Rail Switching
+    document.querySelectorAll('.pr-nav-item[data-stage]').forEach(tab => {
       tab.addEventListener('click', () => {
         const stage = tab.dataset.stage;
         
-        // Update active tab
-        document.querySelectorAll('.pr-stage-tab').forEach(t => t.classList.remove('active'));
+        // Update active nav item
+        document.querySelectorAll('.pr-nav-item[data-stage]').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         
         // Show corresponding stage content, hide others
@@ -1125,7 +1144,7 @@
     // Restore last active stage on page load
     document.addEventListener('DOMContentLoaded', () => {
       const savedStage = localStorage.getItem('pr_active_stage') || 'strategy';
-      const savedTab = document.querySelector(`.pr-stage-tab[data-stage="${savedStage}"]`);
+      const savedTab = document.querySelector(`.pr-nav-item[data-stage="${savedStage}"]`);
       if (savedTab) {
         savedTab.click();
       }
