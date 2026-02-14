@@ -2078,12 +2078,10 @@ ${milestonesData}
     // Show loading
     const step1 = document.getElementById('kb-report-step-1');
     const loading = document.getElementById('kb-report-loading');
-    const loadingText = document.getElementById('kb-report-loading-text');
     const continueBtn = document.getElementById('kb-report-continue');
     
     if (step1) step1.style.display = 'none';
     if (loading) loading.style.display = 'block';
-    if (loadingText) loadingText.textContent = 'Analyzing your request...';
     if (continueBtn) continueBtn.style.display = 'none';
     
     try {
@@ -2284,14 +2282,12 @@ Rules: Max 2 questions. Prefer "choice" type. If in doubt, respond {"ready": tru
     const step1 = document.getElementById('kb-report-step-1');
     const step2 = document.getElementById('kb-report-step-2');
     const loading = document.getElementById('kb-report-loading');
-    const loadingText = document.getElementById('kb-report-loading-text');
     const continueBtn = document.getElementById('kb-report-continue');
     const backBtn = document.getElementById('kb-report-back');
     
     if (step1) step1.style.display = 'none';
     if (step2) step2.style.display = 'none';
     if (loading) loading.style.display = 'block';
-    if (loadingText) loadingText.textContent = 'Generating your report...';
     if (continueBtn) continueBtn.style.display = 'none';
     if (backBtn) backBtn.style.display = 'none';
     

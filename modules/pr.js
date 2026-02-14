@@ -3198,21 +3198,11 @@ Return ONLY the JSON array, nothing else.`;
     const overlay = document.getElementById('pr-refining-overlay');
     if (overlay) {
       overlay.style.display = 'none';
-      const textEl = overlay.querySelector('.pr-refining-text');
-      if (textEl) {
-        textEl.textContent = 'Refining...';
-        textEl.style.color = 'var(--text-secondary)';
-      }
     }
   }
 
-  showRefiningError(message) {
-    const overlay = document.getElementById('pr-refining-overlay');
-    const textEl = overlay?.querySelector('.pr-refining-text');
-    if (textEl) {
-      textEl.textContent = message;
-      textEl.style.color = 'var(--accent-red)';
-    }
+  showRefiningError() {
+    this.hideRefiningOverlay();
   }
 
   async clearOldDrafts() {
