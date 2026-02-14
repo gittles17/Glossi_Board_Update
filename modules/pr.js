@@ -444,8 +444,10 @@ class PRAgent {
   }
 
   setupApiKeyMonitoring() {
+    // Clear previous interval if re-initialized
+    if (this._apiKeyInterval) clearInterval(this._apiKeyInterval);
     // Check for API key updates every 3 seconds
-    setInterval(() => {
+    this._apiKeyInterval = setInterval(() => {
       const previousKey = this.apiKey;
       
       try {
@@ -627,8 +629,11 @@ class PRAgent {
       }
       
       // Show migration modal
-      const migrationNeeded = (localSources && JSON.parse(localSources).length > 0) ||
-                             (localOutputs && JSON.parse(localOutputs).length > 0);
+      let parsedSources, parsedOutputs;
+      try { parsedSources = localSources ? JSON.parse(localSources) : []; } catch (e) { parsedSources = []; }
+      try { parsedOutputs = localOutputs ? JSON.parse(localOutputs) : []; } catch (e) { parsedOutputs = []; }
+      const migrationNeeded = (localSources && parsedSources.length > 0) ||
+                             (localOutputs && parsedOutputs.length > 0);
       
       if (!migrationNeeded) return;
       
@@ -655,7 +660,8 @@ class PRAgent {
       
       // Migrate sources
       if (localSources) {
-        const sources = JSON.parse(localSources);
+        let sources;
+        try { sources = JSON.parse(localSources); } catch (e) { sources = []; }
         totalCount += sources.length;
         
         for (let i = 0; i < sources.length; i++) {
@@ -673,7 +679,8 @@ class PRAgent {
       
       // Migrate outputs
       if (localOutputs) {
-        const outputs = JSON.parse(localOutputs);
+        let outputs;
+        try { outputs = JSON.parse(localOutputs); } catch (e) { outputs = []; }
         totalCount += outputs.length;
         
         for (let i = 0; i < outputs.length; i++) {
@@ -1227,17 +1234,23 @@ class PRAgent {
   }
 
   async deleteSource(id) {
-    // Optimistic delete - remove immediately, no confirmation
+    // Optimistic delete - remove immediately
+    const removedSource = this.sources.find(s => s.id === id);
     this.sources = this.sources.filter(s => s.id !== id);
     this.renderSources();
     this.updateGenerateButton();
     
-    // Sync delete with API in background
-    fetch(`/api/pr/sources/${id}`, {
-      method: 'DELETE'
-    }).catch(error => {
-      console.error('Error deleting source:', error);
-    });
+    // Sync delete with API in background, restore on failure
+    try {
+      const response = await fetch(`/api/pr/sources/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Server delete failed');
+    } catch (error) {
+      if (removedSource) {
+        this.sources.push(removedSource);
+        this.renderSources();
+        this.updateGenerateButton();
+      }
+    }
     
     this.saveSources();
   }
@@ -3955,7 +3968,9 @@ class MediaManager {
 
     modal.querySelectorAll('.pr-save-journalist-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const journalist = JSON.parse(btn.dataset.journalist.replace(/&apos;/g, "'"));
+        let journalist;
+        try { journalist = JSON.parse(btn.dataset.journalist.replace(/&apos;/g, "'")); } catch (e) { journalist = null; }
+        if (!journalist) return;
         await this.saveJournalist(journalist);
         btn.disabled = true;
         btn.textContent = 'Saved!';

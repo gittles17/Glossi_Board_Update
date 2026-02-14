@@ -182,7 +182,6 @@ class MeetingsManager {
     
     if (index !== -1) {
       meetings.splice(index, 1);
-      this.storage.meetings = meetings;
       this.storage.scheduleSave();
       
       if (this.currentMeeting?.id === meetingId) {

@@ -868,6 +868,11 @@ class GlossiDashboard {
       this.showModal('settings-modal');
     });
 
+    document.getElementById('nav-settings-btn')?.addEventListener('click', () => {
+      this.renderSettingsStatus();
+      this.showModal('settings-modal');
+    });
+
     // Desktop nav button handlers
     document.getElementById('desktop-share-btn')?.addEventListener('click', () => {
       this.openShareEmailModal();
@@ -884,16 +889,18 @@ class GlossiDashboard {
    * Process a dropped or selected file
    */
   async processDroppedFile(file) {
-    const fileType = this.getFileType(file);
-    
-    if (!fileType) {
-      this.showToast('Unsupported file type: ' + (file.type || file.name), 'error');
-      return;
-    }
-
-    this.hideModal('settings-modal');
-    
+    if (this._processingDrop) return;
+    this._processingDrop = true;
     try {
+      const fileType = this.getFileType(file);
+      
+      if (!fileType) {
+        this.showToast('Unsupported file type: ' + (file.type || file.name), 'error');
+        return;
+      }
+
+      this.hideModal('settings-modal');
+    
       let content = {};
       
       if (fileType === 'image') {
@@ -931,6 +938,8 @@ class GlossiDashboard {
     } catch (error) {
       this.hideProgress();
       this.showToast('Failed to process file: ' + error.message, 'error');
+    } finally {
+      this._processingDrop = false;
     }
   }
 
@@ -997,18 +1006,22 @@ class GlossiDashboard {
    * Process PDF file
    */
   async processPDFFile(file) {
-    await this._loadPdfJs();
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    
-    let text = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      text += content.items.map(item => item.str).join(' ') + '\n';
+    try {
+      await this._loadPdfJs();
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      
+      let text = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map(item => item.str).join(' ') + '\n';
+      }
+      
+      return { content: { text } };
+    } catch (err) {
+      throw new Error('Could not read PDF. The file may be corrupted or password-protected.');
     }
-    
-    return { content: { text } };
   }
 
   /**
@@ -1079,7 +1092,6 @@ class GlossiDashboard {
             reject(new Error('Failed to parse transcription response'));
           }
         } else {
-          void 0;
           reject(new Error(`Transcription failed: ${xhr.status}`));
         }
       });
@@ -1478,12 +1490,6 @@ class GlossiDashboard {
     try { this.renderSettingsStatus(); } catch (e) { /* render error */ }
   }
 
-  /**
-   * Render stats (deprecated - stats section removed)
-   */
-  renderStats() {
-    // Stats section was removed
-  }
 
   /**
    * Render the pipeline section with two-tier layout
@@ -1938,6 +1944,10 @@ class GlossiDashboard {
    * Setup pipeline auto-refresh (every 5 minutes)
    */
   setupPipelineAutoRefresh() {
+    // Clear any existing intervals to prevent duplicates
+    if (this._pipelineRefreshInterval) clearInterval(this._pipelineRefreshInterval);
+    if (this._pipelineSyncInterval) clearInterval(this._pipelineSyncInterval);
+
     // Initial fetch
     this.fetchPipelineFromSheet();
     
@@ -2033,26 +2043,6 @@ class GlossiDashboard {
     return '';
   }
 
-  /**
-   * Toggle pipeline card expand/collapse (deprecated)
-   */
-  togglePipelineCard(stage) {
-    // No longer used with new layout
-  }
-
-  /**
-   * Toggle highlights section (deprecated)
-   */
-  toggleHighlights() {
-    // No longer used with new layout
-  }
-
-  /**
-   * Render pipeline highlights (deprecated - now rendered inline)
-   */
-  renderPipelineHighlights(highlights, updatedAt) {
-    // No longer used - highlights now rendered in main section
-  }
 
   /**
    * Parse money value string to number
@@ -3009,7 +2999,7 @@ RULES:
     if (!investor || investor.stage === newStage) return;
 
     // Optimistic: Move DOM element immediately
-    const card = document.querySelector(`.investor-card[data-investor-id="${investorId}"]`);
+    const card = document.querySelector(`.investor-card[data-id="${investorId}"]`);
     const targetColumn = document.getElementById(`stage-${newStage}`);
     
     if (card && targetColumn) {
@@ -3321,7 +3311,7 @@ RULES:
     this.hideModal('investor-modal');
     
     // Optimistic: Animate card removal
-    const card = document.querySelector(`.investor-card[data-investor-id="${investorId}"]`);
+    const card = document.querySelector(`.investor-card[data-id="${investorId}"]`);
     if (card) {
       card.style.opacity = '0';
       card.style.transform = 'scale(0.9)';
@@ -3354,12 +3344,6 @@ RULES:
     });
   }
 
-  /**
-   * Refresh pipeline view (deprecated - pipeline section removed)
-   */
-  refreshPipelineViews() {
-    // Pipeline section was removed
-  }
 
   /**
    * Open share email modal with section options
@@ -4459,7 +4443,6 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       // Show review content
       this.renderMeetingReview(result);
     } catch (error) {
-      void 0;
       this.hideModal('review-modal');
       this.showToast('Failed to process notes: ' + error.message, 'error');
     }
@@ -4669,7 +4652,6 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       this.pendingDroppedContent = null;
       
     } catch (error) {
-      void 0;
       this.showToast('Failed to analyze: ' + error.message, 'error');
       this.pendingDroppedContent = null;
     }
@@ -4820,7 +4802,6 @@ TONE RULES:
       this.hideModal('pipeline-update-modal');
       
     } catch (error) {
-      void 0;
       this.showToast('Failed to extract: ' + error.message, 'error');
     }
   }
@@ -4990,7 +4971,6 @@ Return JSON:
       this.showCurationResults(curation, talkingPoints, quotes, thoughts);
       
     } catch (error) {
-      void 0;
       this.hideModal('curation-modal');
       this.showToast('Curation failed: ' + error.message, 'error');
     }
@@ -5478,7 +5458,6 @@ RULES:
       this.data = storage.getData();
       this.renderTalkingPoints();
     } catch (error) {
-      void 0;
       this.showToast('Analysis failed: ' + error.message, 'error');
     }
   }
@@ -6401,7 +6380,7 @@ RULES:
             break;
         }
       } catch (e) {
-        void 0;
+        // Silently skip individual item errors
       }
     });
     
@@ -8569,10 +8548,12 @@ document.addEventListener('DOMContentLoaded', () => {
   window.dashboard = new GlossiDashboard();
   window.dashboard.init();
   
-  // Flush pending edits and saves before page unload
+  // Flush pending edits and clear intervals before page unload
   window.addEventListener('beforeunload', () => {
     if (window.dashboard) {
       window.dashboard.savePendingTodoEdits();
+      if (window.dashboard._pipelineRefreshInterval) clearInterval(window.dashboard._pipelineRefreshInterval);
+      if (window.dashboard._pipelineSyncInterval) clearInterval(window.dashboard._pipelineSyncInterval);
     }
     storage.flushPendingSave();
   });

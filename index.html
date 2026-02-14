@@ -21,13 +21,24 @@
   <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
+  <h1 class="sr-only">Glossi Board Update Dashboard</h1>
   <!-- Top Navigation -->
   <header class="top-nav">
     <div class="nav-left">
-      <img src="Asset 3.svg" alt="Glossi" class="logo-img" width="21" height="24">
+      <a href="index.html" title="Dashboard">
+        <img src="glossi_wordmark.svg" alt="Glossi" class="logo-img">
+      </a>
     </div>
     <div class="nav-right">
-      <div class="menu-container">
+      <nav class="nav-links">
+        <a href="index.html" class="nav-link nav-link-active">Dashboard</a>
+        <a href="notebook.html" class="nav-link">Notebook</a>
+        <a href="pr.html" class="nav-link">PR</a>
+      </nav>
+      <button class="nav-settings-icon" id="nav-settings-btn" title="Settings">
+        <i class="ph-light ph-gear"></i>
+      </button>
+      <div class="menu-container nav-mobile-menu">
         <button class="btn-icon" id="menu-btn" title="Menu" aria-label="Open menu">
           <i class="ph-light ph-list"></i>
         </button>
@@ -285,7 +296,7 @@
     <div class="modal">
       <div class="modal-header">
         <h2>Review Suggested Changes</h2>
-        <button class="btn-icon modal-close" id="modal-close">
+        <button class="btn-icon modal-close" id="modal-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -310,7 +321,7 @@
     <div class="modal modal-large">
       <div class="modal-header">
         <h2>Add Meeting Notes</h2>
-        <button class="btn-icon modal-close" id="notes-modal-close">
+        <button class="btn-icon modal-close" id="notes-modal-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -348,7 +359,7 @@
     <div class="modal modal-medium">
       <div class="modal-header">
         <h2>Review Action Items</h2>
-        <button class="btn-icon modal-close" id="todo-review-close">
+        <button class="btn-icon modal-close" id="todo-review-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -370,7 +381,7 @@
     <div class="modal modal-large">
       <div class="modal-header">
         <h2>Settings</h2>
-        <button class="btn-icon modal-close" id="settings-modal-close">
+        <button class="btn-icon modal-close" id="settings-modal-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -431,7 +442,7 @@
     <div class="modal">
       <div class="modal-header">
         <h2>Add Decision</h2>
-        <button class="btn-icon modal-close" id="decision-modal-close">
+        <button class="btn-icon modal-close" id="decision-modal-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -454,7 +465,7 @@
     <div class="modal">
       <div class="modal-header">
         <h2 id="link-modal-title">Add Link</h2>
-        <button class="btn-icon modal-close" id="link-modal-close">
+        <button class="btn-icon modal-close" id="link-modal-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -509,7 +520,7 @@
     <div class="modal">
       <div class="modal-header">
         <h2 id="investor-modal-title">Add Investor</h2>
-        <button class="btn-icon modal-close" id="investor-modal-close">
+        <button class="btn-icon modal-close" id="investor-modal-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -549,7 +560,7 @@
     <div class="modal modal-large">
       <div class="modal-header">
         <h2 id="unified-modal-title">Content Analysis</h2>
-        <button class="btn-icon modal-close" id="content-action-close">
+        <button class="btn-icon modal-close" id="content-action-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -577,7 +588,7 @@
     <div class="modal modal-large">
       <div class="modal-header">
         <h2>Add Source</h2>
-        <button class="btn-icon modal-close" id="kb-source-modal-close">
+        <button class="btn-icon modal-close" id="kb-source-modal-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -646,7 +657,7 @@
     <div class="modal modal-large">
       <div class="modal-header">
         <h2>Generate Report</h2>
-        <button class="btn-icon modal-close" id="kb-report-modal-close">
+        <button class="btn-icon modal-close" id="kb-report-modal-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -713,7 +724,7 @@
             <i class="ph-light ph-copy"></i>
             Copy
           </button>
-          <button class="btn-icon modal-close" id="kb-report-view-close">
+          <button class="btn-icon modal-close" id="kb-report-view-close" title="Close" aria-label="Close">
             <i class="ph-light ph-x"></i>
           </button>
         </div>
@@ -731,7 +742,7 @@
     <div class="modal modal-large">
       <div class="modal-header">
         <h2>Update Pipeline</h2>
-        <button class="btn-icon modal-close" id="pipeline-edit-close">
+        <button class="btn-icon modal-close" id="pipeline-edit-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -757,7 +768,7 @@
     <div class="modal">
       <div class="modal-header">
         <h2>Generate Weekly Email</h2>
-        <button class="btn-icon modal-close" id="share-email-close">
+        <button class="btn-icon modal-close" id="share-email-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -817,7 +828,7 @@
     <div class="modal modal-wide">
       <div class="modal-header">
         <h2>Your Weekly Email</h2>
-        <button class="btn-icon modal-close" id="email-preview-close">
+        <button class="btn-icon modal-close" id="email-preview-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>

@@ -5,26 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Notebook - Glossi</title>
   <meta name="theme-color" content="#0a0d12">
+  <meta name="description" content="Glossi Board Update Dashboard - AI-powered investor communications and content strategy platform">
+  <meta property="og:title" content="Glossi - Board Update Dashboard">
+  <meta property="og:description" content="AI-powered investor communications and content strategy platform">
+  <meta property="og:type" content="website">
   <link rel="icon" type="image/svg+xml" href="Asset 3.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/light/style.css">
   <link rel="stylesheet" href="dashboard.css">
 </head>
 <body class="kb-page">
+  <h1 class="sr-only">Glossi Knowledge Notebook</h1>
   <!-- Top Navigation -->
   <header class="top-nav">
     <div class="nav-left">
-      <a href="index.html" class="nav-back" title="Back to Dashboard">
-        <i class="ph-light ph-arrow-left"></i>
+      <a href="index.html" title="Dashboard">
+        <img src="glossi_wordmark.svg" alt="Glossi" class="logo-img">
       </a>
-      <img src="Asset 3.svg" alt="Glossi" class="logo-img">
       <span class="nav-page-title">Notebook</span>
     </div>
     <div class="nav-right">
-      <div class="dropdown-wrapper">
-        <button class="btn-icon" id="menu-btn" title="Menu">
+      <nav class="nav-links">
+        <a href="index.html" class="nav-link">Dashboard</a>
+        <a href="notebook.html" class="nav-link nav-link-active">Notebook</a>
+        <a href="pr.html" class="nav-link">PR</a>
+      </nav>
+      <button class="nav-settings-icon" id="nav-settings-btn" title="Settings">
+        <i class="ph-light ph-gear"></i>
+      </button>
+      <div class="dropdown-wrapper nav-mobile-menu">
+        <button class="btn-icon" id="menu-btn" title="Menu" aria-label="Menu">
           <i class="ph-light ph-list"></i>
         </button>
         <div class="dropdown-menu" id="dropdown-menu">
@@ -63,15 +75,15 @@
       <!-- Sources Sidebar (Collapsible) -->
       <div class="kb-sources-sidebar" id="kb-sources-sidebar">
         <div class="kb-sources-header">
-          <button class="kb-toggle-sidebar" id="kb-toggle-sidebar" title="Toggle Sources">
+          <button class="kb-toggle-sidebar" id="kb-toggle-sidebar" title="Toggle Sources" aria-label="Toggle Sources">
             <i class="ph-light ph-sidebar"></i>
           </button>
           <span class="kb-sources-title">Sources</span>
           <span class="kb-sources-count" id="kb-sources-count">0</span>
-          <button class="kb-toggle-all-btn" id="kb-toggle-all-btn" title="Toggle all sources on/off">
+          <button class="kb-toggle-all-btn" id="kb-toggle-all-btn" title="Toggle all sources on/off" aria-label="Toggle all sources on/off">
             <i class="ph-light ph-eye"></i>
           </button>
-          <button class="kb-create-folder-btn" id="kb-create-folder-btn" title="Create Folder">
+          <button class="kb-create-folder-btn" id="kb-create-folder-btn" title="Create Folder" aria-label="Create Folder">
             <i class="ph-light ph-plus"></i>
           </button>
         </div>
@@ -102,7 +114,7 @@
         <div class="kb-chat-container">
           <div class="kb-chat-header">
             <span class="kb-chat-title">Chat</span>
-            <button class="kb-clear-btn" id="kb-clear-btn" title="Clear chat">
+            <button class="kb-clear-btn" id="kb-clear-btn" title="Clear chat" aria-label="Clear chat">
               <i class="ph-light ph-trash"></i>
             </button>
           </div>
@@ -125,7 +137,7 @@
         <div class="kb-input-area" id="kb-input-area">
           <div class="kb-input-wrapper">
             <textarea id="kb-chat-input" class="kb-chat-input" placeholder="How can I help you today?" rows="1"></textarea>
-            <button class="kb-send-btn" id="kb-send-btn" title="Send">
+            <button class="kb-send-btn" id="kb-send-btn" title="Send" aria-label="Send">
               <i class="ph-light ph-paper-plane-tilt"></i>
             </button>
           </div>
@@ -138,12 +150,12 @@
       <!-- Reports Panel (Collapsible) -->
       <div class="kb-reports-panel" id="kb-reports-panel">
         <div class="kb-reports-header">
-          <button class="kb-toggle-reports" id="kb-toggle-reports" title="Toggle Reports">
+          <button class="kb-toggle-reports" id="kb-toggle-reports" title="Toggle Reports" aria-label="Toggle Reports">
             <i class="ph-light ph-file-text"></i>
           </button>
           <span class="kb-reports-title">Reports</span>
           <span class="kb-reports-count" id="kb-reports-count">0</span>
-          <button class="kb-add-report-btn" id="kb-add-report-btn" title="Generate Report">
+          <button class="kb-add-report-btn" id="kb-add-report-btn" title="Generate Report" aria-label="Generate Report">
             <i class="ph-light ph-plus"></i>
           </button>
         </div>
@@ -163,7 +175,7 @@
     <div class="modal">
       <div class="modal-header">
         <h2>Add Source</h2>
-        <button class="btn-icon modal-close" id="kb-source-modal-close">
+        <button class="btn-icon modal-close" id="kb-source-modal-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -209,7 +221,7 @@
     <div class="modal modal-large">
       <div class="modal-header">
         <h2>Generate Report</h2>
-        <button class="btn-icon modal-close" id="kb-report-modal-close">
+        <button class="btn-icon modal-close" id="kb-report-modal-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -261,7 +273,7 @@
             <i class="ph-light ph-copy"></i>
             Copy
           </button>
-          <button class="btn-icon modal-close" id="kb-report-view-close">
+          <button class="btn-icon modal-close" id="kb-report-view-close" title="Close" aria-label="Close">
             <i class="ph-light ph-x"></i>
           </button>
         </div>
@@ -282,7 +294,7 @@
     <div class="modal">
       <div class="modal-header">
         <h2>Settings</h2>
-        <button class="btn-icon modal-close" id="settings-modal-close">
+        <button class="btn-icon modal-close" id="settings-modal-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -417,6 +429,25 @@
         });
       }
       
+      // Settings button (inline nav link)
+      document.getElementById('nav-settings-btn')?.addEventListener('click', async () => {
+        settingsModal.classList.add('visible');
+        try {
+          const response = await fetch('/api/settings');
+          const data = await response.json();
+          const statusBadge = document.getElementById('anthropic-env-status');
+          if (statusBadge) {
+            if (data.hasAnthropicKey) {
+              statusBadge.textContent = 'Configured';
+              statusBadge.className = 'status-badge status-success';
+            } else {
+              statusBadge.textContent = 'Not configured';
+              statusBadge.className = 'status-badge status-error';
+            }
+          }
+        } catch (error) { /* ignored */ }
+      });
+
       // Settings button in dropdown
       if (menuSettings) {
         menuSettings.addEventListener('click', async () => {

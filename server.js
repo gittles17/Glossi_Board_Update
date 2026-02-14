@@ -30,7 +30,21 @@ if (useDatabase) {
     query_timeout: 10000,
     idleTimeoutMillis: 30000
   });
-} else {
+}
+
+// SSRF protection: validate URLs before server-side fetch
+function isAllowedUrl(urlString) {
+  try {
+    const parsed = new URL(urlString);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    const host = parsed.hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '::1') return false;
+    if (host.endsWith('.local') || host.endsWith('.internal')) return false;
+    if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.)/.test(host)) return false;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Data directory for local development
@@ -278,6 +292,16 @@ async function initDatabase() {
 // Middleware
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
+
+// Block sensitive paths from static serving
+app.use((req, res, next) => {
+  const blocked = ['/server.js', '/package.json', '/package-lock.json', '/railway.json', '/.env', '/.gitignore'];
+  const lower = req.path.toLowerCase();
+  if (blocked.includes(lower) || lower.startsWith('/data/') || lower.startsWith('/.')) {
+    return res.status(404).send('Not found');
+  }
+  next();
+});
 app.use(express.static(__dirname));
 
 // Health check endpoint
@@ -394,49 +418,49 @@ app.post('/api/data', async (req, res) => {
     } else {
       // Save to files
       if (data) {
-        fs.writeFileSync(
+        await fs.promises.writeFile(
           path.join(DATA_DIR, 'dashboard-data.json'),
           JSON.stringify(data, null, 2)
         );
       }
       
       if (meetings) {
-        fs.writeFileSync(
+        await fs.promises.writeFile(
           path.join(DATA_DIR, 'meetings.json'),
           JSON.stringify(meetings, null, 2)
         );
       }
       
       if (settings) {
-        fs.writeFileSync(
+        await fs.promises.writeFile(
           path.join(DATA_DIR, 'settings.json'),
           JSON.stringify(settings, null, 2)
         );
       }
       
       if (pipelineHistory) {
-        fs.writeFileSync(
+        await fs.promises.writeFile(
           path.join(DATA_DIR, 'pipeline-history.json'),
           JSON.stringify(pipelineHistory, null, 2)
         );
       }
       
       if (statHistory) {
-        fs.writeFileSync(
+        await fs.promises.writeFile(
           path.join(DATA_DIR, 'stat-history.json'),
           JSON.stringify(statHistory, null, 2)
         );
       }
       
       if (todos) {
-        fs.writeFileSync(
+        await fs.promises.writeFile(
           path.join(DATA_DIR, 'todos.json'),
           JSON.stringify(todos, null, 2)
         );
       }
       
       if (teamMembers) {
-        fs.writeFileSync(
+        await fs.promises.writeFile(
           path.join(DATA_DIR, 'team-members.json'),
           JSON.stringify(teamMembers, null, 2)
         );
@@ -1472,6 +1496,9 @@ app.post('/api/pr/analyze-url', async (req, res) => {
     if (!url) {
       return res.status(400).json({ success: false, error: 'No URL provided' });
     }
+    if (!isAllowedUrl(url)) {
+      return res.status(400).json({ success: false, error: 'Invalid or blocked URL' });
+    }
 
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
     if (!anthropicKey) {
@@ -1934,6 +1961,9 @@ app.post('/api/fetch-url', async (req, res) => {
     
     if (!url) {
       return res.status(400).json({ success: false, error: 'No URL provided' });
+    }
+    if (!isAllowedUrl(url)) {
+      return res.status(400).json({ success: false, error: 'Invalid or blocked URL' });
     }
     
     // Fetch the URL using axios

@@ -5,26 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>PR - Glossi</title>
   <meta name="theme-color" content="#0a0d12">
+  <meta name="description" content="Glossi Board Update Dashboard - AI-powered investor communications and content strategy platform">
+  <meta property="og:title" content="Glossi - Board Update Dashboard">
+  <meta property="og:description" content="AI-powered investor communications and content strategy platform">
+  <meta property="og:type" content="website">
   <link rel="icon" type="image/svg+xml" href="Asset 3.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/light/style.css">
   <link rel="stylesheet" href="dashboard.css">
 </head>
 <body class="pr-page">
+  <h1 class="sr-only">Glossi PR Content Studio</h1>
   <!-- Top Navigation -->
   <header class="top-nav">
     <div class="nav-left">
-      <a href="index.html" class="nav-back" title="Back to Dashboard">
-        <i class="ph-light ph-arrow-left"></i>
+      <a href="index.html" title="Dashboard">
+        <img src="glossi_wordmark.svg" alt="Glossi" class="logo-img">
       </a>
-      <img src="Asset 3.svg" alt="Glossi" class="logo-img">
       <span class="nav-page-title">PR</span>
     </div>
     <div class="nav-right">
-      <div class="dropdown-wrapper">
-        <button class="btn-icon" id="menu-btn" title="Menu">
+      <nav class="nav-links">
+        <a href="index.html" class="nav-link">Dashboard</a>
+        <a href="notebook.html" class="nav-link">Notebook</a>
+        <a href="pr.html" class="nav-link nav-link-active">PR</a>
+      </nav>
+      <button class="nav-settings-icon" id="nav-settings-btn" title="Settings">
+        <i class="ph-light ph-gear"></i>
+      </button>
+      <div class="dropdown-wrapper nav-mobile-menu">
+        <button class="btn-icon" id="menu-btn" title="Menu" aria-label="Menu">
           <i class="ph-light ph-list"></i>
         </button>
         <div class="dropdown-menu" id="dropdown-menu">
@@ -51,56 +63,56 @@
     <!-- Vertical Nav Rail -->
     <nav class="pr-nav-rail" id="pr-nav-rail">
       <div class="pr-nav-stages">
-        <button class="pr-nav-item active" data-stage="strategy" title="Strategy">
+        <button class="pr-nav-item active" data-stage="strategy" title="Strategy" aria-label="Strategy">
           <i class="ph-light ph-crosshair"></i>
         </button>
-        <button class="pr-nav-item" data-stage="create" title="Create">
+        <button class="pr-nav-item" data-stage="create" title="Create" aria-label="Create">
           <i class="ph-light ph-pencil-simple"></i>
         </button>
-        <button class="pr-nav-item" data-stage="distribute" title="Distribute">
+        <button class="pr-nav-item" data-stage="distribute" title="Distribute" aria-label="Distribute">
           <i class="ph-light ph-share-network"></i>
         </button>
       </div>
-      <button class="pr-nav-item pr-nav-sources" id="pr-nav-sources-btn" title="Sources">
+      <button class="pr-nav-item pr-nav-sources" id="pr-nav-sources-btn" title="Sources" aria-label="Sources">
         <i class="ph-light ph-folder"></i>
         <span class="pr-nav-badge" id="pr-nav-sources-badge"></span>
       </button>
     </nav>
 
     <div class="pr-layout">
-      <!-- Strategy Stage Content -->
-      <div class="pr-sources-panel pr-stage-content active" id="pr-sources-panel" data-stage="strategy">
-        
-        <!-- Sources Drawer (overlay) -->
-        <div class="pr-sources-drawer" id="pr-sources-drawer">
-          <div class="pr-sources-drawer-inner">
-            <div class="pr-workflow-section pr-sources-section">
-              <div class="pr-workflow-header pr-sources-header">
-                <h2 class="pr-workflow-title pr-sources-label">Sources</h2>
-                <span class="pr-sources-count" id="pr-sources-count">0</span>
-                <button class="pr-create-folder-btn" id="pr-create-folder-btn" title="Create Folder">
-                  <i class="ph-light ph-plus"></i>
-                </button>
-                <button class="pr-sources-drawer-close" id="pr-sources-drawer-close" title="Close">
-                  <i class="ph-light ph-x"></i>
-                </button>
-              </div>
-              <div class="pr-source-search-wrap">
-                <input type="text" class="pr-source-search" id="pr-source-search" placeholder="Search sources...">
-              </div>
-              <div class="pr-sources-list pr-drop-zone" id="pr-sources-list">
-                <div class="pr-sources-empty" id="pr-sources-empty">
-                  <p>No sources yet</p>
-                </div>
-              </div>
-              <button class="pr-add-source-btn" id="pr-add-source-btn">
+      <!-- Sources Drawer (global overlay, accessible from any stage) -->
+      <div class="pr-sources-drawer" id="pr-sources-drawer">
+        <div class="pr-sources-drawer-inner">
+          <div class="pr-workflow-section pr-sources-section">
+            <div class="pr-workflow-header pr-sources-header">
+              <h2 class="pr-workflow-title pr-sources-label">Sources</h2>
+              <span class="pr-sources-count" id="pr-sources-count">0</span>
+              <button class="pr-create-folder-btn" id="pr-create-folder-btn" title="Create Folder" aria-label="Create Folder">
                 <i class="ph-light ph-plus"></i>
-                <span>Add Source</span>
+              </button>
+              <button class="pr-sources-drawer-close" id="pr-sources-drawer-close" title="Close" aria-label="Close">
+                <i class="ph-light ph-x"></i>
               </button>
             </div>
+            <div class="pr-source-search-wrap">
+              <input type="text" class="pr-source-search" id="pr-source-search" placeholder="Search sources...">
+            </div>
+            <div class="pr-sources-list pr-drop-zone" id="pr-sources-list">
+              <div class="pr-sources-empty" id="pr-sources-empty">
+                <p>No sources yet</p>
+              </div>
+            </div>
+            <button class="pr-add-source-btn" id="pr-add-source-btn">
+              <i class="ph-light ph-plus"></i>
+              <span>Add Source</span>
+            </button>
           </div>
         </div>
-        <div class="pr-sources-backdrop" id="pr-sources-backdrop"></div>
+      </div>
+      <div class="pr-sources-backdrop" id="pr-sources-backdrop"></div>
+
+      <!-- Strategy Stage Content -->
+      <div class="pr-sources-panel pr-stage-content active" id="pr-sources-panel" data-stage="strategy">
 
         <!-- Full-Width News Hooks -->
         <div class="pr-strategy-layout">
@@ -109,28 +121,28 @@
               <h2 class="pr-workflow-title">What's Happening Now</h2>
               <div class="pr-news-hooks-controls">
                 <div class="pr-search-expandable-wrap">
-                  <button class="pr-toolbar-btn" id="pr-search-toggle" title="Search articles">
+                  <button class="pr-toolbar-btn" id="pr-search-toggle" title="Search articles" aria-label="Search articles">
                     <i class="ph-light ph-magnifying-glass"></i>
                   </button>
                   <div class="pr-search-expandable" id="pr-search-expandable" style="display:none">
                     <input type="text" class="pr-news-search" id="pr-news-search" placeholder="Search articles..." autocomplete="off">
-                    <button class="pr-news-search-clear" id="pr-news-search-clear" style="display:none" title="Clear search">&times;</button>
+                    <button class="pr-news-search-clear" id="pr-news-search-clear" style="display:none" title="Clear search" aria-label="Clear search">&times;</button>
                   </div>
                 </div>
                 <div class="pr-add-url-wrap-outer">
-                  <button class="pr-toolbar-btn" id="pr-add-url-btn" title="Add article by URL">
+                  <button class="pr-toolbar-btn" id="pr-add-url-btn" title="Add article by URL" aria-label="Add article by URL">
                     <i class="ph-light ph-plus"></i>
                   </button>
                   <div class="pr-add-url-input-wrap" id="pr-add-url-input-wrap" style="display:none">
                     <input type="url" class="pr-add-url-input" id="pr-add-url-input" placeholder="Paste article URL..." autocomplete="off">
-                    <button class="pr-add-url-submit" id="pr-add-url-submit" title="Analyze">
+                    <button class="pr-add-url-submit" id="pr-add-url-submit" title="Analyze" aria-label="Analyze">
                       <i class="ph-light ph-paper-plane-tilt"></i>
                     </button>
-                    <button class="pr-add-url-cancel" id="pr-add-url-cancel" title="Cancel">&times;</button>
+                    <button class="pr-add-url-cancel" id="pr-add-url-cancel" title="Cancel" aria-label="Cancel">&times;</button>
                   </div>
                 </div>
                 <div class="pr-filter-wrap">
-                  <button class="pr-toolbar-btn" id="pr-filter-toggle" title="Filters">
+                  <button class="pr-toolbar-btn" id="pr-filter-toggle" title="Filters" aria-label="Filters">
                     <i class="ph-light ph-funnel"></i>
                     <span class="pr-filter-active-dot" id="pr-filter-active-dot" style="display:none"></span>
                   </button>
@@ -151,7 +163,7 @@
                     <button class="pr-filter-dropdown-clear" id="pr-filter-clear-all">Clear all filters</button>
                   </div>
                 </div>
-                <button class="pr-toolbar-btn" id="pr-fetch-news-btn" title="Refresh">
+                <button class="pr-toolbar-btn" id="pr-fetch-news-btn" title="Refresh" aria-label="Refresh">
                   <i class="ph-light ph-arrows-clockwise"></i>
                 </button>
               </div>
@@ -178,7 +190,7 @@
 
             <!-- Toggle collapse/expand -->
             <div class="pr-panel-toggle-wrap">
-              <button class="pr-panel-toggle" id="pr-panel-toggle" title="Toggle panel">
+              <button class="pr-panel-toggle" id="pr-panel-toggle" title="Toggle panel" aria-label="Toggle panel">
                 <i class="ph-light ph-sidebar-simple"></i>
               </button>
             </div>
@@ -213,17 +225,17 @@
               <!-- tabs are rendered dynamically -->
               <div class="pr-workspace-actions" style="display:none" id="pr-workspace-actions">
                 <div class="pr-version-pill-wrap">
-                  <button class="pr-version-pill" id="pr-version-pill" title="Version history">
+                  <button class="pr-version-pill" id="pr-version-pill" title="Version history" aria-label="Version history">
                     <span id="pr-version-pill-label">Latest</span>
                     <i class="ph-light ph-caret-down"></i>
                   </button>
                   <div class="pr-version-menu" id="pr-version-menu" style="display:none"></div>
                 </div>
-                <button class="pr-action-btn" id="pr-copy-btn" title="Copy to clipboard">
+                <button class="pr-action-btn" id="pr-copy-btn" title="Copy to clipboard" aria-label="Copy to clipboard">
                   <i class="ph-light ph-copy"></i>
                 </button>
                 <div class="pr-export-wrap">
-                  <button class="pr-action-btn" id="pr-export-btn" title="Export">
+                  <button class="pr-action-btn" id="pr-export-btn" title="Export" aria-label="Export">
                     <i class="ph-light ph-download-simple"></i>
                   </button>
                   <div class="pr-export-menu" id="pr-export-menu">
@@ -309,7 +321,7 @@
             <!-- Compact chat input (sticky bottom) -->
             <div class="pr-workspace-chat" id="pr-workspace-chat" style="display:none">
               <input type="text" id="pr-chat-input" class="pr-workspace-chat-input" placeholder="Refine further..." autocomplete="off" />
-              <button class="pr-workspace-chat-send" id="pr-send-btn" title="Send">
+              <button class="pr-workspace-chat-send" id="pr-send-btn" title="Send" aria-label="Send">
                 <i class="ph-light ph-paper-plane-tilt"></i>
               </button>
             </div>
@@ -348,7 +360,7 @@
     <div class="modal modal-large">
       <div class="modal-header">
         <h2>Add Source</h2>
-        <button class="btn-icon modal-close" id="pr-source-modal-close">
+        <button class="btn-icon modal-close" id="pr-source-modal-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -457,7 +469,7 @@
     <div class="modal">
       <div class="modal-header">
         <h2>Settings</h2>
-        <button class="btn-icon modal-close" id="settings-modal-close">
+        <button class="btn-icon modal-close" id="settings-modal-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -509,7 +521,7 @@
             <div class="wizard-progress-fill" id="wizard-progress-fill"></div>
           </div>
         </div>
-        <button class="wizard-close" id="wizard-close" title="Save and close">
+        <button class="wizard-close" id="wizard-close" title="Save and close" aria-label="Save and close">
           <i class="ph-light ph-x"></i>
         </button>
       </div>
@@ -923,6 +935,10 @@
 
       document.getElementById('menu-settings')?.addEventListener('click', () => {
         dropdownMenu?.classList.remove('active');
+        openSettings();
+      });
+
+      document.getElementById('nav-settings-btn')?.addEventListener('click', () => {
         openSettings();
       });
 
