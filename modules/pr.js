@@ -613,7 +613,7 @@ class PRAgent {
       modal.className = 'pr-migration-modal';
       modal.innerHTML = `
         <div class="pr-migration-content">
-          <div class="pr-loading-spinner"></div>
+          <img src="assets/glossi-logo.svg" class="glossi-loader" alt="Loading" />
           <h3>Migrating your PR data...</h3>
           <p class="pr-migration-progress" id="pr-migration-progress">Preparing migration...</p>
           <div class="pr-migration-bar">
@@ -3884,7 +3884,7 @@ class MediaManager {
     modal.className = 'pr-loading-modal';
     modal.innerHTML = `
       <div class="pr-loading-modal-content">
-        <div class="pr-loading-spinner"></div>
+        <img src="assets/glossi-logo.svg" class="glossi-loader" alt="Loading" />
         <p>${message}</p>
       </div>
     `;

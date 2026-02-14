@@ -4437,7 +4437,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
     this.showModal('review-modal');
     document.getElementById('review-content').innerHTML = `
       <div class="review-loading">
-        <div class="spinner"></div>
+        <img src="assets/glossi-logo.svg" class="glossi-loader" alt="Loading" />
         <p>Claude is analyzing your meeting notes...</p>
       </div>
     `;

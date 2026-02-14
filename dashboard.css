@@ -116,6 +116,35 @@ i[class*="ph-"] {
 }
 
 /* ============================================
+   GLOSSI LOGO LOADER
+   ============================================ */
+.glossi-loader {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  animation: glossi-breathe 2s ease-in-out infinite;
+  opacity: 0.6;
+}
+
+.glossi-loader-sm {
+  width: 24px;
+  height: 24px;
+}
+
+@keyframes glossi-breathe {
+  0%, 100% {
+    opacity: 0.3;
+    filter: brightness(0.8) drop-shadow(0 0 0 transparent);
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.2) drop-shadow(0 0 8px rgba(91, 176, 154, 0.4));
+    transform: scale(1.05);
+  }
+}
+
+/* ============================================
    RESET & BASE
    ============================================ */
 *, *::before, *::after {
