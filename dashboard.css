@@ -11341,8 +11341,7 @@ a.dropdown-item {
 
 /* Ensure no content leaks between stages */
 .pr-sources-panel[data-stage="strategy"] .pr-media-section,
-.pr-workspace-panel[data-stage="create"] .pr-news-hooks-section,
-.pr-workspace-panel[data-stage="create"] .pr-angles-section {
+.pr-workspace-panel[data-stage="create"] .pr-news-hooks-section {
   display: none !important;
 }
 
