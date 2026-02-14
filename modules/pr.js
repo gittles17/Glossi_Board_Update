@@ -878,6 +878,46 @@ class PRAgent {
       }
     });
 
+    // Version pill toggle
+    const versionPill = document.getElementById('pr-version-pill');
+    const versionMenu = document.getElementById('pr-version-menu');
+    if (versionPill && versionMenu) {
+      versionPill.addEventListener('click', (e) => {
+        e.stopPropagation();
+        versionMenu.style.display = versionMenu.style.display === 'none' ? 'block' : 'none';
+      });
+
+      versionMenu.addEventListener('click', (e) => {
+        // Clear old drafts
+        const clearBtn = e.target.closest('.pr-version-menu-clear');
+        if (clearBtn) {
+          e.stopPropagation();
+          this.clearOldDrafts();
+          versionMenu.style.display = 'none';
+          return;
+        }
+        // Switch version
+        const item = e.target.closest('.pr-version-menu-item');
+        if (item && this.currentOutput) {
+          const version = parseInt(item.dataset.version);
+          const draft = this.currentOutput.drafts.find(d => d.version === version);
+          if (draft && this.dom.generatedContent) {
+            this.dom.generatedContent.innerHTML = `<div class="pr-draft-content">${this.formatContent(draft.content, this.currentOutput.citations)}</div>`;
+            versionMenu.querySelectorAll('.pr-version-menu-item').forEach(v => v.classList.remove('active'));
+            item.classList.add('active');
+            const pillLabel = document.getElementById('pr-version-pill-label');
+            if (pillLabel) pillLabel.textContent = item.querySelector('.pr-version-menu-label')?.textContent || `v${version}`;
+          }
+          versionMenu.style.display = 'none';
+        }
+      });
+
+      // Close on outside click
+      document.addEventListener('click', () => {
+        versionMenu.style.display = 'none';
+      });
+    }
+
     // Confirm/Prompt modal handlers
     this.setupConfirmModal();
   }
@@ -2270,36 +2310,55 @@ class PRAgent {
     const container = this.dom.generatedContent;
     const drafts = this.currentOutput.drafts;
     
-    // Update compact drafts title with count
-    const draftsTitle = document.getElementById('pr-drafts-title');
-    if (draftsTitle) {
-      draftsTitle.textContent = drafts.length > 1 ? `Drafts (${drafts.length})` : 'Drafts';
+    // Render only the latest draft content directly (no header)
+    const latest = drafts[0];
+    if (latest) {
+      container.innerHTML = `<div class="pr-draft-content">${this.formatContent(latest.content, this.currentOutput.citations)}</div>`;
     }
-    
-    container.innerHTML = drafts.map((draft, index) => {
-      const isLatest = index === 0;
-      const timeAgo = this.formatTimeAgo(draft.timestamp);
-      
-      return `
-        <div class="pr-draft" data-version="${draft.version}">
-          <div class="pr-draft-header">
-            <span class="pr-draft-version">
-              ${isLatest ? 'Latest' : `Version ${draft.version}`}
-            </span>
-            <span class="pr-draft-time">${timeAgo}</span>
-            ${draft.prompt ? `<span class="pr-draft-prompt">"${this.escapeHtml(draft.prompt)}"</span>` : ''}
-          </div>
-          <div class="pr-draft-content">
-            ${this.formatContent(draft.content, this.currentOutput.citations)}
-          </div>
-        </div>
-      `;
-    }).join('');
+
+    // Update version pill in workspace actions
+    this.renderVersionPill();
 
     // Update version history in left panel if available
     if (this.newsMonitor && this.newsMonitor.renderVersionHistory) {
       this.newsMonitor.renderVersionHistory(this.currentOutput);
     }
+  }
+
+  renderVersionPill() {
+    const pill = document.getElementById('pr-version-pill');
+    const pillLabel = document.getElementById('pr-version-pill-label');
+    const menu = document.getElementById('pr-version-menu');
+    if (!pill || !menu) return;
+
+    const output = this.currentOutput;
+    if (!output || !output.drafts || output.drafts.length === 0) {
+      pill.style.display = 'none';
+      return;
+    }
+
+    pill.style.display = 'inline-flex';
+    const drafts = output.drafts;
+    pillLabel.textContent = `v${drafts[0].version}`;
+
+    menu.innerHTML = drafts.map((draft, index) => {
+      const isLatest = index === 0;
+      const timeAgo = this.formatTimeAgo(draft.timestamp);
+      const label = isLatest ? 'Latest' : `v${draft.version}`;
+      const prompt = draft.prompt ? ` "${this.escapeHtml(draft.prompt)}"` : '';
+      return `
+        <div class="pr-version-menu-item ${isLatest ? 'active' : ''}" data-version="${draft.version}">
+          <span class="pr-version-menu-label">${label}</span>
+          <span class="pr-version-menu-time">${timeAgo}</span>
+          ${prompt ? `<span class="pr-version-menu-prompt">${prompt}</span>` : ''}
+        </div>
+      `;
+    }).join('') + (drafts.length > 1 ? `
+      <div class="pr-version-menu-divider"></div>
+      <div class="pr-version-menu-clear" id="pr-version-menu-clear">
+        <i class="ph-light ph-trash"></i> Clear old drafts
+      </div>
+    ` : '');
   }
 
   formatTimeAgo(timestamp) {
@@ -4963,7 +5022,8 @@ class NewsMonitor {
               <span class="pr-tree-angle-title">${this.escapeHtml(angleTitle)}</span>
             </div>
             ${angleNarrative ? `
-            <div class="pr-tree-angle-narrative">${this.escapeHtml(angleNarrative)}<span class="pr-tree-angle-readmore pr-tree-angle-toggle">read more</span></div>
+            <div class="pr-tree-angle-narrative">${this.escapeHtml(angleNarrative)}</div>
+            <span class="pr-tree-angle-readmore pr-tree-angle-toggle">read more</span>
             <span class="pr-tree-angle-less pr-tree-angle-toggle">less</span>
             ` : ''}
           </div>
@@ -5386,40 +5446,10 @@ class NewsMonitor {
   }
 
   renderVersionHistory(output) {
-    const versionSection = document.getElementById('pr-version-section');
-    const versionList = document.getElementById('pr-version-list');
-    if (!versionSection || !versionList || !output) return;
-
-    if (!output.drafts || output.drafts.length === 0) {
-      versionSection.style.display = 'none';
-      return;
+    // Version history is now handled by the version pill in workspace actions
+    if (this.prAgent) {
+      this.prAgent.renderVersionPill();
     }
-
-    versionSection.style.display = 'block';
-    versionList.innerHTML = output.drafts.map((draft, index) => {
-      const isLatest = index === 0;
-      const timeAgo = this.prAgent.formatTimeAgo(draft.timestamp);
-      return `
-        <div class="pr-version-item ${isLatest ? 'active' : ''}" data-version="${draft.version}">
-          <span class="pr-version-label">${isLatest ? 'Latest' : `v${draft.version}`}</span>
-          <span class="pr-version-time">${timeAgo}</span>
-          ${draft.prompt ? `<span class="pr-version-prompt">${this.escapeHtml(draft.prompt)}</span>` : ''}
-        </div>
-      `;
-    }).join('');
-
-    // Click to view older versions
-    versionList.querySelectorAll('.pr-version-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const version = parseInt(item.dataset.version);
-        const draft = output.drafts.find(d => d.version === version);
-        if (draft && this.prAgent.dom.generatedContent) {
-          this.prAgent.dom.generatedContent.innerHTML = this.prAgent.formatContent(draft.content, output.citations);
-          versionList.querySelectorAll('.pr-version-item').forEach(v => v.classList.remove('active'));
-          item.classList.add('active');
-        }
-      });
-    });
   }
 
   async buildAngleFromHook(newsItem) {

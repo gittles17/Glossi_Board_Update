@@ -11847,10 +11847,11 @@ a.dropdown-item {
 }
 
 .pr-tree-angle-readmore {
+  display: inline-block;
   cursor: pointer;
   color: var(--accent-primary, #6366f1);
   font-size: 11px;
-  margin-left: 4px;
+  margin-top: 2px;
   white-space: nowrap;
 }
 
@@ -13610,43 +13611,116 @@ svg.spinning,
 }
 
 /* Draft versioning */
-.pr-drafts-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--border-subtle);
-  margin-bottom: var(--space-3);
+/* Version pill in workspace actions */
+.pr-version-pill-wrap {
+  position: relative;
 }
 
-.pr-drafts-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.pr-clear-drafts-btn {
-  display: flex;
+.pr-version-pill {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
+  gap: 4px;
+  padding: 3px 8px;
   background: transparent;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
+  border-radius: 12px;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 11px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: border-color 0.12s ease, color 0.12s ease;
+  white-space: nowrap;
 }
 
-.pr-clear-drafts-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: var(--border-color-light);
+.pr-version-pill:hover {
+  border-color: var(--text-secondary);
   color: var(--text-secondary);
+}
+
+.pr-version-pill i {
+  font-size: 10px;
+}
+
+.pr-version-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 200;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  margin-top: 4px;
+  min-width: 200px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.pr-version-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: background 0.1s ease;
+}
+
+.pr-version-menu-item:hover {
+  background: var(--bg-hover);
+}
+
+.pr-version-menu-item.active {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.pr-version-menu-label {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.pr-version-menu-time {
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.pr-version-menu-prompt {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150px;
+}
+
+.pr-version-menu-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}
+
+.pr-version-menu-clear {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.pr-version-menu-clear:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.pr-version-menu-clear i {
+  font-size: 12px;
 }
 
 .pr-draft {
@@ -16106,20 +16180,6 @@ svg.spinning,
   transform: scale(0.95);
 }
 
-.pr-suggestions-container {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin-bottom: var(--space-2);
-}
-
-.pr-suggestions-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
 
 .pr-messages {
   display: flex;
@@ -16230,9 +16290,21 @@ svg.spinning,
 /* Suggested Prompts */
 .pr-suggestions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
   flex-shrink: 0;
+  overflow-x: auto;
+  padding-top: 6px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.pr-suggestions::-webkit-scrollbar {
+  display: none;
+}
+
+.pr-suggestions:empty {
+  display: none;
 }
 
 .pr-suggestion-btn {
@@ -16246,6 +16318,7 @@ svg.spinning,
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .pr-suggestion-btn:hover {
@@ -16258,8 +16331,8 @@ svg.spinning,
 /* Chat Input */
 .pr-input-area {
   display: flex;
-  align-items: center;
-  padding: var(--space-3) var(--space-4);
+  flex-direction: column;
+  padding: var(--space-2) var(--space-3);
   border-top: 1px solid var(--border-subtle);
   background: var(--bg-primary);
   flex-shrink: 0;
@@ -16357,15 +16430,6 @@ svg.spinning,
 @media (max-width: 768px) {
   .pr-chat-area {
     max-height: 300px;
-  }
-  
-  .pr-suggestions {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  .pr-suggestions::-webkit-scrollbar {
-    display: none;
   }
   
   .pr-suggestion-btn {

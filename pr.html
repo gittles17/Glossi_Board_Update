@@ -221,6 +221,13 @@
                 </button>
               </div>
               <div class="pr-workspace-actions" style="display:none" id="pr-workspace-actions">
+                <div class="pr-version-pill-wrap">
+                  <button class="pr-version-pill" id="pr-version-pill" title="Version history">
+                    <span id="pr-version-pill-label">Latest</span>
+                    <i class="ph-light ph-caret-down"></i>
+                  </button>
+                  <div class="pr-version-menu" id="pr-version-menu" style="display:none"></div>
+                </div>
                 <button class="pr-action-btn" id="pr-copy-btn" title="Copy to clipboard">
                   <i class="ph-light ph-copy"></i>
                 </button>
@@ -268,12 +275,6 @@
 
               <!-- Generated content (inline editable) -->
               <div class="pr-workspace-generated" id="pr-workspace-generated" style="display:none">
-                <div class="pr-drafts-header">
-                  <span class="pr-drafts-title" id="pr-drafts-title">Drafts</span>
-                  <button class="pr-clear-drafts-btn" id="pr-clear-drafts-btn" title="Clear old drafts">
-                    <i class="ph-light ph-trash"></i>
-                  </button>
-                </div>
                 <div class="pr-generated-content" id="pr-generated-content" contenteditable="true" spellcheck="true"></div>
                 <div class="pr-verification-bar" id="pr-verification-bar" style="display:none">
                   <div class="pr-verification-info">
@@ -300,14 +301,8 @@
               <button class="pr-clear-chat-btn" id="pr-clear-chat-btn" title="Clear chat history">
                 <i class="ph-light ph-trash"></i>
               </button>
-              
-              <!-- Smart Suggestions -->
-              <div class="pr-suggestions-container" id="pr-suggestions-container">
-                <div class="pr-suggestions-label">Suggestions</div>
-                <div class="pr-suggestions" id="pr-suggestions"></div>
-              </div>
 
-              <!-- Chat Input -->
+              <!-- Chat Input + Inline Suggestions -->
               <div class="pr-input-area" id="pr-input-area">
                 <div class="pr-input-wrapper">
                   <textarea id="pr-chat-input" class="pr-chat-input" placeholder="Refine further..." rows="1"></textarea>
@@ -315,6 +310,7 @@
                     <i class="ph-light ph-paper-plane-tilt"></i>
                   </button>
                 </div>
+                <div class="pr-suggestions" id="pr-suggestions"></div>
               </div>
             </div>
 
