@@ -158,66 +158,36 @@
         <!-- 2-Panel Create Layout -->
         <div class="pr-create-layout">
           
-          <!-- Left Panel (1/3): Angle Context + Version History -->
+          <!-- Left Panel: File Tree + Active Angle -->
           <div class="pr-create-left">
-            
-            <!-- Angle Context Section -->
-            <div class="pr-workflow-section pr-angle-context-section pr-left-collapsible">
-              <div class="pr-workflow-header pr-left-section-toggle" data-target="pr-angle-context">
-                <i class="ph-light ph-caret-down pr-left-chevron"></i>
-                <h2 class="pr-workflow-title">Story Angle</h2>
-              </div>
-              <div class="pr-left-section-body" id="pr-angle-context-body">
-                <div class="pr-angle-context" id="pr-angle-context">
-                  <div class="pr-angle-context-empty">
-                    <p>Click "Create Content" on a news card to get started.</p>
-                  </div>
-                </div>
+
+            <!-- File Tree -->
+            <div class="pr-file-tree" id="pr-file-tree">
+              <div class="pr-file-tree-empty">
+                <p>Click "Create Content" on a news card to get started.</p>
               </div>
             </div>
 
-            <!-- News Source Reference -->
-            <div class="pr-workflow-section pr-source-ref-section pr-left-collapsible" id="pr-source-ref-section" style="display:none">
-              <div class="pr-workflow-header pr-left-section-toggle" data-target="pr-source-ref">
-                <i class="ph-light ph-caret-down pr-left-chevron"></i>
-                <h2 class="pr-workflow-title">Source</h2>
-              </div>
-              <div class="pr-left-section-body" id="pr-source-ref-body">
-                <div class="pr-source-ref" id="pr-source-ref"></div>
-              </div>
+            <!-- Dynamic Angle Display (updates on story selection) -->
+            <div class="pr-file-tree-angle" id="pr-file-tree-angle" style="display:none">
+              <div class="pr-file-tree-angle-title" id="pr-file-tree-angle-title"></div>
+              <div class="pr-file-tree-angle-narrative" id="pr-file-tree-angle-narrative"></div>
             </div>
 
-            <!-- Version History -->
-            <div class="pr-workflow-section pr-version-section pr-left-collapsible" id="pr-version-section" style="display:none">
-              <div class="pr-workflow-header pr-left-section-toggle" data-target="pr-version">
-                <i class="ph-light ph-caret-down pr-left-chevron"></i>
-                <h2 class="pr-workflow-title">Versions</h2>
-              </div>
-              <div class="pr-left-section-body" id="pr-version-body">
-                <div class="pr-version-list" id="pr-version-list"></div>
-              </div>
-            </div>
-
-            <!-- Legacy: hidden angle manager elements for backward compat -->
+            <!-- Legacy: hidden elements for backward compat -->
             <div style="display:none">
               <div id="pr-angles-list"></div>
               <div id="pr-content-list"></div>
               <div id="pr-content-empty"></div>
               <button id="pr-generate-angles-btn"></button>
+              <div id="pr-angle-context"></div>
+              <div id="pr-source-ref-section"><div id="pr-source-ref"></div></div>
+              <div id="pr-version-section"><div id="pr-version-list"></div></div>
             </div>
           </div>
 
           <!-- Right Panel (2/3): Workspace -->
           <div class="pr-create-right">
-
-            <!-- Story Selector -->
-            <div class="pr-story-selector" id="pr-story-selector" style="display:none">
-              <button class="pr-story-selector-trigger" id="pr-story-selector-trigger">
-                <span class="pr-story-selector-label" id="pr-story-selector-label">Select story...</span>
-                <i class="ph-light ph-caret-down"></i>
-              </button>
-              <div class="pr-story-selector-menu" id="pr-story-selector-menu" style="display:none"></div>
-            </div>
 
             <!-- Content Plan Tabs -->
             <div class="pr-content-tabs" id="pr-content-tabs" style="display:none"></div>

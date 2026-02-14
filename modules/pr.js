@@ -4302,8 +4302,7 @@ class NewsMonitor {
   async init() {
     this.setupDOM();
     this.setupEventListeners();
-    this.setupStorySelector();
-    this.setupLeftPanelToggles();
+    this.setupFileTree();
     await this.loadCachedNews();
   }
 
@@ -4890,8 +4889,6 @@ class NewsMonitor {
       target: story.contentPlan[0]?.target || '',
       description: story.contentPlan[0]?.description || ''
     };
-
-    this.renderStorySelector();
   }
 
   switchToStory(key) {
@@ -4927,109 +4924,136 @@ class NewsMonitor {
     }
   }
 
-  renderStorySelector() {
-    const selector = document.getElementById('pr-story-selector');
-    const label = document.getElementById('pr-story-selector-label');
-    const menu = document.getElementById('pr-story-selector-menu');
-    if (!selector) return;
+  renderFileTree() {
+    const container = document.getElementById('pr-file-tree');
+    if (!container) return;
 
     if (this._stories.size === 0) {
-      selector.style.display = 'none';
+      container.innerHTML = `<div class="pr-file-tree-empty"><p>Click "Create Content" on a news card to get started.</p></div>`;
+      this.renderActiveAngle(null);
       return;
     }
 
-    selector.style.display = 'flex';
-    const activeStory = this._stories.get(this._activeStoryKey);
-    if (label && activeStory) {
-      const headline = activeStory.newsItem.headline || 'Untitled';
-      label.textContent = headline.length > 50 ? headline.substring(0, 50) + '...' : headline;
-    }
+    let html = '';
+    for (const [key, story] of this._stories) {
+      const isActiveStory = key === this._activeStoryKey;
+      const headline = story.newsItem.headline || 'Untitled';
+      const contentPlan = story.contentPlan || [];
 
-    if (menu) {
-      menu.innerHTML = [...this._stories.entries()].map(([key, story]) => {
-        const headline = story.newsItem.headline || 'Untitled';
-        const truncated = headline.length > 45 ? headline.substring(0, 45) + '...' : headline;
-        const isActive = key === this._activeStoryKey;
+      const childrenHTML = contentPlan.map((item, i) => {
+        const tabId = `plan_${i}`;
+        const typeLabel = CONTENT_TYPES.find(t => t.id === item.type)?.label || item.type;
+        const isActiveLeaf = isActiveStory && this._activeTabId === tabId;
         return `
-          <div class="pr-story-item ${isActive ? 'active' : ''}" data-story-key="${this.escapeHtml(key)}">
-            <span class="pr-story-item-label">${this.escapeHtml(truncated)}</span>
-            <button class="pr-story-item-close" data-story-close="${this.escapeHtml(key)}" title="Close story">
-              <i class="ph-light ph-x"></i>
-            </button>
+          <div class="pr-file-tree-leaf ${isActiveLeaf ? 'active' : ''}" data-story-key="${this.escapeHtml(key)}" data-tab-id="${tabId}">
+            <i class="ph-light ph-file-text pr-file-tree-leaf-icon"></i>
+            <span class="pr-file-tree-leaf-label">${this.escapeHtml(typeLabel)}</span>
           </div>
         `;
       }).join('');
+
+      html += `
+        <div class="pr-file-tree-node ${isActiveStory ? 'expanded' : ''}" data-story-key="${this.escapeHtml(key)}">
+          <div class="pr-file-tree-header ${isActiveStory ? 'active' : ''}">
+            <i class="ph-light ph-caret-right pr-file-tree-chevron"></i>
+            <i class="ph-light ph-article pr-file-tree-icon"></i>
+            <span class="pr-file-tree-label" title="${this.escapeHtml(headline)}">${this.escapeHtml(headline)}</span>
+            <button class="pr-file-tree-close" data-tree-close="${this.escapeHtml(key)}" title="Close story">
+              <i class="ph-light ph-x"></i>
+            </button>
+          </div>
+          <div class="pr-file-tree-children">${childrenHTML}</div>
+        </div>
+      `;
     }
+
+    container.innerHTML = html;
+    this.renderActiveAngle(this._activeNewsItem);
   }
 
-  setupStorySelector() {
-    const trigger = document.getElementById('pr-story-selector-trigger');
-    const menu = document.getElementById('pr-story-selector-menu');
-    if (!trigger || !menu) return;
+  renderActiveAngle(newsItem) {
+    const angleEl = document.getElementById('pr-file-tree-angle');
+    const titleEl = document.getElementById('pr-file-tree-angle-title');
+    const narrativeEl = document.getElementById('pr-file-tree-angle-narrative');
+    if (!angleEl) return;
 
-    trigger.addEventListener('click', () => {
-      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-    });
+    if (!newsItem) {
+      angleEl.style.display = 'none';
+      return;
+    }
 
-    menu.addEventListener('click', (e) => {
-      const closeBtn = e.target.closest('[data-story-close]');
+    const title = newsItem.angle_title || '';
+    const narrative = newsItem.angle_narrative || newsItem.relevance || '';
+
+    if (!title && !narrative) {
+      angleEl.style.display = 'none';
+      return;
+    }
+
+    angleEl.style.display = 'block';
+    if (titleEl) titleEl.textContent = title;
+    if (narrativeEl) narrativeEl.textContent = narrative;
+  }
+
+  // Kept for backward compat (called from restoreStoryState references)
+  renderStorySelector() {
+    this.renderFileTree();
+  }
+
+  setupFileTree() {
+    const container = document.getElementById('pr-file-tree');
+    if (!container) return;
+
+    container.addEventListener('click', (e) => {
+      // Close button
+      const closeBtn = e.target.closest('[data-tree-close]');
       if (closeBtn) {
         e.stopPropagation();
-        this.closeStory(closeBtn.dataset.storyClose);
+        this.closeStory(closeBtn.dataset.treeClose);
         return;
       }
-      const item = e.target.closest('.pr-story-item');
-      if (item) {
-        this.switchToStory(item.dataset.storyKey);
-        menu.style.display = 'none';
-      }
-    });
 
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.pr-story-selector')) {
-        menu.style.display = 'none';
+      // Leaf (content item) click
+      const leaf = e.target.closest('.pr-file-tree-leaf');
+      if (leaf) {
+        const storyKey = leaf.dataset.storyKey;
+        const tabId = leaf.dataset.tabId;
+        if (storyKey !== this._activeStoryKey) {
+          this.switchToStory(storyKey);
+        }
+        if (tabId) {
+          this.switchContentTab(tabId);
+          this.renderFileTree();
+        }
+        return;
+      }
+
+      // Header (story node) click
+      const header = e.target.closest('.pr-file-tree-header');
+      if (header) {
+        const node = header.closest('.pr-file-tree-node');
+        if (!node) return;
+        const storyKey = node.dataset.storyKey;
+
+        if (storyKey === this._activeStoryKey) {
+          // Toggle expand/collapse
+          node.classList.toggle('expanded');
+        } else {
+          // Switch to this story
+          this.switchToStory(storyKey);
+        }
+        return;
       }
     });
   }
 
   populateLeftPanel(newsItem) {
-    const angleContext = document.getElementById('pr-angle-context');
-    if (angleContext) {
-      const title = newsItem.angle_title || '';
-      const narrative = newsItem.angle_narrative || newsItem.relevance || '';
-      angleContext.innerHTML = `
-        <div class="pr-angle-context-card">
-          ${title ? `<h3 class="pr-angle-context-title">${this.escapeHtml(title)}</h3>` : ''}
-          ${narrative ? `<p class="pr-angle-context-narrative">${this.escapeHtml(narrative)}</p>` : ''}
-        </div>
-      `;
-    }
-
-    const sourceRefSection = document.getElementById('pr-source-ref-section');
-    const sourceRef = document.getElementById('pr-source-ref');
-    if (sourceRefSection && sourceRef) {
-      sourceRefSection.style.display = 'block';
-      const date = new Date(newsItem.date || newsItem.fetched_at);
-      const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
-      const dateText = daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`;
-      sourceRef.innerHTML = `
-        <a href="${newsItem.url}" target="_blank" class="pr-source-ref-headline">${this.escapeHtml(newsItem.headline)}</a>
-        <div class="pr-source-ref-meta">
-          <span>${this.escapeHtml(newsItem.outlet)}</span>
-          <span>${dateText}</span>
-        </div>
-      `;
-    }
+    this.renderFileTree();
+    this.renderActiveAngle(newsItem);
   }
 
   setupLeftPanelToggles() {
-    document.querySelectorAll('.pr-left-section-toggle').forEach(header => {
-      header.addEventListener('click', () => {
-        const section = header.closest('.pr-left-collapsible');
-        if (section) section.classList.toggle('collapsed');
-      });
-    });
+    // No longer needed (file tree replaced collapsible sections)
   }
 
   async launchCreateWorkspace(newsItem) {
@@ -5166,6 +5190,15 @@ class NewsMonitor {
     });
 
     this._activeTabId = tabId;
+
+    // Update file tree active leaf
+    const treeContainer = document.getElementById('pr-file-tree');
+    if (treeContainer) {
+      treeContainer.querySelectorAll('.pr-file-tree-leaf').forEach(leaf => {
+        const isActive = leaf.dataset.storyKey === this._activeStoryKey && leaf.dataset.tabId === tabId;
+        leaf.classList.toggle('active', isActive);
+      });
+    }
 
     // Show content for this tab
     const entry = this._tabContent.get(tabId);

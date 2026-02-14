@@ -11583,151 +11583,170 @@ a.dropdown-item {
   padding-top: 0;
 }
 
-/* Collapsible left panel sections */
-.pr-left-section-toggle {
-  cursor: pointer;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.pr-left-chevron {
-  font-size: 12px;
-  color: var(--text-muted);
-  transition: transform 0.2s ease;
-  flex-shrink: 0;
-}
-
-.pr-left-collapsible.collapsed .pr-left-chevron {
-  transform: rotate(-90deg);
-}
-
-.pr-left-section-body {
-  overflow: hidden;
-  max-height: 600px;
-  transition: max-height 0.25s ease, padding 0.25s ease;
-}
-
-.pr-left-collapsible.collapsed .pr-left-section-body {
-  max-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-}
-
-/* Story selector dropdown */
-.pr-story-selector {
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  margin-bottom: var(--space-3);
-  flex-shrink: 0;
-}
-
-.pr-story-selector-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 0.15s ease;
-  width: 100%;
-  text-align: left;
-  overflow: hidden;
-}
-
-.pr-story-selector-trigger:hover {
-  border-color: var(--accent-primary);
-}
-
-.pr-story-selector-trigger i {
-  font-size: 12px;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.pr-story-selector-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* File tree in left panel */
+.pr-file-tree {
   flex: 1;
-}
-
-.pr-story-selector-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 200;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  margin-top: 2px;
-  max-height: 240px;
   overflow-y: auto;
+  padding: var(--space-2) 0;
 }
 
-.pr-story-item {
+.pr-file-tree-empty {
+  padding: var(--space-4);
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.pr-file-tree-empty p {
+  margin: 0;
+}
+
+.pr-file-tree-node {
+  margin-bottom: 2px;
+}
+
+.pr-file-tree-header {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  gap: 6px;
+  padding: 6px var(--space-2);
   cursor: pointer;
+  border-radius: var(--radius-sm);
   transition: background 0.1s ease;
-  font-size: 13px;
-  color: var(--text-secondary);
+  user-select: none;
 }
 
-.pr-story-item:hover {
+.pr-file-tree-header:hover {
   background: var(--bg-hover);
 }
 
-.pr-story-item.active {
+.pr-file-tree-header.active {
   background: rgba(var(--accent-primary-rgb, 99, 102, 241), 0.1);
-  color: var(--text-primary);
-  font-weight: 500;
 }
 
-.pr-story-item-label {
+.pr-file-tree-chevron {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+
+.pr-file-tree-node.expanded .pr-file-tree-chevron {
+  transform: rotate(90deg);
+}
+
+.pr-file-tree-icon {
+  font-size: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.pr-file-tree-label {
   flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.3;
 }
 
-.pr-story-item-close {
+.pr-file-tree-close {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition: opacity 0.12s ease, background 0.12s ease;
 }
 
-.pr-story-item:hover .pr-story-item-close {
+.pr-file-tree-header:hover .pr-file-tree-close {
   opacity: 1;
 }
 
-.pr-story-item-close:hover {
+.pr-file-tree-close:hover {
   background: var(--bg-secondary);
   color: var(--text-primary);
+}
+
+.pr-file-tree-children {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.2s ease;
+  padding-left: 20px;
+}
+
+.pr-file-tree-node.expanded .pr-file-tree-children {
+  max-height: 300px;
+}
+
+.pr-file-tree-leaf {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px var(--space-2) 4px 6px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.1s ease;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.pr-file-tree-leaf:hover {
+  background: var(--bg-hover);
+}
+
+.pr-file-tree-leaf.active {
+  background: rgba(var(--accent-primary-rgb, 99, 102, 241), 0.1);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.pr-file-tree-leaf-icon {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.pr-file-tree-leaf-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Angle display below file tree */
+.pr-file-tree-angle {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-subtle);
+  padding: var(--space-3);
+  overflow-y: auto;
+  max-height: 200px;
+}
+
+.pr-file-tree-angle-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+  line-height: 1.4;
+}
+
+.pr-file-tree-angle-narrative {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 /* Angle tabs in workspace */
