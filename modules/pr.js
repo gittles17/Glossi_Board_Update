@@ -1885,6 +1885,32 @@ class PRAgent {
       }
     }
 
+    // Update active tab content if angle tabs are open
+    if (this.angleManager && this.angleManager.activeTabId) {
+      this.angleManager.tabContent.set(this.angleManager.activeTabId, { loading: false, output });
+    }
+
+    // If the output was generated from an angle, update the active angle display
+    if (output.angleId && this.angleManager) {
+      const angle = this.angleManager.angles.find(a => a.id === output.angleId) ||
+                    this.angleManager.defaultAngles.find(a => a.id === output.angleId);
+      if (angle) {
+        this.angleManager.activeAngle = angle;
+        localStorage.setItem('pr_active_angle', JSON.stringify(angle));
+        this.angleManager.updateTracker();
+        // Select the angle card
+        document.querySelectorAll('.pr-angle-card').forEach(card => {
+          card.classList.toggle('selected', card.dataset.angleId === angle.id);
+        });
+        // Show tracker section
+        const trackerSection = document.getElementById('pr-angle-tracker-section');
+        if (trackerSection) trackerSection.style.display = '';
+        if (this.angleManager.collapseSection) {
+          this.angleManager.collapseSection('pr-tracker-body', false);
+        }
+      }
+    }
+
     this.renderGeneratedContent(output);
     this.renderStrategy(output.strategy);
     this.showWorkspace();
@@ -5045,6 +5071,8 @@ class AngleManager {
     this.angles = [];
     this.activeAngle = null;
     this.defaultAngles = this.getDefaultAngles();
+    this.tabContent = new Map();
+    this.activeTabId = null;
   }
 
   getDefaultAngles() {
@@ -5101,6 +5129,7 @@ class AngleManager {
     await this.loadCachedAngles();
     this.renderAngles();
     this.updateTracker();
+    this.setupCollapsibleSections();
   }
 
   setupDOM() {
@@ -5417,19 +5446,6 @@ class AngleManager {
     this.activeAngle = angle;
     localStorage.setItem('pr_active_angle', JSON.stringify(angle));
 
-    // Set context for this specific piece
-    const contentTypeDropdown = document.getElementById('pr-content-type');
-    if (contentTypeDropdown) {
-      contentTypeDropdown.value = planItem.type;
-      contentTypeDropdown.dispatchEvent(new Event('change'));
-    }
-
-    this.prAgent.angleContext = {
-      narrative: angle.narrative,
-      target: planItem.target || '',
-      description: planItem.description || ''
-    };
-
     // Select the angle card
     document.querySelectorAll('.pr-angle-card').forEach(card => {
       card.classList.toggle('selected', card.dataset.angleId === angleId);
@@ -5439,14 +5455,15 @@ class AngleManager {
     const tabLabel = this.formatContentType(planItem.type);
     this.openAngleTab(angle, planIndex, tabLabel);
 
+    const tabId = `${angle.id}_${planIndex}`;
     this.updateTracker();
 
-    // Trigger content generation
-    const generateBtn = document.getElementById('pr-generate-btn');
-    if (generateBtn && !generateBtn.disabled) {
-      generateBtn.click();
-    }
+    // Auto-collapse Story Angles, expand Active Angle
+    this.collapseSection('pr-angles-body', true);
+    this.collapseSection('pr-tracker-body', false);
 
+    // Generate content directly for this tab
+    this.generatePieceContent(angle, planItem, tabId);
     this.prAgent.showToast(`Generating: ${tabLabel}`, 'success');
   }
 
@@ -5464,39 +5481,141 @@ class AngleManager {
 
     this.updateTracker();
 
+    // Auto-collapse Story Angles, expand Active Angle
+    this.collapseSection('pr-angles-body', true);
+    this.collapseSection('pr-tracker-body', false);
+
     const pieceCount = angle.content_plan.length;
     this.prAgent.showToast(`Generating all ${pieceCount} pieces in parallel...`, 'success');
 
-    // Generate each piece with a small stagger so the UI can set context per piece
-    for (let i = 0; i < pieceCount; i++) {
-      const planItem = angle.content_plan[i];
+    // Open all tabs first
+    const tabIds = [];
+    angle.content_plan.forEach((planItem, i) => {
       const tabLabel = this.formatContentType(planItem.type);
-
-      // Open a tab for this piece
       this.openAngleTab(angle, i, tabLabel);
+      tabIds.push(`${angle.id}_${i}`);
+    });
 
-      // Set context and trigger generation
-      const contentTypeDropdown = document.getElementById('pr-content-type');
-      if (contentTypeDropdown) {
-        contentTypeDropdown.value = planItem.type;
-        contentTypeDropdown.dispatchEvent(new Event('change'));
+    // Fire all generations in parallel
+    const promises = angle.content_plan.map((planItem, i) => {
+      return this.generatePieceContent(angle, planItem, tabIds[i]);
+    });
+
+    await Promise.all(promises);
+  }
+
+  async generatePieceContent(angle, planItem, tabId) {
+    const selectedSources = this.prAgent.sources.filter(s => s.selected);
+    if (selectedSources.length === 0 && !this.prAgent.apiKey) return;
+
+    const typeLabel = CONTENT_TYPES.find(t => t.id === planItem.type)?.label || planItem.type;
+
+    // Mark tab as loading
+    this.tabContent.set(tabId, { loading: true, output: null });
+
+    // Show loading if this is the active tab
+    if (this.activeTabId === tabId) {
+      this.prAgent.showLoading();
+    }
+
+    // Build the prompt (same format as generateContent)
+    const sourcesContext = selectedSources.map((s, i) => {
+      return `[Source ${i + 1}] (ID: ${s.id})\nTitle: ${s.title}\nType: ${s.type}\nContent:\n${s.content}\n---`;
+    }).join('\n\n');
+
+    let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
+    userMessage += `STORY ANGLE (use this as your narrative framework):\n${angle.narrative}\n\n`;
+    if (planItem.target) {
+      userMessage += `Target: ${planItem.target}\n\n`;
+    }
+    if (planItem.description) {
+      userMessage += `Brief: ${planItem.description}\n\n`;
+    }
+    userMessage += `SOURCES:\n${sourcesContext}`;
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-opus-4-6',
+          max_tokens: 8192,
+          system: PR_SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: userMessage }]
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `API request failed (${response.status})`);
       }
 
-      this.prAgent.angleContext = {
-        narrative: angle.narrative,
-        target: planItem.target || '',
-        description: planItem.description || ''
+      const data = await response.json();
+      const rawText = data.content?.[0]?.text || '';
+
+      let parsed;
+      try {
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+      } catch { parsed = null; }
+
+      if (!parsed) {
+        parsed = { content: rawText, citations: [], strategy: null };
+      }
+
+      if (parsed.citations) {
+        parsed.citations = parsed.citations.map((c, i) => {
+          const srcIndex = c.index || (i + 1);
+          const matchedSource = selectedSources[srcIndex - 1];
+          return { ...c, index: srcIndex, sourceId: matchedSource?.id || null, verified: c.sourceId !== null && c.verified !== false };
+        });
+      }
+
+      const output = {
+        id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        content_type: planItem.type,
+        title: this.prAgent.extractTitle(parsed.content, typeLabel),
+        content: parsed.content,
+        sources: selectedSources.map(s => s.id),
+        citations: parsed.citations || [],
+        strategy: parsed.strategy || null,
+        status: 'draft',
+        phase: 'edit',
+        angleId: angle.id,
+        drafts: [{ content: parsed.content, version: 1, timestamp: Date.now(), prompt: null }]
       };
 
-      // Trigger generation
-      const generateBtn = document.getElementById('pr-generate-btn');
-      if (generateBtn && !generateBtn.disabled) {
-        generateBtn.click();
+      // Store in per-tab content
+      this.tabContent.set(tabId, { loading: false, output });
+
+      // Save to PRAgent outputs
+      this.prAgent.outputs.push(output);
+      this.prAgent.saveOutputs();
+      try {
+        await fetch('/api/pr/outputs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(output) });
+      } catch (e) { /* silent */ }
+
+      // If this tab is currently active, render it
+      if (this.activeTabId === tabId) {
+        this.prAgent.currentOutput = output;
+        this.prAgent.renderGeneratedContent(output);
+        this.prAgent.renderStrategy(output.strategy);
+        this.prAgent.showWorkspace();
+        this.prAgent.hideLoading();
       }
 
-      // Small stagger between pieces so each request fires
-      if (i < pieceCount - 1) {
-        await new Promise(r => setTimeout(r, 300));
+      // Track angle progress
+      this.trackContentCreation(planItem.type);
+      this.prAgent.renderHistory();
+
+      // Auto-expand Content History after generation
+      this.collapseSection('pr-history-body', false);
+
+    } catch (err) {
+      this.tabContent.set(tabId, { loading: false, output: null, error: err.message });
+      if (this.activeTabId === tabId) {
+        this.prAgent.hideLoading();
+        this.prAgent.showToast(err.message || 'Generation failed', 'error');
       }
     }
   }
@@ -5505,10 +5624,8 @@ class AngleManager {
     const tabsContainer = document.getElementById('pr-angle-tabs');
     if (!tabsContainer) return;
 
-    // Show tabs container
     tabsContainer.style.display = 'flex';
 
-    // Use a unique tab ID combining angle ID and plan index
     const tabId = `${angle.id}_${planIndex}`;
     const displayLabel = label || angle.title;
     const shortLabel = displayLabel.length > 25 ? displayLabel.substring(0, 25) + '...' : displayLabel;
@@ -5531,6 +5648,9 @@ class AngleManager {
     // Deactivate other tabs
     tabsContainer.querySelectorAll('.pr-angle-tab').forEach(t => t.classList.remove('active'));
 
+    // Set this as active tab
+    this.activeTabId = tabId;
+
     tabsContainer.appendChild(tab);
 
     // Tab click handler
@@ -5547,10 +5667,20 @@ class AngleManager {
     const tabsContainer = document.getElementById('pr-angle-tabs');
     if (!tabsContainer) return;
 
+    // Save current tab's workspace content before switching
+    if (this.activeTabId && this.activeTabId !== tabId) {
+      const currentEntry = this.tabContent.get(this.activeTabId);
+      if (currentEntry && !currentEntry.loading && this.prAgent.currentOutput) {
+        currentEntry.output = this.prAgent.currentOutput;
+      }
+    }
+
     // Update tab active states
     tabsContainer.querySelectorAll('.pr-angle-tab').forEach(t => {
       t.classList.toggle('active', t.dataset.tabId === tabId);
     });
+
+    this.activeTabId = tabId;
 
     // Get the angle from the tab
     const activeTab = tabsContainer.querySelector(`[data-tab-id="${tabId}"]`);
@@ -5577,7 +5707,6 @@ class AngleManager {
         description: planItem?.description || ''
       };
 
-      // Update content type dropdown to match this tab's piece
       if (planItem) {
         const contentTypeDropdown = document.getElementById('pr-content-type');
         if (contentTypeDropdown) {
@@ -5587,6 +5716,30 @@ class AngleManager {
       }
 
       this.updateTracker();
+    }
+
+    // Restore this tab's content
+    const tabEntry = this.tabContent.get(tabId);
+    if (tabEntry) {
+      if (tabEntry.loading) {
+        this.prAgent.showLoading();
+      } else if (tabEntry.output) {
+        this.prAgent.currentOutput = tabEntry.output;
+        this.prAgent.renderGeneratedContent(tabEntry.output);
+        this.prAgent.renderStrategy(tabEntry.output.strategy);
+        this.prAgent.showWorkspace();
+        this.prAgent.hideLoading();
+      } else {
+        // Error or empty
+        this.prAgent.hideLoading();
+        if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
+        if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
+      }
+    } else {
+      // No content yet for this tab
+      if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
+      if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
+      this.prAgent.hideLoading();
     }
   }
 
@@ -5601,7 +5754,9 @@ class AngleManager {
     const angleId = tab.dataset.angleId;
     tab.remove();
 
-    // If closed tab was active, switch to another
+    // Clean up stored content
+    this.tabContent.delete(tabId);
+
     if (wasActive) {
       const remaining = tabsContainer.querySelectorAll('.pr-angle-tab');
       if (remaining.length > 0) {
@@ -5610,10 +5765,10 @@ class AngleManager {
       } else {
         tabsContainer.style.display = 'none';
         this.activeAngle = null;
+        this.activeTabId = null;
       }
     }
 
-    // Deselect card if no tabs remain for this angle
     const remainingForAngle = tabsContainer.querySelectorAll(`[data-angle-id="${angleId}"]`);
     if (remainingForAngle.length === 0) {
       const card = document.querySelector(`.pr-angle-card[data-angle-id="${angleId}"]`);
@@ -5722,6 +5877,49 @@ class AngleManager {
       'talking_points': 'Talking Points'
     };
     return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  collapseSection(sectionId, collapsed) {
+    const body = document.getElementById(sectionId);
+    if (!body) return;
+    const header = body.previousElementSibling;
+    if (collapsed) {
+      body.classList.add('collapsed');
+      if (header) header.classList.add('collapsed');
+    } else {
+      body.classList.remove('collapsed');
+      if (header) header.classList.remove('collapsed');
+    }
+    // Persist state
+    try {
+      const states = JSON.parse(localStorage.getItem('pr_collapse_states') || '{}');
+      states[sectionId] = collapsed;
+      localStorage.setItem('pr_collapse_states', JSON.stringify(states));
+    } catch (e) { /* silent */ }
+  }
+
+  setupCollapsibleSections() {
+    document.querySelectorAll('.pr-collapsible-header').forEach(header => {
+      header.addEventListener('click', (e) => {
+        // Don't collapse if clicking a button inside the header
+        if (e.target.closest('button') || e.target.closest('select')) return;
+        const targetId = header.dataset.collapseTarget;
+        const body = document.getElementById(targetId);
+        if (!body) return;
+        const isCollapsed = body.classList.contains('collapsed');
+        this.collapseSection(targetId, !isCollapsed);
+      });
+    });
+
+    // Restore saved states, with defaults: angles expanded, tracker and history collapsed
+    try {
+      const states = JSON.parse(localStorage.getItem('pr_collapse_states') || '{}');
+      const defaults = { 'pr-angles-body': false, 'pr-tracker-body': true, 'pr-history-body': true };
+      const merged = { ...defaults, ...states };
+      Object.entries(merged).forEach(([id, collapsed]) => {
+        this.collapseSection(id, collapsed);
+      });
+    } catch (e) { /* silent */ }
   }
 
   escapeHtml(str) {

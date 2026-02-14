@@ -187,9 +187,12 @@
           <!-- Left Panel (1/3): Story Angles + Content History -->
           <div class="pr-create-left">
             
-            <!-- Story Angles Section -->
+            <!-- Story Angles Section (collapsible, expanded by default) -->
             <div class="pr-workflow-section pr-angles-section">
-              <div class="pr-workflow-header">
+              <div class="pr-workflow-header pr-collapsible-header" data-collapse-target="pr-angles-body">
+                <svg class="pr-collapse-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
                 <h2 class="pr-workflow-title">Story Angles</h2>
                 <button class="btn btn-secondary btn-sm" id="pr-generate-angles-btn">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -198,23 +201,33 @@
                   Generate Angles
                 </button>
               </div>
-              <div class="pr-angles-list" id="pr-angles-list">
-                <div class="pr-angles-empty">Click "Generate Angles" to get strategic recommendations</div>
+              <div class="pr-section-body" id="pr-angles-body">
+                <div class="pr-angles-list" id="pr-angles-list">
+                  <div class="pr-angles-empty">Click "Generate Angles" to get strategic recommendations</div>
+                </div>
               </div>
             </div>
 
-            <!-- Active Angle Tracker Section -->
+            <!-- Active Angle Tracker Section (collapsible, collapsed by default) -->
             <div class="pr-workflow-section pr-angle-tracker-section" id="pr-angle-tracker-section" style="display: none;">
-              <div class="pr-workflow-header">
+              <div class="pr-workflow-header pr-collapsible-header" data-collapse-target="pr-tracker-body">
+                <svg class="pr-collapse-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
                 <h2 class="pr-workflow-title">Active Angle</h2>
               </div>
-              <div class="pr-angle-tracker" id="pr-angle-tracker">
+              <div class="pr-section-body" id="pr-tracker-body">
+                <div class="pr-angle-tracker" id="pr-angle-tracker">
+                </div>
               </div>
             </div>
 
-            <!-- Content History at bottom -->
+            <!-- Content History (collapsible, collapsed by default) -->
             <div class="pr-workflow-section pr-library-section">
-              <div class="pr-workflow-header pr-history-header">
+              <div class="pr-workflow-header pr-history-header pr-collapsible-header" data-collapse-target="pr-history-body">
+                <svg class="pr-collapse-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
                 <h2 class="pr-workflow-title">Content History</h2>
                 <div class="pr-history-controls">
                   <span class="pr-history-badge" id="pr-history-count">0</span>
@@ -232,9 +245,11 @@
                   </div>
                 </div>
               </div>
-              <div class="pr-history-list" id="pr-history-list">
-                <div class="pr-history-empty" id="pr-history-empty">
-                  <p>No content saved</p>
+              <div class="pr-section-body" id="pr-history-body">
+                <div class="pr-history-list" id="pr-history-list">
+                  <div class="pr-history-empty" id="pr-history-empty">
+                    <p>No content saved</p>
+                  </div>
                 </div>
               </div>
             </div>

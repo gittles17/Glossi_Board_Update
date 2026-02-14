@@ -11522,6 +11522,29 @@ a.dropdown-item {
   background: rgba(59, 130, 246, 0.08);
 }
 
+/* Collapsible sections in Create left panel */
+.pr-collapsible-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.pr-collapsible-header .pr-collapse-chevron {
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.pr-collapsible-header.collapsed .pr-collapse-chevron {
+  transform: rotate(-90deg);
+}
+
+.pr-section-body {
+  transition: opacity 0.15s ease;
+}
+
+.pr-section-body.collapsed {
+  display: none;
+}
+
 .pr-sources-header {
   display: flex;
   align-items: center;
