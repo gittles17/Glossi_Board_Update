@@ -11374,6 +11374,48 @@ a.dropdown-item {
   background: var(--bg-primary);
 }
 
+/* 2-Panel Strategy Layout */
+.pr-strategy-layout {
+  display: flex;
+  gap: 24px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.pr-strategy-left {
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-right: 1px solid var(--border-subtle);
+  padding-right: 24px;
+}
+
+.pr-strategy-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+/* Remove extra padding from workflow sections inside strategy panels */
+.pr-strategy-left .pr-workflow-section,
+.pr-strategy-right .pr-workflow-section {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.pr-strategy-left .pr-workflow-section:first-child {
+  padding-top: 0;
+}
+
 .pr-sources-header {
   display: flex;
   align-items: center;
@@ -13442,6 +13484,26 @@ a.dropdown-item {
   .pr-right-panel {
     border-left: none;
     border-top: 1px solid var(--border-color);
+  }
+
+  /* Strategy 2-panel layout becomes stacked on mobile */
+  .pr-strategy-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .pr-strategy-left {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-right: 0;
+    padding-bottom: 16px;
+  }
+
+  .pr-strategy-right {
+    width: 100%;
   }
 }
 

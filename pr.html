@@ -93,99 +93,110 @@
       <!-- Strategy Stage Content -->
       <div class="pr-sources-panel pr-stage-content active" id="pr-sources-panel" data-stage="strategy">
         
-        <!-- News Hooks Section -->
-          <div class="pr-workflow-section pr-news-hooks-section">
-            <div class="pr-workflow-header">
-              <h2 class="pr-workflow-title">What's Happening Now</h2>
-              <button class="btn btn-secondary btn-sm" id="pr-fetch-news-btn">
+        <!-- 2-Panel Strategy Layout -->
+        <div class="pr-strategy-layout">
+          
+          <!-- Left Panel: Sources -->
+          <div class="pr-strategy-left">
+            <div class="pr-workflow-section pr-sources-section">
+              <div class="pr-workflow-header pr-sources-header">
+                <h2 class="pr-workflow-title pr-sources-label">Sources</h2>
+                <span class="pr-sources-count" id="pr-sources-count">0</span>
+                <button class="pr-create-folder-btn" id="pr-create-folder-btn" title="Create Folder">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+              </div>
+              <div class="pr-source-search-wrap">
+                <input type="text" class="pr-source-search" id="pr-source-search" placeholder="Search sources...">
+              </div>
+              <div class="pr-sources-list pr-drop-zone" id="pr-sources-list">
+                <div class="pr-sources-empty" id="pr-sources-empty">
+                  <p>No sources yet</p>
+                </div>
+              </div>
+              <button class="pr-add-source-btn" id="pr-add-source-btn">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M23 4v6h-6"></path>
-                  <path d="M1 20v-6h6"></path>
-                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                Refresh
+                <span>Add Source</span>
               </button>
             </div>
-            <div class="pr-news-hooks-header">
-              <div class="pr-news-hooks-filters">
-                <div class="pr-filter-group">
-                  <select class="pr-filter-select" id="pr-news-date-filter">
-                    <option value="7">Last 7 days</option>
-                    <option value="30">Last 30 days</option>
-                    <option value="60" selected>Last 60 days</option>
-                    <option value="all">All time</option>
-                  </select>
+          </div>
+
+          <!-- Right Panel: News Hooks + Angles -->
+          <div class="pr-strategy-right">
+            
+            <!-- News Hooks Section -->
+            <div class="pr-workflow-section pr-news-hooks-section">
+              <div class="pr-workflow-header">
+                <h2 class="pr-workflow-title">What's Happening Now</h2>
+                <button class="btn btn-secondary btn-sm" id="pr-fetch-news-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M1 20v-6h6"></path>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+              <div class="pr-news-hooks-header">
+                <div class="pr-news-hooks-filters">
+                  <div class="pr-filter-group">
+                    <select class="pr-filter-select" id="pr-news-date-filter">
+                      <option value="7">Last 7 days</option>
+                      <option value="30">Last 30 days</option>
+                      <option value="60" selected>Last 60 days</option>
+                      <option value="all">All time</option>
+                    </select>
+                  </div>
+                  <div class="pr-filter-group">
+                    <button class="pr-filter-btn" id="pr-news-outlet-filter-btn">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                      </svg>
+                      Outlets
+                      <span class="pr-filter-count" id="pr-outlet-filter-count"></span>
+                    </button>
+                  </div>
+                  <button class="pr-filter-clear" id="pr-news-clear-filters" style="display: none;">Clear</button>
                 </div>
-                <div class="pr-filter-group">
-                  <button class="pr-filter-btn" id="pr-news-outlet-filter-btn">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                    </svg>
-                    Outlets
-                    <span class="pr-filter-count" id="pr-outlet-filter-count"></span>
-                  </button>
-                </div>
-                <button class="pr-filter-clear" id="pr-news-clear-filters" style="display: none;">Clear</button>
+              </div>
+              <div class="pr-news-hooks-list" id="pr-news-hooks-list">
+                <div class="pr-news-hooks-empty">No news hooks yet</div>
               </div>
             </div>
-            <div class="pr-news-hooks-list" id="pr-news-hooks-list">
-              <div class="pr-news-hooks-empty">No news hooks yet</div>
-            </div>
-          </div>
 
-          <!-- Recommended Angles Section -->
-          <div class="pr-workflow-section pr-angles-section">
-            <div class="pr-workflow-header">
-              <h2 class="pr-workflow-title">Story Angles</h2>
-              <button class="btn btn-secondary btn-sm" id="pr-generate-angles-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                </svg>
-                Generate Angles
-              </button>
+            <!-- Recommended Angles Section -->
+            <div class="pr-workflow-section pr-angles-section">
+              <div class="pr-workflow-header">
+                <h2 class="pr-workflow-title">Story Angles</h2>
+                <button class="btn btn-secondary btn-sm" id="pr-generate-angles-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                  Generate Angles
+                </button>
+              </div>
+              <div class="pr-angles-list" id="pr-angles-list">
+                <div class="pr-angles-empty">Click "Generate Angles" to get strategic recommendations</div>
+              </div>
             </div>
-            <div class="pr-angles-list" id="pr-angles-list">
-              <div class="pr-angles-empty">Click "Generate Angles" to get strategic recommendations</div>
-            </div>
-          </div>
 
-          <!-- Active Angle Tracker Section -->
-          <div class="pr-workflow-section pr-angle-tracker-section" id="pr-angle-tracker-section" style="display: none;">
-            <div class="pr-workflow-header">
-              <h2 class="pr-workflow-title">Active Angle</h2>
+            <!-- Active Angle Tracker Section -->
+            <div class="pr-workflow-section pr-angle-tracker-section" id="pr-angle-tracker-section" style="display: none;">
+              <div class="pr-workflow-header">
+                <h2 class="pr-workflow-title">Active Angle</h2>
+              </div>
+              <div class="pr-angle-tracker" id="pr-angle-tracker">
+                <!-- Tracker content populated by JS -->
+              </div>
             </div>
-            <div class="pr-angle-tracker" id="pr-angle-tracker">
-              <!-- Tracker content populated by JS -->
-            </div>
-          </div>
 
-        <!-- Sources Section (moved from nested tab) -->
-        <div class="pr-workflow-section pr-sources-section">
-          <div class="pr-workflow-header pr-sources-header">
-            <h2 class="pr-workflow-title pr-sources-label">Sources</h2>
-            <span class="pr-sources-count" id="pr-sources-count">0</span>
-            <button class="pr-create-folder-btn" id="pr-create-folder-btn" title="Create Folder">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-            </button>
           </div>
-          <div class="pr-source-search-wrap">
-            <input type="text" class="pr-source-search" id="pr-source-search" placeholder="Search sources...">
-          </div>
-          <div class="pr-sources-list pr-drop-zone" id="pr-sources-list">
-            <div class="pr-sources-empty" id="pr-sources-empty">
-              <p>No sources yet</p>
-            </div>
-          </div>
-          <button class="pr-add-source-btn" id="pr-add-source-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            <span>Add Source</span>
-          </button>
         </div>
 
       </div>
