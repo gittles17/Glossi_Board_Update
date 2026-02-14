@@ -4930,7 +4930,6 @@ class NewsMonitor {
 
     if (this._stories.size === 0) {
       container.innerHTML = `<div class="pr-file-tree-empty"><p>Click "Create Content" on a news card to get started.</p></div>`;
-      this.renderActiveAngle(null);
       return;
     }
 
@@ -4952,6 +4951,23 @@ class NewsMonitor {
         `;
       }).join('');
 
+      // Inline angle block
+      const angleTitle = story.newsItem.angle_title || '';
+      const angleNarrative = story.newsItem.angle_narrative || story.newsItem.relevance || '';
+      let angleHTML = '';
+      if (angleTitle || angleNarrative) {
+        angleHTML = `
+          <div class="pr-tree-angle">
+            <div class="pr-tree-angle-toggle">
+              <i class="ph-light ph-lightbulb pr-tree-angle-icon"></i>
+              <span class="pr-tree-angle-title">${this.escapeHtml(angleTitle)}</span>
+              <i class="ph-light ph-caret-down pr-tree-angle-chevron"></i>
+            </div>
+            ${angleNarrative ? `<div class="pr-tree-angle-narrative">${this.escapeHtml(angleNarrative)}</div>` : ''}
+          </div>
+        `;
+      }
+
       html += `
         <div class="pr-file-tree-node ${isActiveStory ? 'expanded' : ''}" data-story-key="${this.escapeHtml(key)}">
           <div class="pr-file-tree-header ${isActiveStory ? 'active' : ''}">
@@ -4962,37 +4978,12 @@ class NewsMonitor {
               <i class="ph-light ph-x"></i>
             </button>
           </div>
-          <div class="pr-file-tree-children">${childrenHTML}</div>
+          <div class="pr-file-tree-children">${childrenHTML}${angleHTML}</div>
         </div>
       `;
     }
 
     container.innerHTML = html;
-    this.renderActiveAngle(this._activeNewsItem);
-  }
-
-  renderActiveAngle(newsItem) {
-    const angleEl = document.getElementById('pr-file-tree-angle');
-    const titleEl = document.getElementById('pr-file-tree-angle-title');
-    const narrativeEl = document.getElementById('pr-file-tree-angle-narrative');
-    if (!angleEl) return;
-
-    if (!newsItem) {
-      angleEl.style.display = 'none';
-      return;
-    }
-
-    const title = newsItem.angle_title || '';
-    const narrative = newsItem.angle_narrative || newsItem.relevance || '';
-
-    if (!title && !narrative) {
-      angleEl.style.display = 'none';
-      return;
-    }
-
-    angleEl.style.display = 'block';
-    if (titleEl) titleEl.textContent = title;
-    if (narrativeEl) narrativeEl.textContent = narrative;
   }
 
   // Kept for backward compat (called from restoreStoryState references)
@@ -5010,6 +5001,14 @@ class NewsMonitor {
       if (closeBtn) {
         e.stopPropagation();
         this.closeStory(closeBtn.dataset.treeClose);
+        return;
+      }
+
+      // Angle toggle (expand/collapse narrative)
+      const angleToggle = e.target.closest('.pr-tree-angle-toggle');
+      if (angleToggle) {
+        const angle = angleToggle.closest('.pr-tree-angle');
+        if (angle) angle.classList.toggle('expanded');
         return;
       }
 
@@ -5049,7 +5048,6 @@ class NewsMonitor {
 
   populateLeftPanel(newsItem) {
     this.renderFileTree();
-    this.renderActiveAngle(newsItem);
   }
 
   setupLeftPanelToggles() {
