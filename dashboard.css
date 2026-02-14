@@ -16480,8 +16480,11 @@ body.pr-resizing * {
 /* Angles section polish */
 .pr-angles-section .pr-workflow-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+}
+
+.pr-angles-section .pr-workflow-header .btn-icon-only {
+  margin-left: auto;
 }
 
 /* Laptop Responsive - DISABLED for stage layout */
