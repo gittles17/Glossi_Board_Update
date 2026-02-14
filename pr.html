@@ -167,206 +167,202 @@
         <!-- 2-Panel Create Layout -->
         <div class="pr-create-layout">
           
-          <!-- Left Panel (1/3): Story Angles + Content History -->
+          <!-- Left Panel (1/3): Angle Context + Version History -->
           <div class="pr-create-left">
             
-            <!-- Story Angles Section (collapsible, expanded by default) -->
-            <div class="pr-workflow-section pr-angles-section">
-              <div class="pr-workflow-header pr-collapsible-header" data-collapse-target="pr-angles-body">
-                <svg class="pr-collapse-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-                <h2 class="pr-workflow-title">Story Angles</h2>
-                <button class="btn btn-secondary btn-sm btn-icon-only" id="pr-generate-angles-btn" title="Generate Angles">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                  </svg>
-                </button>
+            <!-- Angle Context Section -->
+            <div class="pr-workflow-section pr-angle-context-section">
+              <div class="pr-workflow-header">
+                <h2 class="pr-workflow-title">Story Angle</h2>
               </div>
-              <div class="pr-section-body" id="pr-angles-body">
-                <div class="pr-angles-list" id="pr-angles-list">
-                  <div class="pr-angles-empty">Click "Generate Angles" to get strategic recommendations</div>
+              <div class="pr-angle-context" id="pr-angle-context">
+                <div class="pr-angle-context-empty">
+                  <p>Click "Create Content" on a news card to get started.</p>
                 </div>
               </div>
             </div>
 
-            <!-- Content (collapsible, unified active angle + history) -->
-            <div class="pr-workflow-section pr-content-section">
-              <div class="pr-workflow-header pr-collapsible-header" data-collapse-target="pr-content-body">
-                <svg class="pr-collapse-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-                <h2 class="pr-workflow-title">Content</h2>
+            <!-- News Source Reference -->
+            <div class="pr-workflow-section pr-source-ref-section" id="pr-source-ref-section" style="display:none">
+              <div class="pr-workflow-header">
+                <h2 class="pr-workflow-title">Source</h2>
               </div>
-              <div class="pr-section-body" id="pr-content-body">
-                <div class="pr-content-list" id="pr-content-list">
-                  <div class="pr-content-empty" id="pr-content-empty">
-                    <p>No content yet. Generate angles to get started.</p>
-                  </div>
-                </div>
+              <div class="pr-source-ref" id="pr-source-ref"></div>
+            </div>
+
+            <!-- Version History -->
+            <div class="pr-workflow-section pr-version-section" id="pr-version-section" style="display:none">
+              <div class="pr-workflow-header">
+                <h2 class="pr-workflow-title">Versions</h2>
               </div>
+              <div class="pr-version-list" id="pr-version-list"></div>
+            </div>
+
+            <!-- Legacy: hidden angle manager elements for backward compat -->
+            <div style="display:none">
+              <div id="pr-angles-list"></div>
+              <div id="pr-content-list"></div>
+              <div id="pr-content-empty"></div>
+              <button id="pr-generate-angles-btn"></button>
             </div>
           </div>
 
           <!-- Right Panel (2/3): Workspace -->
           <div class="pr-create-right">
 
-            <!-- Angle Tabs (shown when angles are being worked on) -->
-            <div class="pr-angle-tabs" id="pr-angle-tabs" style="display:none">
+            <!-- Content Plan Tabs -->
+            <div class="pr-content-tabs" id="pr-content-tabs" style="display:none"></div>
+
+            <!-- Top bar -->
+            <div class="pr-workspace-topbar">
+              <div class="pr-workspace-controls">
+                <select class="pr-content-type" id="pr-content-type" style="display:none">
+                  <option value="press_release">Press Release</option>
+                  <option value="media_pitch">Media Pitch Email</option>
+                  <option value="product_announcement">Product Announcement</option>
+                  <option value="founder_quote">Founder Quote / Soundbite</option>
+                  <option value="blog_post">Blog Post</option>
+                  <option value="linkedin_post">LinkedIn Post</option>
+                  <option value="tweet_thread">Tweet Thread</option>
+                  <option value="briefing_doc">Briefing Document</option>
+                  <option value="talking_points">Talking Points</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <button class="pr-generate-btn" id="pr-generate-btn" disabled style="display:none">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                  Generate
+                </button>
+                <button class="pr-regenerate-btn" id="pr-regenerate-btn" style="display:none">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M1 20v-6h6"></path>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                  Regenerate
+                </button>
+              </div>
+              <div class="pr-workspace-actions" style="display:none" id="pr-workspace-actions">
+                <button class="pr-action-btn" id="pr-copy-btn" title="Copy to clipboard">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
+                <div class="pr-export-wrap">
+                  <button class="pr-action-btn" id="pr-export-btn" title="Export">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                  </button>
+                  <div class="pr-export-menu" id="pr-export-menu">
+                    <button class="pr-export-item" id="pr-export-text">Copy as text</button>
+                    <button class="pr-export-item" id="pr-export-html">Download as HTML</button>
+                  </div>
+                </div>
+              </div>
             </div>
-            
-        <!-- Top bar -->
-        <div class="pr-workspace-topbar">
-          <div class="pr-workspace-controls">
-            <select class="pr-content-type" id="pr-content-type">
-              <option value="press_release">Press Release</option>
-              <option value="media_pitch">Media Pitch Email</option>
-              <option value="product_announcement">Product Announcement</option>
-              <option value="founder_quote">Founder Quote / Soundbite</option>
-              <option value="blog_post">Blog Post</option>
-              <option value="linkedin_post">LinkedIn Post</option>
-              <option value="tweet_thread">Tweet Thread</option>
-              <option value="briefing_doc">Briefing Document</option>
-              <option value="talking_points">Talking Points</option>
-              <option value="custom">Custom</option>
-            </select>
-            <button class="pr-generate-btn" id="pr-generate-btn" disabled>
+
+            <!-- Status hint -->
+            <div class="pr-status-hint" id="pr-status-hint" style="display:none">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
               </svg>
-              Generate
-            </button>
-            <button class="pr-regenerate-btn" id="pr-regenerate-btn" style="display:none">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M23 4v6h-6"></path>
-                <path d="M1 20v-6h6"></path>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-              </svg>
-              Regenerate
-            </button>
-          </div>
-          <div class="pr-workspace-actions" style="display:none" id="pr-workspace-actions">
-            <button class="pr-action-btn" id="pr-copy-btn" title="Copy to clipboard">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-            </button>
-            <div class="pr-export-wrap">
-              <button class="pr-action-btn" id="pr-export-btn" title="Export">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
+              <span id="pr-status-hint-text"></span>
+            </div>
+
+            <!-- Custom prompt -->
+            <div class="pr-custom-prompt-wrap" id="pr-custom-prompt-wrap" style="display:none">
+              <textarea class="pr-custom-prompt" id="pr-custom-prompt" placeholder="Describe what you want to generate..." rows="2"></textarea>
+            </div>
+
+            <!-- Content area -->
+            <div class="pr-workspace-content" id="pr-workspace-content">
+              <!-- Empty state -->
+              <div class="pr-workspace-empty" id="pr-workspace-empty">
+                <div class="pr-empty-message">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                  </svg>
+                  <p>Click "Create Content" on a news card to start generating.</p>
+                </div>
+              </div>
+
+              <!-- Loading state -->
+              <div class="pr-loading-state" id="pr-loading-state" style="display:none">
+                <div class="pr-loading-spinner"></div>
+                <p>Generating content...</p>
+                <div class="pr-progress-bar-container">
+                  <div class="pr-progress-bar" id="pr-progress-bar"></div>
+                </div>
+              </div>
+
+              <!-- Generated content (inline editable) -->
+              <div class="pr-workspace-generated" id="pr-workspace-generated" style="display:none">
+                <div class="pr-drafts-header">
+                  <span class="pr-drafts-title">Drafts</span>
+                  <button class="pr-clear-drafts-btn" id="pr-clear-drafts-btn" title="Clear old drafts">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                    Clear old drafts
+                  </button>
+                </div>
+                <div class="pr-generated-content" id="pr-generated-content" contenteditable="true" spellcheck="true"></div>
+                <div class="pr-verification-bar" id="pr-verification-bar" style="display:none">
+                  <div class="pr-verification-info">
+                    <span class="pr-verification-text" id="pr-verification-text">0 of 0 claims sourced</span>
+                  </div>
+                  <div class="pr-verification-track">
+                    <div class="pr-verification-progress" id="pr-verification-progress"></div>
+                  </div>
+                </div>
+                
+                <!-- Refining overlay -->
+                <div class="pr-refining-overlay" id="pr-refining-overlay" style="display:none">
+                  <div class="pr-refining-content">
+                    <div class="pr-loading-spinner"></div>
+                    <span class="pr-refining-text">Refining...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chat Interface for Content Refinement -->
+            <div class="pr-chat-section" id="pr-chat-section" style="display:none">
+              <!-- Sticky Clear Button -->
+              <button class="pr-clear-chat-btn" id="pr-clear-chat-btn" title="Clear chat history">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
                 </svg>
               </button>
-              <div class="pr-export-menu" id="pr-export-menu">
-                <button class="pr-export-item" id="pr-export-text">Copy as text</button>
-                <button class="pr-export-item" id="pr-export-html">Download as HTML</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Status hint (shown when generate is disabled) -->
-        <div class="pr-status-hint" id="pr-status-hint" style="display:none">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
-          <span id="pr-status-hint-text"></span>
-        </div>
-
-        <!-- Custom prompt (hidden unless Custom selected) -->
-        <div class="pr-custom-prompt-wrap" id="pr-custom-prompt-wrap" style="display:none">
-          <textarea class="pr-custom-prompt" id="pr-custom-prompt" placeholder="Describe what you want to generate..." rows="2"></textarea>
-        </div>
-
-        <!-- Content area -->
-        <div class="pr-workspace-content" id="pr-workspace-content">
-            <!-- Empty state -->
-            <div class="pr-workspace-empty" id="pr-workspace-empty">
-              <div class="pr-empty-message">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                </svg>
-                <p>Select content type and generate</p>
-              </div>
-            </div>
-
-            <!-- Loading state -->
-            <div class="pr-loading-state" id="pr-loading-state" style="display:none">
-              <div class="pr-loading-spinner"></div>
-              <p>Generating content...</p>
-              <div class="pr-progress-bar-container">
-                <div class="pr-progress-bar" id="pr-progress-bar"></div>
-              </div>
-            </div>
-
-            <!-- Generated content -->
-            <div class="pr-workspace-generated" id="pr-workspace-generated" style="display:none">
-              <div class="pr-drafts-header">
-                <span class="pr-drafts-title">Drafts</span>
-                <button class="pr-clear-drafts-btn" id="pr-clear-drafts-btn" title="Clear old drafts">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                  </svg>
-                  Clear old drafts
-                </button>
-              </div>
-              <div class="pr-generated-content" id="pr-generated-content"></div>
-              <div class="pr-verification-bar" id="pr-verification-bar" style="display:none">
-                <div class="pr-verification-info">
-                  <span class="pr-verification-text" id="pr-verification-text">0 of 0 claims sourced</span>
-                </div>
-                <div class="pr-verification-track">
-                  <div class="pr-verification-progress" id="pr-verification-progress"></div>
-                </div>
-              </div>
               
-              <!-- Refining overlay -->
-              <div class="pr-refining-overlay" id="pr-refining-overlay" style="display:none">
-                <div class="pr-refining-content">
-                  <div class="pr-loading-spinner"></div>
-                  <span class="pr-refining-text">Refining...</span>
+              <!-- Smart Suggestions -->
+              <div class="pr-suggestions-container" id="pr-suggestions-container">
+                <div class="pr-suggestions-label">Suggestions</div>
+                <div class="pr-suggestions" id="pr-suggestions"></div>
+              </div>
+
+              <!-- Chat Input -->
+              <div class="pr-input-area" id="pr-input-area">
+                <div class="pr-input-wrapper">
+                  <textarea id="pr-chat-input" class="pr-chat-input" placeholder="Refine further..." rows="1"></textarea>
+                  <button class="pr-send-btn" id="pr-send-btn" title="Send">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
-
-          <!-- Chat Interface for Content Refinement -->
-          <div class="pr-chat-section" id="pr-chat-section" style="display:none">
-            <!-- Sticky Clear Button -->
-            <button class="pr-clear-chat-btn" id="pr-clear-chat-btn" title="Clear chat history">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-              </svg>
-            </button>
-            
-            <!-- Smart Suggestions -->
-            <div class="pr-suggestions-container" id="pr-suggestions-container">
-              <div class="pr-suggestions-label">Suggestions</div>
-              <div class="pr-suggestions" id="pr-suggestions">
-                <!-- Dynamic suggestions rendered here -->
-              </div>
-            </div>
-
-            <!-- Chat Input -->
-            <div class="pr-input-area" id="pr-input-area">
-              <div class="pr-input-wrapper">
-                <textarea id="pr-chat-input" class="pr-chat-input" placeholder="Refine further..." rows="1"></textarea>
-                <button class="pr-send-btn" id="pr-send-btn" title="Send">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
 
           </div>
         </div>

@@ -2313,6 +2313,11 @@ class PRAgent {
         </div>
       `;
     }).join('');
+
+    // Update version history in left panel if available
+    if (this.newsMonitor && this.newsMonitor.renderVersionHistory) {
+      this.newsMonitor.renderVersionHistory(this.currentOutput);
+    }
   }
 
   formatTimeAgo(timestamp) {
@@ -4638,7 +4643,11 @@ class NewsMonitor {
       const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
       const isStale = daysAgo > 7;
       
-      const angleText = item.suggested_angle ? this.escapeHtml(item.suggested_angle) : '';
+      // Build angle display with fallback chain
+      const angleTitle = item.angle_title || '';
+      const angleNarrative = item.angle_narrative || item.relevance || '';
+      const hasAngle = angleTitle || angleNarrative;
+      
       html += `
         <div class="pr-news-item ${isStale ? 'stale' : ''}">
           <div class="pr-news-header">
@@ -4650,14 +4659,10 @@ class NewsMonitor {
             <span class="pr-news-date">${daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`}</span>
           </div>
           <p class="pr-news-summary">${this.escapeHtml(item.summary)}</p>
-          <div class="pr-news-relevance">
-            <span class="pr-relevance-label">How Glossi ties in:</span>
-            <p class="pr-relevance-text">${this.escapeHtml(item.relevance)}</p>
-          </div>
-          ${angleText ? `
+          ${hasAngle ? `
           <div class="pr-news-angle">
-            <span class="pr-angle-label">Story Angle:</span>
-            <p class="pr-angle-text">${angleText}</p>
+            ${angleTitle ? `<span class="pr-news-angle-title">${this.escapeHtml(angleTitle)}</span>` : ''}
+            ${angleNarrative ? `<p class="pr-news-angle-narrative">${this.escapeHtml(angleNarrative)}</p>` : ''}
           </div>
           ` : ''}
           <div class="pr-news-actions">
@@ -4709,9 +4714,11 @@ class NewsMonitor {
           Creating...
         `;
 
-        // Add as source silently, then build angle (switches to Create tab)
+        // Add as source silently
         this.useAsHook(newsItem, null);
-        await this.buildAngleFromHook(newsItem);
+        
+        // Switch to Create tab and populate with angle context
+        await this.launchCreateWorkspace(newsItem);
 
         btn.disabled = false;
         btn.innerHTML = originalHTML;
@@ -4719,25 +4726,314 @@ class NewsMonitor {
     });
   }
 
-  async buildAngleFromHook(newsItem) {
-    // Switch to Create tab where angles now live
+  async launchCreateWorkspace(newsItem) {
+    // Switch to Create tab
     const createTab = document.querySelector('.pr-stage-tab[data-stage="create"]');
     if (createTab) {
       createTab.click();
     }
 
-    // Wait for tab switch, then generate angles
-    setTimeout(async () => {
-      if (this.prAgent.angleManager) {
-        await this.prAgent.angleManager.generateAngles(newsItem);
-      }
+    // Wait for tab switch
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Populate left panel: angle context
+    const angleContext = document.getElementById('pr-angle-context');
+    if (angleContext) {
+      const title = newsItem.angle_title || '';
+      const narrative = newsItem.angle_narrative || newsItem.relevance || '';
+      angleContext.innerHTML = `
+        <div class="pr-angle-context-card">
+          ${title ? `<h3 class="pr-angle-context-title">${this.escapeHtml(title)}</h3>` : ''}
+          ${narrative ? `<p class="pr-angle-context-narrative">${this.escapeHtml(narrative)}</p>` : ''}
+        </div>
+      `;
+    }
+
+    // Populate left panel: source reference
+    const sourceRefSection = document.getElementById('pr-source-ref-section');
+    const sourceRef = document.getElementById('pr-source-ref');
+    if (sourceRefSection && sourceRef) {
+      sourceRefSection.style.display = 'block';
+      const date = new Date(newsItem.date || newsItem.fetched_at);
+      const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+      const dateText = daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`;
+      sourceRef.innerHTML = `
+        <a href="${newsItem.url}" target="_blank" class="pr-source-ref-headline">${this.escapeHtml(newsItem.headline)}</a>
+        <div class="pr-source-ref-meta">
+          <span>${this.escapeHtml(newsItem.outlet)}</span>
+          <span>${dateText}</span>
+        </div>
+      `;
+    }
+
+    // Build content plan tabs
+    let contentPlan = newsItem.content_plan;
+    if (typeof contentPlan === 'string') {
+      try { contentPlan = JSON.parse(contentPlan); } catch (e) { contentPlan = null; }
+    }
+    if (!contentPlan || !Array.isArray(contentPlan) || contentPlan.length === 0) {
+      contentPlan = [
+        { type: 'linkedin_post', description: 'Thought leadership post tied to this news', priority: 1 },
+        { type: 'media_pitch', description: 'Pitch email to relevant journalists', priority: 2 },
+        { type: 'blog_post', description: 'In-depth analysis post', priority: 3 }
+      ];
+    }
+
+    // Sort by priority
+    contentPlan.sort((a, b) => (a.priority || 99) - (b.priority || 99));
+
+    // Store the active news item and content plan on the workspace manager
+    this._activeNewsItem = newsItem;
+    this._activeContentPlan = contentPlan;
+    this._tabContent = new Map();
+    this._activeTabId = null;
+
+    // Render content plan tabs
+    this.renderContentPlanTabs(contentPlan);
+
+    // Set angle context on PRAgent for content generation
+    this.prAgent.angleContext = {
+      narrative: newsItem.angle_narrative || newsItem.relevance || newsItem.summary || '',
+      target: contentPlan[0]?.target || '',
+      description: contentPlan[0]?.description || ''
+    };
+
+    // Auto-generate first (highest priority) tab
+    const firstTabId = `plan_0`;
+    this.switchContentTab(firstTabId);
+    this.generateTabContent(firstTabId, contentPlan[0], newsItem);
+  }
+
+  renderContentPlanTabs(contentPlan) {
+    const tabsContainer = document.getElementById('pr-content-tabs');
+    if (!tabsContainer) return;
+
+    tabsContainer.style.display = 'flex';
+    tabsContainer.innerHTML = '';
+
+    contentPlan.forEach((item, index) => {
+      const tabId = `plan_${index}`;
+      const label = this.formatContentType(item.type);
+      const tab = document.createElement('button');
+      tab.className = `pr-content-tab ${index === 0 ? 'active' : ''}`;
+      tab.dataset.tabId = tabId;
+      tab.dataset.planIndex = index;
+      tab.innerHTML = `<span>${label}</span>`;
       
-      // Scroll angles into view in left panel
-      const anglesSection = document.querySelector('.pr-angles-section');
-      if (anglesSection) {
-        anglesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      tab.addEventListener('click', () => {
+        this.switchContentTab(tabId);
+        
+        // Generate if not already generated
+        const entry = this._tabContent.get(tabId);
+        if (!entry) {
+          this.generateTabContent(tabId, this._activeContentPlan[index], this._activeNewsItem);
+        }
+      });
+
+      tabsContainer.appendChild(tab);
+    });
+  }
+
+  formatContentType(type) {
+    const labels = {
+      'press_release': 'Press Release',
+      'media_pitch': 'Media Pitch',
+      'product_announcement': 'Product Announcement',
+      'founder_quote': 'Founder Quote',
+      'blog_post': 'Blog Post',
+      'linkedin_post': 'LinkedIn Post',
+      'tweet_thread': 'Tweet Thread',
+      'briefing_doc': 'Briefing Doc',
+      'talking_points': 'Talking Points',
+      'custom': 'Custom'
+    };
+    return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  switchContentTab(tabId) {
+    const tabsContainer = document.getElementById('pr-content-tabs');
+    if (!tabsContainer) return;
+
+    // Update active tab visuals
+    tabsContainer.querySelectorAll('.pr-content-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.tabId === tabId);
+    });
+
+    this._activeTabId = tabId;
+
+    // Show content for this tab
+    const entry = this._tabContent.get(tabId);
+    if (entry) {
+      if (entry.loading) {
+        this.prAgent.showLoading();
+      } else if (entry.output) {
+        this.prAgent.currentOutput = entry.output;
+        this.prAgent.renderGeneratedContent(entry.output);
+        this.prAgent.showWorkspace();
+        this.prAgent.hideLoading();
+        this.renderVersionHistory(entry.output);
       }
-    }, 200);
+    } else {
+      // No content yet - show empty state with generate prompt
+      if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
+      if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
+      this.prAgent.hideLoading();
+    }
+  }
+
+  async generateTabContent(tabId, planItem, newsItem) {
+    const selectedSources = this.prAgent.sources.filter(s => s.selected);
+    if (selectedSources.length === 0 && !this.prAgent.apiKey) return;
+
+    const typeLabel = CONTENT_TYPES.find(t => t.id === planItem.type)?.label || planItem.type;
+
+    // Mark tab as loading
+    this._tabContent.set(tabId, { loading: true, output: null });
+    if (this._activeTabId === tabId) {
+      this.prAgent.showLoading();
+    }
+
+    // Update content type dropdown (hidden but used by existing logic)
+    const dropdown = document.getElementById('pr-content-type');
+    if (dropdown) dropdown.value = planItem.type;
+
+    // Build prompt
+    const sourcesContext = selectedSources.map((s, i) => {
+      return `[Source ${i + 1}] (ID: ${s.id})\nTitle: ${s.title}\nType: ${s.type}\nContent:\n${s.content}\n---`;
+    }).join('\n\n');
+
+    let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
+    const angleNarrative = newsItem.angle_narrative || newsItem.relevance || newsItem.summary || '';
+    if (angleNarrative) {
+      userMessage += `STORY ANGLE (use this as your narrative framework):\n${angleNarrative}\n\n`;
+    }
+    if (planItem.description) {
+      userMessage += `Brief: ${planItem.description}\n\n`;
+    }
+    if (planItem.target) {
+      userMessage += `Target: ${planItem.target}\n\n`;
+    }
+    userMessage += `SOURCES:\n${sourcesContext}`;
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-opus-4-6',
+          max_tokens: 8192,
+          system: PR_SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: userMessage }]
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `API request failed (${response.status})`);
+      }
+
+      const data = await response.json();
+      const rawText = data.content?.[0]?.text || '';
+
+      let parsed;
+      try {
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+      } catch { parsed = null; }
+
+      if (!parsed) {
+        parsed = { content: rawText, citations: [], strategy: null };
+      }
+
+      if (parsed.citations) {
+        parsed.citations = parsed.citations.map((c, i) => {
+          const srcIndex = c.index || (i + 1);
+          const matchedSource = selectedSources[srcIndex - 1];
+          return { ...c, index: srcIndex, sourceId: matchedSource?.id || null, verified: c.sourceId !== null && c.verified !== false };
+        });
+      }
+
+      const output = {
+        id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        content_type: planItem.type,
+        title: this.prAgent.extractTitle(parsed.content, typeLabel),
+        content: parsed.content,
+        sources: selectedSources.map(s => s.id),
+        citations: parsed.citations || [],
+        strategy: parsed.strategy || null,
+        status: 'draft',
+        phase: 'edit',
+        drafts: [{ content: parsed.content, version: 1, timestamp: Date.now(), prompt: null }]
+      };
+
+      this._tabContent.set(tabId, { loading: false, output });
+
+      // Save to PRAgent outputs
+      this.prAgent.outputs.push(output);
+      this.prAgent.saveOutputs();
+      try {
+        await fetch('/api/pr/outputs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(output) });
+      } catch (e) { /* silent */ }
+
+      // If this tab is active, render
+      if (this._activeTabId === tabId) {
+        this.prAgent.currentOutput = output;
+        this.prAgent.renderGeneratedContent(output);
+        this.prAgent.renderStrategy(output.strategy);
+        this.prAgent.showWorkspace();
+        this.prAgent.hideLoading();
+        this.renderVersionHistory(output);
+      }
+
+    } catch (err) {
+      this._tabContent.set(tabId, { loading: false, output: null, error: err.message });
+      if (this._activeTabId === tabId) {
+        this.prAgent.hideLoading();
+        this.prAgent.showToast(err.message || 'Generation failed', 'error');
+      }
+    }
+  }
+
+  renderVersionHistory(output) {
+    const versionSection = document.getElementById('pr-version-section');
+    const versionList = document.getElementById('pr-version-list');
+    if (!versionSection || !versionList || !output) return;
+
+    if (!output.drafts || output.drafts.length === 0) {
+      versionSection.style.display = 'none';
+      return;
+    }
+
+    versionSection.style.display = 'block';
+    versionList.innerHTML = output.drafts.map((draft, index) => {
+      const isLatest = index === 0;
+      const timeAgo = this.prAgent.formatTimeAgo(draft.timestamp);
+      return `
+        <div class="pr-version-item ${isLatest ? 'active' : ''}" data-version="${draft.version}">
+          <span class="pr-version-label">${isLatest ? 'Latest' : `v${draft.version}`}</span>
+          <span class="pr-version-time">${timeAgo}</span>
+          ${draft.prompt ? `<span class="pr-version-prompt">${this.escapeHtml(draft.prompt)}</span>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    // Click to view older versions
+    versionList.querySelectorAll('.pr-version-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const version = parseInt(item.dataset.version);
+        const draft = output.drafts.find(d => d.version === version);
+        if (draft && this.prAgent.dom.generatedContent) {
+          this.prAgent.dom.generatedContent.innerHTML = this.prAgent.formatContent(draft.content, output.citations);
+          versionList.querySelectorAll('.pr-version-item').forEach(v => v.classList.remove('active'));
+          item.classList.add('active');
+        }
+      });
+    });
+  }
+
+  async buildAngleFromHook(newsItem) {
+    // Legacy method - redirects to new flow
+    await this.launchCreateWorkspace(newsItem);
   }
 
   attachNewsEventListeners() {
@@ -4750,6 +5046,7 @@ class NewsMonitor {
     if (sourcesTab) sourcesTab.click();
     
     // 2. Build source object
+    const angleInfo = newsItem.angle_title ? `\nSTORY ANGLE: ${newsItem.angle_title}\n${newsItem.angle_narrative || ''}` : '';
     const sourceContent = `
 NEWS HOOK: ${newsItem.headline}
 
@@ -4759,9 +5056,9 @@ URL: ${newsItem.url}
 
 SUMMARY:
 ${newsItem.summary}
-
+${angleInfo}
 RELEVANCE TO GLOSSI:
-${newsItem.relevance}
+${newsItem.angle_narrative || newsItem.relevance || ''}
     `.trim();
 
     const source = {

@@ -950,7 +950,6 @@ class GlossiDashboard {
 
       this.handleDroppedContent(content);
     } catch (error) {
-      console.error('File processing error:', error);
       this.hideProgress();
       this.showToast('Failed to process file: ' + error.message, 'error');
     }
@@ -999,9 +998,27 @@ class GlossiDashboard {
   }
 
   /**
+   * Lazy-load pdf.js library on first use
+   */
+  async _loadPdfJs() {
+    if (typeof pdfjsLib !== 'undefined') return;
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.onload = () => {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        resolve();
+      };
+      script.onerror = () => reject(new Error('Failed to load PDF library'));
+      document.head.appendChild(script);
+    });
+  }
+
+  /**
    * Process PDF file
    */
   async processPDFFile(file) {
+    await this._loadPdfJs();
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     
@@ -1083,7 +1100,7 @@ class GlossiDashboard {
             reject(new Error('Failed to parse transcription response'));
           }
         } else {
-          console.error('Whisper API error:', xhr.responseText);
+          void 0;
           reject(new Error(`Transcription failed: ${xhr.status}`));
         }
       });
@@ -1467,19 +1484,19 @@ class GlossiDashboard {
    * Render all dashboard components
    */
   render() {
-    try { this.renderSeedRaise(); } catch (e) { console.error('renderSeedRaise error:', e); }
-    try { this.renderPipelineSection(); } catch (e) { console.error('renderPipelineSection error:', e); }
-    try { this.renderMeetingSelector(); } catch (e) { console.error('renderMeetingSelector error:', e); }
-    try { this.renderQuickLinks(); } catch (e) { console.error('renderQuickLinks error:', e); }
+    try { this.renderSeedRaise(); } catch (e) { /* render error */ }
+    try { this.renderPipelineSection(); } catch (e) { /* render error */ }
+    try { this.renderMeetingSelector(); } catch (e) { /* render error */ }
+    try { this.renderQuickLinks(); } catch (e) { /* render error */ }
     
     try {
       const currentMeeting = meetingsManager.getCurrentMeeting();
       if (currentMeeting) {
         this.renderMeeting(currentMeeting);
       }
-    } catch (e) { console.error('renderMeeting error:', e); }
+    } catch (e) { /* render error */ }
 
-    try { this.renderSettingsStatus(); } catch (e) { console.error('renderSettingsStatus error:', e); }
+    try { this.renderSettingsStatus(); } catch (e) { /* render error */ }
   }
 
   /**
@@ -1948,12 +1965,12 @@ class GlossiDashboard {
     this.fetchPipelineFromSheet();
     
     // Auto-refresh every 5 minutes
-    setInterval(() => {
+    this._pipelineRefreshInterval = setInterval(() => {
       this.fetchPipelineFromSheet();
     }, 5 * 60 * 1000);
     
     // Update sync time display every minute
-    setInterval(() => {
+    this._pipelineSyncInterval = setInterval(() => {
       this.updatePipelineSyncTime();
     }, 60 * 1000);
   }
@@ -4489,7 +4506,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       // Show review content
       this.renderMeetingReview(result);
     } catch (error) {
-      console.error('Meeting notes processing error:', error);
+      void 0;
       this.hideModal('review-modal');
       this.showToast('Failed to process notes: ' + error.message, 'error');
     }
@@ -4699,7 +4716,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       this.pendingDroppedContent = null;
       
     } catch (error) {
-      console.error('Import error:', error);
+      void 0;
       this.showToast('Failed to analyze: ' + error.message, 'error');
       this.pendingDroppedContent = null;
     }
@@ -4850,7 +4867,7 @@ TONE RULES:
       this.hideModal('pipeline-update-modal');
       
     } catch (error) {
-      console.error('Pipeline update error:', error);
+      void 0;
       this.showToast('Failed to extract: ' + error.message, 'error');
     }
   }
@@ -5020,7 +5037,7 @@ Return JSON:
       this.showCurationResults(curation, talkingPoints, quotes, thoughts);
       
     } catch (error) {
-      console.error('Curation error:', error);
+      void 0;
       this.hideModal('curation-modal');
       this.showToast('Curation failed: ' + error.message, 'error');
     }
@@ -5508,7 +5525,7 @@ RULES:
       this.data = storage.getData();
       this.renderTalkingPoints();
     } catch (error) {
-      console.error('Fix redundancies error:', error);
+      void 0;
       this.showToast('Analysis failed: ' + error.message, 'error');
     }
   }
@@ -6431,7 +6448,7 @@ RULES:
             break;
         }
       } catch (e) {
-        console.error('Error applying item:', itemType, itemId, e);
+        void 0;
       }
     });
     
@@ -6994,14 +7011,12 @@ Rules:
     // Extract JSON from response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.error('No JSON found in response:', responseText);
       throw new Error('Failed to parse AI response');
     }
     
     try {
       return JSON.parse(jsonMatch[0]);
     } catch (e) {
-      console.error('JSON parse error:', e, jsonMatch[0]);
       throw new Error('Failed to parse AI response');
     }
   }
@@ -7115,7 +7130,6 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
     // Extract JSON from response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.error('No JSON found in response:', responseText);
       return null;
     }
     
@@ -7123,7 +7137,6 @@ Focus on extracting the most valuable, quotable content. Include statistics, spe
       const parsed = JSON.parse(jsonMatch[0]);
       return parsed.items || [];
     } catch (e) {
-      console.error('Failed to parse JSON:', e);
       return null;
     }
   }
@@ -7524,7 +7537,7 @@ Content: "${content.substring(0, 300)}"`
         return 'core';
       }
     } catch (e) {
-      console.error('Failed to get category suggestion:', e);
+      /* category suggestion failed */
     }
     return null;
   }
@@ -7891,7 +7904,6 @@ Respond with just the category name (core, traction, market, or testimonials) an
         }
       }
     } catch (e) {
-      console.error('Failed to get category suggestion:', e);
       const suggestionEl = document.getElementById('ai-category-suggestion');
       if (suggestionEl) suggestionEl.innerHTML = '';
     }
@@ -8449,7 +8461,6 @@ Respond with just the category name (core, traction, market, or testimonials) an
       this.updateStatusBadge('anthropic-env-status', data.hasAnthropicKey);
       this.updateStatusBadge('openai-env-status', data.hasOpenAIKey);
     } catch (error) {
-      console.error('Failed to check API key status:', error);
       this.updateStatusBadge('anthropic-env-status', false);
       this.updateStatusBadge('openai-env-status', false);
     }

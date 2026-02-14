@@ -226,8 +226,20 @@ async function initDatabase() {
             url TEXT,
             summary TEXT,
             relevance TEXT,
+            angle_title TEXT,
+            angle_narrative TEXT,
+            content_plan JSONB,
             fetched_at TIMESTAMP DEFAULT NOW()
           )
+        `);
+        
+        // Migration: add angle columns if they don't exist (for existing databases)
+        await pool.query(`
+          DO $$ BEGIN
+            ALTER TABLE pr_news_hooks ADD COLUMN IF NOT EXISTS angle_title TEXT;
+            ALTER TABLE pr_news_hooks ADD COLUMN IF NOT EXISTS angle_narrative TEXT;
+            ALTER TABLE pr_news_hooks ADD COLUMN IF NOT EXISTS content_plan JSONB;
+          END $$;
         `);
         
         // Articles feed
@@ -1215,10 +1227,21 @@ Return articles in this JSON format:
       "url": "Original URL",
       "summary": "One sentence summary of the article",
       "relevance": "Topic #X: [explain connection]",
-      "suggested_angle": "A concise story angle title Glossi could pitch based on this article (1 sentence, e.g. 'How AI-powered product visualization is replacing traditional photoshoots')"
+      "angle_title": "Short story angle name (3-6 words, e.g. 'AI Photography Goes Enterprise')",
+      "angle_narrative": "1-2 sentences explaining the story angle AND how it connects to Glossi. Weave in the Glossi tie-in naturally, not as a separate thought. Example: 'As enterprise brands scramble to adopt AI for product content, Glossi's compositing-first approach solves the brand consistency problem that pure generation tools cannot.'",
+      "content_plan": [
+        {"type": "linkedin_post", "description": "Brief description of what this piece would cover", "priority": 1},
+        {"type": "media_pitch", "description": "Brief description of the pitch angle", "priority": 2}
+      ]
     }
   ]
 }
+
+CONTENT PLAN RULES:
+- Each article should have 2-3 content pieces in its content_plan
+- Valid content types: linkedin_post, media_pitch, blog_post, press_release, tweet_thread, founder_quote, talking_points, briefing_doc, product_announcement
+- Order by priority (1 = highest)
+- Pick types that make sense for the article (e.g. breaking news = media_pitch first, thought leadership = linkedin_post first)
 
 CRITICAL: Only include articles you're recommending. Do NOT include articles with "EXCLUDED" or "Not relevant" in the relevance field. If you think an article should be excluded, simply don't add it to the JSON array.
 
@@ -1324,15 +1347,18 @@ EXCLUDE (specific examples):
       for (const item of normalizedNews) {
         try {
           await pool.query(`
-            INSERT INTO pr_news_hooks (headline, outlet, date, url, summary, relevance, fetched_at)
-            VALUES ($1, $2, $3, $4, $5, $6, NOW())
+            INSERT INTO pr_news_hooks (headline, outlet, date, url, summary, relevance, angle_title, angle_narrative, content_plan, fetched_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
           `, [
             item.headline || 'No title',
             item.outlet || 'Unknown',
             item.date,
             item.url || '',
             item.summary || '',
-            item.relevance || ''
+            item.relevance || '',
+            item.angle_title || '',
+            item.angle_narrative || '',
+            item.content_plan ? JSON.stringify(item.content_plan) : null
           ]);
           insertedCount++;
         } catch (error) {

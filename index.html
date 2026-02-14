@@ -3,9 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Glossi</title>
+  <title>Glossi Board Update Dashboard</title>
   <meta name="theme-color" content="#0a0d12">
   <meta name="description" content="Glossi investor dashboard for tracking fundraising, pipeline, and board updates.">
+  <meta property="og:title" content="Glossi Board Update Dashboard">
+  <meta property="og:description" content="Glossi investor dashboard for tracking fundraising, pipeline, and board updates.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Glossi Board Update Dashboard">
+  <meta name="twitter:description" content="Glossi investor dashboard for tracking fundraising, pipeline, and board updates.">
   <link rel="icon" type="image/svg+xml" href="Asset 3.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +27,7 @@
     </div>
     <div class="nav-right">
       <div class="menu-container">
-        <button class="btn-icon" id="menu-btn" title="Menu">
+        <button class="btn-icon" id="menu-btn" title="Menu" aria-label="Open menu">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="3" y1="6" x2="21" y2="6"></line>
             <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -77,7 +83,7 @@
         </div>
         <span class="progress-percent" id="seed-percent">0%</span>
       </div>
-      <button class="add-btn-small" id="add-investor-btn" title="Add Investor">
+      <button class="add-btn-small" id="add-investor-btn" title="Add Investor" aria-label="Add investor">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -149,7 +155,7 @@
       </div>
       <div class="pipeline-sync-status">
         <span class="sync-time" id="pipeline-sync-time">Not synced</span>
-        <button class="btn-icon btn-icon-sm" id="pipeline-refresh-btn" title="Refresh Pipeline">
+        <button class="btn-icon btn-icon-sm" id="pipeline-refresh-btn" title="Refresh Pipeline" aria-label="Refresh pipeline">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M23 4v6h-6"></path>
             <path d="M1 20v-6h6"></path>
@@ -185,7 +191,7 @@
       <div class="panel-header">
         <h2>Week at a Glance</h2>
         <div class="header-controls">
-          <button class="btn btn-icon btn-secondary" id="add-notes-btn" title="Add Notes">
+          <button class="btn btn-icon btn-secondary" id="add-notes-btn" title="Add Notes" aria-label="Add notes">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -218,7 +224,7 @@
                       <option value="latest">This Week</option>
                       <!-- Populated by JS with past weeks -->
                     </select>
-                    <button class="add-btn-small" id="add-summary-btn" title="Add summary point">
+                    <button class="add-btn-small" id="add-summary-btn" title="Add summary point" aria-label="Add summary point">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -245,7 +251,7 @@
                     <h2 class="section-title-h4">Key Decisions</h2>
                     <span class="item-count" id="decisions-count"></span>
                   </div>
-                  <button class="add-btn-small" id="add-decision-btn" title="Add decision">
+                  <button class="add-btn-small" id="add-decision-btn" title="Add decision" aria-label="Add decision">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="12" y1="5" x2="12" y2="19"></line>
                       <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -273,7 +279,7 @@
                     <h2 class="section-title-h4">Action Items</h2>
                   </div>
                   <div class="section-header-right">
-                    <button class="add-btn-small" id="add-todo-btn" title="Add action item">
+                    <button class="add-btn-small" id="add-todo-btn" title="Add action item" aria-label="Add action item">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -301,7 +307,7 @@
         <div class="links-card" id="links-card">
           <div class="links-header">
             <h2 class="section-title-h4">Quick Links</h2>
-            <button class="add-btn-small" id="add-section-btn" title="Add section">
+            <button class="add-btn-small" id="add-section-btn" title="Add section" aria-label="Add section">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -536,12 +542,12 @@
         <div class="notes-input-section">
           <label>Color</label>
           <div class="color-picker">
-            <button type="button" class="color-option default selected" data-color="default"></button>
-            <button type="button" class="color-option red" data-color="red"></button>
-            <button type="button" class="color-option blue" data-color="blue"></button>
-            <button type="button" class="color-option purple" data-color="purple"></button>
-            <button type="button" class="color-option green" data-color="green"></button>
-            <button type="button" class="color-option orange" data-color="orange"></button>
+            <button type="button" class="color-option default selected" data-color="default" aria-label="Default color"></button>
+            <button type="button" class="color-option red" data-color="red" aria-label="Red color"></button>
+            <button type="button" class="color-option blue" data-color="blue" aria-label="Blue color"></button>
+            <button type="button" class="color-option purple" data-color="purple" aria-label="Purple color"></button>
+            <button type="button" class="color-option green" data-color="green" aria-label="Green color"></button>
+            <button type="button" class="color-option orange" data-color="orange" aria-label="Orange color"></button>
           </div>
         </div>
         <div class="notes-input-section">
@@ -1034,12 +1040,6 @@
   <div id="pdf-template" style="display: none;"></div>
 
   <!-- Scripts -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script>
-    // Set PDF.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  </script>
   <script type="module" src="app.js"></script>
 </body>
 </html>
