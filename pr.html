@@ -159,7 +159,14 @@
         <div class="pr-create-layout">
           
           <!-- Left Panel: File Tree -->
-          <div class="pr-create-left">
+          <div class="pr-create-left" id="pr-create-left">
+
+            <!-- Toggle collapse/expand -->
+            <div class="pr-panel-toggle-wrap">
+              <button class="pr-panel-toggle" id="pr-panel-toggle" title="Toggle panel">
+                <i class="ph-light ph-sidebar-simple"></i>
+              </button>
+            </div>
 
             <!-- File Tree -->
             <div class="pr-file-tree" id="pr-file-tree">
@@ -179,6 +186,9 @@
               <div id="pr-version-section"><div id="pr-version-list"></div></div>
             </div>
           </div>
+
+          <!-- Resize divider -->
+          <div class="pr-panel-divider" id="pr-panel-divider"></div>
 
           <!-- Right Panel (2/3): Workspace -->
           <div class="pr-create-right">

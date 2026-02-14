@@ -11553,14 +11553,92 @@ a.dropdown-item {
 .pr-create-left {
   width: 25%;
   min-width: 220px;
-  max-width: 300px;
+  max-width: 400px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
-  border-right: 1px solid var(--border-subtle);
-  padding: 0 var(--space-3) 0 0;
+  border-right: none;
+  padding: 0;
+  position: relative;
+  transition: width 0.2s ease, min-width 0.2s ease, padding 0.2s ease;
+}
+
+.pr-create-left.collapsed {
+  width: 32px !important;
+  min-width: 32px !important;
+  max-width: 32px !important;
+  overflow: hidden;
+}
+
+.pr-create-left.collapsed .pr-file-tree,
+.pr-create-left.collapsed > div:not(.pr-panel-toggle-wrap) {
+  display: none;
+}
+
+/* Panel toggle button */
+.pr-panel-toggle-wrap {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2) var(--space-2) 0;
+  flex-shrink: 0;
+}
+
+.pr-panel-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.pr-panel-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.pr-create-left.collapsed .pr-panel-toggle-wrap {
+  justify-content: center;
+  padding: var(--space-2) 0 0;
+}
+
+/* Panel divider (drag to resize) */
+.pr-panel-divider {
+  width: 4px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s ease;
+  position: relative;
+}
+
+.pr-panel-divider::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 1px;
+  width: 1px;
+  background: var(--border-subtle);
+}
+
+.pr-panel-divider:hover,
+.pr-panel-divider.dragging {
+  background: rgba(var(--accent-primary-rgb, 99, 102, 241), 0.15);
+}
+
+.pr-panel-divider:hover::after,
+.pr-panel-divider.dragging::after {
+  background: var(--accent-primary, #6366f1);
 }
 
 .pr-create-right {
@@ -11612,8 +11690,9 @@ a.dropdown-item {
   padding: 6px var(--space-2);
   cursor: pointer;
   border-radius: var(--radius-sm);
-  transition: background 0.1s ease;
+  transition: background 0.1s ease, border-color 0.1s ease;
   user-select: none;
+  border-left: 3px solid transparent;
 }
 
 .pr-file-tree-header:hover {
@@ -11621,7 +11700,16 @@ a.dropdown-item {
 }
 
 .pr-file-tree-header.active {
-  background: rgba(var(--accent-primary-rgb, 99, 102, 241), 0.1);
+  background: rgba(var(--accent-primary-rgb, 99, 102, 241), 0.18);
+  border-left-color: var(--accent-primary, #6366f1);
+}
+
+.pr-file-tree-header.active .pr-file-tree-label {
+  color: var(--accent-primary, #6366f1);
+}
+
+.pr-file-tree-header.active .pr-file-tree-chevron {
+  color: var(--accent-primary, #6366f1);
 }
 
 .pr-file-tree-chevron {
@@ -11637,22 +11725,18 @@ a.dropdown-item {
   transform: rotate(90deg);
 }
 
-.pr-file-tree-icon {
-  font-size: 14px;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
 
 .pr-file-tree-label {
   flex: 1;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1.3;
 }
+
 
 .pr-file-tree-close {
   display: flex;
@@ -11685,7 +11769,7 @@ a.dropdown-item {
   overflow: hidden;
   max-height: 0;
   transition: max-height 0.2s ease;
-  padding-left: 20px;
+  padding-left: 28px;
 }
 
 .pr-file-tree-node.expanded .pr-file-tree-children {
@@ -11696,12 +11780,13 @@ a.dropdown-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px var(--space-2) 4px 6px;
+  padding: 3px var(--space-2) 3px 6px;
   cursor: pointer;
   border-radius: var(--radius-sm);
   transition: background 0.1s ease;
   font-size: 12px;
-  color: var(--text-secondary);
+  font-weight: 400;
+  color: var(--text-muted);
 }
 
 .pr-file-tree-leaf:hover {
@@ -11714,12 +11799,6 @@ a.dropdown-item {
   font-weight: 500;
 }
 
-.pr-file-tree-leaf-icon {
-  font-size: 12px;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
 .pr-file-tree-leaf-label {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -11728,17 +11807,15 @@ a.dropdown-item {
 
 /* Inline angle inside file tree children */
 .pr-tree-angle {
-  margin-top: 4px;
-  padding: 6px 6px 6px 6px;
+  margin-top: var(--space-2);
+  padding: var(--space-2) 6px;
   border-top: 1px solid var(--border-subtle);
 }
 
-.pr-tree-angle-toggle {
+.pr-tree-angle-header {
   display: flex;
   align-items: center;
   gap: 5px;
-  cursor: pointer;
-  user-select: none;
 }
 
 .pr-tree-angle-icon {
@@ -11749,24 +11826,13 @@ a.dropdown-item {
 
 .pr-tree-angle-title {
   flex: 1;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1.3;
-}
-
-.pr-tree-angle-chevron {
-  font-size: 10px;
-  color: var(--text-muted);
-  flex-shrink: 0;
-  transition: transform 0.15s ease;
-}
-
-.pr-tree-angle.expanded .pr-tree-angle-chevron {
-  transform: rotate(180deg);
 }
 
 .pr-tree-angle-narrative {
@@ -11780,10 +11846,42 @@ a.dropdown-item {
   overflow: hidden;
 }
 
+.pr-tree-angle-readmore {
+  cursor: pointer;
+  color: var(--accent-primary, #6366f1);
+  font-size: 11px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.pr-tree-angle-readmore:hover {
+  text-decoration: underline;
+}
+
+.pr-tree-angle-less {
+  display: none;
+  cursor: pointer;
+  color: var(--accent-primary, #6366f1);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.pr-tree-angle-less:hover {
+  text-decoration: underline;
+}
+
 .pr-tree-angle.expanded .pr-tree-angle-narrative {
   display: block;
   -webkit-line-clamp: unset;
   overflow: visible;
+}
+
+.pr-tree-angle.expanded .pr-tree-angle-readmore {
+  display: none;
+}
+
+.pr-tree-angle.expanded .pr-tree-angle-less {
+  display: inline;
 }
 
 /* Angle tabs in workspace */

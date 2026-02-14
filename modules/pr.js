@@ -4303,6 +4303,7 @@ class NewsMonitor {
     this.setupDOM();
     this.setupEventListeners();
     this.setupFileTree();
+    this.setupPanelResize();
     await this.loadCachedNews();
   }
 
@@ -4945,7 +4946,6 @@ class NewsMonitor {
         const isActiveLeaf = isActiveStory && this._activeTabId === tabId;
         return `
           <div class="pr-file-tree-leaf ${isActiveLeaf ? 'active' : ''}" data-story-key="${this.escapeHtml(key)}" data-tab-id="${tabId}">
-            <i class="ph-light ph-file-text pr-file-tree-leaf-icon"></i>
             <span class="pr-file-tree-leaf-label">${this.escapeHtml(typeLabel)}</span>
           </div>
         `;
@@ -4958,12 +4958,14 @@ class NewsMonitor {
       if (angleTitle || angleNarrative) {
         angleHTML = `
           <div class="pr-tree-angle">
-            <div class="pr-tree-angle-toggle">
+            <div class="pr-tree-angle-header">
               <i class="ph-light ph-lightbulb pr-tree-angle-icon"></i>
               <span class="pr-tree-angle-title">${this.escapeHtml(angleTitle)}</span>
-              <i class="ph-light ph-caret-down pr-tree-angle-chevron"></i>
             </div>
-            ${angleNarrative ? `<div class="pr-tree-angle-narrative">${this.escapeHtml(angleNarrative)}</div>` : ''}
+            ${angleNarrative ? `
+            <div class="pr-tree-angle-narrative">${this.escapeHtml(angleNarrative)}<span class="pr-tree-angle-readmore pr-tree-angle-toggle">read more</span></div>
+            <span class="pr-tree-angle-less pr-tree-angle-toggle">less</span>
+            ` : ''}
           </div>
         `;
       }
@@ -4972,7 +4974,6 @@ class NewsMonitor {
         <div class="pr-file-tree-node ${isActiveStory ? 'expanded' : ''}" data-story-key="${this.escapeHtml(key)}">
           <div class="pr-file-tree-header ${isActiveStory ? 'active' : ''}">
             <i class="ph-light ph-caret-right pr-file-tree-chevron"></i>
-            <i class="ph-light ph-article pr-file-tree-icon"></i>
             <span class="pr-file-tree-label" title="${this.escapeHtml(headline)}">${this.escapeHtml(headline)}</span>
             <button class="pr-file-tree-close" data-tree-close="${this.escapeHtml(key)}" title="Close story">
               <i class="ph-light ph-x"></i>
@@ -5052,6 +5053,59 @@ class NewsMonitor {
 
   setupLeftPanelToggles() {
     // No longer needed (file tree replaced collapsible sections)
+  }
+
+  setupPanelResize() {
+    const panel = document.getElementById('pr-create-left');
+    const divider = document.getElementById('pr-panel-divider');
+    const toggle = document.getElementById('pr-panel-toggle');
+    if (!panel || !divider || !toggle) return;
+
+    let savedWidth = panel.offsetWidth;
+
+    // Toggle collapse/expand
+    toggle.addEventListener('click', () => {
+      if (panel.classList.contains('collapsed')) {
+        panel.classList.remove('collapsed');
+        panel.style.width = savedWidth + 'px';
+        divider.style.display = '';
+      } else {
+        savedWidth = panel.offsetWidth;
+        panel.classList.add('collapsed');
+        divider.style.display = 'none';
+      }
+    });
+
+    // Drag to resize
+    let isDragging = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    divider.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isDragging = true;
+      startX = e.clientX;
+      startWidth = panel.offsetWidth;
+      divider.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const delta = e.clientX - startX;
+      const newWidth = Math.max(160, Math.min(400, startWidth + delta));
+      panel.style.width = newWidth + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      divider.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      savedWidth = panel.offsetWidth;
+    });
   }
 
   async launchCreateWorkspace(newsItem) {
