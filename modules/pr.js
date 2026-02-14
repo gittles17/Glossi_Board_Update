@@ -5116,7 +5116,6 @@ class AngleManager {
     this.dom.generateAnglesBtn?.addEventListener('click', () => this.generateAngles());
     
     // EVENT DELEGATION: Handle all angle card button clicks
-    // This attaches ONCE and works for all current and future buttons
     this.dom.anglesList?.addEventListener('click', (e) => {
       // Expand/collapse button
       const expandBtn = e.target.closest('.pr-angle-expand-btn');
@@ -5127,12 +5126,22 @@ class AngleManager {
         return;
       }
       
-      // Create Content button
-      const createBtn = e.target.closest('.pr-create-from-angle-btn');
-      if (createBtn) {
+      // Generate single piece button
+      const pieceBtn = e.target.closest('.pr-generate-piece-btn');
+      if (pieceBtn) {
         e.stopPropagation();
-        const angleId = createBtn.dataset.angleId;
-        this.createContentFromAngle(angleId);
+        const angleId = pieceBtn.dataset.angleId;
+        const planIndex = parseInt(pieceBtn.dataset.planIndex, 10);
+        this.generateSinglePiece(angleId, planIndex);
+        return;
+      }
+
+      // Generate All button
+      const allBtn = e.target.closest('.pr-generate-all-btn');
+      if (allBtn) {
+        e.stopPropagation();
+        const angleId = allBtn.dataset.angleId;
+        this.generateAllPieces(angleId);
         return;
       }
       
@@ -5145,12 +5154,12 @@ class AngleManager {
         return;
       }
 
-      // Clicking on the angle card itself (not a button) - select it
+      // Clicking on the angle card itself - select and expand, not generate
       const angleCard = e.target.closest('.pr-angle-card');
       if (angleCard) {
         const angleId = angleCard.dataset.angleId;
         if (angleId) {
-          this.createContentFromAngle(angleId);
+          this.selectAngle(angleId);
         }
       }
     });
@@ -5308,15 +5317,22 @@ class AngleManager {
             <ul class="pr-content-plan-list">
               ${angle.content_plan.map((item, idx) => `
                 <li class="${item.completed ? 'completed' : ''}">
-                  ${item.completed ? '✅' : `${item.priority}.`} <strong>${this.formatContentType(item.type)}</strong> — ${this.escapeHtml(item.description)}
-                  ${item.target ? `<br><span class="pr-plan-target">Target: ${this.escapeHtml(item.target)}</span>` : ''}
+                  <div class="pr-plan-item-row">
+                    <div class="pr-plan-item-info">
+                      ${item.completed ? '✅' : `${item.priority}.`} <strong>${this.formatContentType(item.type)}</strong> - ${this.escapeHtml(item.description)}
+                      ${item.target ? `<span class="pr-plan-target">Target: ${this.escapeHtml(item.target)}</span>` : ''}
+                    </div>
+                    <button class="btn btn-sm pr-generate-piece-btn" data-angle-id="${angle.id}" data-plan-index="${idx}">
+                      Generate
+                    </button>
+                  </div>
                 </li>
               `).join('')}
             </ul>
           </div>
           
-          <button class="btn btn-primary pr-create-from-angle-btn" data-angle-id="${angle.id}">
-            Create Content →
+          <button class="btn btn-primary pr-generate-all-btn" data-angle-id="${angle.id}">
+            Generate All (${angle.content_plan.length} pieces)
           </button>
           
           ${!angle.isDefault ? `
@@ -5373,67 +5389,144 @@ class AngleManager {
     localStorage.setItem('pr_expanded_angles', JSON.stringify(expandedIds));
   }
 
-  createContentFromAngle(angleId) {
+  selectAngle(angleId) {
     const angle = this.angles.find(a => a.id === angleId) || this.defaultAngles.find(a => a.id === angleId);
     if (!angle) return;
 
     this.activeAngle = angle;
     localStorage.setItem('pr_active_angle', JSON.stringify(angle));
 
-    const firstPlanItem = angle.content_plan ? (angle.content_plan.find(item => !item.completed) || angle.content_plan[0]) : null;
-
-    const contentTypeDropdown = document.getElementById('pr-content-type');
-    if (contentTypeDropdown && firstPlanItem) {
-      contentTypeDropdown.value = firstPlanItem.type;
-      contentTypeDropdown.dispatchEvent(new Event('change'));
-    }
-
-    this.prAgent.angleContext = {
-      narrative: angle.narrative,
-      target: firstPlanItem?.target || '',
-      description: firstPlanItem?.description || ''
-    };
-
-    this.updateTracker();
-
     // Mark angle as selected in left panel
     document.querySelectorAll('.pr-angle-card').forEach(card => {
       card.classList.toggle('selected', card.dataset.angleId === angleId);
     });
 
-    // Open angle tab in workspace
-    this.openAngleTab(angle);
+    // Expand the content plan so pieces are visible
+    if (!this.isAngleExpanded(angleId)) {
+      this.toggleAngleExpand(angleId);
+    }
 
-    // Auto-generate content for this angle
+    this.updateTracker();
+  }
+
+  generateSinglePiece(angleId, planIndex) {
+    const angle = this.angles.find(a => a.id === angleId) || this.defaultAngles.find(a => a.id === angleId);
+    if (!angle || !angle.content_plan || !angle.content_plan[planIndex]) return;
+
+    const planItem = angle.content_plan[planIndex];
+    this.activeAngle = angle;
+    localStorage.setItem('pr_active_angle', JSON.stringify(angle));
+
+    // Set context for this specific piece
+    const contentTypeDropdown = document.getElementById('pr-content-type');
+    if (contentTypeDropdown) {
+      contentTypeDropdown.value = planItem.type;
+      contentTypeDropdown.dispatchEvent(new Event('change'));
+    }
+
+    this.prAgent.angleContext = {
+      narrative: angle.narrative,
+      target: planItem.target || '',
+      description: planItem.description || ''
+    };
+
+    // Select the angle card
+    document.querySelectorAll('.pr-angle-card').forEach(card => {
+      card.classList.toggle('selected', card.dataset.angleId === angleId);
+    });
+
+    // Open a tab named after the content type
+    const tabLabel = this.formatContentType(planItem.type);
+    this.openAngleTab(angle, planIndex, tabLabel);
+
+    this.updateTracker();
+
+    // Trigger content generation
     const generateBtn = document.getElementById('pr-generate-btn');
     if (generateBtn && !generateBtn.disabled) {
       generateBtn.click();
     }
 
-    this.prAgent.showToast(`Creating content for: ${angle.title}`, 'success');
+    this.prAgent.showToast(`Generating: ${tabLabel}`, 'success');
   }
 
-  openAngleTab(angle) {
+  async generateAllPieces(angleId) {
+    const angle = this.angles.find(a => a.id === angleId) || this.defaultAngles.find(a => a.id === angleId);
+    if (!angle || !angle.content_plan || angle.content_plan.length === 0) return;
+
+    this.activeAngle = angle;
+    localStorage.setItem('pr_active_angle', JSON.stringify(angle));
+
+    // Select the angle card
+    document.querySelectorAll('.pr-angle-card').forEach(card => {
+      card.classList.toggle('selected', card.dataset.angleId === angleId);
+    });
+
+    this.updateTracker();
+
+    const pieceCount = angle.content_plan.length;
+    this.prAgent.showToast(`Generating all ${pieceCount} pieces in parallel...`, 'success');
+
+    // Generate each piece with a small stagger so the UI can set context per piece
+    for (let i = 0; i < pieceCount; i++) {
+      const planItem = angle.content_plan[i];
+      const tabLabel = this.formatContentType(planItem.type);
+
+      // Open a tab for this piece
+      this.openAngleTab(angle, i, tabLabel);
+
+      // Set context and trigger generation
+      const contentTypeDropdown = document.getElementById('pr-content-type');
+      if (contentTypeDropdown) {
+        contentTypeDropdown.value = planItem.type;
+        contentTypeDropdown.dispatchEvent(new Event('change'));
+      }
+
+      this.prAgent.angleContext = {
+        narrative: angle.narrative,
+        target: planItem.target || '',
+        description: planItem.description || ''
+      };
+
+      // Trigger generation
+      const generateBtn = document.getElementById('pr-generate-btn');
+      if (generateBtn && !generateBtn.disabled) {
+        generateBtn.click();
+      }
+
+      // Small stagger between pieces so each request fires
+      if (i < pieceCount - 1) {
+        await new Promise(r => setTimeout(r, 300));
+      }
+    }
+  }
+
+  openAngleTab(angle, planIndex = 0, label = null) {
     const tabsContainer = document.getElementById('pr-angle-tabs');
     if (!tabsContainer) return;
 
     // Show tabs container
     tabsContainer.style.display = 'flex';
 
+    // Use a unique tab ID combining angle ID and plan index
+    const tabId = `${angle.id}_${planIndex}`;
+    const displayLabel = label || angle.title;
+    const shortLabel = displayLabel.length > 25 ? displayLabel.substring(0, 25) + '...' : displayLabel;
+
     // Check if tab already exists
-    const existingTab = tabsContainer.querySelector(`[data-angle-id="${angle.id}"]`);
+    const existingTab = tabsContainer.querySelector(`[data-tab-id="${tabId}"]`);
     if (existingTab) {
-      // Switch to existing tab
-      this.switchAngleTab(angle.id);
+      this.switchAngleTab(tabId);
       return;
     }
 
     // Create new tab
     const tab = document.createElement('button');
     tab.className = 'pr-angle-tab active';
+    tab.dataset.tabId = tabId;
     tab.dataset.angleId = angle.id;
-    const shortTitle = angle.title.length > 25 ? angle.title.substring(0, 25) + '...' : angle.title;
-    tab.innerHTML = `<span>${shortTitle}</span><span class="pr-angle-tab-close" data-angle-id="${angle.id}">&times;</span>`;
+    tab.dataset.planIndex = planIndex;
+    tab.innerHTML = `<span>${shortLabel}</span><span class="pr-angle-tab-close" data-tab-id="${tabId}">&times;</span>`;
 
     // Deactivate other tabs
     tabsContainer.querySelectorAll('.pr-angle-tab').forEach(t => t.classList.remove('active'));
@@ -5443,21 +5536,28 @@ class AngleManager {
     // Tab click handler
     tab.addEventListener('click', (e) => {
       if (e.target.closest('.pr-angle-tab-close')) {
-        this.closeAngleTab(angle.id);
+        this.closeAngleTab(tabId);
         return;
       }
-      this.switchAngleTab(angle.id);
+      this.switchAngleTab(tabId);
     });
   }
 
-  switchAngleTab(angleId) {
+  switchAngleTab(tabId) {
     const tabsContainer = document.getElementById('pr-angle-tabs');
     if (!tabsContainer) return;
 
     // Update tab active states
     tabsContainer.querySelectorAll('.pr-angle-tab').forEach(t => {
-      t.classList.toggle('active', t.dataset.angleId === angleId);
+      t.classList.toggle('active', t.dataset.tabId === tabId);
     });
+
+    // Get the angle from the tab
+    const activeTab = tabsContainer.querySelector(`[data-tab-id="${tabId}"]`);
+    if (!activeTab) return;
+
+    const angleId = activeTab.dataset.angleId;
+    const planIndex = parseInt(activeTab.dataset.planIndex, 10);
 
     // Update angle card selection in left panel
     document.querySelectorAll('.pr-angle-card').forEach(card => {
@@ -5469,23 +5569,36 @@ class AngleManager {
     if (angle) {
       this.activeAngle = angle;
       localStorage.setItem('pr_active_angle', JSON.stringify(angle));
+
+      const planItem = angle.content_plan?.[planIndex];
       this.prAgent.angleContext = {
         narrative: angle.narrative,
-        target: '',
-        description: ''
+        target: planItem?.target || '',
+        description: planItem?.description || ''
       };
+
+      // Update content type dropdown to match this tab's piece
+      if (planItem) {
+        const contentTypeDropdown = document.getElementById('pr-content-type');
+        if (contentTypeDropdown) {
+          contentTypeDropdown.value = planItem.type;
+          contentTypeDropdown.dispatchEvent(new Event('change'));
+        }
+      }
+
       this.updateTracker();
     }
   }
 
-  closeAngleTab(angleId) {
+  closeAngleTab(tabId) {
     const tabsContainer = document.getElementById('pr-angle-tabs');
     if (!tabsContainer) return;
 
-    const tab = tabsContainer.querySelector(`[data-angle-id="${angleId}"]`);
+    const tab = tabsContainer.querySelector(`[data-tab-id="${tabId}"]`);
     if (!tab) return;
 
     const wasActive = tab.classList.contains('active');
+    const angleId = tab.dataset.angleId;
     tab.remove();
 
     // If closed tab was active, switch to another
@@ -5493,17 +5606,19 @@ class AngleManager {
       const remaining = tabsContainer.querySelectorAll('.pr-angle-tab');
       if (remaining.length > 0) {
         const nextTab = remaining[remaining.length - 1];
-        this.switchAngleTab(nextTab.dataset.angleId);
+        this.switchAngleTab(nextTab.dataset.tabId);
       } else {
-        // No tabs left
         tabsContainer.style.display = 'none';
         this.activeAngle = null;
       }
     }
 
-    // Deselect card in left panel
-    const card = document.querySelector(`.pr-angle-card[data-angle-id="${angleId}"]`);
-    if (card) card.classList.remove('selected');
+    // Deselect card if no tabs remain for this angle
+    const remainingForAngle = tabsContainer.querySelectorAll(`[data-angle-id="${angleId}"]`);
+    if (remainingForAngle.length === 0) {
+      const card = document.querySelector(`.pr-angle-card[data-angle-id="${angleId}"]`);
+      if (card) card.classList.remove('selected');
+    }
   }
 
   trackContentCreation(contentType) {
