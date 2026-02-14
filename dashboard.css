@@ -11250,12 +11250,13 @@ a.dropdown-item {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   width: 56px;
   min-width: 56px;
   background: var(--bg-card);
   border-right: 1px solid var(--border-color);
   padding: var(--space-3) 0;
-  gap: var(--space-1);
+  gap: var(--space-2);
   flex-shrink: 0;
   z-index: 10;
 }
@@ -11301,7 +11302,7 @@ a.dropdown-item {
 }
 
 .pr-nav-spacer {
-  flex: 1;
+  display: none;
 }
 
 /* Sources badge in nav rail */
@@ -11324,6 +11325,7 @@ a.dropdown-item {
 }
 
 .pr-nav-sources {
+  margin-top: auto;
   margin-bottom: var(--space-2);
 }
 
@@ -14710,8 +14712,8 @@ svg.spinning,
 .pr-news-items {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-4);
-  padding: var(--space-2);
+  gap: var(--space-6);
+  padding: var(--space-5);
 }
 
 @media (max-width: 768px) {
@@ -14724,11 +14726,11 @@ svg.spinning,
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: var(--space-4);
+  padding: var(--space-5);
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
   height: fit-content;
 }
 
@@ -14751,11 +14753,11 @@ svg.spinning,
 
 .pr-news-headline {
   flex: 1;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
   text-decoration: none;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .pr-news-headline:hover {
@@ -14838,6 +14840,10 @@ svg.spinning,
   color: var(--text-secondary);
   line-height: 1.5;
   margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* Legacy angle label/text - kept for compatibility */
@@ -14858,8 +14864,10 @@ svg.spinning,
 }
 
 .pr-use-hook-btn {
-  width: 100%;
-  justify-content: center;
+  align-self: flex-end;
+  width: auto;
+  padding: 6px 16px;
+  font-size: 13px;
   gap: var(--space-2);
   margin-top: auto;
 }
@@ -16650,7 +16658,8 @@ body.pr-resizing * {
 .pr-news-hooks-toolbar {
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 12px;
+  padding: var(--space-5) var(--space-5) var(--space-4);
 }
 
 .pr-news-hooks-controls {
