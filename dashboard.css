@@ -13383,6 +13383,7 @@ svg.spinning,
   flex-direction: column;
   overflow: visible;
   min-height: 0;
+  position: relative;
 }
 
 /* Empty state */
@@ -13507,23 +13508,6 @@ svg.spinning,
   to { transform: rotate(360deg); }
 }
 
-.pr-progress-bar-container {
-  width: 200px;
-  height: 3px;
-  background: var(--border-color);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: var(--space-2);
-}
-
-.pr-progress-bar {
-  height: 100%;
-  background: var(--accent-green);
-  width: 0%;
-  transition: width 0.3s ease;
-  border-radius: 2px;
-}
-
 /* Generated content */
 .pr-workspace-generated {
   position: relative;
@@ -13608,26 +13592,25 @@ svg.spinning,
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(26, 26, 26, 0.85);
-  backdrop-filter: blur(4px);
+  background: var(--bg-primary, #141414);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 50;
-  border-radius: var(--radius-md);
 }
 
 .pr-refining-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .pr-refining-text {
-  color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
 }
 
 .pr-loading-spinner {

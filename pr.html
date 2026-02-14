@@ -270,22 +270,19 @@
               <div class="pr-loading-state" id="pr-loading-state" style="display:none">
                 <img src="assets/glossi-logo.svg" class="glossi-loader" alt="Loading" />
                 <p>Generating content...</p>
-                <div class="pr-progress-bar-container">
-                  <div class="pr-progress-bar" id="pr-progress-bar"></div>
-                </div>
               </div>
 
               <!-- Generated content (inline editable) -->
               <div class="pr-workspace-generated" id="pr-workspace-generated" style="display:none">
                 <div class="pr-generated-content" id="pr-generated-content" contenteditable="true" spellcheck="true"></div>
                 <div class="pr-suggestions" id="pr-suggestions"></div>
-                
-                <!-- Refining overlay -->
-                <div class="pr-refining-overlay" id="pr-refining-overlay" style="display:none">
-                  <div class="pr-refining-content">
-                    <img src="assets/glossi-logo.svg" class="glossi-loader glossi-loader-sm" alt="Loading" />
-                    <span class="pr-refining-text">Refining...</span>
-                  </div>
+              </div>
+
+              <!-- Refining overlay (covers full workspace area) -->
+              <div class="pr-refining-overlay" id="pr-refining-overlay" style="display:none">
+                <div class="pr-refining-content">
+                  <img src="assets/glossi-logo.svg" class="glossi-loader" alt="Loading" />
+                  <span class="pr-refining-text">Refining...</span>
                 </div>
               </div>
             </div>

@@ -484,6 +484,13 @@ class PRAgent {
         this.sources = [];
       }
     }
+
+    // Clean up auto-added news hook sources (one-time migration)
+    const beforeCount = this.sources.length;
+    this.sources = this.sources.filter(s => !s.id || !s.id.startsWith('src_news_'));
+    if (this.sources.length < beforeCount) {
+      this.saveSources();
+    }
     
     // Load outputs from API
     try {
@@ -2258,39 +2265,12 @@ class PRAgent {
     this.stopProgressBar();
   }
   
-  startProgressBar() {
-    const progressBar = document.getElementById('pr-progress-bar');
-    if (!progressBar) return;
-    
-    // Reset
-    progressBar.style.width = '0%';
-    
-    // Simulate progress over ~90 seconds (typical generation time)
-    let progress = 0;
-    this.progressInterval = setInterval(() => {
-      // Slow down as it gets closer to 95%
-      const increment = progress < 50 ? 1.5 : progress < 80 ? 0.8 : 0.3;
-      progress = Math.min(95, progress + increment);
-      progressBar.style.width = progress + '%';
-      
-      if (progress >= 95) {
-        clearInterval(this.progressInterval);
-      }
-    }, 1000);
-  }
+  startProgressBar() {}
   
   stopProgressBar() {
-    const progressBar = document.getElementById('pr-progress-bar');
     if (this.progressInterval) {
       clearInterval(this.progressInterval);
       this.progressInterval = null;
-    }
-    if (progressBar) {
-      // Complete the progress bar
-      progressBar.style.width = '100%';
-      setTimeout(() => {
-        progressBar.style.width = '0%';
-      }, 500);
     }
   }
 
@@ -3098,20 +3078,6 @@ Return ONLY the JSON array, nothing else.`;
       `;
     }
     
-    // Attach click handlers to suggestion buttons
-    this.attachSuggestionHandlers();
-  }
-  
-  attachSuggestionHandlers() {
-    const buttons = document.querySelectorAll('.pr-suggestion-btn');
-    buttons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const suggestion = btn.getAttribute('data-suggestion');
-        if (suggestion) {
-          this.applySuggestion(suggestion);
-        }
-      });
-    });
   }
   
   async applySuggestion(suggestion) {
@@ -4874,7 +4840,6 @@ class NewsMonitor {
           Creating...
         `;
 
-        this.useAsHook(newsItem, null);
         await this.launchCreateWorkspace(newsItem);
 
         btn.disabled = false;
