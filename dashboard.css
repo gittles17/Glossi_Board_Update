@@ -11731,10 +11731,8 @@ a.dropdown-item {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   line-height: 1.3;
+  word-break: break-word;
 }
 
 

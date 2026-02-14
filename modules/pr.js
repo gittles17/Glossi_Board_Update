@@ -2994,6 +2994,11 @@ Apply the requested refinement and return ONLY the complete refined content (no 
         timestamp: Date.now(),
         prompt: message
       });
+
+      // Keep only the latest 10 drafts
+      if (this.currentOutput.drafts.length > 10) {
+        this.currentOutput.drafts = this.currentOutput.drafts.slice(0, 10);
+      }
       
       // Render updated drafts
       this.renderDrafts();
@@ -3106,11 +3111,8 @@ Return ONLY the JSON array, nothing else.`;
   
   async applySuggestion(suggestion) {
     const chatInput = document.getElementById('pr-chat-input');
-    if (chatInput) {
-      chatInput.value = suggestion;
-      // Trigger the refinement
-      this.refineContent(suggestion);
-    }
+    if (chatInput) chatInput.value = suggestion;
+    await this.sendChatMessage();
   }
 
   escapeHtml(text) {
