@@ -2270,6 +2270,12 @@ class PRAgent {
     const container = this.dom.generatedContent;
     const drafts = this.currentOutput.drafts;
     
+    // Update compact drafts title with count
+    const draftsTitle = document.getElementById('pr-drafts-title');
+    if (draftsTitle) {
+      draftsTitle.textContent = drafts.length > 1 ? `Drafts (${drafts.length})` : 'Drafts';
+    }
+    
     container.innerHTML = drafts.map((draft, index) => {
       const isLatest = index === 0;
       const timeAgo = this.formatTimeAgo(draft.timestamp);
@@ -4287,11 +4293,17 @@ class NewsMonitor {
       dateRange: 60, // Default: last 60 days
       outlets: [] // Empty = all outlets
     };
+
+    // Multi-story workspace state
+    this._stories = new Map();
+    this._activeStoryKey = null;
   }
 
   async init() {
     this.setupDOM();
     this.setupEventListeners();
+    this.setupStorySelector();
+    this.setupLeftPanelToggles();
     await this.loadCachedNews();
   }
 
@@ -4818,17 +4830,170 @@ class NewsMonitor {
     });
   }
 
-  async launchCreateWorkspace(newsItem) {
-    // Switch to Create tab
-    const createTab = document.querySelector('.pr-nav-item[data-stage="create"]');
-    if (createTab) {
-      createTab.click();
+  // =========================================
+  // MULTI-STORY WORKSPACE
+  // =========================================
+
+  getStoryKey(newsItem) {
+    return newsItem.url || newsItem.headline || `story_${Date.now()}`;
+  }
+
+  saveCurrentStoryState() {
+    if (!this._activeStoryKey || !this._stories.has(this._activeStoryKey)) return;
+    const story = this._stories.get(this._activeStoryKey);
+    story.tabContent = this._tabContent ? new Map(this._tabContent) : new Map();
+    story.activeTabId = this._activeTabId;
+    story.currentOutput = this.prAgent.currentOutput;
+    // Save chat messages from DOM
+    const chatArea = document.getElementById('pr-chat-area');
+    if (chatArea) story.chatHTML = chatArea.innerHTML;
+    const suggestionsEl = document.getElementById('pr-suggestions');
+    if (suggestionsEl) story.suggestionsHTML = suggestionsEl.innerHTML;
+  }
+
+  restoreStoryState(key) {
+    const story = this._stories.get(key);
+    if (!story) return;
+
+    this._activeStoryKey = key;
+    this._activeNewsItem = story.newsItem;
+    this._activeContentPlan = story.contentPlan;
+    this._tabContent = story.tabContent || new Map();
+    this._activeTabId = story.activeTabId;
+
+    // Restore left panel
+    this.populateLeftPanel(story.newsItem);
+
+    // Restore content plan tabs
+    this.renderContentPlanTabs(story.contentPlan);
+
+    // Restore active tab content via switchContentTab (handles visuals + content)
+    if (story.activeTabId) {
+      this.switchContentTab(story.activeTabId);
+    } else if (story.currentOutput) {
+      this.prAgent.currentOutput = story.currentOutput;
+      this.prAgent.renderGeneratedContent(story.currentOutput);
+      this.prAgent.showWorkspace();
     }
 
-    // Wait for tab switch
-    await new Promise(resolve => setTimeout(resolve, 150));
+    // Restore chat/suggestions
+    const chatSection = document.getElementById('pr-chat-section');
+    const chatArea = document.getElementById('pr-chat-area');
+    if (chatArea && story.chatHTML) chatArea.innerHTML = story.chatHTML;
+    const suggestionsEl = document.getElementById('pr-suggestions');
+    if (suggestionsEl && story.suggestionsHTML) suggestionsEl.innerHTML = story.suggestionsHTML;
+    if (chatSection && (story.chatHTML || story.suggestionsHTML)) chatSection.style.display = '';
 
-    // Populate left panel: angle context
+    // Set angle context
+    this.prAgent.angleContext = {
+      narrative: story.newsItem.angle_narrative || story.newsItem.relevance || story.newsItem.summary || '',
+      target: story.contentPlan[0]?.target || '',
+      description: story.contentPlan[0]?.description || ''
+    };
+
+    this.renderStorySelector();
+  }
+
+  switchToStory(key) {
+    if (key === this._activeStoryKey) return;
+    this.saveCurrentStoryState();
+    this.restoreStoryState(key);
+  }
+
+  closeStory(key) {
+    this._stories.delete(key);
+    if (this._activeStoryKey === key) {
+      // Switch to next available story or show empty
+      const keys = [...this._stories.keys()];
+      if (keys.length > 0) {
+        this.restoreStoryState(keys[0]);
+      } else {
+        this._activeStoryKey = null;
+        this._activeNewsItem = null;
+        this._tabContent = new Map();
+        this._activeTabId = null;
+        this.prAgent.currentOutput = null;
+        // Reset UI to empty state
+        const tabsEl = document.getElementById('pr-content-tabs');
+        if (tabsEl) { tabsEl.style.display = 'none'; tabsEl.innerHTML = ''; }
+        if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
+        if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
+        const chatSection = document.getElementById('pr-chat-section');
+        if (chatSection) chatSection.style.display = 'none';
+        this.renderStorySelector();
+      }
+    } else {
+      this.renderStorySelector();
+    }
+  }
+
+  renderStorySelector() {
+    const selector = document.getElementById('pr-story-selector');
+    const label = document.getElementById('pr-story-selector-label');
+    const menu = document.getElementById('pr-story-selector-menu');
+    if (!selector) return;
+
+    if (this._stories.size === 0) {
+      selector.style.display = 'none';
+      return;
+    }
+
+    selector.style.display = 'flex';
+    const activeStory = this._stories.get(this._activeStoryKey);
+    if (label && activeStory) {
+      const headline = activeStory.newsItem.headline || 'Untitled';
+      label.textContent = headline.length > 50 ? headline.substring(0, 50) + '...' : headline;
+    }
+
+    if (menu) {
+      menu.innerHTML = [...this._stories.entries()].map(([key, story]) => {
+        const headline = story.newsItem.headline || 'Untitled';
+        const truncated = headline.length > 45 ? headline.substring(0, 45) + '...' : headline;
+        const isActive = key === this._activeStoryKey;
+        return `
+          <div class="pr-story-item ${isActive ? 'active' : ''}" data-story-key="${this.escapeHtml(key)}">
+            <span class="pr-story-item-label">${this.escapeHtml(truncated)}</span>
+            <button class="pr-story-item-close" data-story-close="${this.escapeHtml(key)}" title="Close story">
+              <i class="ph-light ph-x"></i>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  setupStorySelector() {
+    const trigger = document.getElementById('pr-story-selector-trigger');
+    const menu = document.getElementById('pr-story-selector-menu');
+    if (!trigger || !menu) return;
+
+    trigger.addEventListener('click', () => {
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    });
+
+    menu.addEventListener('click', (e) => {
+      const closeBtn = e.target.closest('[data-story-close]');
+      if (closeBtn) {
+        e.stopPropagation();
+        this.closeStory(closeBtn.dataset.storyClose);
+        return;
+      }
+      const item = e.target.closest('.pr-story-item');
+      if (item) {
+        this.switchToStory(item.dataset.storyKey);
+        menu.style.display = 'none';
+      }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.pr-story-selector')) {
+        menu.style.display = 'none';
+      }
+    });
+  }
+
+  populateLeftPanel(newsItem) {
     const angleContext = document.getElementById('pr-angle-context');
     if (angleContext) {
       const title = newsItem.angle_title || '';
@@ -4841,7 +5006,6 @@ class NewsMonitor {
       `;
     }
 
-    // Populate left panel: source reference
     const sourceRefSection = document.getElementById('pr-source-ref-section');
     const sourceRef = document.getElementById('pr-source-ref');
     if (sourceRefSection && sourceRef) {
@@ -4857,6 +5021,43 @@ class NewsMonitor {
         </div>
       `;
     }
+  }
+
+  setupLeftPanelToggles() {
+    document.querySelectorAll('.pr-left-section-toggle').forEach(header => {
+      header.addEventListener('click', () => {
+        const section = header.closest('.pr-left-collapsible');
+        if (section) section.classList.toggle('collapsed');
+      });
+    });
+  }
+
+  async launchCreateWorkspace(newsItem) {
+    const key = this.getStoryKey(newsItem);
+
+    // If story already exists, just switch to it
+    if (this._stories.has(key)) {
+      const createTab = document.querySelector('.pr-nav-item[data-stage="create"]');
+      if (createTab) createTab.click();
+      await new Promise(resolve => setTimeout(resolve, 150));
+      this.switchToStory(key);
+      return;
+    }
+
+    // Save current story state before switching
+    this.saveCurrentStoryState();
+
+    // Switch to Create tab
+    const createTab = document.querySelector('.pr-nav-item[data-stage="create"]');
+    if (createTab) {
+      createTab.click();
+    }
+
+    // Wait for tab switch
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Populate left panel
+    this.populateLeftPanel(newsItem);
 
     // Build content plan tabs
     let contentPlan = newsItem.content_plan;
@@ -4879,8 +5080,21 @@ class NewsMonitor {
     this._activeContentPlan = contentPlan;
     this._tabContent = new Map();
     this._activeTabId = null;
+    this._activeStoryKey = key;
 
-    // Render content plan tabs
+    // Create the story entry
+    this._stories.set(key, {
+      newsItem,
+      contentPlan,
+      tabContent: new Map(),
+      activeTabId: null,
+      currentOutput: null,
+      chatHTML: '',
+      suggestionsHTML: ''
+    });
+
+    // Render story selector and content plan tabs
+    this.renderStorySelector();
     this.renderContentPlanTabs(contentPlan);
 
     // Set angle context on PRAgent for content generation

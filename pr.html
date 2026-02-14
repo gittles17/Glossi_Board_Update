@@ -162,31 +162,40 @@
           <div class="pr-create-left">
             
             <!-- Angle Context Section -->
-            <div class="pr-workflow-section pr-angle-context-section">
-              <div class="pr-workflow-header">
+            <div class="pr-workflow-section pr-angle-context-section pr-left-collapsible">
+              <div class="pr-workflow-header pr-left-section-toggle" data-target="pr-angle-context">
+                <i class="ph-light ph-caret-down pr-left-chevron"></i>
                 <h2 class="pr-workflow-title">Story Angle</h2>
               </div>
-              <div class="pr-angle-context" id="pr-angle-context">
-                <div class="pr-angle-context-empty">
-                  <p>Click "Create Content" on a news card to get started.</p>
+              <div class="pr-left-section-body" id="pr-angle-context-body">
+                <div class="pr-angle-context" id="pr-angle-context">
+                  <div class="pr-angle-context-empty">
+                    <p>Click "Create Content" on a news card to get started.</p>
+                  </div>
                 </div>
               </div>
             </div>
 
             <!-- News Source Reference -->
-            <div class="pr-workflow-section pr-source-ref-section" id="pr-source-ref-section" style="display:none">
-              <div class="pr-workflow-header">
+            <div class="pr-workflow-section pr-source-ref-section pr-left-collapsible" id="pr-source-ref-section" style="display:none">
+              <div class="pr-workflow-header pr-left-section-toggle" data-target="pr-source-ref">
+                <i class="ph-light ph-caret-down pr-left-chevron"></i>
                 <h2 class="pr-workflow-title">Source</h2>
               </div>
-              <div class="pr-source-ref" id="pr-source-ref"></div>
+              <div class="pr-left-section-body" id="pr-source-ref-body">
+                <div class="pr-source-ref" id="pr-source-ref"></div>
+              </div>
             </div>
 
             <!-- Version History -->
-            <div class="pr-workflow-section pr-version-section" id="pr-version-section" style="display:none">
-              <div class="pr-workflow-header">
+            <div class="pr-workflow-section pr-version-section pr-left-collapsible" id="pr-version-section" style="display:none">
+              <div class="pr-workflow-header pr-left-section-toggle" data-target="pr-version">
+                <i class="ph-light ph-caret-down pr-left-chevron"></i>
                 <h2 class="pr-workflow-title">Versions</h2>
               </div>
-              <div class="pr-version-list" id="pr-version-list"></div>
+              <div class="pr-left-section-body" id="pr-version-body">
+                <div class="pr-version-list" id="pr-version-list"></div>
+              </div>
             </div>
 
             <!-- Legacy: hidden angle manager elements for backward compat -->
@@ -200,6 +209,15 @@
 
           <!-- Right Panel (2/3): Workspace -->
           <div class="pr-create-right">
+
+            <!-- Story Selector -->
+            <div class="pr-story-selector" id="pr-story-selector" style="display:none">
+              <button class="pr-story-selector-trigger" id="pr-story-selector-trigger">
+                <span class="pr-story-selector-label" id="pr-story-selector-label">Select story...</span>
+                <i class="ph-light ph-caret-down"></i>
+              </button>
+              <div class="pr-story-selector-menu" id="pr-story-selector-menu" style="display:none"></div>
+            </div>
 
             <!-- Content Plan Tabs -->
             <div class="pr-content-tabs" id="pr-content-tabs" style="display:none"></div>
@@ -277,10 +295,9 @@
               <!-- Generated content (inline editable) -->
               <div class="pr-workspace-generated" id="pr-workspace-generated" style="display:none">
                 <div class="pr-drafts-header">
-                  <span class="pr-drafts-title">Drafts</span>
+                  <span class="pr-drafts-title" id="pr-drafts-title">Drafts</span>
                   <button class="pr-clear-drafts-btn" id="pr-clear-drafts-btn" title="Clear old drafts">
                     <i class="ph-light ph-trash"></i>
-                    Clear old drafts
                   </button>
                 </div>
                 <div class="pr-generated-content" id="pr-generated-content" contenteditable="true" spellcheck="true"></div>
