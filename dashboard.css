@@ -11700,16 +11700,16 @@ a.dropdown-item {
 }
 
 .pr-file-tree-header.active {
-  background: rgba(var(--accent-primary-rgb, 99, 102, 241), 0.18);
-  border-left-color: var(--accent-primary, #6366f1);
+  background: transparent;
+  border-left-color: transparent;
 }
 
 .pr-file-tree-header.active .pr-file-tree-label {
-  color: var(--accent-primary, #6366f1);
+  color: #fff;
 }
 
 .pr-file-tree-header.active .pr-file-tree-chevron {
-  color: var(--accent-primary, #6366f1);
+  color: var(--text-secondary);
 }
 
 .pr-file-tree-chevron {
@@ -11794,8 +11794,8 @@ a.dropdown-item {
 }
 
 .pr-file-tree-leaf.active {
-  background: rgba(var(--accent-primary-rgb, 99, 102, 241), 0.1);
-  color: var(--text-primary);
+  background: transparent;
+  color: var(--accent-primary, #6366f1);
   font-weight: 500;
 }
 
