@@ -4,6 +4,26 @@
  */
 
 /* ============================================
+   PHOSPHOR ICONS - BASE SIZING
+   ============================================ */
+i[class*="ph-"] {
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* Context sizes */
+.pr-nav-rail i[class*="ph-"] { font-size: 20px; }
+.top-nav i[class*="ph-"] { font-size: 18px; }
+.pr-news-hooks-toolbar i[class*="ph-"] { font-size: 14px; }
+.pr-filter-btn i[class*="ph-"] { font-size: 12px; }
+.pr-news-angle-row i[class*="ph-"] { font-size: 14px; }
+.pr-create-content-btn i[class*="ph-"] { font-size: 16px; }
+.btn-sm i[class*="ph-"] { font-size: 14px; }
+.btn i[class*="ph-"] { font-size: 16px; }
+.modal-close i[class*="ph-"],
+.pr-sources-drawer-close i[class*="ph-"] { font-size: 16px; }
+
+/* ============================================
    CSS CUSTOM PROPERTIES - AURIS DESIGN TOKENS
    ============================================ */
 :root {
@@ -11357,9 +11377,8 @@ a.dropdown-item {
   overflow-y: auto;
   overflow-x: hidden;
   width: 100% !important;
-  max-width: 1400px !important;
   min-width: 0 !important;
-  margin: 0 auto !important;
+  margin: 0 !important;
   padding: var(--space-6);
 }
 
@@ -11373,10 +11392,9 @@ a.dropdown-item {
 .pr-right-panel.pr-stage-content {
   width: 100% !important;
   min-width: 0 !important;
-  max-width: 1400px !important;
   flex: 1 !important;
   flex-basis: auto !important;
-  margin: 0 auto !important;
+  margin: 0 !important;
 }
 
 /* Old mobile tabs - hidden in favor of stage tabs */
@@ -14749,6 +14767,8 @@ svg.spinning,
   flex-direction: column;
   gap: 0;
   height: fit-content;
+  min-width: 0;
+  overflow-wrap: break-word;
   transition: border-color 0.15s ease;
 }
 
@@ -14847,23 +14867,27 @@ svg.spinning,
   transition: color 0.15s ease;
 }
 
-/* Create button inline with angle title */
+/* Create button (lightning icon) inline with angle title */
 .pr-create-content-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary);
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 0;
+  color: var(--text-secondary);
   background: var(--surface-hover);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  white-space: nowrap;
   flex-shrink: 0;
   margin-left: auto;
   transition: all 0.15s ease;
+}
+
+.pr-create-content-btn i[class*="ph-"] {
+  font-size: 16px;
 }
 
 .pr-create-content-btn:hover {

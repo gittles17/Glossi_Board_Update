@@ -198,10 +198,7 @@ class PRAgent {
       editBtn.className = 'pr-create-folder-btn';
       editBtn.title = 'Edit Foundation';
       editBtn.innerHTML = `
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-        </svg>
+        <i class="ph-light ph-pencil-simple"></i>
       `;
       editBtn.addEventListener('click', () => this.wizard.open(true));
       
@@ -335,9 +332,7 @@ class PRAgent {
     const indicator = document.createElement('div');
     indicator.className = 'pr-save-indicator';
     indicator.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
+      <i class="ph-light ph-check"></i>
       <span>Saved to Library</span>
     `;
     document.body.appendChild(indicator);
@@ -1318,17 +1313,11 @@ class PRAgent {
     menu.style.top = e.pageY + 'px';
     menu.innerHTML = `
       <button class="pr-context-menu-item" data-action="rename">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-        </svg>
+        <i class="ph-light ph-pencil-simple"></i>
         Rename
       </button>
       <button class="pr-context-menu-item" data-action="delete">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="3 6 5 6 21 6"></polyline>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-        </svg>
+        <i class="ph-light ph-trash"></i>
         Delete
       </button>
     `;
@@ -1370,10 +1359,10 @@ class PRAgent {
     if (this.dom.sourcesEmpty) this.dom.sourcesEmpty.style.display = 'none';
 
     const typeIcons = {
-      text: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>',
-      url: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>',
-      file: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>',
-      audio: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line></svg>'
+      text: '<i class="ph-light ph-file-text"></i>',
+      url: '<i class="ph-light ph-link"></i>',
+      file: '<i class="ph-light ph-file"></i>',
+      audio: '<i class="ph-light ph-microphone"></i>'
     };
 
     const renderSourceItem = (source) => {
@@ -1405,10 +1394,7 @@ class PRAgent {
             </div>
           </div>
           <button class="pr-source-delete" data-action="delete" data-id="${source.id}" title="Delete source" ${source.loading ? 'disabled' : ''}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
+            <i class="ph-light ph-x"></i>
           </button>
         </div>`;
     };
@@ -1432,12 +1418,8 @@ class PRAgent {
       html += `
         <div class="pr-folder ${isExpanded ? 'expanded' : ''}" data-folder="${this.escapeHtml(folderName)}">
           <div class="pr-folder-header">
-            <svg class="pr-folder-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-            <svg class="pr-folder-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-            </svg>
+            <i class="ph-light ph-caret-right pr-folder-chevron"></i>
+            <i class="ph-light ph-folder pr-folder-icon"></i>
             <span class="pr-folder-name">${this.escapeHtml(folderName)}</span>
             <span class="pr-folder-count">${folderSources.length}</span>
           </div>
@@ -1449,7 +1431,7 @@ class PRAgent {
     });
     html += ungrouped.map(s => renderSourceItem(s)).join('');
 
-    const dropIndicator = '<div class="pr-drop-indicator" id="pr-drop-indicator"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg><span>Drop files here</span></div>';
+    const dropIndicator = '<div class="pr-drop-indicator" id="pr-drop-indicator"><i class="ph-light ph-upload-simple"></i><span>Drop files here</span></div>';
     this.dom.sourcesList.innerHTML = html + dropIndicator;
 
     this.dom.sourcesList.querySelectorAll('.pr-folder-header').forEach(header => {
@@ -1751,10 +1733,7 @@ class PRAgent {
               <span class="pr-history-piece-types">${this.escapeHtml(pieceTypes)}</span>
             </div>
             <button class="pr-history-delete" data-angle-delete="${entry.angleId}" title="Delete all pieces">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
+              <i class="ph-light ph-x"></i>
             </button>
           </div>`;
       } else {
@@ -1771,10 +1750,7 @@ class PRAgent {
               </span>
             </div>
             <button class="pr-history-delete" data-history-delete="${output.id}" title="Delete">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
+              <i class="ph-light ph-x"></i>
             </button>
           </div>`;
       }
@@ -1866,17 +1842,17 @@ class PRAgent {
     const configs = {
       edit: {
         label: 'Edit',
-        icon: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
+        icon: '<i class="ph-light ph-pencil-simple"></i>',
         color: '#f59e0b'
       },
       review: {
         label: 'Review',
-        icon: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+        icon: '<i class="ph-light ph-eye"></i>',
         color: '#3b82f6'
       },
       publish: {
         label: 'Publish',
-        icon: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+        icon: '<i class="ph-light ph-check"></i>',
         color: '#10b981'
       }
     };
@@ -3783,11 +3759,7 @@ class MediaManager {
               <div class="pr-outlet-card-title">
                 <span class="pr-outlet-name">${this.escapeHtml(outlet.name)}</span>
                 <a href="https://${outlet.url}" target="_blank" class="pr-outlet-url" title="Visit ${outlet.name}">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                    <polyline points="15 3 21 3 21 9"></polyline>
-                    <line x1="10" y1="14" x2="21" y2="3"></line>
-                  </svg>
+                  <i class="ph-light ph-arrow-square-out"></i>
                 </a>
               </div>
             </div>
@@ -3796,10 +3768,7 @@ class MediaManager {
             </div>
             <p class="pr-outlet-notes">${this.escapeHtml(outlet.notes)}</p>
             <button class="btn btn-sm btn-primary pr-find-journalists-btn" data-outlet="${this.escapeHtml(outlet.name)}" data-url="${outlet.url}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-              </svg>
+              <i class="ph-light ph-magnifying-glass"></i>
               Find Journalists
             </button>
           </div>
@@ -3877,10 +3846,7 @@ class MediaManager {
         <div class="modal-header">
           <h2>Journalists at ${this.escapeHtml(outletName)}</h2>
           <button class="btn-icon modal-close">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
+            <i class="ph-light ph-x"></i>
           </button>
         </div>
         <div class="modal-body">
@@ -3913,11 +3879,7 @@ class MediaManager {
                   </div>
                 ` : ''}
                 <button class="btn btn-primary pr-save-journalist-btn" data-journalist='${JSON.stringify(j).replace(/'/g, "&apos;")}'>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                    <polyline points="7 3 7 8 15 8"></polyline>
-                  </svg>
+                  <i class="ph-light ph-floppy-disk"></i>
                   Save to Media List
                 </button>
               </div>
@@ -4113,16 +4075,10 @@ class MediaManager {
                 <option value="covered" ${journalist.status === 'covered' ? 'selected' : ''}>Covered</option>
               </select>
               <button class="btn-icon" data-action="view" data-journalist-id="${journalist.id}" title="View details">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
+                <i class="ph-light ph-eye"></i>
               </button>
               <button class="btn-icon" data-action="delete" data-journalist-id="${journalist.id}" title="Delete">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
+                <i class="ph-light ph-trash"></i>
               </button>
             </div>
           </div>
@@ -4255,10 +4211,7 @@ class MediaManager {
         <div class="modal-header">
           <h2>${this.escapeHtml(journalist.name)}</h2>
           <button class="btn-icon modal-close">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
+            <i class="ph-light ph-x"></i>
           </button>
         </div>
         <div class="modal-body">
@@ -4467,7 +4420,7 @@ class NewsMonitor {
     } finally {
       if (this.dom.addUrlSubmit) {
         this.dom.addUrlSubmit.disabled = false;
-        this.dom.addUrlSubmit.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>';
+        this.dom.addUrlSubmit.innerHTML = '<i class="ph-light ph-paper-plane-tilt"></i>';
       }
       if (this.dom.addUrlInput) this.dom.addUrlInput.disabled = false;
     }
@@ -4781,16 +4734,10 @@ class NewsMonitor {
           ${showAngleRow ? `
           <div class="pr-news-angle">
             <div class="pr-news-angle-row">
-              <svg class="pr-angle-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
+              <i class="ph-light ph-caret-right pr-angle-chevron"></i>
               <span class="pr-news-angle-title">${this.escapeHtml(displayAngleTitle)}</span>
               <button class="pr-create-content-btn" data-news-index="${actualIndex}">
-                Create
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                  <polyline points="12 5 19 12 12 19"></polyline>
-                </svg>
+                <i class="ph-light ph-lightning"></i>
               </button>
             </div>
             ${displayAngleNarrative ? `
@@ -4802,11 +4749,7 @@ class NewsMonitor {
           ` : `
           <div class="pr-news-angle-row pr-news-angle-row-noangle">
             <button class="pr-create-content-btn" data-news-index="${actualIndex}">
-              Create Content
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-                <polyline points="12 5 19 12 12 19"></polyline>
-              </svg>
+              <i class="ph-light ph-lightning"></i>
             </button>
           </div>
           `}
@@ -5249,10 +5192,7 @@ ${newsItem.angle_narrative || newsItem.relevance || ''}
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = `
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
+          <i class="ph-light ph-plus"></i>
           Use as Hook
         `;
       }
@@ -5435,10 +5375,7 @@ class CalendarManager {
           <span class="pr-calendar-status-badge">${statusLabels[item.status] || item.status}</span>
         </div>
         <button class="pr-calendar-delete" data-item-id="${item.id}" title="Delete">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
     `;
@@ -5452,10 +5389,7 @@ class CalendarManager {
         <div class="modal-header">
           <h2>Add Calendar Item</h2>
           <button class="btn-icon modal-close">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
+            <i class="ph-light ph-x"></i>
           </button>
         </div>
         <div class="modal-body">
@@ -5853,9 +5787,7 @@ class AngleManager {
           <p class="pr-angle-why-now"><strong>Why now:</strong> ${this.escapeHtml(angle.why_now)}</p>
           
           <button class="pr-angle-expand-btn" data-angle-id="${angle.id}">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
+            <i class="ph-light ph-caret-down"></i>
             Content Plan (${angle.content_plan.length} pieces)
           </button>
           
@@ -5883,10 +5815,7 @@ class AngleManager {
           
           ${!angle.isDefault ? `
             <button class="btn-icon pr-delete-angle-btn" data-angle-id="${angle.id}" title="Delete angle">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
+              <i class="ph-light ph-trash"></i>
             </button>
           ` : ''}
         </div>
@@ -6416,10 +6345,7 @@ class AngleManager {
               </span>
             </div>
             <button class="pr-content-past-delete" data-angle-delete="${entry.angleId}" title="Delete all pieces">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
+              <i class="ph-light ph-x"></i>
             </button>
           </div>`;
       } else {
@@ -6436,10 +6362,7 @@ class AngleManager {
               </span>
             </div>
             <button class="pr-content-past-delete" data-history-delete="${output.id}" title="Delete">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
+              <i class="ph-light ph-x"></i>
             </button>
           </div>`;
       }

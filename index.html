@@ -17,6 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap"></noscript>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/light/style.css">
   <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
@@ -28,41 +29,24 @@
     <div class="nav-right">
       <div class="menu-container">
         <button class="btn-icon" id="menu-btn" title="Menu" aria-label="Open menu">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-list"></i>
         </button>
         <div class="dropdown-menu" id="dropdown-menu">
           <a href="notebook.html" class="dropdown-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-            </svg>
+            <i class="ph-light ph-book-open"></i>
             Notebook
           </a>
           <a href="pr.html" class="dropdown-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-            </svg>
+            <i class="ph-light ph-book-open"></i>
             PR
           </a>
           <div class="dropdown-divider"></div>
           <button class="dropdown-item" id="menu-share">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-              <polyline points="16 6 12 2 8 6"></polyline>
-              <line x1="12" y1="2" x2="12" y2="15"></line>
-            </svg>
+            <i class="ph-light ph-share-network"></i>
             Share
           </button>
           <button class="dropdown-item" id="menu-settings">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
-            </svg>
+            <i class="ph-light ph-gear"></i>
             Settings
           </button>
         </div>
@@ -84,10 +68,7 @@
         <span class="progress-percent" id="seed-percent">0%</span>
       </div>
       <button class="add-btn-small" id="add-investor-btn" title="Add Investor" aria-label="Add investor">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
+        <i class="ph-light ph-plus"></i>
       </button>
     </div>
     
@@ -156,11 +137,7 @@
       <div class="pipeline-sync-status">
         <span class="sync-time" id="pipeline-sync-time">Not synced</span>
         <button class="btn-icon btn-icon-sm" id="pipeline-refresh-btn" title="Refresh Pipeline" aria-label="Refresh pipeline">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M23 4v6h-6"></path>
-            <path d="M1 20v-6h6"></path>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-          </svg>
+          <i class="ph-light ph-arrows-clockwise"></i>
         </button>
       </div>
     </div>
@@ -192,10 +169,7 @@
         <h2>Week at a Glance</h2>
         <div class="header-controls">
           <button class="btn btn-icon btn-secondary" id="add-notes-btn" title="Add Notes" aria-label="Add notes">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
+            <i class="ph-light ph-plus"></i>
           </button>
         </div>
       </div>
@@ -211,9 +185,7 @@
                 <div class="section-header-row clickable" data-toggle="summary-content">
                   <div class="section-header-left">
                     <button class="collapse-toggle" aria-expanded="true" aria-label="Toggle Summary">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
+                      <i class="ph-light ph-caret-down"></i>
                     </button>
                     <h2 class="section-title-h4">Summary</h2>
                     <span class="item-count" id="summary-count"></span>
@@ -225,10 +197,7 @@
                       <!-- Populated by JS with past weeks -->
                     </select>
                     <button class="add-btn-small" id="add-summary-btn" title="Add summary point" aria-label="Add summary point">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                      </svg>
+                      <i class="ph-light ph-plus"></i>
                     </button>
                   </div>
                 </div>
@@ -244,18 +213,13 @@
                 <div class="section-header-row clickable" data-toggle="decisions-content">
                   <div class="section-header-left">
                     <button class="collapse-toggle" aria-expanded="true" aria-label="Toggle Key Decisions">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
+                      <i class="ph-light ph-caret-down"></i>
                     </button>
                     <h2 class="section-title-h4">Key Decisions</h2>
                     <span class="item-count" id="decisions-count"></span>
                   </div>
                   <button class="add-btn-small" id="add-decision-btn" title="Add decision" aria-label="Add decision">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
+                    <i class="ph-light ph-plus"></i>
                   </button>
                 </div>
                 <div class="section-content" id="decisions-content">
@@ -272,18 +236,13 @@
                 <div class="section-header-row clickable" data-toggle="actions-content">
                   <div class="section-header-left">
                     <button class="collapse-toggle" aria-expanded="true" aria-label="Toggle Action Items">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
+                      <i class="ph-light ph-caret-down"></i>
                     </button>
                     <h2 class="section-title-h4">Action Items</h2>
                   </div>
                   <div class="section-header-right">
                     <button class="add-btn-small" id="add-todo-btn" title="Add action item" aria-label="Add action item">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                      </svg>
+                      <i class="ph-light ph-plus"></i>
                     </button>
                     <span class="meeting-status" id="meeting-status">
                       <span id="todo-progress">0/0 complete</span>
@@ -308,10 +267,7 @@
           <div class="links-header">
             <h2 class="section-title-h4">Quick Links</h2>
             <button class="add-btn-small" id="add-section-btn" title="Add section" aria-label="Add section">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
+              <i class="ph-light ph-plus"></i>
             </button>
           </div>
           <div class="links-list" id="links-list">
@@ -330,10 +286,7 @@
       <div class="modal-header">
         <h2>Review Suggested Changes</h2>
         <button class="btn-icon modal-close" id="modal-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body" id="review-content">
@@ -356,10 +309,7 @@
       <div class="modal-header">
         <h2>Add Meeting Notes</h2>
         <button class="btn-icon modal-close" id="notes-modal-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body">
@@ -384,9 +334,7 @@
         <button class="btn btn-secondary" id="notes-cancel">Cancel</button>
         <button class="btn btn-secondary" id="notes-save-direct">Save as Notes</button>
         <button class="btn btn-primary" id="notes-process">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-          </svg>
+          <i class="ph-light ph-lightning"></i>
           Process with AI
         </button>
       </div>
@@ -399,10 +347,7 @@
       <div class="modal-header">
         <h2>Review Action Items</h2>
         <button class="btn-icon modal-close" id="todo-review-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body">
@@ -424,10 +369,7 @@
       <div class="modal-header">
         <h2>Settings</h2>
         <button class="btn-icon modal-close" id="settings-modal-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body">
@@ -488,10 +430,7 @@
       <div class="modal-header">
         <h2>Add Decision</h2>
         <button class="btn-icon modal-close" id="decision-modal-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body">
@@ -514,10 +453,7 @@
       <div class="modal-header">
         <h2 id="link-modal-title">Add Link</h2>
         <button class="btn-icon modal-close" id="link-modal-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body">
@@ -572,10 +508,7 @@
       <div class="modal-header">
         <h2 id="investor-modal-title">Add Investor</h2>
         <button class="btn-icon modal-close" id="investor-modal-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body">
@@ -615,10 +548,7 @@
       <div class="modal-header">
         <h2 id="unified-modal-title">Content Analysis</h2>
         <button class="btn-icon modal-close" id="content-action-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body unified-preview-body">
@@ -632,9 +562,7 @@
       <div class="modal-footer unified-preview-footer" id="unified-preview-footer" style="display: none;">
         <button class="btn btn-secondary" id="unified-cancel">Cancel</button>
         <button class="btn btn-primary" id="unified-apply-selected">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
+          <i class="ph-light ph-check"></i>
           Apply Selected
         </button>
       </div>
@@ -648,29 +576,18 @@
       <div class="modal-header">
         <h2>Add Source</h2>
         <button class="btn-icon modal-close" id="kb-source-modal-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body">
         <!-- Source Type Tabs -->
         <div class="kb-source-tabs">
           <button class="kb-source-tab active" data-type="text">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-            </svg>
+            <i class="ph-light ph-file-text"></i>
             Paste Text
           </button>
           <button class="kb-source-tab" data-type="url">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-            </svg>
+            <i class="ph-light ph-link"></i>
             URL
           </button>
         </div>
@@ -701,9 +618,7 @@
           <label>Category</label>
           <div class="kb-category-options" id="kb-category-options">
             <button class="kb-category-btn active" data-category="auto">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-              </svg>
+              <i class="ph-light ph-lightning"></i>
               Auto-detect
             </button>
             <button class="kb-category-btn" data-category="market">Market Research</button>
@@ -717,10 +632,7 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="kb-source-cancel">Cancel</button>
         <button class="btn btn-primary" id="kb-source-save">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
+          <i class="ph-light ph-plus"></i>
           Add Source
         </button>
       </div>
@@ -733,10 +645,7 @@
       <div class="modal-header">
         <h2>Generate Report</h2>
         <button class="btn-icon modal-close" id="kb-report-modal-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body">
@@ -745,40 +654,22 @@
           <label>Choose a template or describe what you need:</label>
           <div class="kb-template-options">
             <button class="kb-template-btn" data-template="investor_update">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="3" y1="9" x2="21" y2="9"></line>
-                <line x1="9" y1="21" x2="9" y2="9"></line>
-              </svg>
+              <i class="ph-light ph-squares-four"></i>
               <span>Investor Update</span>
               <small>Weekly/monthly progress summary</small>
             </button>
             <button class="kb-template-btn" data-template="talking_points">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="8" y1="6" x2="21" y2="6"></line>
-                <line x1="8" y1="12" x2="21" y2="12"></line>
-                <line x1="8" y1="18" x2="21" y2="18"></line>
-                <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                <line x1="3" y1="18" x2="3.01" y2="18"></line>
-              </svg>
+              <i class="ph-light ph-list-bullets"></i>
               <span>Talking Points</span>
               <small>Key points for investor calls</small>
             </button>
             <button class="kb-template-btn" data-template="due_diligence">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-              </svg>
+              <i class="ph-light ph-file-text"></i>
               <span>Due Diligence Brief</span>
               <small>Comprehensive company overview</small>
             </button>
             <button class="kb-template-btn active" data-template="custom">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-              </svg>
+              <i class="ph-light ph-lightning"></i>
               <span>Custom Report</span>
               <small>Describe what you need</small>
             </button>
@@ -803,9 +694,7 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="kb-report-cancel">Cancel</button>
         <button class="btn btn-primary" id="kb-report-generate">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-          </svg>
+          <i class="ph-light ph-lightning"></i>
           Generate
         </button>
       </div>
@@ -819,17 +708,11 @@
         <h2 id="kb-report-view-title">Report</h2>
         <div class="modal-header-actions">
           <button class="btn btn-secondary btn-sm" id="kb-report-copy" title="Copy to clipboard">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
+            <i class="ph-light ph-copy"></i>
             Copy
           </button>
           <button class="btn-icon modal-close" id="kb-report-view-close">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
+            <i class="ph-light ph-x"></i>
           </button>
         </div>
       </div>
@@ -847,10 +730,7 @@
       <div class="modal-header">
         <h2>Update Pipeline</h2>
         <button class="btn-icon modal-close" id="pipeline-edit-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body">
@@ -863,9 +743,7 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="pipeline-edit-cancel">Cancel</button>
         <button class="btn btn-primary" id="pipeline-edit-save">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
+          <i class="ph-light ph-check"></i>
           Save Pipeline
         </button>
       </div>
@@ -878,10 +756,7 @@
       <div class="modal-header">
         <h2>Generate Weekly Email</h2>
         <button class="btn-icon modal-close" id="share-email-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body">
@@ -928,10 +803,7 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="share-email-cancel">Cancel</button>
         <button class="btn btn-primary" id="share-email-generate">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 2L11 13"></path>
-            <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
-          </svg>
+          <i class="ph-light ph-paper-plane-tilt"></i>
           Generate Email
         </button>
       </div>
@@ -944,10 +816,7 @@
       <div class="modal-header">
         <h2>Your Weekly Email</h2>
         <button class="btn-icon modal-close" id="email-preview-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body">
@@ -963,10 +832,7 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="email-preview-cancel">Close</button>
         <button class="btn btn-primary" id="email-preview-copy">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-          </svg>
+          <i class="ph-light ph-copy"></i>
           Copy to Clipboard
         </button>
       </div>

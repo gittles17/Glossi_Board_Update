@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/light/style.css">
   <link rel="stylesheet" href="dashboard.css">
 </head>
 <body class="pr-page">
@@ -16,10 +17,7 @@
   <header class="top-nav">
     <div class="nav-left">
       <a href="index.html" class="nav-back" title="Back to Dashboard">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="19" y1="12" x2="5" y2="12"></line>
-          <polyline points="12 19 5 12 12 5"></polyline>
-        </svg>
+        <i class="ph-light ph-arrow-left"></i>
       </a>
       <img src="Asset 3.svg" alt="Glossi" class="logo-img">
       <span class="nav-page-title">PR</span>
@@ -27,33 +25,20 @@
     <div class="nav-right">
       <div class="dropdown-wrapper">
         <button class="btn-icon" id="menu-btn" title="Menu">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-list"></i>
         </button>
         <div class="dropdown-menu" id="dropdown-menu">
           <a href="index.html" class="dropdown-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-              <polyline points="9 22 9 12 15 12 15 22"></polyline>
-            </svg>
+            <i class="ph-light ph-house"></i>
             Dashboard
           </a>
           <a href="notebook.html" class="dropdown-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-            </svg>
+            <i class="ph-light ph-book-open"></i>
             Notebook
           </a>
           <div class="dropdown-divider"></div>
           <button class="dropdown-item" id="menu-settings">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
-            </svg>
+            <i class="ph-light ph-gear"></i>
             Settings
           </button>
         </div>
@@ -67,32 +52,17 @@
     <nav class="pr-nav-rail" id="pr-nav-rail">
       <div class="pr-nav-stages">
         <button class="pr-nav-item active" data-stage="strategy" title="Strategy">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <circle cx="12" cy="12" r="6"></circle>
-            <circle cx="12" cy="12" r="2"></circle>
-          </svg>
+          <i class="ph-light ph-crosshair"></i>
         </button>
         <button class="pr-nav-item" data-stage="create" title="Create">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 20h9"></path>
-            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-          </svg>
+          <i class="ph-light ph-pencil-simple"></i>
         </button>
         <button class="pr-nav-item" data-stage="distribute" title="Distribute">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="18" cy="5" r="3"></circle>
-            <circle cx="6" cy="12" r="3"></circle>
-            <circle cx="18" cy="19" r="3"></circle>
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-          </svg>
+          <i class="ph-light ph-share-network"></i>
         </button>
       </div>
       <button class="pr-nav-item pr-nav-sources" id="pr-nav-sources-btn" title="Sources">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-        </svg>
+        <i class="ph-light ph-folder"></i>
         <span class="pr-nav-badge" id="pr-nav-sources-badge"></span>
       </button>
     </nav>
@@ -109,16 +79,10 @@
                 <h2 class="pr-workflow-title pr-sources-label">Sources</h2>
                 <span class="pr-sources-count" id="pr-sources-count">0</span>
                 <button class="pr-create-folder-btn" id="pr-create-folder-btn" title="Create Folder">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                  </svg>
+                  <i class="ph-light ph-plus"></i>
                 </button>
                 <button class="pr-sources-drawer-close" id="pr-sources-drawer-close" title="Close">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
+                  <i class="ph-light ph-x"></i>
                 </button>
               </div>
               <div class="pr-source-search-wrap">
@@ -130,10 +94,7 @@
                 </div>
               </div>
               <button class="pr-add-source-btn" id="pr-add-source-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
+                <i class="ph-light ph-plus"></i>
                 <span>Add Source</span>
               </button>
             </div>
@@ -148,27 +109,18 @@
               <h2 class="pr-workflow-title">What's Happening Now</h2>
               <div class="pr-news-hooks-controls">
                 <div class="pr-news-search-wrap">
-                  <svg class="pr-news-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
+                  <i class="ph-light ph-magnifying-glass pr-news-search-icon"></i>
                   <input type="text" class="pr-news-search" id="pr-news-search" placeholder="Search articles..." autocomplete="off">
                   <button class="pr-news-search-clear" id="pr-news-search-clear" style="display:none" title="Clear search">&times;</button>
                 </div>
                 <button class="pr-filter-btn pr-add-url-btn" id="pr-add-url-btn" title="Add article by URL">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                  </svg>
+                  <i class="ph-light ph-plus"></i>
                   Add URL
                 </button>
                 <div class="pr-add-url-input-wrap" id="pr-add-url-input-wrap" style="display:none">
                   <input type="url" class="pr-add-url-input" id="pr-add-url-input" placeholder="Paste article URL and press Enter..." autocomplete="off">
                   <button class="pr-add-url-submit" id="pr-add-url-submit" title="Analyze">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="22" y1="2" x2="11" y2="13"></line>
-                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
+                    <i class="ph-light ph-paper-plane-tilt"></i>
                   </button>
                   <button class="pr-add-url-cancel" id="pr-add-url-cancel" title="Cancel">&times;</button>
                 </div>
@@ -179,19 +131,13 @@
                   <option value="all">All time</option>
                 </select>
                 <button class="pr-filter-btn" id="pr-news-outlet-filter-btn">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                  </svg>
+                  <i class="ph-light ph-funnel"></i>
                   Outlets
                   <span class="pr-filter-count" id="pr-outlet-filter-count"></span>
                 </button>
                 <button class="pr-filter-clear" id="pr-news-clear-filters" style="display: none;">Clear</button>
                 <button class="btn btn-secondary btn-sm btn-icon-only" id="pr-fetch-news-btn" title="Refresh">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M23 4v6h-6"></path>
-                    <path d="M1 20v-6h6"></path>
-                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                  </svg>
+                  <i class="ph-light ph-arrows-clockwise"></i>
                 </button>
               </div>
             </div>
@@ -274,34 +220,21 @@
                   <option value="custom">Custom</option>
                 </select>
                 <button class="pr-generate-btn" id="pr-generate-btn" disabled style="display:none">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                  </svg>
+                  <i class="ph-light ph-lightning"></i>
                   Generate
                 </button>
                 <button class="pr-regenerate-btn" id="pr-regenerate-btn" style="display:none">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M23 4v6h-6"></path>
-                    <path d="M1 20v-6h6"></path>
-                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                  </svg>
+                  <i class="ph-light ph-arrows-clockwise"></i>
                   Regenerate
                 </button>
               </div>
               <div class="pr-workspace-actions" style="display:none" id="pr-workspace-actions">
                 <button class="pr-action-btn" id="pr-copy-btn" title="Copy to clipboard">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                  </svg>
+                  <i class="ph-light ph-copy"></i>
                 </button>
                 <div class="pr-export-wrap">
                   <button class="pr-action-btn" id="pr-export-btn" title="Export">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                      <polyline points="7 10 12 15 17 10"></polyline>
-                      <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
+                    <i class="ph-light ph-download-simple"></i>
                   </button>
                   <div class="pr-export-menu" id="pr-export-menu">
                     <button class="pr-export-item" id="pr-export-text">Copy as text</button>
@@ -313,11 +246,7 @@
 
             <!-- Status hint -->
             <div class="pr-status-hint" id="pr-status-hint" style="display:none">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-              </svg>
+              <i class="ph-light ph-info"></i>
               <span id="pr-status-hint-text"></span>
             </div>
 
@@ -331,10 +260,7 @@
               <!-- Empty state -->
               <div class="pr-workspace-empty" id="pr-workspace-empty">
                 <div class="pr-empty-message">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                  </svg>
+                  <i class="ph-light ph-file-text" style="font-size: 48px; opacity: 0.3;"></i>
                   <p>Click "Create Content" on a news card to start generating.</p>
                 </div>
               </div>
@@ -353,10 +279,7 @@
                 <div class="pr-drafts-header">
                   <span class="pr-drafts-title">Drafts</span>
                   <button class="pr-clear-drafts-btn" id="pr-clear-drafts-btn" title="Clear old drafts">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="3 6 5 6 21 6"></polyline>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    </svg>
+                    <i class="ph-light ph-trash"></i>
                     Clear old drafts
                   </button>
                 </div>
@@ -384,9 +307,7 @@
             <div class="pr-chat-section" id="pr-chat-section" style="display:none">
               <!-- Sticky Clear Button -->
               <button class="pr-clear-chat-btn" id="pr-clear-chat-btn" title="Clear chat history">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                </svg>
+                <i class="ph-light ph-trash"></i>
               </button>
               
               <!-- Smart Suggestions -->
@@ -400,10 +321,7 @@
                 <div class="pr-input-wrapper">
                   <textarea id="pr-chat-input" class="pr-chat-input" placeholder="Refine further..." rows="1"></textarea>
                   <button class="pr-send-btn" id="pr-send-btn" title="Send">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="22" y1="2" x2="11" y2="13"></line>
-                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
+                    <i class="ph-light ph-paper-plane-tilt"></i>
                   </button>
                 </div>
               </div>
@@ -444,44 +362,26 @@
       <div class="modal-header">
         <h2>Add Source</h2>
         <button class="btn-icon modal-close" id="pr-source-modal-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body">
         <!-- Source Type Tabs -->
         <div class="pr-source-tabs">
           <button class="pr-source-tab active" data-type="text">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-            </svg>
+            <i class="ph-light ph-file-text"></i>
             Paste Text
           </button>
           <button class="pr-source-tab" data-type="url">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-            </svg>
+            <i class="ph-light ph-link"></i>
             URL
           </button>
           <button class="pr-source-tab" data-type="file">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-              <polyline points="13 2 13 9 20 9"></polyline>
-            </svg>
+            <i class="ph-light ph-file-text"></i>
             Upload File
           </button>
           <button class="pr-source-tab" data-type="audio">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-              <line x1="12" y1="19" x2="12" y2="23"></line>
-            </svg>
+            <i class="ph-light ph-microphone"></i>
             Audio
           </button>
         </div>
@@ -519,11 +419,7 @@
           </div>
           <div class="pr-file-dropzone" id="pr-file-dropzone">
             <input type="file" id="pr-source-file-input" accept=".txt,.md,.csv,.pdf" style="display:none">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
+            <i class="ph-light ph-upload-simple" style="font-size: 32px;"></i>
             <span>Drop file here or click to browse</span>
             <span class="pr-dropzone-hint">PDF, TXT, MD, CSV (max 10MB)</span>
           </div>
@@ -538,15 +434,11 @@
           </div>
           <div class="pr-audio-controls">
             <button class="btn btn-secondary" id="pr-audio-record">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="6" fill="currentColor"></circle>
-              </svg>
+              <i class="ph-light ph-record"></i>
               Record
             </button>
             <button class="btn btn-danger" id="pr-audio-stop" style="display:none">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="6" y="6" width="12" height="12" fill="currentColor"></rect>
-              </svg>
+              <i class="ph-light ph-stop"></i>
               Stop
             </button>
             <span class="pr-audio-divider">or</span>
@@ -566,10 +458,7 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="pr-source-cancel">Cancel</button>
         <button class="btn btn-primary" id="pr-source-save">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
+          <i class="ph-light ph-plus"></i>
           Add Source
         </button>
       </div>
@@ -582,10 +471,7 @@
       <div class="modal-header">
         <h2>Settings</h2>
         <button class="btn-icon modal-close" id="settings-modal-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       <div class="modal-body">
@@ -637,10 +523,7 @@
           </div>
         </div>
         <button class="wizard-close" id="wizard-close" title="Save and close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
       
@@ -828,9 +711,7 @@
           <button class="btn btn-secondary" id="wizard-back" style="display:none">Back</button>
           <button class="btn btn-primary" id="wizard-next">Next →</button>
           <button class="btn btn-primary" id="wizard-finish" style="display:none">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
+            <i class="ph-light ph-check"></i>
             Finish
           </button>
         </div>

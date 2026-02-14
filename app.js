@@ -347,28 +347,16 @@ class GlossiDashboard {
     const renderTodoItem = (todo) => `
       <div class="todo-item" data-todo-id="${todo.id}" draggable="true">
         <div class="todo-drag-handle" title="Drag to move">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="9" cy="5" r="1.5"></circle>
-            <circle cx="15" cy="5" r="1.5"></circle>
-            <circle cx="9" cy="12" r="1.5"></circle>
-            <circle cx="15" cy="12" r="1.5"></circle>
-            <circle cx="9" cy="19" r="1.5"></circle>
-            <circle cx="15" cy="19" r="1.5"></circle>
-          </svg>
+          <i class="ph-light ph-dots-six-vertical"></i>
         </div>
         <div class="todo-checkbox" onclick="window.dashboard.toggleTodo('${todo.id}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
+          <i class="ph-light ph-check"></i>
         </div>
         <div class="todo-content">
           <span class="todo-text editable-item" contenteditable="true" data-type="todo-text" data-todo-id="${todo.id}" draggable="false">${todo.text}</span>
         </div>
         <button class="delete-btn" onclick="window.dashboard.deleteTodo('${todo.id}')" title="Delete">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <i class="ph-light ph-x"></i>
         </button>
       </div>
     `;
@@ -522,20 +510,11 @@ class GlossiDashboard {
     menu.className = 'todo-add-menu dropdown-menu active';
     menu.innerHTML = `
       <button class="dropdown-item" data-action="add-todo">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 5v14M5 12h14"></path>
-        </svg>
+        <i class="ph-light ph-plus"></i>
         Item
       </button>
       <button class="dropdown-item" data-action="add-owner">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="8" y1="6" x2="21" y2="6"></line>
-          <line x1="8" y1="12" x2="21" y2="12"></line>
-          <line x1="8" y1="18" x2="21" y2="18"></line>
-          <line x1="3" y1="6" x2="3.01" y2="6"></line>
-          <line x1="3" y1="12" x2="3.01" y2="12"></line>
-          <line x1="3" y1="18" x2="3.01" y2="18"></line>
-        </svg>
+        <i class="ph-light ph-list"></i>
         List
       </button>
     `;
@@ -1693,9 +1672,7 @@ class GlossiDashboard {
         </div>
         ${hasBlocker ? `
           <div class="deal-card-blocker-badge">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-            </svg>
+            <i class="ph-light ph-warning"></i>
             ${this.escapeHtml(this.truncateText(deal.blockers, 30))}
           </div>
         ` : ''}
@@ -2410,28 +2387,11 @@ RULES:
     const linksBySection = storage.getQuickLinksBySection();
 
     const iconMap = {
-      globe: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="2" y1="12" x2="22" y2="12"></line>
-        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-      </svg>`,
-      video: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-      </svg>`,
-      document: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-        <polyline points="14 2 14 8 20 8"></polyline>
-        <line x1="16" y1="13" x2="8" y2="13"></line>
-        <line x1="16" y1="17" x2="8" y2="17"></line>
-      </svg>`,
-      book: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-      </svg>`,
-      link: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-      </svg>`
+      globe: `<i class="ph-light ph-globe"></i>`,
+      video: `<i class="ph-light ph-video"></i>`,
+      document: `<i class="ph-light ph-file-text"></i>`,
+      book: `<i class="ph-light ph-book-open"></i>`,
+      link: `<i class="ph-light ph-link"></i>`
     };
 
     // Map old color names to CSS classes
@@ -2456,10 +2416,7 @@ RULES:
               <span>${link.name}</span>
             </a>
             <button class="link-edit-btn" onclick="window.dashboard.editLink('${link.id}')" title="Edit">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
+              <i class="ph-light ph-pencil-simple"></i>
             </button>
           </div>
         `;
@@ -3743,7 +3700,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       const copyBtn = document.getElementById('email-preview-copy');
       if (copyBtn) {
         const original = copyBtn.innerHTML;
-        copyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!';
+        copyBtn.innerHTML = '<i class="ph-light ph-check"></i> Copied!';
         setTimeout(() => { copyBtn.innerHTML = original; }, 2000);
       }
     } catch (error) {
@@ -4065,10 +4022,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
         `<li class="deletable-item">
           <span class="editable-item" contenteditable="true" data-type="summary" data-index="${index}">${item}</span>
           <button class="delete-btn" onclick="window.dashboard.deleteSummaryItem('${meeting.id}', ${index})" title="Delete">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
+            <i class="ph-light ph-x"></i>
           </button>
         </li>`
       ).join('');
@@ -4087,10 +4041,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
         `<li class="deletable-item">
           <span class="editable-item" contenteditable="true" data-type="decision" data-index="${index}">${decision}</span>
           <button class="delete-btn" onclick="window.dashboard.deleteDecision('${meeting.id}', ${index})" title="Delete">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
+            <i class="ph-light ph-x"></i>
           </button>
         </li>`
       ).join('');
