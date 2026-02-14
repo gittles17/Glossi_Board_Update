@@ -97,7 +97,17 @@ Return your response in this exact JSON structure:
 
 function glossiLoaderSVG(extraClass = '') {
   const cls = extraClass ? `glossi-loader ${extraClass}` : 'glossi-loader';
-  return `<img src="assets/glossi-logo.svg" class="${cls}" alt="Loading" />`;
+  const count = 12;
+  const ticks = Array.from({length: count}, (_, i) => {
+    const angle = (i / count) * 360;
+    const rad = angle * Math.PI / 180;
+    const x1 = (50 + 40 * Math.cos(rad)).toFixed(1);
+    const y1 = (50 + 40 * Math.sin(rad)).toFixed(1);
+    const x2 = (50 + 48 * Math.cos(rad)).toFixed(1);
+    const y2 = (50 + 48 * Math.sin(rad)).toFixed(1);
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#fff" stroke-width="1.5" stroke-linecap="round" class="gl-tick gl-tick-${i}"/>`;
+  }).join('');
+  return `<div class="${cls}"><svg class="glossi-loader-dots" viewBox="0 0 100 100">${ticks}</svg><img src="assets/glossi-logo.svg" class="glossi-loader-logo" alt="" /></div>`;
 }
 
 const CONTENT_TYPES = [
@@ -119,6 +129,8 @@ class PRAgent {
     this.outputs = [];
     this.settings = {};
     this.currentOutput = null;
+    this._viewingDraftIndex = 0;
+    this._editSaveDebounce = null;
     this.isGenerating = false;
     this.apiKey = null;
     this.openaiApiKey = null;
@@ -909,9 +921,15 @@ class PRAgent {
         // Switch version
         const item = e.target.closest('.pr-version-menu-item');
         if (item && this.currentOutput) {
+          // Save current edits before switching
+          this.saveCurrentEdits();
+          this.saveOutputs();
+
           const version = parseInt(item.dataset.version);
-          const draft = this.currentOutput.drafts.find(d => d.version === version);
+          const draftIndex = this.currentOutput.drafts.findIndex(d => d.version === version);
+          const draft = draftIndex >= 0 ? this.currentOutput.drafts[draftIndex] : null;
           if (draft && this.dom.generatedContent) {
+            this._viewingDraftIndex = draftIndex;
             this.dom.generatedContent.innerHTML = `<div class="pr-draft-content">${this.formatContent(draft.content, this.currentOutput.citations)}</div>`;
             versionMenu.querySelectorAll('.pr-version-menu-item').forEach(v => v.classList.remove('active'));
             item.classList.add('active');
@@ -941,6 +959,17 @@ class PRAgent {
     }
     if (sendBtn) {
       sendBtn.addEventListener('click', () => this.sendChatMessage());
+    }
+
+    // Autosave edits in contenteditable area (debounced)
+    if (this.dom.generatedContent) {
+      this.dom.generatedContent.addEventListener('input', () => {
+        clearTimeout(this._editSaveDebounce);
+        this._editSaveDebounce = setTimeout(() => {
+          this.saveCurrentEdits();
+          this.saveOutputs();
+        }, 1500);
+      });
     }
 
     // Confirm/Prompt modal handlers
@@ -2305,13 +2334,27 @@ class PRAgent {
 
   }
 
+  saveCurrentEdits() {
+    if (!this.currentOutput?.drafts || this._viewingDraftIndex == null) return;
+    const draft = this.currentOutput.drafts[this._viewingDraftIndex];
+    if (!draft || !this.dom.generatedContent) return;
+    const el = this.dom.generatedContent.querySelector('.pr-draft-content');
+    if (el) {
+      const edited = el.innerText.trim();
+      if (edited && edited !== draft.content) {
+        draft.content = edited;
+      }
+    }
+  }
+
   renderDrafts() {
     if (!this.currentOutput || !this.currentOutput.drafts) return;
     
     const container = this.dom.generatedContent;
     const drafts = this.currentOutput.drafts;
     
-    // Render only the latest draft content directly (no header)
+    // Always show latest draft and reset viewing index
+    this._viewingDraftIndex = 0;
     const latest = drafts[0];
     if (latest) {
       container.innerHTML = `<div class="pr-draft-content">${this.formatContent(latest.content, this.currentOutput.citations)}</div>`;
@@ -4330,61 +4373,98 @@ class NewsMonitor {
     this.dom = {
       fetchNewsBtn: document.getElementById('pr-fetch-news-btn'),
       newsHooksList: document.getElementById('pr-news-hooks-list'),
-      dateFilter: document.getElementById('pr-news-date-filter'),
-      outletFilterBtn: document.getElementById('pr-news-outlet-filter-btn'),
-      outletFilterCount: document.getElementById('pr-outlet-filter-count'),
-      clearFilters: document.getElementById('pr-news-clear-filters'),
       sourcesDrawer: document.getElementById('pr-sources-drawer'),
       sourcesBackdrop: document.getElementById('pr-sources-backdrop'),
       sourcesToggleBtn: document.getElementById('pr-nav-sources-btn'),
       sourcesDrawerClose: document.getElementById('pr-sources-drawer-close'),
       sourcesToggleCount: document.getElementById('pr-nav-sources-badge'),
+      searchToggle: document.getElementById('pr-search-toggle'),
+      searchExpandable: document.getElementById('pr-search-expandable'),
       searchInput: document.getElementById('pr-news-search'),
       searchClear: document.getElementById('pr-news-search-clear'),
       addUrlBtn: document.getElementById('pr-add-url-btn'),
       addUrlWrap: document.getElementById('pr-add-url-input-wrap'),
       addUrlInput: document.getElementById('pr-add-url-input'),
       addUrlSubmit: document.getElementById('pr-add-url-submit'),
-      addUrlCancel: document.getElementById('pr-add-url-cancel')
+      addUrlCancel: document.getElementById('pr-add-url-cancel'),
+      filterToggle: document.getElementById('pr-filter-toggle'),
+      filterDropdown: document.getElementById('pr-filter-dropdown'),
+      filterOutletList: document.getElementById('pr-filter-outlet-list'),
+      filterActiveDot: document.getElementById('pr-filter-active-dot'),
+      filterClearAll: document.getElementById('pr-filter-clear-all')
     };
   }
 
   setupEventListeners() {
     this.dom.fetchNewsBtn?.addEventListener('click', () => this.refreshNews());
-    
-    // Date filter
-    this.dom.dateFilter?.addEventListener('change', (e) => {
-      this.filters.dateRange = e.target.value === 'all' ? 'all' : parseInt(e.target.value);
-      this.renderNews();
-      this.updateClearButton();
-    });
-    
-    // Outlet filter button
-    this.dom.outletFilterBtn?.addEventListener('click', () => this.showOutletFilter());
-    
-    // Clear filters
-    this.dom.clearFilters?.addEventListener('click', () => this.clearFilters());
 
     // Sources drawer toggle
     this.dom.sourcesToggleBtn?.addEventListener('click', () => this.toggleSourcesDrawer());
     this.dom.sourcesDrawerClose?.addEventListener('click', () => this.closeSourcesDrawer());
     this.dom.sourcesBackdrop?.addEventListener('click', () => this.closeSourcesDrawer());
 
-    // Search input (debounced)
+    // Expandable search
+    this.dom.searchToggle?.addEventListener('click', () => this.toggleSearch());
+
     this.dom.searchInput?.addEventListener('input', () => {
       clearTimeout(this._searchDebounce);
       this._searchDebounce = setTimeout(() => {
         this.searchQuery = (this.dom.searchInput.value || '').trim().toLowerCase();
-        this.dom.searchClear.style.display = this.searchQuery ? 'flex' : 'none';
+        if (this.dom.searchClear) this.dom.searchClear.style.display = this.searchQuery ? 'flex' : 'none';
         this.renderNews();
+        this.updateFilterIndicator();
       }, 300);
+    });
+
+    this.dom.searchInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.collapseSearch();
     });
 
     this.dom.searchClear?.addEventListener('click', () => {
       this.searchQuery = '';
       if (this.dom.searchInput) this.dom.searchInput.value = '';
-      this.dom.searchClear.style.display = 'none';
+      if (this.dom.searchClear) this.dom.searchClear.style.display = 'none';
       this.renderNews();
+      this.updateFilterIndicator();
+    });
+
+    // Unified filter dropdown
+    this.dom.filterToggle?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleFilterDropdown();
+    });
+
+    this.dom.filterDropdown?.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    // Date radios inside filter dropdown
+    this.dom.filterDropdown?.querySelectorAll('input[name="pr-date-range"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        this.filters.dateRange = radio.value === 'all' ? 'all' : parseInt(radio.value);
+        this.renderNews();
+        this.updateFilterIndicator();
+      });
+    });
+
+    // Clear all filters
+    this.dom.filterClearAll?.addEventListener('click', () => {
+      this.clearFilters();
+      this.closeFilterDropdown();
+    });
+
+    // Close filter dropdown on outside click
+    document.addEventListener('click', (e) => {
+      if (this.dom.filterDropdown && this.dom.filterDropdown.style.display !== 'none') {
+        if (!e.target.closest('.pr-filter-wrap')) {
+          this.closeFilterDropdown();
+        }
+      }
+      if (this.dom.searchExpandable && this.dom.searchExpandable.style.display !== 'none') {
+        if (!e.target.closest('.pr-search-expandable-wrap')) {
+          this.collapseSearch();
+        }
+      }
     });
 
     // Add URL: toggle input
@@ -4398,7 +4478,6 @@ class NewsMonitor {
   }
 
   showAddUrlInput() {
-    if (this.dom.addUrlBtn) this.dom.addUrlBtn.style.display = 'none';
     if (this.dom.addUrlWrap) {
       this.dom.addUrlWrap.style.display = 'flex';
       this.dom.addUrlInput?.focus();
@@ -4407,7 +4486,6 @@ class NewsMonitor {
 
   hideAddUrlInput() {
     if (this.dom.addUrlWrap) this.dom.addUrlWrap.style.display = 'none';
-    if (this.dom.addUrlBtn) this.dom.addUrlBtn.style.display = 'inline-flex';
     if (this.dom.addUrlInput) this.dom.addUrlInput.value = '';
   }
 
@@ -4491,104 +4569,86 @@ class NewsMonitor {
     this.filters.dateRange = 60;
     this.filters.outlets = [];
     this.searchQuery = '';
-    if (this.dom.dateFilter) this.dom.dateFilter.value = '60';
     if (this.dom.searchInput) this.dom.searchInput.value = '';
     if (this.dom.searchClear) this.dom.searchClear.style.display = 'none';
+    // Reset date radios
+    const radio60 = this.dom.filterDropdown?.querySelector('input[name="pr-date-range"][value="60"]');
+    if (radio60) radio60.checked = true;
+    // Uncheck outlet checkboxes
+    this.dom.filterDropdown?.querySelectorAll('.pr-filter-checkbox input').forEach(cb => { cb.checked = false; });
     this.renderNews();
-    this.updateClearButton();
+    this.updateFilterIndicator();
   }
-  
-  updateClearButton() {
+
+  updateFilterIndicator() {
     const hasFilters = this.filters.dateRange !== 60 || this.filters.outlets.length > 0 || this.searchQuery;
-    if (this.dom.clearFilters) {
-      this.dom.clearFilters.style.display = hasFilters ? 'block' : 'none';
-    }
-    
-    // Update outlet count badge
-    if (this.dom.outletFilterCount) {
-      this.dom.outletFilterCount.textContent = this.filters.outlets.length > 0 ? `(${this.filters.outlets.length})` : '';
+    if (this.dom.filterActiveDot) {
+      this.dom.filterActiveDot.style.display = hasFilters ? 'block' : 'none';
     }
   }
-  
-  showOutletFilter() {
-    // Get outlets that are actually in current news
+
+  toggleSearch() {
+    if (!this.dom.searchExpandable) return;
+    const isOpen = this.dom.searchExpandable.style.display !== 'none';
+    if (isOpen) {
+      this.collapseSearch();
+    } else {
+      this.dom.searchExpandable.style.display = 'flex';
+      this.dom.searchInput?.focus();
+    }
+  }
+
+  collapseSearch() {
+    if (!this.dom.searchExpandable) return;
+    if (this.searchQuery) return;
+    this.dom.searchExpandable.style.display = 'none';
+  }
+
+  toggleFilterDropdown() {
+    if (!this.dom.filterDropdown) return;
+    const isOpen = this.dom.filterDropdown.style.display !== 'none';
+    if (isOpen) {
+      this.closeFilterDropdown();
+    } else {
+      this.populateOutletCheckboxes();
+      this.dom.filterDropdown.style.display = 'block';
+    }
+  }
+
+  closeFilterDropdown() {
+    if (this.dom.filterDropdown) this.dom.filterDropdown.style.display = 'none';
+  }
+
+  populateOutletCheckboxes() {
+    if (!this.dom.filterOutletList) return;
     const availableOutlets = [...new Set(this.newsHooks.map(item => item.outlet))].sort();
-    
-    // All possible outlets (matching server includeDomains configuration)
     const allPossibleOutlets = [
-      'TechCrunch',
-      'The Verge',
-      'WIRED',
-      'VentureBeat',
-      'MIT Technology Review',
-      'Ars Technica',
-      'Fast Company',
-      'Business Insider',
-      'Forbes',
-      'CNBC',
-      'Reuters',
-      'Bloomberg',
-      'TLDR',
-      'Business of Fashion',
-      'The Interline'
+      'TechCrunch', 'The Verge', 'WIRED', 'VentureBeat',
+      'MIT Technology Review', 'Ars Technica', 'Fast Company',
+      'Business Insider', 'Forbes', 'CNBC', 'Reuters', 'Bloomberg',
+      'TLDR', 'Business of Fashion', 'The Interline'
     ];
-    
-    // Combine available outlets with all possible outlets (prioritize available ones)
     const outlets = [...new Set([...availableOutlets, ...allPossibleOutlets])].sort();
-    
-    // Create filter modal
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay visible';
-    modal.innerHTML = `
-      <div class="modal pr-outlet-filter-modal">
-        <div class="modal-header">
-          <h3>Filter by Outlet</h3>
-          <button class="modal-close">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="pr-outlet-filter-list">
-            ${outlets.map(outlet => {
-              const isAvailable = availableOutlets.includes(outlet);
-              const count = isAvailable ? this.newsHooks.filter(item => item.outlet === outlet).length : 0;
-              return `
-                <label class="pr-outlet-filter-item ${!isAvailable ? 'disabled' : ''}">
-                  <input type="checkbox" value="${this.escapeHtml(outlet)}" ${this.filters.outlets.includes(outlet) ? 'checked' : ''} ${!isAvailable ? 'disabled' : ''}>
-                  <span>${this.escapeHtml(outlet)}</span>
-                  ${isAvailable ? `<span class="pr-outlet-count">(${count})</span>` : '<span class="pr-outlet-unavailable">No news</span>'}
-                </label>
-              `;
-            }).join('')}
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" data-action="cancel">Cancel</button>
-          <button class="btn btn-primary" data-action="apply">Apply Filters</button>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Event listeners
-    const closeBtn = modal.querySelector('.modal-close');
-    const cancelBtn = modal.querySelector('[data-action="cancel"]');
-    const applyBtn = modal.querySelector('[data-action="apply"]');
-    
-    const closeModal = () => modal.remove();
-    
-    closeBtn.addEventListener('click', closeModal);
-    cancelBtn.addEventListener('click', closeModal);
-    
-    applyBtn.addEventListener('click', () => {
-      const checkboxes = modal.querySelectorAll('input[type="checkbox"]:checked');
-      this.filters.outlets = Array.from(checkboxes).map(cb => cb.value);
-      this.renderNews();
-      this.updateClearButton();
-      closeModal();
-    });
-    
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal();
+
+    this.dom.filterOutletList.innerHTML = outlets.map(outlet => {
+      const isAvailable = availableOutlets.includes(outlet);
+      const count = isAvailable ? this.newsHooks.filter(item => item.outlet === outlet).length : 0;
+      return `
+        <label class="pr-filter-checkbox ${!isAvailable ? 'disabled' : ''}">
+          <input type="checkbox" value="${this.escapeHtml(outlet)}" ${this.filters.outlets.includes(outlet) ? 'checked' : ''} ${!isAvailable ? 'disabled' : ''}>
+          <span>${this.escapeHtml(outlet)}</span>
+          ${isAvailable ? `<span class="pr-filter-outlet-count">${count}</span>` : ''}
+        </label>
+      `;
+    }).join('');
+
+    this.dom.filterOutletList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const checked = this.dom.filterOutletList.querySelectorAll('input[type="checkbox"]:checked');
+        this.filters.outlets = Array.from(checked).map(c => c.value);
+        this.renderNews();
+        this.updateFilterIndicator();
+      });
     });
   }
   
@@ -4858,6 +4918,8 @@ class NewsMonitor {
 
   saveCurrentStoryState() {
     if (!this._activeStoryKey || !this._stories.has(this._activeStoryKey)) return;
+    // Persist any in-progress text edits before saving story state
+    this.prAgent.saveCurrentEdits();
     const story = this._stories.get(this._activeStoryKey);
     story.tabContent = this._tabContent ? new Map(this._tabContent) : new Map();
     story.activeTabId = this._activeTabId;

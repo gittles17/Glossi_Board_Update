@@ -4437,7 +4437,10 @@ Format this into a clean, professional weekly update email. Return as JSON with 
     this.showModal('review-modal');
     document.getElementById('review-content').innerHTML = `
       <div class="review-loading">
-        <img src="assets/glossi-logo.svg" class="glossi-loader" alt="Loading" />
+        <div class="glossi-loader">
+          <svg class="glossi-loader-dots" viewBox="0 0 100 100"><line x1="90.0" y1="50.0" x2="98.0" y2="50.0" stroke="#fff" stroke-width="1.5" stroke-linecap="round" class="gl-tick gl-tick-0"/><line x1="84.6" y1="70.0" x2="91.6" y2="74.0" stroke="#fff" stroke-width="1.5" stroke-linecap="round" class="gl-tick gl-tick-1"/><line x1="70.0" y1="84.6" x2="74.0" y2="91.6" stroke="#fff" stroke-width="1.5" stroke-linecap="round" class="gl-tick gl-tick-2"/><line x1="50.0" y1="90.0" x2="50.0" y2="98.0" stroke="#fff" stroke-width="1.5" stroke-linecap="round" class="gl-tick gl-tick-3"/><line x1="30.0" y1="84.6" x2="26.0" y2="91.6" stroke="#fff" stroke-width="1.5" stroke-linecap="round" class="gl-tick gl-tick-4"/><line x1="15.4" y1="70.0" x2="8.4" y2="74.0" stroke="#fff" stroke-width="1.5" stroke-linecap="round" class="gl-tick gl-tick-5"/><line x1="10.0" y1="50.0" x2="2.0" y2="50.0" stroke="#fff" stroke-width="1.5" stroke-linecap="round" class="gl-tick gl-tick-6"/><line x1="15.4" y1="30.0" x2="8.4" y2="26.0" stroke="#fff" stroke-width="1.5" stroke-linecap="round" class="gl-tick gl-tick-7"/><line x1="30.0" y1="15.4" x2="26.0" y2="8.4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" class="gl-tick gl-tick-8"/><line x1="50.0" y1="10.0" x2="50.0" y2="2.0" stroke="#fff" stroke-width="1.5" stroke-linecap="round" class="gl-tick gl-tick-9"/><line x1="70.0" y1="15.4" x2="74.0" y2="8.4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" class="gl-tick gl-tick-10"/><line x1="84.6" y1="30.0" x2="91.6" y2="26.0" stroke="#fff" stroke-width="1.5" stroke-linecap="round" class="gl-tick gl-tick-11"/></svg>
+          <img src="assets/glossi-logo.svg" class="glossi-loader-logo" alt="" />
+        </div>
         <p>Claude is analyzing your meeting notes...</p>
       </div>
     `;

@@ -116,26 +116,57 @@ i[class*="ph-"] {
 }
 
 /* ============================================
-   GLOSSI LOGO LOADER (bottom-up fill)
+   GLOSSI LOGO LOADER (clock-tick spinner)
    ============================================ */
 .glossi-loader {
-  width: 40px;
-  height: 46px;
-  object-fit: contain;
-  opacity: 1;
-  animation: gl-fill 2.2s ease-in-out infinite;
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .glossi-loader-sm {
-  width: 24px;
-  height: 28px;
+  width: 52px;
+  height: 52px;
 }
 
-@keyframes gl-fill {
-  0%   { clip-path: inset(100% 0 0 0); }
-  50%  { clip-path: inset(0 0 0 0); }
-  85%  { clip-path: inset(0 0 0 0); }
-  100% { clip-path: inset(100% 0 0 0); }
+.glossi-loader-dots {
+  position: absolute;
+  inset: 0;
+}
+
+.glossi-loader-logo {
+  width: 28%;
+  height: auto;
+  object-fit: contain;
+  opacity: 0.7;
+}
+
+.glossi-loader-sm .glossi-loader-logo {
+  width: 30%;
+}
+
+.gl-tick { opacity: 0; }
+.gl-tick-0  { animation: gl-tick 1.2s ease-in-out infinite 0s; }
+.gl-tick-1  { animation: gl-tick 1.2s ease-in-out infinite 0.1s; }
+.gl-tick-2  { animation: gl-tick 1.2s ease-in-out infinite 0.2s; }
+.gl-tick-3  { animation: gl-tick 1.2s ease-in-out infinite 0.3s; }
+.gl-tick-4  { animation: gl-tick 1.2s ease-in-out infinite 0.4s; }
+.gl-tick-5  { animation: gl-tick 1.2s ease-in-out infinite 0.5s; }
+.gl-tick-6  { animation: gl-tick 1.2s ease-in-out infinite 0.6s; }
+.gl-tick-7  { animation: gl-tick 1.2s ease-in-out infinite 0.7s; }
+.gl-tick-8  { animation: gl-tick 1.2s ease-in-out infinite 0.8s; }
+.gl-tick-9  { animation: gl-tick 1.2s ease-in-out infinite 0.9s; }
+.gl-tick-10 { animation: gl-tick 1.2s ease-in-out infinite 1.0s; }
+.gl-tick-11 { animation: gl-tick 1.2s ease-in-out infinite 1.1s; }
+
+@keyframes gl-tick {
+  0%, 100% { opacity: 0; }
+  8% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 /* ============================================
@@ -11705,6 +11736,12 @@ a.dropdown-item {
 
 .pr-file-tree-node {
   margin-bottom: 2px;
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+
+.pr-file-tree-node:has(.pr-file-tree-header.active) {
+  opacity: 1;
 }
 
 .pr-file-tree-header {
@@ -16904,42 +16941,68 @@ body.pr-resizing * {
 .pr-news-hooks-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 4px;
 }
 
-/* Search input in news hooks toolbar */
-.pr-news-search-wrap {
-  position: relative;
+/* Toolbar icon buttons */
+.pr-toolbar-btn {
   display: flex;
   align-items: center;
-}
-
-.pr-news-search-icon {
-  position: absolute;
-  left: 8px;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
-  pointer-events: none;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 
-.pr-news-search {
-  padding: 6px 28px 6px 28px;
-  font-size: 13px;
+.pr-toolbar-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-color);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.pr-toolbar-btn i {
+  font-size: 16px;
+}
+
+/* Expandable search */
+.pr-search-expandable-wrap {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.pr-search-expandable {
+  display: flex;
+  align-items: center;
+  position: relative;
+  margin-left: 4px;
+}
+
+.pr-search-expandable .pr-news-search {
+  padding: 5px 28px 5px 10px;
+  font-size: 12px;
   background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   width: 180px;
-  transition: width 0.2s ease, border-color 0.15s;
+  transition: border-color 0.15s;
 }
 
-.pr-news-search:focus {
+.pr-search-expandable .pr-news-search:focus {
   outline: none;
   border-color: var(--accent-blue);
-  width: 240px;
 }
 
-.pr-news-search::placeholder {
+.pr-search-expandable .pr-news-search::placeholder {
   color: var(--text-muted);
 }
 
@@ -16954,7 +17017,7 @@ body.pr-resizing * {
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
   border-radius: 3px;
   padding: 0;
@@ -16962,12 +17025,13 @@ body.pr-resizing * {
 
 .pr-news-search-clear:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.1);
 }
 
-/* Add URL button and inline input */
-.pr-add-url-btn {
-  gap: 4px;
+/* Add URL */
+.pr-add-url-wrap-outer {
+  display: flex;
+  align-items: center;
+  position: relative;
 }
 
 .pr-add-url-input-wrap {
@@ -17039,6 +17103,107 @@ body.pr-resizing * {
 .pr-add-url-cancel:hover {
   color: var(--text-primary);
   background: rgba(255, 255, 255, 0.1);
+}
+
+/* Unified filter dropdown */
+.pr-filter-wrap {
+  position: relative;
+}
+
+.pr-filter-active-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-green, #4ade80);
+}
+
+.pr-filter-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  width: 220px;
+  background: var(--bg-elevated, #1e1e1e);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  padding: var(--space-2) 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.pr-filter-dropdown-section {
+  padding: var(--space-2) var(--space-3);
+}
+
+.pr-filter-dropdown-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.pr-filter-radio,
+.pr-filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.pr-filter-radio:hover,
+.pr-filter-checkbox:hover {
+  color: var(--text-primary);
+}
+
+.pr-filter-radio input,
+.pr-filter-checkbox input {
+  accent-color: var(--accent-green, #4ade80);
+  margin: 0;
+}
+
+.pr-filter-checkbox.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.pr-filter-outlet-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.pr-filter-dropdown-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: var(--space-1) 0;
+}
+
+.pr-filter-dropdown-clear {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s;
+}
+
+.pr-filter-dropdown-clear:hover {
+  color: var(--accent-green, #4ade80);
 }
 
 /* .pr-news-actions removed, replaced by inline .pr-create-content-btn */
@@ -17206,17 +17371,7 @@ body.pr-resizing * {
   letter-spacing: -0.01em;
 }
 
-/* News Hooks compact styling - .pr-news-hooks-header and .pr-news-hooks-filters removed; see .pr-news-hooks-toolbar + .pr-news-hooks-controls */
-
-.pr-filter-select {
-  font-size: 13px;
-  padding: 6px 10px;
-}
-
-.pr-filter-btn {
-  font-size: 13px;
-  padding: 6px 12px;
-}
+/* News Hooks compact styling - toolbar uses .pr-toolbar-btn icon buttons */
 
 /* Angles section polish */
 .pr-angles-section .pr-workflow-header {
