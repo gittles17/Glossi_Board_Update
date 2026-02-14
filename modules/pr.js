@@ -751,9 +751,7 @@ class PRAgent {
       workspaceGenerated: document.getElementById('pr-workspace-generated'),
       generatedContent: document.getElementById('pr-generated-content'),
       loadingState: document.getElementById('pr-loading-state'),
-      verificationBar: document.getElementById('pr-verification-bar'),
-      verificationText: document.getElementById('pr-verification-text'),
-      verificationProgress: document.getElementById('pr-verification-progress'),
+      leftChat: document.getElementById('pr-left-chat'),
       copyBtn: document.getElementById('pr-copy-btn'),
       exportBtn: document.getElementById('pr-export-btn'),
       exportMenu: document.getElementById('pr-export-menu'),
@@ -916,6 +914,21 @@ class PRAgent {
       document.addEventListener('click', () => {
         versionMenu.style.display = 'none';
       });
+    }
+
+    // Left panel chat input
+    const chatInput = document.getElementById('pr-chat-input');
+    const sendBtn = document.getElementById('pr-send-btn');
+    if (chatInput) {
+      chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.sendChatMessage();
+        }
+      });
+    }
+    if (sendBtn) {
+      sendBtn.addEventListener('click', () => this.sendChatMessage());
     }
 
     // Confirm/Prompt modal handlers
@@ -2281,12 +2294,16 @@ class PRAgent {
     if (this.dom.workspaceEmpty) this.dom.workspaceEmpty.style.display = 'none';
     if (this.dom.workspaceGenerated) this.dom.workspaceGenerated.style.display = 'block';
     if (this.dom.regenerateBtn) this.dom.regenerateBtn.style.display = 'inline-flex';
+    if (this.dom.leftChat) this.dom.leftChat.style.display = 'flex';
     
     // Switch to workspace tab after generation
     const workspaceTab = document.querySelector('[data-workspace-tab="content"]');
     if (workspaceTab) {
       workspaceTab.click();
     }
+
+    // Generate suggestions for the content area
+    this.generateSuggestions();
   }
 
   renderGeneratedContent(output) {
@@ -2301,7 +2318,6 @@ class PRAgent {
       this.renderDrafts();
     }
 
-    this.updateVerificationBar(output);
   }
 
   renderDrafts() {
@@ -2502,9 +2518,6 @@ class PRAgent {
         }
         menu.remove();
         this.updateOutputContent();
-        if (this.currentOutput) {
-          this.updateVerificationBar(this.currentOutput);
-        }
       });
     });
 
@@ -2535,31 +2548,6 @@ class PRAgent {
       }
       
       this.saveOutputs();
-    }
-  }
-
-  updateVerificationBar(output) {
-    if (!this.dom.verificationBar || !output) return;
-
-    const total = (output.citations || []).length;
-    const needsSourceCount = (this.dom.generatedContent?.querySelectorAll('.pr-needs-source') || []).length;
-    const verified = total - (output.citations || []).filter(c => !c.verified).length;
-
-    if (total === 0 && needsSourceCount === 0) {
-      this.dom.verificationBar.style.display = 'none';
-      return;
-    }
-
-    this.dom.verificationBar.style.display = 'flex';
-    const sourced = total > 0 ? verified : 0;
-    const totalClaims = total + needsSourceCount;
-
-    if (this.dom.verificationText) {
-      this.dom.verificationText.textContent = `${sourced} of ${totalClaims} claims sourced`;
-    }
-    if (this.dom.verificationProgress) {
-      const pct = totalClaims > 0 ? (sourced / totalClaims) * 100 : 0;
-      this.dom.verificationProgress.style.width = pct + '%';
     }
   }
 
@@ -2947,7 +2935,6 @@ class PRAgent {
 
     // Clear input
     input.value = '';
-    input.style.height = 'auto';
     input.disabled = true;
     
     const sendBtn = document.getElementById('pr-send-btn');
@@ -4903,9 +4890,7 @@ class NewsMonitor {
     story.tabContent = this._tabContent ? new Map(this._tabContent) : new Map();
     story.activeTabId = this._activeTabId;
     story.currentOutput = this.prAgent.currentOutput;
-    // Save chat messages from DOM
-    const chatArea = document.getElementById('pr-chat-area');
-    if (chatArea) story.chatHTML = chatArea.innerHTML;
+    // Save suggestions from DOM
     const suggestionsEl = document.getElementById('pr-suggestions');
     if (suggestionsEl) story.suggestionsHTML = suggestionsEl.innerHTML;
   }
@@ -4935,13 +4920,13 @@ class NewsMonitor {
       this.prAgent.showWorkspace();
     }
 
-    // Restore chat/suggestions
-    const chatSection = document.getElementById('pr-chat-section');
-    const chatArea = document.getElementById('pr-chat-area');
-    if (chatArea && story.chatHTML) chatArea.innerHTML = story.chatHTML;
+    // Restore suggestions
     const suggestionsEl = document.getElementById('pr-suggestions');
     if (suggestionsEl && story.suggestionsHTML) suggestionsEl.innerHTML = story.suggestionsHTML;
-    if (chatSection && (story.chatHTML || story.suggestionsHTML)) chatSection.style.display = '';
+    // Show left panel chat if content exists
+    if (this.prAgent.dom.leftChat && story.currentOutput) {
+      this.prAgent.dom.leftChat.style.display = 'flex';
+    }
 
     // Set angle context
     this.prAgent.angleContext = {
@@ -4975,8 +4960,7 @@ class NewsMonitor {
         if (tabsEl) { tabsEl.style.display = 'none'; tabsEl.innerHTML = ''; }
         if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
         if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
-        const chatSection = document.getElementById('pr-chat-section');
-        if (chatSection) chatSection.style.display = 'none';
+        if (this.prAgent.dom.leftChat) this.prAgent.dom.leftChat.style.display = 'none';
         this.renderStorySelector();
       }
     } else {
@@ -5240,10 +5224,13 @@ class NewsMonitor {
       description: contentPlan[0]?.description || ''
     };
 
-    // Auto-generate first (highest priority) tab
+    // Auto-generate all content plan tabs
     const firstTabId = `plan_0`;
     this.switchContentTab(firstTabId);
-    this.generateTabContent(firstTabId, contentPlan[0], newsItem);
+    contentPlan.forEach((item, i) => {
+      const tabId = `plan_${i}`;
+      this.generateTabContent(tabId, item, newsItem);
+    });
   }
 
   renderContentPlanTabs(contentPlan) {

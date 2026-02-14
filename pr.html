@@ -175,6 +175,14 @@
               </div>
             </div>
 
+            <!-- Compact chat input -->
+            <div class="pr-left-chat" id="pr-left-chat" style="display:none">
+              <input type="text" id="pr-chat-input" class="pr-left-chat-input" placeholder="Refine further..." autocomplete="off" />
+              <button class="pr-left-chat-send" id="pr-send-btn" title="Send">
+                <i class="ph-light ph-paper-plane-tilt"></i>
+              </button>
+            </div>
+
             <!-- Legacy: hidden elements for backward compat -->
             <div style="display:none">
               <div id="pr-angles-list"></div>
@@ -276,14 +284,7 @@
               <!-- Generated content (inline editable) -->
               <div class="pr-workspace-generated" id="pr-workspace-generated" style="display:none">
                 <div class="pr-generated-content" id="pr-generated-content" contenteditable="true" spellcheck="true"></div>
-                <div class="pr-verification-bar" id="pr-verification-bar" style="display:none">
-                  <div class="pr-verification-info">
-                    <span class="pr-verification-text" id="pr-verification-text">0 of 0 claims sourced</span>
-                  </div>
-                  <div class="pr-verification-track">
-                    <div class="pr-verification-progress" id="pr-verification-progress"></div>
-                  </div>
-                </div>
+                <div class="pr-suggestions" id="pr-suggestions"></div>
                 
                 <!-- Refining overlay -->
                 <div class="pr-refining-overlay" id="pr-refining-overlay" style="display:none">
@@ -292,25 +293,6 @@
                     <span class="pr-refining-text">Refining...</span>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            <!-- Chat Interface for Content Refinement -->
-            <div class="pr-chat-section" id="pr-chat-section" style="display:none">
-              <!-- Sticky Clear Button -->
-              <button class="pr-clear-chat-btn" id="pr-clear-chat-btn" title="Clear chat history">
-                <i class="ph-light ph-trash"></i>
-              </button>
-
-              <!-- Chat Input + Inline Suggestions -->
-              <div class="pr-input-area" id="pr-input-area">
-                <div class="pr-input-wrapper">
-                  <textarea id="pr-chat-input" class="pr-chat-input" placeholder="Refine further..." rows="1"></textarea>
-                  <button class="pr-send-btn" id="pr-send-btn" title="Send">
-                    <i class="ph-light ph-paper-plane-tilt"></i>
-                  </button>
-                </div>
-                <div class="pr-suggestions" id="pr-suggestions"></div>
               </div>
             </div>
 
@@ -843,45 +825,8 @@
         generateBtnMobile.addEventListener('click', () => pr.generateContent());
       }
 
-      // Chat functionality
-      const chatInput = document.getElementById('pr-chat-input');
-      const sendBtn = document.getElementById('pr-send-btn');
-      const clearChatBtn = document.getElementById('pr-clear-chat-btn');
-      const chatSection = document.getElementById('pr-chat-section');
-      const messagesContainer = document.getElementById('pr-messages');
+      // Suggestions delegation
       const suggestionsContainer = document.getElementById('pr-suggestions');
-
-      // Auto-resize textarea
-      if (chatInput) {
-        chatInput.addEventListener('input', () => {
-          chatInput.style.height = 'auto';
-          chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
-        });
-
-        // Send on Enter, newline on Shift+Enter
-        chatInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            pr.sendChatMessage();
-          }
-        });
-      }
-
-      // Send button
-      if (sendBtn) {
-        sendBtn.addEventListener('click', () => pr.sendChatMessage());
-      }
-
-      // Clear chat button
-      if (clearChatBtn) {
-        clearChatBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const confirmed = await pr.showConfirm('Clear refinement history? This will regenerate suggestions.', 'Clear History');
-          if (confirmed && pr.currentOutput) {
-            await pr.generateSuggestions();
-          }
-        });
-      }
 
       // Clear drafts button
       const clearDraftsBtn = document.getElementById('pr-clear-drafts-btn');
@@ -901,32 +846,15 @@
       if (suggestionsContainer) {
         suggestionsContainer.addEventListener('click', async (e) => {
           const btn = e.target.closest('.pr-suggestion-btn');
-          if (btn && chatInput) {
+          if (btn) {
             const suggestion = btn.dataset.suggestion;
-            chatInput.value = suggestion;
-            await pr.sendChatMessage();
+            await pr.applySuggestion(suggestion);
           }
         });
       }
 
       // Get generated element once
       const generatedEl = document.getElementById('pr-workspace-generated');
-      
-      // Show chat and generate suggestions when content is generated
-      const observer2 = new MutationObserver(async () => {
-        if (generatedEl && chatSection) {
-          const isVisible = generatedEl.style.display !== 'none';
-          chatSection.style.display = isVisible ? 'flex' : 'none';
-          
-          // Generate initial suggestions when content first appears
-          if (isVisible && pr.currentOutput) {
-            await pr.generateSuggestions();
-          }
-        }
-      });
-      if (generatedEl) {
-        observer2.observe(generatedEl, { attributes: true, attributeFilter: ['style'] });
-      }
 
       // Show generated content actions when content exists
       const observer = new MutationObserver(() => {
