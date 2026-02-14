@@ -11273,7 +11273,7 @@ a.dropdown-item {
   width: 56px;
   min-width: 56px;
   background: var(--bg-card);
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color-light);
   padding: var(--space-3) 0;
   flex-shrink: 0;
   z-index: 10;
@@ -11559,6 +11559,7 @@ a.dropdown-item {
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
+  background: var(--bg-secondary);
   border-right: none;
   padding: 0;
   position: relative;
@@ -11628,7 +11629,7 @@ a.dropdown-item {
   bottom: 0;
   left: 1px;
   width: 1px;
-  background: var(--border-subtle);
+  background: var(--border-color);
 }
 
 .pr-panel-divider:hover,
@@ -11951,7 +11952,7 @@ a.dropdown-item {
   gap: 2px;
   padding: 0;
   background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-color);
   overflow-x: auto;
   flex-shrink: 0;
   margin-bottom: 16px;
@@ -11978,6 +11979,7 @@ a.dropdown-item {
 .pr-content-tab.active {
   color: var(--accent-green, #4ade80);
   border-bottom-color: var(--accent-green, #4ade80);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 /* ============================================
@@ -13259,6 +13261,7 @@ svg.spinning,
   display: flex;
   align-items: center;
   gap: var(--space-1);
+  padding: var(--space-2) 0;
 }
 
 .pr-action-btn {
@@ -13506,6 +13509,11 @@ svg.spinning,
   max-width: min(900px, 90%);
   margin: 0 auto;
   width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-3);
 }
 
 .pr-generated-content {
@@ -13885,9 +13893,9 @@ svg.spinning,
   display: none;
   align-items: center;
   gap: 8px;
-  padding: var(--space-2) var(--space-4);
-  border-top: 1px solid var(--border-subtle);
-  background: var(--bg-primary);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
   flex-shrink: 0;
   position: sticky;
   bottom: 0;
@@ -16156,7 +16164,7 @@ svg.spinning,
   gap: 6px;
   margin-top: var(--space-4);
   padding-top: var(--space-4);
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border-color);
 }
 
 .pr-suggestions:empty {
@@ -16878,6 +16886,8 @@ body.pr-resizing * {
   flex-wrap: wrap;
   gap: 12px;
   padding: var(--space-5) var(--space-5) var(--space-4);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
 }
 
 .pr-news-hooks-controls {
