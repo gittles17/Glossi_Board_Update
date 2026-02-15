@@ -2165,6 +2165,11 @@ class PRAgent {
     if (this.dom.regenerateBtn) this.dom.regenerateBtn.style.display = 'inline-flex';
     if (this.dom.workspaceChat) this.dom.workspaceChat.style.display = 'flex';
     
+    // Show workspace actions (version pill, copy, export)
+    const actionsEl = document.getElementById('pr-workspace-actions');
+    if (actionsEl) actionsEl.style.display = 'flex';
+    this.renderVersionPill();
+    
     // Switch to workspace tab after generation
     const workspaceTab = document.querySelector('[data-workspace-tab="content"]');
     if (workspaceTab) {
