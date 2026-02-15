@@ -7973,20 +7973,42 @@ class DistributeManager {
     const planItem = story.contentPlan?.[planIndex];
     if (!planItem) return;
 
-    // Find the matching output: prefer tabContent (in-memory source of truth), fallback to outputs array
+    // Find the matching output using multiple strategies
     const tabEntry = nm._tabContent?.get(tabId);
     let output = tabEntry?.output;
+
+    // Fallback: use the currently displayed output if it belongs to this story
+    if (!output && this.prAgent.currentOutput?.story_key === nm._activeStoryKey) {
+      output = this.prAgent.currentOutput;
+    }
+
+    // Fallback: search outputs by story_key + content_plan_index (strict)
     if (!output) {
       output = this.prAgent.outputs.find(o =>
         o.story_key === nm._activeStoryKey && o.content_plan_index === planIndex
       );
     }
+
+    // Fallback: search outputs by story_key + content_plan_index (string coercion)
     if (!output) {
       output = this.prAgent.outputs.find(o =>
         o.story_key === nm._activeStoryKey && String(o.content_plan_index) === String(planIndex)
       );
     }
+
+    // Fallback: search by story_key + content_type matching the plan item
+    if (!output) {
+      output = this.prAgent.outputs.find(o =>
+        o.story_key === nm._activeStoryKey && o.content_type === planItem.type && o.phase !== 'distribute'
+      );
+    }
+
     if (!output || !output.content) return;
+
+    // Ensure output is in the outputs array (might not be if found via currentOutput)
+    if (!this.prAgent.outputs.includes(output)) {
+      this.prAgent.outputs.push(output);
+    }
 
     // Update phase and status
     output.phase = 'distribute';
