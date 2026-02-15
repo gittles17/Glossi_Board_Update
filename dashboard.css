@@ -18416,17 +18416,25 @@ body.pr-resizing * {
 }
 
 .pr-li-body-truncated {
-  max-height: 7.5em;
+  max-height: 4.5em;
   overflow: hidden;
   position: relative;
 }
 
+.pr-li-see-more-wrap {
+  padding: 0 16px 4px;
+}
+
 .pr-li-see-more {
-  color: rgba(255, 255, 255, 0.5);
-  font-weight: 500;
-  cursor: default;
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.45);
+  font: 500 14px/1.5 var(--font-sans);
+  cursor: pointer;
   display: inline;
+}
+
+.pr-li-see-more:hover {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: underline;
 }
 
 /* Engagement bar */

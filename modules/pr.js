@@ -8106,20 +8106,15 @@ class DistributeManager {
       fullText += '\n\n' + hashtags.map(h => '#' + h).join(' ');
     }
 
-    // Truncate for preview (LinkedIn shows ~5 lines then "see more")
+    // Determine if truncation is needed (LinkedIn: 3-line preview on desktop)
     const lines = fullText.split('\n');
-    const isLong = lines.length > 5 || fullText.length > 500;
-    let displayText = fullText;
-    let seeMore = '';
+    // Handle blank-line edge case like LinkedIn: if line 3 is blank, treat as 2-line cutoff
+    let effectiveLineCount = lines.length;
+    if (lines.length >= 3 && lines[2].trim() === '') effectiveLineCount = Math.max(effectiveLineCount, 4);
+    const isLong = effectiveLineCount > 3 || fullText.length > 210;
 
-    if (isLong) {
-      const truncated = lines.slice(0, 5).join('\n');
-      displayText = truncated.length > 500 ? truncated.slice(0, 497) : truncated;
-      seeMore = `<span class="pr-li-see-more">...see more</span>`;
-    }
-
-    // Format body text: make hashtags blue, links blue
-    const formattedBody = this.formatLinkedInBody(displayText) + seeMore;
+    // Format the full body text (always render full content in DOM)
+    const formattedBody = this.formatLinkedInBody(fullText);
 
     // Build media HTML
     let mediaHtml = '';
@@ -8149,6 +8144,7 @@ class DistributeManager {
         </div>
       </div>
       <div class="pr-li-body ${isLong ? 'pr-li-body-truncated' : ''}">${formattedBody}</div>
+      ${isLong ? '<div class="pr-li-see-more-wrap"><span class="pr-li-see-more" data-action="see-more">...more</span></div>' : ''}
       ${mediaHtml}
       <div class="pr-li-engagement">
         <div class="pr-li-action"><i class="ph-light ph-thumbs-up"></i> Like</div>
@@ -8157,6 +8153,22 @@ class DistributeManager {
         <div class="pr-li-action"><i class="ph-light ph-paper-plane-tilt"></i> Send</div>
       </div>
     `;
+
+    // Wire up see more / show less toggle
+    const seeMoreBtn = container.querySelector('[data-action="see-more"]');
+    if (seeMoreBtn) {
+      seeMoreBtn.addEventListener('click', () => {
+        const body = container.querySelector('.pr-li-body');
+        const isExpanded = !body.classList.contains('pr-li-body-truncated');
+        if (isExpanded) {
+          body.classList.add('pr-li-body-truncated');
+          seeMoreBtn.textContent = '...more';
+        } else {
+          body.classList.remove('pr-li-body-truncated');
+          seeMoreBtn.textContent = 'Show less';
+        }
+      });
+    }
 
     // Wire up media remove button
     container.querySelector('[data-action="remove-media"]')?.addEventListener('click', () => {
