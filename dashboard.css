@@ -13089,6 +13089,84 @@ svg.spinning,
   border-color: var(--accent-green);
 }
 
+/* Create Content from Sources button */
+.pr-create-from-sources-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  margin: 0 var(--space-3) var(--space-2);
+  background: var(--accent-blue);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #fff;
+  font: 600 13px var(--font-sans);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+.pr-create-from-sources-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+.pr-create-from-sources-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: var(--bg-card);
+  color: var(--text-muted);
+}
+.pr-create-from-sources-btn i {
+  font-size: 15px;
+}
+
+/* Custom file tree label */
+.pr-custom-label-row {
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--border-color);
+  padding-top: var(--space-2);
+}
+.pr-create-left.collapsed > .pr-custom-label-row {
+  display: none !important;
+}
+.pr-create-left.collapsed > #pr-custom-file-tree {
+  display: none !important;
+}
+
+/* Category bar */
+.pr-category-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+}
+.pr-category-label {
+  font: 500 12px var(--font-sans);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.pr-category-select {
+  font: 500 13px var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-body);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--duration-fast);
+}
+.pr-category-select:hover {
+  border-color: var(--accent-blue);
+}
+.pr-category-select:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
 /* History section */
 .pr-history-divider {
   height: 1px;

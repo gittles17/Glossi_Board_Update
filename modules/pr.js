@@ -1121,13 +1121,12 @@ class PRAgent {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(source)
         });
-      } catch (error) {
-        console.error('Error updating source:', error);
-      }
+      } catch (error) { /* silent */ }
       
       this.saveSources();
       this.renderSources();
       this.updateGenerateButton();
+      this.updateCreateFromSourcesBtn();
     }
   }
 
@@ -4586,12 +4585,14 @@ class NewsMonitor {
 
     storyKeys.forEach(key => {
       const storyOutputs = grouped[key];
-      // Sort by content_plan_index
       storyOutputs.sort((a, b) => (a.content_plan_index || 0) - (b.content_plan_index || 0));
+
+      // Detect if this is a custom story (key starts with custom_ or any output has is_custom)
+      const isCustom = key.startsWith('custom_') || storyOutputs.some(o => o.is_custom === true);
+      const category = storyOutputs.find(o => o.category)?.category || 'general';
 
       const headline = storyOutputs[0].news_headline || 'Untitled';
 
-      // Build a minimal newsItem from the saved output data
       const newsItem = {
         headline,
         url: key,
@@ -4602,10 +4603,12 @@ class NewsMonitor {
         }))
       };
 
-      // Try to find the real news hook for richer data
-      const realHook = this.newsHooks.find(h => (h.url || h.headline) === key);
-      if (realHook) {
-        Object.assign(newsItem, realHook);
+      // Try to find the real news hook for richer data (articles only)
+      if (!isCustom) {
+        const realHook = this.newsHooks.find(h => (h.url || h.headline) === key);
+        if (realHook) {
+          Object.assign(newsItem, realHook);
+        }
       }
 
       const contentPlan = newsItem.content_plan || storyOutputs.map(o => ({
@@ -4629,12 +4632,9 @@ class NewsMonitor {
         }
       }
 
-      // Build tabContent map from saved outputs
-      // Match outputs to plan items by content_type first, then by content_plan_index
       const tabContent = new Map();
       const usedOutputIds = new Set();
 
-      // Pass 1: match by content_type to the plan
       contentPlan.forEach((planItem, index) => {
         const tabId = `plan_${index}`;
         const match = storyOutputs.find(o => o.content_type === planItem.type && !usedOutputIds.has(o.id));
@@ -4657,7 +4657,6 @@ class NewsMonitor {
         }
       });
 
-      // Pass 2: fill remaining tabs by content_plan_index for unmatched outputs
       storyOutputs.forEach(output => {
         if (usedOutputIds.has(output.id)) return;
         const idx = output.content_plan_index || 0;
@@ -4679,10 +4678,17 @@ class NewsMonitor {
         }
       });
 
-      // Check archived status from any output in the group
       const isArchived = storyOutputs.some(o => o.archived === true);
 
-      // Create the story entry
+      // Collect source IDs from outputs for custom stories
+      const sourceIds = isCustom
+        ? [...new Set(storyOutputs.flatMap(o => {
+            let s = o.sources;
+            if (typeof s === 'string') { try { s = JSON.parse(s); } catch { s = []; } }
+            return Array.isArray(s) ? s : [];
+          }))]
+        : null;
+
       this._stories.set(key, {
         newsItem,
         contentPlan,
@@ -4691,7 +4697,11 @@ class NewsMonitor {
         currentOutput: storyOutputs[0] || null,
         chatHTML: '',
         suggestionsHTML: '',
-        archived: isArchived
+        archived: isArchived,
+        custom: isCustom,
+        customTitle: isCustom ? headline : undefined,
+        category: isCustom ? category : undefined,
+        sourceIds: sourceIds
       });
     });
 
@@ -5356,11 +5366,19 @@ class NewsMonitor {
     }
 
     // Set angle context
-    this.prAgent.angleContext = {
-      narrative: story.newsItem.angle_narrative || story.newsItem.relevance || story.newsItem.summary || '',
-      target: story.contentPlan[0]?.target || '',
-      description: story.contentPlan[0]?.description || ''
-    };
+    if (story.custom) {
+      this.prAgent.angleContext = {
+        narrative: story.newsItem?.summary || '',
+        target: story.contentPlan[0]?.target || '',
+        description: story.contentPlan[0]?.description || ''
+      };
+    } else {
+      this.prAgent.angleContext = {
+        narrative: story.newsItem?.angle_narrative || story.newsItem?.relevance || story.newsItem?.summary || '',
+        target: story.contentPlan[0]?.target || '',
+        description: story.contentPlan[0]?.description || ''
+      };
+    }
   }
 
   switchToStory(key) {
@@ -5547,22 +5565,52 @@ class NewsMonitor {
 
   renderFileTree() {
     const container = document.getElementById('pr-file-tree');
-    if (!container) return;
+    const customContainer = document.getElementById('pr-custom-file-tree');
+    const customLabelRow = document.getElementById('pr-custom-label-row');
 
-    if (this._stories.size === 0) {
-      container.innerHTML = `<div class="pr-file-tree-empty"><p>Click "Create Content" on a news card to get started.</p></div>`;
-      return;
+    // Separate stories into articles vs custom, then active vs archived
+    const articleActive = [];
+    const articleArchived = [];
+    const customActive = [];
+    const customArchived = [];
+    for (const [key, story] of this._stories) {
+      const isCustom = story.custom === true;
+      if (story.archived) {
+        (isCustom ? customArchived : articleArchived).push([key, story]);
+      } else {
+        (isCustom ? customActive : articleActive).push([key, story]);
+      }
     }
 
-    // Separate active and archived stories
-    const activeStories = [];
-    const archivedStories = [];
-    for (const [key, story] of this._stories) {
-      if (story.archived) {
-        archivedStories.push([key, story]);
-      } else {
-        activeStories.push([key, story]);
+    // Render custom section
+    const hasCustom = customActive.length > 0 || customArchived.length > 0;
+    if (customLabelRow) customLabelRow.style.display = hasCustom ? '' : 'none';
+    if (customContainer) {
+      customContainer.style.display = hasCustom ? '' : 'none';
+      if (hasCustom) {
+        let customHTML = '';
+        for (const [key, story] of customActive) {
+          customHTML += this._renderStoryNode(key, story);
+        }
+        if (customActive.length === 0) {
+          customHTML += `<div class="pr-file-tree-empty"><p>Select sources and click "Create Content" to get started.</p></div>`;
+        }
+        if (customArchived.length > 0) {
+          customHTML += this._renderArchivedSection(customArchived);
+        }
+        customContainer.innerHTML = customHTML;
       }
+    }
+
+    // Render article section (original behavior)
+    if (!container) return;
+
+    const activeStories = articleActive;
+    const archivedStories = articleArchived;
+
+    if (this._stories.size === 0 || (activeStories.length === 0 && archivedStories.length === 0 && !hasCustom)) {
+      container.innerHTML = `<div class="pr-file-tree-empty"><p>Click "Create Content" on a news card to get started.</p></div>`;
+      return;
     }
 
     let html = '';
@@ -5594,36 +5642,40 @@ class NewsMonitor {
 
     // Archived section
     if (archivedStories.length > 0) {
-      html += `
-        <div class="pr-file-tree-archived-section ${this._archivedExpanded ? 'expanded' : ''}">
-          <div class="pr-file-tree-archived-header">
-            <i class="ph-light ph-caret-right pr-file-tree-archived-chevron"></i>
-            <span class="pr-file-tree-archived-label">Archived</span>
-            <span class="pr-file-tree-archived-count">${archivedStories.length}</span>
-          </div>
-          <div class="pr-file-tree-archived-list">
-            ${archivedStories.map(([key, story]) => {
-              const headline = story.newsItem.headline || 'Untitled';
-              return `
-                <div class="pr-file-tree-archived-node" data-story-key="${this.escapeHtml(key)}">
-                  <span class="pr-file-tree-archived-node-label" title="${this.escapeHtml(headline)}">${this.escapeHtml(headline)}</span>
-                  <button class="pr-file-tree-unarchive" data-unarchive-key="${this.escapeHtml(key)}" title="Restore article">
-                    <i class="ph-light ph-arrow-counter-clockwise"></i>
-                  </button>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
-      `;
+      html += this._renderArchivedSection(archivedStories);
     }
 
     container.innerHTML = html;
   }
 
+  _renderArchivedSection(archivedStories) {
+    return `
+      <div class="pr-file-tree-archived-section ${this._archivedExpanded ? 'expanded' : ''}">
+        <div class="pr-file-tree-archived-header">
+          <i class="ph-light ph-caret-right pr-file-tree-archived-chevron"></i>
+          <span class="pr-file-tree-archived-label">Archived</span>
+          <span class="pr-file-tree-archived-count">${archivedStories.length}</span>
+        </div>
+        <div class="pr-file-tree-archived-list">
+          ${archivedStories.map(([key, story]) => {
+            const headline = (story.custom ? story.customTitle : story.newsItem?.headline) || 'Untitled';
+            return `
+              <div class="pr-file-tree-archived-node" data-story-key="${this.escapeHtml(key)}">
+                <span class="pr-file-tree-archived-node-label" title="${this.escapeHtml(headline)}">${this.escapeHtml(headline)}</span>
+                <button class="pr-file-tree-unarchive" data-unarchive-key="${this.escapeHtml(key)}" title="Restore">
+                  <i class="ph-light ph-arrow-counter-clockwise"></i>
+                </button>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   _renderStoryNode(key, story) {
     const isActiveStory = key === this._activeStoryKey;
-    const headline = story.newsItem.headline || 'Untitled';
+    const headline = story.custom ? (story.customTitle || 'Untitled') : (story.newsItem?.headline || 'Untitled');
     const contentPlan = story.contentPlan || [];
 
     const childrenHTML = contentPlan.map((item, i) => {
@@ -5640,9 +5692,9 @@ class NewsMonitor {
       `;
     }).join('');
 
-    // Inline angle block
-    const angleTitle = story.newsItem.angle_title || '';
-    const angleNarrative = story.newsItem.angle_narrative || story.newsItem.relevance || '';
+    // Inline angle block (skip for custom stories)
+    const angleTitle = story.custom ? '' : (story.newsItem?.angle_title || '');
+    const angleNarrative = story.custom ? '' : (story.newsItem?.angle_narrative || story.newsItem?.relevance || '');
     let angleHTML = '';
     if (angleTitle || angleNarrative) {
       angleHTML = `
@@ -5692,7 +5744,7 @@ class NewsMonitor {
 
   setupFileTree() {
     const container = document.getElementById('pr-file-tree');
-    if (!container) return;
+    const customContainer = document.getElementById('pr-custom-file-tree');
 
     // Select mode toggle button
     const selectToggle = document.getElementById('pr-select-toggle');
@@ -5700,8 +5752,8 @@ class NewsMonitor {
       selectToggle.addEventListener('click', () => this.toggleSelectMode());
     }
 
-    container.addEventListener('click', (e) => {
-      // Bulk archive button
+    // Shared click handler for both article and custom file trees
+    const handleTreeClick = (e) => {
       const bulkArchive = e.target.closest('.pr-file-tree-bulk-archive');
       if (bulkArchive && !bulkArchive.disabled) {
         e.stopPropagation();
@@ -5709,7 +5761,6 @@ class NewsMonitor {
         return;
       }
 
-      // Bulk cancel button
       const bulkCancel = e.target.closest('.pr-file-tree-bulk-cancel');
       if (bulkCancel) {
         e.stopPropagation();
@@ -5717,7 +5768,6 @@ class NewsMonitor {
         return;
       }
 
-      // Archive button on individual story
       const archiveBtn = e.target.closest('[data-archive-key]');
       if (archiveBtn) {
         e.stopPropagation();
@@ -5725,7 +5775,6 @@ class NewsMonitor {
         return;
       }
 
-      // Unarchive button
       const unarchiveBtn = e.target.closest('[data-unarchive-key]');
       if (unarchiveBtn) {
         e.stopPropagation();
@@ -5733,7 +5782,6 @@ class NewsMonitor {
         return;
       }
 
-      // Archived section header toggle
       const archivedHeader = e.target.closest('.pr-file-tree-archived-header');
       if (archivedHeader) {
         this._archivedExpanded = !this._archivedExpanded;
@@ -5742,7 +5790,6 @@ class NewsMonitor {
         return;
       }
 
-      // Select mode checkbox
       const checkbox = e.target.closest('.pr-file-tree-select-checkbox');
       if (checkbox) {
         e.stopPropagation();
@@ -5751,7 +5798,6 @@ class NewsMonitor {
         return;
       }
 
-      // Close button
       const closeBtn = e.target.closest('[data-tree-close]');
       if (closeBtn) {
         e.stopPropagation();
@@ -5759,7 +5805,6 @@ class NewsMonitor {
         return;
       }
 
-      // Angle toggle (expand/collapse narrative)
       const angleToggle = e.target.closest('.pr-tree-angle-toggle');
       if (angleToggle) {
         const angle = angleToggle.closest('.pr-tree-angle');
@@ -5767,7 +5812,6 @@ class NewsMonitor {
         return;
       }
 
-      // Delete content piece button
       const deleteBtn = e.target.closest('.pr-file-tree-leaf-delete');
       if (deleteBtn) {
         e.stopPropagation();
@@ -5777,7 +5821,6 @@ class NewsMonitor {
         return;
       }
 
-      // Leaf (content item) click
       const leaf = e.target.closest('.pr-file-tree-leaf');
       if (leaf) {
         const storyKey = leaf.dataset.storyKey;
@@ -5792,7 +5835,6 @@ class NewsMonitor {
         return;
       }
 
-      // Header (story node) click
       const header = e.target.closest('.pr-file-tree-header');
       if (header) {
         const node = header.closest('.pr-file-tree-node');
@@ -5800,19 +5842,190 @@ class NewsMonitor {
         const storyKey = node.dataset.storyKey;
 
         if (storyKey === this._activeStoryKey) {
-          // Toggle expand/collapse
           node.classList.toggle('expanded');
         } else {
-          // Switch to this story
           this.switchToStory(storyKey);
         }
         return;
       }
-    });
+    };
+
+    if (container) container.addEventListener('click', handleTreeClick);
+    if (customContainer) customContainer.addEventListener('click', handleTreeClick);
   }
 
   populateLeftPanel(newsItem) {
     this.renderFileTree();
+    this.updateCategoryBar();
+  }
+
+  updateCreateFromSourcesBtn() {
+    const btn = this.dom.createFromSourcesBtn;
+    if (!btn) return;
+    const selectedCount = this.sources.filter(s => s.selected).length;
+    btn.disabled = selectedCount === 0;
+  }
+
+  updateCategoryBar() {
+    const bar = this.dom.categoryBar;
+    if (!bar) return;
+    const story = this._activeStoryKey ? this._stories.get(this._activeStoryKey) : null;
+    if (story && story.custom) {
+      bar.style.display = 'flex';
+      if (this.dom.categorySelect && story.category) {
+        this.dom.categorySelect.value = story.category;
+      }
+    } else {
+      bar.style.display = 'none';
+    }
+  }
+
+  onCategoryChange() {
+    const story = this._activeStoryKey ? this._stories.get(this._activeStoryKey) : null;
+    if (!story || !story.custom) return;
+    story.category = this.dom.categorySelect.value;
+    // Persist category to all outputs for this story
+    for (const [, entry] of (story.tabContent || new Map())) {
+      if (entry.output) {
+        entry.output.category = story.category;
+        fetch('/api/pr/outputs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entry.output)
+        }).catch(() => {});
+      }
+    }
+  }
+
+  async launchCustomWorkspace() {
+    const selectedSources = this.sources.filter(s => s.selected);
+    if (selectedSources.length === 0) return;
+
+    // Build a title from selected source titles
+    const titleParts = selectedSources.map(s => s.title).filter(Boolean);
+    const customTitle = titleParts.length === 1
+      ? titleParts[0]
+      : titleParts.length <= 3
+        ? titleParts.join(', ')
+        : titleParts.slice(0, 2).join(', ') + ` +${titleParts.length - 2} more`;
+
+    const key = `custom_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+
+    // Save current story state before switching
+    this.saveCurrentStoryState();
+
+    // Close the sources drawer
+    this.closeSourcesDrawer();
+
+    // Switch to Create tab
+    const createTab = document.querySelector('.pr-nav-item[data-stage="create"]');
+    if (createTab) createTab.click();
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Detect category and build content plan via AI
+    this.prAgent.showLoading();
+    let category = 'general';
+    let contentPlan = [
+      { type: 'blog_post', description: 'In-depth analysis with product angle', priority: 1, audience: 'brands' },
+      { type: 'linkedin_post', description: 'Key insight as a founder perspective post', priority: 2, audience: 'brands' },
+      { type: 'tweet_thread', description: 'Key insight as a concise thread', priority: 3, audience: 'builders' },
+      { type: 'email_blast', description: 'Signal boost to subscriber list', priority: 4, audience: 'brands' }
+    ];
+
+    try {
+      const sourcesContext = selectedSources.map((s, i) => {
+        const preview = (s.content || '').substring(0, 3000);
+        return `[Source ${i + 1}] Title: ${s.title}\nType: ${s.type}\nContent:\n${preview}`;
+      }).join('\n---\n');
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          system: 'You are a content strategist. Analyze the provided source material and determine the best content category and content plan. Return ONLY valid JSON.',
+          messages: [{
+            role: 'user',
+            content: `Analyze these sources and determine:
+1. The best content CATEGORY from: feature_update, case_study, thought_leadership, product_announcement, how_to_guide, investor_update, hiring_culture, general
+2. A content plan with 4-5 content types to create from this material.
+
+Each content plan item should have: type (one of: blog_post, linkedin_post, tweet_thread, email_blast, media_pitch, op_ed, hot_take, talking_points), description, priority (1-5), audience (brands/builders/press/internal).
+
+Return JSON: { "category": "...", "contentPlan": [...] }
+
+SOURCES:
+${sourcesContext}`
+          }]
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const rawText = data.content?.[0]?.text || '';
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (parsed.category) category = parsed.category;
+          if (parsed.contentPlan && Array.isArray(parsed.contentPlan) && parsed.contentPlan.length > 0) {
+            contentPlan = parsed.contentPlan;
+          }
+        }
+      }
+    } catch (e) { /* fall back to defaults */ }
+
+    contentPlan.sort((a, b) => (a.priority || 99) - (b.priority || 99));
+
+    // Build a minimal newsItem-like object for compatibility
+    const pseudoNewsItem = {
+      headline: customTitle,
+      url: key,
+      content_plan: contentPlan,
+      summary: selectedSources.map(s => (s.content || '').substring(0, 500)).join('\n\n')
+    };
+
+    this._activeNewsItem = pseudoNewsItem;
+    this._activeContentPlan = contentPlan;
+    this._tabContent = new Map();
+    this._activeTabId = null;
+    this._activeStoryKey = key;
+
+    // Create the story entry
+    this._stories.set(key, {
+      newsItem: pseudoNewsItem,
+      contentPlan,
+      tabContent: new Map(),
+      activeTabId: null,
+      currentOutput: null,
+      chatHTML: '',
+      suggestionsHTML: '',
+      archived: false,
+      custom: true,
+      customTitle,
+      category,
+      sourceIds: selectedSources.map(s => s.id)
+    });
+
+    this.renderStorySelector();
+    this.renderContentPlanTabs(contentPlan);
+    this.updateCategoryBar();
+
+    // Set angle context from sources
+    this.prAgent.angleContext = {
+      narrative: selectedSources.map(s => (s.content || '').substring(0, 500)).join('\n\n'),
+      target: contentPlan[0]?.target || '',
+      description: contentPlan[0]?.description || ''
+    };
+
+    // Auto-generate content for all tabs
+    this.prAgent.hideLoading();
+    const firstTabId = 'plan_0';
+    this.switchContentTab(firstTabId);
+    contentPlan.forEach((item, i) => {
+      const tabId = `plan_${i}`;
+      this.generateTabContent(tabId, item, pseudoNewsItem);
+    });
   }
 
   setupLeftPanelToggles() {
@@ -6144,7 +6357,17 @@ class NewsMonitor {
   }
 
   async generateTabContent(tabId, planItem, newsItem) {
-    const selectedSources = this.prAgent.sources.filter(s => s.selected);
+    // Determine if this is a custom story
+    const activeStory = this._activeStoryKey ? this._stories.get(this._activeStoryKey) : null;
+    const isCustom = activeStory?.custom === true;
+
+    // For custom stories, use the story's source IDs; otherwise use globally selected sources
+    let selectedSources;
+    if (isCustom && activeStory.sourceIds) {
+      selectedSources = this.prAgent.sources.filter(s => activeStory.sourceIds.includes(s.id));
+    } else {
+      selectedSources = this.prAgent.sources.filter(s => s.selected);
+    }
     if (selectedSources.length === 0 && !this.prAgent.apiKey) return;
 
     const typeLabel = CONTENT_TYPES.find(t => t.id === planItem.type)?.label || planItem.type;
@@ -6166,10 +6389,26 @@ class NewsMonitor {
     }).join('\n\n');
 
     let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
-    const angleNarrative = newsItem.angle_narrative || newsItem.relevance || newsItem.summary || '';
-    if (angleNarrative) {
-      userMessage += `STORY ANGLE (use this as your narrative framework):\n${angleNarrative}\n\n`;
+
+    // For custom stories, add category context instead of news angle
+    if (isCustom && activeStory.category && activeStory.category !== 'general') {
+      const categoryLabels = {
+        feature_update: 'Feature Update',
+        case_study: 'Case Study',
+        thought_leadership: 'Thought Leadership',
+        product_announcement: 'Product Announcement',
+        how_to_guide: 'How-to Guide',
+        investor_update: 'Investor Update',
+        hiring_culture: 'Hiring / Culture'
+      };
+      userMessage += `CONTENT CATEGORY: ${categoryLabels[activeStory.category] || activeStory.category}\nWrite in the style appropriate for this category.\n\n`;
+    } else {
+      const angleNarrative = newsItem.angle_narrative || newsItem.relevance || newsItem.summary || '';
+      if (angleNarrative) {
+        userMessage += `STORY ANGLE (use this as your narrative framework):\n${angleNarrative}\n\n`;
+      }
     }
+
     if (planItem.description) {
       userMessage += `Brief: ${planItem.description}\n\n`;
     }
@@ -6230,7 +6469,9 @@ class NewsMonitor {
         drafts: [{ content: parsed.content, version: 1, timestamp: Date.now(), prompt: null }],
         story_key: this._activeStoryKey || null,
         news_headline: newsItem.headline || null,
-        content_plan_index: planIndex
+        content_plan_index: planIndex,
+        is_custom: isCustom || false,
+        category: isCustom ? (activeStory.category || 'general') : null
       };
 
       const prevEntryDone = this._tabContent.get(tabId);
@@ -8390,7 +8631,27 @@ class DistributeManager {
       ? `<div class="pr-blog-featured-img"><img src="${this.escapeHtml(featuredImage)}" alt=""></div>`
       : '';
 
-    const bodyHtml = this.markdownToBlogHtml(content);
+    // Strip leading headline from body if it matches the title (already shown in header)
+    let blogBodyContent = content;
+    const blogLines = blogBodyContent.split('\n');
+    // Remove leading blank lines
+    while (blogLines.length > 0 && blogLines[0].trim() === '') {
+      blogLines.shift();
+    }
+    // Remove first line if it matches the title (with or without markdown heading prefix)
+    if (blogLines.length > 0) {
+      const firstLine = blogLines[0].replace(/^#+\s*/, '').trim();
+      if (firstLine === title.trim() || firstLine.toLowerCase() === title.trim().toLowerCase()) {
+        blogLines.shift();
+        // Remove blank line after stripped title
+        while (blogLines.length > 0 && blogLines[0].trim() === '') {
+          blogLines.shift();
+        }
+      }
+    }
+    blogBodyContent = blogLines.join('\n');
+
+    const bodyHtml = this.markdownToBlogHtml(blogBodyContent);
 
     container.innerHTML = `
       <div class="pr-blog-nav">
@@ -8561,8 +8822,17 @@ class DistributeManager {
       subject = subject.replace(/^subject:\s*/i, '');
     }
 
+    // Strip "Subject:" line from body content (already shown in header)
+    let bodyContent = content;
+    const subjectLinePattern = /^subject:\s*.+/i;
+    const contentLines = bodyContent.split('\n');
+    while (contentLines.length > 0 && (contentLines[0].trim() === '' || subjectLinePattern.test(contentLines[0].trim()))) {
+      contentLines.shift();
+    }
+    bodyContent = contentLines.join('\n').trim();
+
     // Convert content to paragraphs
-    const paragraphs = content.split(/\n\n+/).filter(p => p.trim());
+    const paragraphs = bodyContent.split(/\n\n+/).filter(p => p.trim());
     const bodyHtml = paragraphs.map(p => {
       const escaped = this.escapeHtml(p.trim());
       return `<p>${escaped.replace(/\n/g, '<br>')}</p>`;
@@ -9137,9 +9407,26 @@ class DistributeManager {
 
     container.innerHTML = items.map(output => {
       const typeLabel = CONTENT_TYPES.find(t => t.id === output.content_type)?.label || output.content_type;
-      const title = output.title || output.news_headline || 'Untitled';
-      const isLinkedIn = LINKEDIN_PUBLISHABLE_TYPES.includes(output.content_type);
+      const title = output.news_headline || output.title || 'Untitled';
       const isActive = this.activeReviewItem?.id === output.id;
+
+      const iconMap = {
+        linkedin_post: 'ph-linkedin-logo',
+        blog_post: 'ph-article',
+        email_blast: 'ph-envelope',
+        media_pitch: 'ph-envelope',
+        tweet_thread: 'ph-x-logo',
+        press_release: 'ph-newspaper',
+        hot_take: 'ph-fire',
+        founder_quote: 'ph-quotes',
+        product_announcement: 'ph-megaphone',
+        op_ed: 'ph-pen-nib',
+        investor_snippet: 'ph-chart-line-up',
+        briefing_doc: 'ph-file-text',
+        talking_points: 'ph-list-bullets',
+        custom: 'ph-file-text'
+      };
+      const iconClass = iconMap[output.content_type] || 'ph-file-text';
 
       let metaText = '';
       if (status === 'scheduled') {
@@ -9161,7 +9448,7 @@ class DistributeManager {
       return `
         <div class="pr-distribute-queue-item ${isActive ? 'active' : ''}" data-output-id="${this.escapeHtml(output.id)}">
           <div class="pr-distribute-queue-item-icon">
-            <i class="ph-light ${isLinkedIn ? 'ph-linkedin-logo' : 'ph-file-text'}"></i>
+            <i class="ph-light ${iconClass}"></i>
           </div>
           <div class="pr-distribute-queue-item-body">
             <div class="pr-distribute-queue-item-title" title="${this.escapeHtml(title)}">${this.escapeHtml(title)}</div>

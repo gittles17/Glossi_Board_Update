@@ -215,6 +215,20 @@ async function initDatabase() {
             END IF;
           END $$;
         `);
+
+        // Migration: Add category and is_custom columns for custom content sources
+        await pool.query(`
+          DO $$ 
+          BEGIN 
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_name='pr_outputs' AND column_name='category'
+            ) THEN
+              ALTER TABLE pr_outputs ADD COLUMN category VARCHAR(50);
+              ALTER TABLE pr_outputs ADD COLUMN is_custom BOOLEAN DEFAULT false;
+            END IF;
+          END $$;
+        `);
         
         // Media outlets (user-added customs)
         await pool.query(`
@@ -729,19 +743,19 @@ app.get('/api/pr/outputs', async (req, res) => {
 // Save output
 app.post('/api/pr/outputs', async (req, res) => {
   try {
-    const { id, content_type, title, content, sources, citations, strategy, status, phase, story_key, news_headline, drafts, content_plan_index, media_attachments, hashtags, first_comment, og_data } = req.body;
+    const { id, content_type, title, content, sources, citations, strategy, status, phase, story_key, news_headline, drafts, content_plan_index, media_attachments, hashtags, first_comment, og_data, category, is_custom } = req.body;
     
     if (!useDatabase) {
       return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     await pool.query(`
-      INSERT INTO pr_outputs (id, content_type, title, content, sources, citations, strategy, status, phase, story_key, news_headline, drafts, content_plan_index, media_attachments, hashtags, first_comment, og_data, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
+      INSERT INTO pr_outputs (id, content_type, title, content, sources, citations, strategy, status, phase, story_key, news_headline, drafts, content_plan_index, media_attachments, hashtags, first_comment, og_data, category, is_custom, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW())
       ON CONFLICT (id) DO UPDATE SET
         content_type = $2, title = $3, content = $4, sources = $5, citations = $6, strategy = $7, status = $8, phase = $9,
-        story_key = $10, news_headline = $11, drafts = $12, content_plan_index = $13, media_attachments = $14, hashtags = $15, first_comment = $16, og_data = $17
-    `, [id, content_type, title, content, JSON.stringify(sources), JSON.stringify(citations), JSON.stringify(strategy), status, phase || 'edit', story_key || null, news_headline || null, JSON.stringify(drafts || null), content_plan_index != null ? content_plan_index : null, JSON.stringify(media_attachments || null), JSON.stringify(hashtags || null), first_comment || null, JSON.stringify(og_data || null)]);
+        story_key = $10, news_headline = $11, drafts = $12, content_plan_index = $13, media_attachments = $14, hashtags = $15, first_comment = $16, og_data = $17, category = $18, is_custom = $19
+    `, [id, content_type, title, content, JSON.stringify(sources), JSON.stringify(citations), JSON.stringify(strategy), status, phase || 'edit', story_key || null, news_headline || null, JSON.stringify(drafts || null), content_plan_index != null ? content_plan_index : null, JSON.stringify(media_attachments || null), JSON.stringify(hashtags || null), first_comment || null, JSON.stringify(og_data || null), category || null, is_custom === true]);
     
     res.json({ success: true });
   } catch (error) {

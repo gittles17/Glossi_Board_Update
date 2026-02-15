@@ -106,6 +106,10 @@
               <i class="ph-light ph-plus"></i>
               <span>Add Source</span>
             </button>
+            <button class="pr-create-from-sources-btn" id="pr-create-from-sources-btn" disabled title="Select sources and create content">
+              <i class="ph-light ph-pencil-line"></i>
+              <span>Create Content</span>
+            </button>
           </div>
         </div>
       </div>
@@ -202,10 +206,21 @@
               </button>
             </div>
 
-            <!-- File Tree -->
+            <!-- File Tree (Articles) -->
             <div class="pr-file-tree" id="pr-file-tree">
               <div class="pr-file-tree-empty">
                 <p>Click "Create Content" on a news card to get started.</p>
+              </div>
+            </div>
+
+            <div class="pr-panel-label-row pr-custom-label-row" id="pr-custom-label-row" style="display:none">
+              <span class="pr-panel-label">Custom</span>
+            </div>
+
+            <!-- File Tree (Custom) -->
+            <div class="pr-file-tree" id="pr-custom-file-tree" style="display:none">
+              <div class="pr-file-tree-empty">
+                <p>Select sources and click "Create Content" to get started.</p>
               </div>
             </div>
 
@@ -226,6 +241,21 @@
 
           <!-- Right Panel (2/3): Workspace -->
           <div class="pr-create-right">
+
+            <!-- Category Badge (shown for custom stories) -->
+            <div class="pr-category-bar" id="pr-category-bar" style="display:none">
+              <span class="pr-category-label">Category:</span>
+              <select class="pr-category-select" id="pr-category-select">
+                <option value="feature_update">Feature Update</option>
+                <option value="case_study">Case Study</option>
+                <option value="thought_leadership">Thought Leadership</option>
+                <option value="product_announcement">Product Announcement</option>
+                <option value="how_to_guide">How-to Guide</option>
+                <option value="investor_update">Investor Update</option>
+                <option value="hiring_culture">Hiring / Culture</option>
+                <option value="general">General</option>
+              </select>
+            </div>
 
             <!-- Content Plan Tabs + Actions -->
             <div class="pr-content-tabs" id="pr-content-tabs" style="display:none">
