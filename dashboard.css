@@ -175,6 +175,11 @@ i[class*="ph-"] {
   height: 52px;
 }
 
+.glossi-loader-xs {
+  width: 20px;
+  height: 20px;
+}
+
 .glossi-loader-dots {
   position: absolute;
   inset: 0;

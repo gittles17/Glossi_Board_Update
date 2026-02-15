@@ -1464,10 +1464,7 @@ class PRAgent {
       const loadingClass = source.loading ? 'loading' : '';
       const loadingIndicator = source.loading ? `
         <div class="pr-source-loading-overlay">
-          <svg class="spinning" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" opacity="0.25"></circle>
-            <path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path>
-          </svg>
+          ${glossiLoaderSVG('glossi-loader-xs')}
           <span>Saving...</span>
         </div>
       ` : '';
@@ -5086,7 +5083,7 @@ class NewsMonitor {
     // Show loading state
     if (this.dom.addUrlSubmit) {
       this.dom.addUrlSubmit.disabled = true;
-      this.dom.addUrlSubmit.innerHTML = '<svg class="spinning" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path></svg>';
+      this.dom.addUrlSubmit.innerHTML = glossiLoaderSVG('glossi-loader-xs');
     }
     if (this.dom.addUrlInput) this.dom.addUrlInput.disabled = true;
 
@@ -5552,13 +5549,7 @@ class NewsMonitor {
 
         btn.disabled = true;
         const originalHTML = btn.innerHTML;
-        btn.innerHTML = `
-          <svg class="spinning" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" opacity="0.25"></circle>
-            <path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path>
-          </svg>
-          Creating...
-        `;
+        btn.innerHTML = glossiLoaderSVG('glossi-loader-xs');
 
         await this.launchCreateWorkspace(newsItem);
 
@@ -6298,7 +6289,7 @@ ${primaryContext}${bgContext}`
     const feedbackSubmit = document.getElementById('pr-angle-feedback-submit');
 
     if (loading) {
-      container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:var(--space-6);"><svg class="spinning" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><circle cx="12" cy="12" r="10" opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path></svg></div>';
+      container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:var(--space-6);">' + glossiLoaderSVG('glossi-loader-sm') + '</div>';
       if (feedbackRow) feedbackRow.style.display = 'none';
       this.dom.angleSelectModal?.classList.add('visible');
       return;
@@ -6599,7 +6590,7 @@ ${primaryContext}${bgContext}`
 
         btn.disabled = true;
         const originalHTML = btn.innerHTML;
-        btn.innerHTML = '<svg class="spinning" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path></svg>';
+        btn.innerHTML = glossiLoaderSVG('glossi-loader-xs');
 
         // Build pseudo news item from custom card
         const pseudoNewsItem = {
@@ -9888,7 +9879,7 @@ class DistributeManager {
     const publishBtn = document.getElementById('pr-distribute-publish-btn');
     if (publishBtn) {
       publishBtn.disabled = true;
-      publishBtn.innerHTML = '<i class="ph-light ph-spinner ph-spin"></i> Publishing...';
+      publishBtn.innerHTML = glossiLoaderSVG('glossi-loader-xs') + ' Publishing...';
     }
 
     try {
