@@ -15685,6 +15685,49 @@ svg.spinning,
   background: var(--accent-purple-dim);
 }
 
+.pr-tone-confirm-change {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px 0;
+}
+
+.pr-tone-confirm-change i {
+  color: var(--accent-green);
+  font-size: 12px;
+}
+
+.pr-tone-confirm-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 12px 0;
+}
+
+.pr-tone-confirm-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pr-tone-confirm-list li {
+  display: inline-flex;
+}
+
+.pr-tone-confirm-type {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
 .pr-audience-press {
   color: var(--accent-orange);
   background: var(--accent-orange-dim);

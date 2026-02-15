@@ -2622,30 +2622,229 @@ class PRAgent {
       if (!selected) return;
 
       const newTone = selected.value;
-      if (!this.settings) this.settings = {};
-      this.settings['wizard-tone'] = newTone;
+      const oldTone = currentTone;
+      const toneChanged = newTone !== oldTone;
 
+      // Collect generated tabs from the current story
+      const generatedTabs = this.getGeneratedTabsForToneChange();
+
+      if (toneChanged && generatedTabs.length > 0) {
+        modal.remove();
+        this.showToneChangeConfirmation(oldTone, newTone, generatedTabs, toneOptions);
+      } else {
+        await this.applyToneChange(newTone);
+        modal.remove();
+      }
+    });
+  }
+
+  async applyToneChange(newTone) {
+    if (!this.settings) this.settings = {};
+    this.settings['wizard-tone'] = newTone;
+
+    try {
+      await fetch('/api/pr/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.settings)
+      });
+    } catch (e) { /* silent */ }
+
+    const voiceSource = this.sources.find(s => s.title === 'Founder Voice & Messaging');
+    if (voiceSource && voiceSource.content) {
+      voiceSource.content = voiceSource.content.replace(
+        /TONE PREFERENCE:\n.+/,
+        `TONE PREFERENCE:\n${newTone}`
+      );
+      this.saveSources();
+    }
+  }
+
+  getGeneratedTabsForToneChange() {
+    const tabs = [];
+    const nm = this.newsMonitor;
+    if (nm && nm._tabContent && nm._activeContentPlan) {
+      for (const [tabId, entry] of nm._tabContent.entries()) {
+        if (entry && entry.output && !entry.loading) {
+          const planIndex = parseInt(tabId.replace('plan_', ''), 10);
+          const planItem = nm._activeContentPlan[planIndex];
+          if (planItem) {
+            const label = CONTENT_TYPES.find(t => t.id === planItem.type)?.label || planItem.type;
+            tabs.push({ tabId, entry, planItem, planIndex, label, newsItem: nm._activeNewsItem });
+          }
+        }
+      }
+    }
+    return tabs;
+  }
+
+  showToneChangeConfirmation(oldTone, newTone, generatedTabs, toneOptions) {
+    const oldLabel = toneOptions.find(t => t.value === oldTone)?.label || oldTone;
+    const newLabel = toneOptions.find(t => t.value === newTone)?.label || newTone;
+
+    const confirmModal = document.createElement('div');
+    confirmModal.className = 'modal-overlay visible';
+    confirmModal.innerHTML = `
+      <div class="modal" style="max-width: 460px;">
+        <div class="modal-header">
+          <h2>Regenerate in new tone?</h2>
+          <button class="btn-icon modal-close"><i class="ph-light ph-x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: var(--space-5) var(--space-6);">
+          <p class="pr-tone-confirm-change">${this.escapeHtml(oldLabel)} <i class="ph-light ph-arrow-right"></i> ${this.escapeHtml(newLabel)}</p>
+          <p class="pr-tone-confirm-desc">${generatedTabs.length} piece${generatedTabs.length > 1 ? 's' : ''} will be regenerated. Each saves as a new draft.</p>
+          <ul class="pr-tone-confirm-list">
+            ${generatedTabs.map(t => `<li><span class="pr-tone-confirm-type">${this.escapeHtml(t.label)}</span></li>`).join('')}
+          </ul>
+        </div>
+        <div class="modal-footer" style="padding: var(--space-4) var(--space-6); border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: var(--space-2);">
+          <button class="btn btn-secondary" id="tone-confirm-cancel">Cancel</button>
+          <button class="btn btn-secondary" id="tone-confirm-save-only">Just Save Tone</button>
+          <button class="btn btn-primary" id="tone-confirm-regen">Regenerate All</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(confirmModal);
+
+    const close = () => confirmModal.remove();
+    confirmModal.querySelector('.modal-close').addEventListener('click', close);
+    confirmModal.addEventListener('click', (e) => { if (e.target === confirmModal) close(); });
+    confirmModal.querySelector('#tone-confirm-cancel').addEventListener('click', close);
+
+    confirmModal.querySelector('#tone-confirm-save-only').addEventListener('click', async () => {
+      await this.applyToneChange(newTone);
+      this.showToast('Tone updated (existing content unchanged)', 'success');
+      close();
+    });
+
+    confirmModal.querySelector('#tone-confirm-regen').addEventListener('click', async () => {
+      close();
+      await this.applyToneChange(newTone);
+      await this.regenerateAllInTone(newTone, generatedTabs);
+    });
+  }
+
+  async regenerateAllInTone(newTone, generatedTabs) {
+    const total = generatedTabs.length;
+    let completed = 0;
+
+    this.showToast(`Regenerating 0/${total} in new tone...`, 'success');
+
+    const nm = this.newsMonitor;
+    const selectedSources = this.sources.filter(s => s.selected);
+    if (selectedSources.length === 0) {
+      this.showToast('No sources selected', 'error');
+      return;
+    }
+
+    const sourcesContext = selectedSources.map((s, i) => {
+      return `[Source ${i + 1}] (ID: ${s.id})\nTitle: ${s.title}\nType: ${s.type}\nContent:\n${s.content}\n---`;
+    }).join('\n\n');
+
+    const promises = generatedTabs.map(async ({ tabId, entry, planItem, label, newsItem }) => {
       try {
-        await fetch('/api/pr/settings', {
+        const typeLabel = label;
+        let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
+        const angleNarrative = newsItem?.angle_narrative || newsItem?.relevance || newsItem?.summary || '';
+        if (angleNarrative) {
+          userMessage += `STORY ANGLE (use this as your narrative framework):\n${angleNarrative}\n\n`;
+        }
+        if (planItem.description) {
+          userMessage += `Brief: ${planItem.description}\n\n`;
+        }
+        if (planItem.target) {
+          userMessage += `Target: ${planItem.target}\n\n`;
+        }
+        userMessage += `SOURCES:\n${sourcesContext}`;
+
+        const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(this.settings)
+          body: JSON.stringify({
+            model: 'claude-opus-4-6',
+            max_tokens: 8192,
+            system: PR_SYSTEM_PROMPT,
+            messages: [{ role: 'user', content: userMessage }]
+          })
         });
-      } catch (e) { /* silent */ }
 
-      // Update the Founder Voice source if it exists
-      const voiceSource = this.sources.find(s => s.title === 'Founder Voice & Messaging');
-      if (voiceSource && voiceSource.content) {
-        voiceSource.content = voiceSource.content.replace(
-          /TONE PREFERENCE:\n.+/,
-          `TONE PREFERENCE:\n${newTone}`
-        );
-        this.saveSources();
+        if (!response.ok) {
+          throw new Error(`API request failed (${response.status})`);
+        }
+
+        const data = await response.json();
+        const rawText = data.content?.[0]?.text || '';
+
+        let parsed;
+        try {
+          const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+        } catch { parsed = null; }
+        if (!parsed) parsed = { content: rawText, citations: [], strategy: null };
+
+        if (parsed.citations) {
+          parsed.citations = parsed.citations.map((c, i) => {
+            const srcIndex = c.index || (i + 1);
+            const matchedSource = selectedSources[srcIndex - 1];
+            return { ...c, index: srcIndex, sourceId: matchedSource?.id || null, verified: c.sourceId !== null && c.verified !== false };
+          });
+        }
+
+        const output = entry.output;
+        if (!output.drafts) this.migrateContentToDrafts(output);
+
+        const newVersion = output.drafts.length + 1;
+        output.drafts.unshift({
+          content: parsed.content,
+          version: newVersion,
+          timestamp: Date.now(),
+          prompt: `Tone change: ${newTone}`
+        });
+        if (output.drafts.length > 10) output.drafts = output.drafts.slice(0, 10);
+
+        output.content = parsed.content;
+        output.citations = parsed.citations || output.citations;
+        output.title = this.extractTitle(parsed.content, typeLabel);
+
+        entry.output = output;
+
+        try {
+          await fetch('/api/pr/outputs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(output) });
+        } catch (e) { /* silent */ }
+
+        completed++;
+        this.showToast(`Regenerating ${completed}/${total} in new tone...`, 'success');
+
+        return { tabId, success: true };
+      } catch (err) {
+        completed++;
+        this.showToast(`Regenerating ${completed}/${total} in new tone...`, 'success');
+        return { tabId, success: false, error: err.message };
       }
-
-      this.showToast('Tone updated', 'success');
-      modal.remove();
     });
+
+    const results = await Promise.all(promises);
+
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+
+    if (nm) {
+      const activeEntry = nm._tabContent.get(nm._activeTabId);
+      if (activeEntry && activeEntry.output) {
+        this.currentOutput = activeEntry.output;
+        this._viewingDraftIndex = 0;
+        this.renderDrafts();
+        this.renderVersionPill();
+      }
+    }
+
+    await this.saveOutputs();
+
+    if (failCount === 0) {
+      this.showToast(`All ${successCount} pieces regenerated in new tone`, 'success');
+    } else {
+      this.showToast(`${successCount} regenerated, ${failCount} failed`, 'error');
+    }
   }
 
   copyContent() {
