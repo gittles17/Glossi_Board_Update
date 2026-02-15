@@ -5563,8 +5563,10 @@ class NewsMonitor {
       const showAngleRow = displayAngleTitle || displayAngleNarrative;
       
       const newsId = item.url || item.headline;
+      const inWorkspace = this._stories.has(newsId);
       html += `
-        <div class="pr-news-item ${isStale ? 'stale' : ''}" data-news-id="${this.escapeHtml(newsId)}">
+        <div class="pr-news-item ${isStale ? 'stale' : ''} ${inWorkspace ? 'in-workspace' : ''}" data-news-id="${this.escapeHtml(newsId)}">
+          ${inWorkspace ? '<span class="pr-card-status-badge">In Progress</span>' : ''}
           <button class="pr-news-card-archive" data-archive-news-id="${this.escapeHtml(newsId)}" title="Archive"><i class="ph-light ph-archive"></i></button>
           <a href="${item.url}" target="_blank" class="pr-news-headline">${this.escapeHtml(item.headline)}</a>
           <div class="pr-news-meta">
@@ -5860,6 +5862,10 @@ class NewsMonitor {
     } else {
       this.renderStorySelector();
     }
+
+    // Update strategy cards to remove in-workspace status
+    this.renderNews();
+    this.renderCustomCards();
   }
 
   deleteContentPiece(storyKey, planIndex) {
@@ -6624,8 +6630,10 @@ ${primaryContext}${bgContext}`
       const i = this._customCards.indexOf(card);
       const showAngleRow = card.angleTitle || card.angleNarrative;
 
+      const inWorkspace = this._stories.has(card.id);
       html += `
-        <div class="pr-news-item" data-custom-index="${i}">
+        <div class="pr-news-item ${inWorkspace ? 'in-workspace' : ''}" data-custom-index="${i}">
+          ${inWorkspace ? '<span class="pr-card-status-badge">In Progress</span>' : ''}
           <button class="pr-news-card-archive" data-archive-custom-index="${i}" title="Archive"><i class="ph-light ph-archive"></i></button>
           <span class="pr-news-headline">${this.escapeHtml(card.angleTitle || card.sourceTitle)}</span>
           <div class="pr-news-meta">
@@ -6942,6 +6950,10 @@ ${primaryContext}${bgContext}`
       const tabId = `plan_${i}`;
       this.generateTabContent(tabId, item, newsItem);
     });
+
+    // Update strategy cards to reflect in-workspace status
+    this.renderNews();
+    this.renderCustomCards();
   }
 
   renderContentPlanTabs(contentPlan) {
