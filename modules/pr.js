@@ -1126,7 +1126,7 @@ class PRAgent {
       this.saveSources();
       this.renderSources();
       this.updateGenerateButton();
-      this.updateCreateFromSourcesBtn();
+      if (this.newsMonitor) this.newsMonitor.updateCreateFromSourcesBtn();
     }
   }
 
@@ -1435,6 +1435,9 @@ class PRAgent {
     
     // Update command center stats
     this.updateCommandCenterStats();
+
+    // Update Create Content from Sources button state
+    if (this.newsMonitor) this.newsMonitor.updateCreateFromSourcesBtn();
   }
 
   setupSourceDrag() {
@@ -4753,12 +4756,21 @@ class NewsMonitor {
       filterDropdown: document.getElementById('pr-filter-dropdown'),
       filterOutletList: document.getElementById('pr-filter-outlet-list'),
       filterActiveDot: document.getElementById('pr-filter-active-dot'),
-      filterClearAll: document.getElementById('pr-filter-clear-all')
+      filterClearAll: document.getElementById('pr-filter-clear-all'),
+      createFromSourcesBtn: document.getElementById('pr-create-from-sources-btn'),
+      categoryBar: document.getElementById('pr-category-bar'),
+      categorySelect: document.getElementById('pr-category-select')
     };
   }
 
   setupEventListeners() {
     this.dom.fetchNewsBtn?.addEventListener('click', () => this.refreshNews());
+
+    // Create Content from Sources button
+    this.dom.createFromSourcesBtn?.addEventListener('click', () => this.launchCustomWorkspace());
+
+    // Category dropdown change
+    this.dom.categorySelect?.addEventListener('change', () => this.onCategoryChange());
 
     // Sources drawer toggle
     this.dom.sourcesToggleBtn?.addEventListener('click', () => this.toggleSourcesDrawer());
@@ -5862,7 +5874,7 @@ class NewsMonitor {
   updateCreateFromSourcesBtn() {
     const btn = this.dom.createFromSourcesBtn;
     if (!btn) return;
-    const selectedCount = this.sources.filter(s => s.selected).length;
+    const selectedCount = this.prAgent.sources.filter(s => s.selected).length;
     btn.disabled = selectedCount === 0;
   }
 
@@ -5898,7 +5910,7 @@ class NewsMonitor {
   }
 
   async launchCustomWorkspace() {
-    const selectedSources = this.sources.filter(s => s.selected);
+    const selectedSources = this.prAgent.sources.filter(s => s.selected);
     if (selectedSources.length === 0) return;
 
     // Build a title from selected source titles
