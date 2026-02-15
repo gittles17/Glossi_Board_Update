@@ -185,6 +185,9 @@ class PRAgent {
     this.newsMonitor = new NewsMonitor(this);
     await this.newsMonitor.init();
     
+    // Restore stories from saved outputs (rebuild tabs from persisted content)
+    this.newsMonitor.restoreStoriesFromOutputs(this.outputs);
+    
     // Initialize media manager
     this.mediaManager = new MediaManager(this);
     await this.mediaManager.init();
@@ -3740,7 +3743,7 @@ class MediaManager {
     modal.className = 'pr-loading-modal';
     modal.innerHTML = `
       <div class="pr-loading-modal-content">
-        ${glossiLoaderSVG()}
+        ${glossiLoaderSVG('glossi-loader-sm')}
         <p>${message}</p>
       </div>
     `;
@@ -4211,6 +4214,108 @@ class NewsMonitor {
     this.setupFileTree();
     this.setupPanelResize();
     await this.loadCachedNews();
+  }
+
+  restoreStoriesFromOutputs(outputs) {
+    if (!outputs || outputs.length === 0) return;
+
+    // Group outputs by story_key
+    const grouped = {};
+    outputs.forEach(output => {
+      const key = output.story_key;
+      if (!key) return;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(output);
+    });
+
+    const storyKeys = Object.keys(grouped);
+    if (storyKeys.length === 0) return;
+
+    storyKeys.forEach(key => {
+      const storyOutputs = grouped[key];
+      // Sort by content_plan_index
+      storyOutputs.sort((a, b) => (a.content_plan_index || 0) - (b.content_plan_index || 0));
+
+      const headline = storyOutputs[0].news_headline || 'Untitled';
+
+      // Build a minimal newsItem from the saved output data
+      const newsItem = {
+        headline,
+        url: key,
+        content_plan: storyOutputs.map(o => ({
+          type: o.content_type,
+          description: o.title || '',
+          priority: (o.content_plan_index || 0) + 1
+        }))
+      };
+
+      // Try to find the real news hook for richer data
+      const realHook = this.newsHooks.find(h => (h.url || h.headline) === key);
+      if (realHook) {
+        Object.assign(newsItem, realHook);
+      }
+
+      const contentPlan = newsItem.content_plan || storyOutputs.map(o => ({
+        type: o.content_type,
+        description: o.title || '',
+        priority: (o.content_plan_index || 0) + 1
+      }));
+
+      // Build tabContent map from saved outputs
+      const tabContent = new Map();
+      storyOutputs.forEach(output => {
+        const idx = output.content_plan_index || 0;
+        const tabId = `plan_${idx}`;
+        // Parse drafts if stored as string
+        let drafts = output.drafts;
+        if (typeof drafts === 'string') {
+          try { drafts = JSON.parse(drafts); } catch (e) { drafts = null; }
+        }
+        if (!drafts && output.content) {
+          drafts = [{ content: output.content, version: 1, timestamp: Date.now(), prompt: null }];
+        }
+        tabContent.set(tabId, {
+          loading: false,
+          output: { ...output, drafts: drafts || [] }
+        });
+      });
+
+      // Create the story entry
+      this._stories.set(key, {
+        newsItem,
+        contentPlan,
+        tabContent,
+        activeTabId: 'plan_0',
+        currentOutput: storyOutputs[0] || null,
+        chatHTML: '',
+        suggestionsHTML: ''
+      });
+    });
+
+    // Restore the first story
+    const firstKey = storyKeys[0];
+    this._activeStoryKey = firstKey;
+    this._activeNewsItem = this._stories.get(firstKey).newsItem;
+    this._activeContentPlan = this._stories.get(firstKey).contentPlan;
+    this._tabContent = this._stories.get(firstKey).tabContent;
+    this._activeTabId = 'plan_0';
+
+    // Render the restored state
+    this.renderStorySelector();
+    this.renderContentPlanTabs(this._activeContentPlan);
+    this.renderFileTree();
+
+    // Restore the first tab content
+    const firstEntry = this._tabContent.get('plan_0');
+    if (firstEntry && firstEntry.output) {
+      this.prAgent.currentOutput = firstEntry.output;
+      this.prAgent.renderGeneratedContent(firstEntry.output);
+      this.prAgent.showWorkspace();
+      this.prAgent.hideLoading();
+    }
+
+    // Populate left panel with news item
+    this.populateLeftPanel(this._activeNewsItem);
   }
 
   setupDOM() {
@@ -5389,6 +5494,7 @@ class NewsMonitor {
         });
       }
 
+      const planIndex = parseInt(tabId.replace('plan_', ''), 10);
       const output = {
         id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
         content_type: planItem.type,
@@ -5399,7 +5505,10 @@ class NewsMonitor {
         strategy: parsed.strategy || null,
         status: 'draft',
         phase: 'edit',
-        drafts: [{ content: parsed.content, version: 1, timestamp: Date.now(), prompt: null }]
+        drafts: [{ content: parsed.content, version: 1, timestamp: Date.now(), prompt: null }],
+        story_key: this._activeStoryKey || null,
+        news_headline: newsItem.headline || null,
+        content_plan_index: planIndex
       };
 
       this._tabContent.set(tabId, { loading: false, output });

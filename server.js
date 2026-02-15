@@ -159,6 +159,22 @@ async function initDatabase() {
           END $$;
         `);
         
+        // Migration: Add story_key, news_headline, drafts, content_plan_index columns
+        await pool.query(`
+          DO $$ 
+          BEGIN 
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_name='pr_outputs' AND column_name='story_key'
+            ) THEN
+              ALTER TABLE pr_outputs ADD COLUMN story_key TEXT;
+              ALTER TABLE pr_outputs ADD COLUMN news_headline TEXT;
+              ALTER TABLE pr_outputs ADD COLUMN drafts JSONB;
+              ALTER TABLE pr_outputs ADD COLUMN content_plan_index INTEGER;
+            END IF;
+          END $$;
+        `);
+        
         // Media outlets (user-added customs)
         await pool.query(`
           CREATE TABLE IF NOT EXISTS pr_outlets (
@@ -636,18 +652,19 @@ app.get('/api/pr/outputs', async (req, res) => {
 // Save output
 app.post('/api/pr/outputs', async (req, res) => {
   try {
-    const { id, content_type, title, content, sources, citations, strategy, status, phase } = req.body;
+    const { id, content_type, title, content, sources, citations, strategy, status, phase, story_key, news_headline, drafts, content_plan_index } = req.body;
     
     if (!useDatabase) {
       return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     await pool.query(`
-      INSERT INTO pr_outputs (id, content_type, title, content, sources, citations, strategy, status, phase, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      INSERT INTO pr_outputs (id, content_type, title, content, sources, citations, strategy, status, phase, story_key, news_headline, drafts, content_plan_index, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
       ON CONFLICT (id) DO UPDATE SET
-        content_type = $2, title = $3, content = $4, sources = $5, citations = $6, strategy = $7, status = $8, phase = $9
-    `, [id, content_type, title, content, JSON.stringify(sources), JSON.stringify(citations), JSON.stringify(strategy), status, phase || 'edit']);
+        content_type = $2, title = $3, content = $4, sources = $5, citations = $6, strategy = $7, status = $8, phase = $9,
+        story_key = $10, news_headline = $11, drafts = $12, content_plan_index = $13
+    `, [id, content_type, title, content, JSON.stringify(sources), JSON.stringify(citations), JSON.stringify(strategy), status, phase || 'edit', story_key || null, news_headline || null, JSON.stringify(drafts || null), content_plan_index != null ? content_plan_index : null]);
     
     res.json({ success: true });
   } catch (error) {
