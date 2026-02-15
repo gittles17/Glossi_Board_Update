@@ -1463,6 +1463,181 @@ app.delete('/api/pr/news-hooks/old', async (req, res) => {
   }
 });
 
+// Re-analyze all cached articles with updated content plan intelligence
+app.post('/api/pr/news-hooks/reanalyze', async (req, res) => {
+  try {
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicKey) {
+      return res.status(500).json({ success: false, error: 'Anthropic API key not configured' });
+    }
+
+    const allArticles = await pool.query(`
+      SELECT * FROM pr_news_hooks
+      WHERE date > NOW() - INTERVAL '30 days'
+      ORDER BY date DESC
+    `);
+
+    if (allArticles.rows.length === 0) {
+      return res.json({ success: true, news: [], message: 'No articles to re-analyze' });
+    }
+
+    // Fetch talking points for strategic context
+    let talkingPointsContext = '';
+    try {
+      const dashResult = await pool.query("SELECT data FROM app_data WHERE key = 'dashboard_data'");
+      if (dashResult.rows.length > 0 && dashResult.rows[0]?.data) {
+        const dashData = typeof dashResult.rows[0].data === 'string' ? JSON.parse(dashResult.rows[0].data) : dashResult.rows[0].data;
+        if (dashData.talkingPoints && dashData.talkingPoints.length > 0) {
+          const grouped = {};
+          dashData.talkingPoints.forEach(tp => {
+            const cat = tp.category || 'general';
+            if (!grouped[cat]) grouped[cat] = [];
+            grouped[cat].push(tp.title + (tp.content ? ': ' + tp.content : ''));
+          });
+          talkingPointsContext = '\nCOMPANY TALKING POINTS (use these to shape content angles):\n' +
+            Object.entries(grouped).map(([cat, points]) =>
+              `${cat.toUpperCase()}:\n${points.map(p => '- ' + p).join('\n')}`
+            ).join('\n') +
+            '\nFavor content types that let these messages land naturally.\n';
+        }
+      }
+    } catch (tpError) {
+      console.error('Error fetching talking points:', tpError.message);
+    }
+
+    const articlesForPrompt = allArticles.rows.map((a, i) => `
+${i + 1}. HEADLINE: ${a.headline}
+   OUTLET: ${a.outlet}
+   SUMMARY: ${a.summary || ''}
+   RELEVANCE: ${a.relevance || ''}
+   ANGLE: ${a.angle_title || ''} - ${a.angle_narrative || ''}
+`).join('\n');
+
+    const reanalyzePrompt = `You are re-analyzing cached news articles for Glossi, an AI-powered 3D product visualization platform. Each article has already been curated as relevant. Your job is to generate fresh, varied content plans for each one.
+
+GLOSSI'S MARKET:
+- Product: AI + 3D engine that creates unlimited product photos (eliminates photoshoots)
+- Customers: Enterprise brands (CPG, fashion, beauty, e-commerce)
+- Buyers: CMOs, creative directors, e-commerce directors
+${talkingPointsContext}
+ARTICLES TO RE-ANALYZE:
+${articlesForPrompt}
+
+For each article, return an updated content_plan. Keep the headline, angle_title, and angle_narrative as-is unless they can be meaningfully improved.
+
+Return JSON:
+{
+  "articles": [
+    {
+      "index": 1,
+      "angle_title": "Keep or improve the existing angle title",
+      "angle_narrative": "Keep or improve the existing narrative",
+      "content_plan": [
+        {"type": "hot_take", "description": "Specific, sharp description", "priority": 1, "audience": "builders"},
+        {"type": "blog_post", "description": "Specific description", "priority": 2, "audience": "brands"}
+      ]
+    }
+  ]
+}
+
+CONTENT PLAN RULES:
+
+CONTEXT: Glossi is a seed-stage startup building awareness with builders (devs, designers, PMs) and brand/marketing teams. The content voice is product-led, opinionated, and intentional (think Cursor, Linear, Canva). Never corporate. Never hype. Never generic startup marketing. Every piece should feel like it was worth writing.
+
+ACTIVE CHANNELS: LinkedIn, Twitter/X, company blog, email list, press outreach. Only suggest content for these channels.
+
+VALID CONTENT TYPES: linkedin_post, media_pitch, blog_post, press_release, tweet_thread, founder_quote, talking_points, briefing_doc, product_announcement, op_ed, email_blast, investor_snippet, hot_take
+
+SELECTION HEURISTICS (pick based on article type, not a default template):
+- Breaking/time-sensitive news: media_pitch + hot_take + email_blast
+- Competitor or market shift: op_ed + tweet_thread + linkedin_post
+- Thought leadership / trend piece: op_ed + linkedin_post + blog_post
+- Product/feature relevance: product_announcement + blog_post + email_blast
+- Funding/business signal: investor_snippet + press_release + linkedin_post
+- Customer/industry story: blog_post + linkedin_post + founder_quote
+- Technical deep-dive: blog_post + tweet_thread + hot_take
+- "Everyone gets this wrong": hot_take + op_ed + tweet_thread
+
+DYNAMIC PLAN SIZE:
+- High relevance + high urgency: 4-5 content pieces
+- Medium relevance: 3-4 content pieces
+- Low relevance: 2 content pieces
+
+DIVERSIFICATION: Do NOT default to linkedin_post + media_pitch for every article. Vary the mix across articles. If multiple articles would get the same lead type, shift them.
+
+AUDIENCE TAG: Each piece MUST have an "audience" field: "builders", "brands", "investors", "press", or "internal"
+
+TONE: Write descriptions like a sharp comms lead. Be specific to each article, not generic.
+
+Return ONLY valid JSON.`;
+
+    const response = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: 'claude-haiku-4-5',
+      max_tokens: 8192,
+      system: 'You are a strategic communications analyst. Return only valid JSON.',
+      messages: [{ role: 'user', content: reanalyzePrompt }]
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01'
+      }
+    });
+
+    const responseText = response.data?.content?.[0]?.text || '{}';
+    let cleanedText = responseText.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+    const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+    const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { articles: [] };
+
+    let updatedCount = 0;
+    for (const updated of (result.articles || [])) {
+      const idx = (updated.index || 0) - 1;
+      if (idx < 0 || idx >= allArticles.rows.length) continue;
+
+      const dbRow = allArticles.rows[idx];
+      try {
+        await pool.query(`
+          UPDATE pr_news_hooks
+          SET content_plan = $1,
+              angle_title = COALESCE(NULLIF($2, ''), angle_title),
+              angle_narrative = COALESCE(NULLIF($3, ''), angle_narrative)
+          WHERE id = $4
+        `, [
+          JSON.stringify(updated.content_plan || []),
+          updated.angle_title || '',
+          updated.angle_narrative || '',
+          dbRow.id
+        ]);
+        updatedCount++;
+      } catch (updateErr) {
+        console.error('Error updating article:', updateErr.message, dbRow.headline);
+      }
+    }
+
+    console.log(`Re-analyzed ${updatedCount} of ${allArticles.rows.length} articles`);
+
+    const freshNews = await pool.query(`
+      SELECT * FROM pr_news_hooks
+      WHERE date > NOW() - INTERVAL '30 days'
+      ORDER BY date DESC, fetched_at DESC
+    `);
+
+    const normalizedNews = freshNews.rows.map(item => ({
+      ...item,
+      outlet: normalizeOutletName(item.outlet)
+    }));
+
+    res.json({ success: true, news: normalizedNews, updated: updatedCount });
+  } catch (error) {
+    console.error('Error re-analyzing news hooks:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Analyze a single article URL - fetch content, analyze with Claude, store as news hook
 app.post('/api/pr/analyze-url', async (req, res) => {
   try {
