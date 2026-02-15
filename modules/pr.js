@@ -10083,16 +10083,6 @@ class DistributeManager {
     output.phase = 'edit';
     output.status = 'draft';
 
-    try {
-      await this.prAgent.apiCall('/api/pr/outputs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(output)
-      });
-    } catch (e) { /* silent */ }
-
-    this.prAgent.saveOutputs();
-
     if (this.activeReviewItem?.id === outputId) {
       this.activeReviewItem = null;
       const emptyState = document.getElementById('pr-distribute-empty-state');
@@ -10102,6 +10092,14 @@ class DistributeManager {
     }
 
     this.render();
+
+    try {
+      await this.prAgent.apiCall('/api/pr/outputs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(output)
+      });
+    } catch (e) { /* silent */ }
   }
 
   async checkLinkedInStatus() {
