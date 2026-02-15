@@ -7714,7 +7714,7 @@ class DistributeManager {
     };
     this.scheduledPosts = [];
     this.activeReviewItem = null;
-    this.activeChannel = 'linkedin';
+    this.activeChannel = 'blog';
     this._mediaUrlMode = null;
     this.linkedInConnected = false;
     this.linkedInOrgName = null;
