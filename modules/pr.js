@@ -1139,9 +1139,10 @@ class PRAgent {
     this._pendingFileName = null;
     this._pendingTranscription = null;
 
-    // Auto-trigger angle analysis if a content source was added
-    if (folder === 'Content Sources' && this.newsMonitor) {
-      this.newsMonitor.launchCustomWorkspace();
+    // Auto-trigger angle analysis if source was added from Custom tab flow
+    if (folder === 'Content Sources' && this.newsMonitor && this.newsMonitor._customSourceFlow) {
+      this.newsMonitor._customSourceFlow = false;
+      this.newsMonitor.triggerAngleAnalysis(source);
     }
   }
 
@@ -4715,6 +4716,11 @@ class NewsMonitor {
     this._selectMode = false;
     this._selectedStoryKeys = new Set();
     this._archivedExpanded = false;
+
+    // Custom source cards (persisted to localStorage)
+    this._customCards = [];
+    this._customSourceFlow = false;
+    this._pendingAngleSource = null;
   }
 
   async init() {
@@ -4722,6 +4728,7 @@ class NewsMonitor {
     this.setupEventListeners();
     this.setupFileTree();
     this.setupPanelResize();
+    this.loadCustomCards();
     await this.loadCachedNews();
   }
 
@@ -4920,13 +4927,35 @@ class NewsMonitor {
       filterOutletList: document.getElementById('pr-filter-outlet-list'),
       filterActiveDot: document.getElementById('pr-filter-active-dot'),
       filterClearAll: document.getElementById('pr-filter-clear-all'),
-      workspaceContent: document.getElementById('pr-workspace-content'),
-      workspaceEmpty: document.getElementById('pr-workspace-empty')
+      customCardsList: document.getElementById('pr-custom-cards-list'),
+      customAddSourceBtn: document.getElementById('pr-custom-add-source-btn'),
+      angleSelectModal: document.getElementById('pr-angle-select-modal'),
+      angleSelectCards: document.getElementById('pr-angle-select-cards'),
+      angleSelectClose: document.getElementById('pr-angle-select-close')
     };
   }
 
   setupEventListeners() {
     this.dom.fetchNewsBtn?.addEventListener('click', () => this.refreshNews());
+
+    // Strategy sub-tab switching
+    document.querySelectorAll('.pr-strategy-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.pr-strategy-tab').forEach(t => t.classList.toggle('active', t === tab));
+        document.querySelectorAll('.pr-strategy-panel').forEach(p => {
+          p.classList.toggle('active', p.dataset.strategyTab === tab.dataset.strategyTab);
+        });
+      });
+    });
+
+    // Custom tab: Add Source button
+    this.dom.customAddSourceBtn?.addEventListener('click', () => {
+      this._customSourceFlow = true;
+      this.prAgent.openSourceModal();
+    });
+
+    // Angle selection modal close
+    this.dom.angleSelectClose?.addEventListener('click', () => this.closeAngleSelectModal());
 
     // Sources drawer toggle
     this.dom.sourcesToggleBtn?.addEventListener('click', () => this.toggleSourcesDrawer());
@@ -6036,103 +6065,52 @@ class NewsMonitor {
     this.renderFileTree();
   }
 
-  async launchCustomWorkspace() {
-    // Content Sources folder = primary material, About Glossi folder = background context
-    const contentSources = this.prAgent.sources.filter(s => s.folder === 'Content Sources');
+  async triggerAngleAnalysis(source) {
+    // Gather background context from About Glossi folder
     const glossiSources = this.prAgent.sources.filter(s => s.folder === 'About Glossi');
 
-    if (contentSources.length === 0) return;
+    const customTitle = source.title || 'Untitled';
 
-    // All sources combined for the story
-    const selectedSources = [...contentSources, ...glossiSources];
-
-    // Primary source is the most recently added content source
-    const sorted = [...contentSources].sort((a, b) => {
-      const da = new Date(a.created_at || a.createdAt || a.addedAt || 0);
-      const db = new Date(b.created_at || b.createdAt || b.addedAt || 0);
-      return db - da;
-    });
-    const primarySource = sorted[0];
-    // Context = other content sources + all Glossi sources
-    const contextSources = [...sorted.slice(1), ...glossiSources];
-
-    const customTitle = primarySource.title || 'Untitled';
-    const key = `custom_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-
-    this.saveCurrentStoryState();
-    this.closeSourcesDrawer();
-
-    const createTab = document.querySelector('.pr-nav-item[data-stage="create"]');
-    if (createTab) createTab.click();
-    await new Promise(resolve => setTimeout(resolve, 150));
-
-    // Hide any existing content tabs, chat, and workspace actions while generating angles
-    const tabsEl = document.getElementById('pr-content-tabs');
-    if (tabsEl) tabsEl.style.display = 'none';
-    const chatEl = document.getElementById('pr-workspace-chat');
-    if (chatEl) chatEl.style.display = 'none';
-    const emptyEl = document.getElementById('pr-workspace-empty');
-    if (emptyEl) emptyEl.style.display = 'none';
-
-    // Analyze source material via AI
-    this.prAgent.showLoading();
-    let angleTitle = 'Content from ' + customTitle;
-    let angleNarrative = '';
-    let contentPlan = [
+    const defaultPlan = [
       { type: 'blog_post', description: 'In-depth analysis with product angle', priority: 1, audience: 'brands' },
       { type: 'linkedin_post', description: 'Key insight as a founder perspective post', priority: 2, audience: 'brands' },
       { type: 'tweet_thread', description: 'One sharp, punchy tweet (280 chars max)', priority: 3, audience: 'builders' },
       { type: 'email_blast', description: 'Signal boost to subscriber list', priority: 4, audience: 'brands' }
     ];
 
-    const primaryContext = `PRIMARY SOURCE (this is the main material to create content from):\nTitle: ${primarySource.title}\nType: ${primarySource.type}\nContent:\n${(primarySource.content || '').substring(0, 5000)}`;
+    const primaryContext = `PRIMARY SOURCE (this is the main material to create content from):\nTitle: ${source.title}\nType: ${source.type}\nContent:\n${(source.content || '').substring(0, 5000)}`;
 
     let bgContext = '';
-    if (contextSources.length > 0) {
+    if (glossiSources.length > 0) {
       bgContext = '\n\nBACKGROUND CONTEXT (company knowledge for additional detail, NOT the main focus):\n' +
-        contextSources.map((s, i) => {
+        glossiSources.map((s, i) => {
           return `[Context ${i + 1}] Title: ${s.title}\nContent:\n${(s.content || '').substring(0, 1500)}`;
         }).join('\n---\n');
     }
 
-    let angles = [{
-      angleTitle,
-      angleNarrative,
-      contentPlan
-    }];
+    let angles = [{ angleTitle: 'Content from ' + customTitle, angleNarrative: '', contentPlan: defaultPlan }];
+
+    // Show modal with loading state
+    this._pendingAngleSource = source;
+    this.showAngleSelectModal(angles, true);
 
     try {
       const result = await this._fetchAngleAnalysis(primaryContext, bgContext);
       if (result.angles && result.angles.length > 0) {
         angles = result.angles.map(a => ({
-          angleTitle: a.angleTitle || angleTitle,
+          angleTitle: a.angleTitle || 'Content from ' + customTitle,
           angleNarrative: a.angleNarrative || '',
-          contentPlan: a.contentPlan || contentPlan
+          contentPlan: a.contentPlan || defaultPlan
         }));
       }
     } catch (e) { /* fall back to defaults */ }
 
-    // Sort each angle's content plan
     angles.forEach(a => {
       if (a.contentPlan) a.contentPlan.sort((x, y) => (x.priority || 99) - (y.priority || 99));
     });
 
-    this.prAgent.hideLoading();
-
-    // Store pending data for after user confirms the angle
-    this._pendingAngleData = {
-      key,
-      customTitle,
-      selectedSources,
-      primarySource,
-      contextSources,
-      primaryContext,
-      bgContext,
-      angles
-    };
-
-    // Render inline angle cards in the workspace
-    this.renderInlineAngleCards(angles);
+    // Re-render modal with actual angles
+    this.showAngleSelectModal(angles, false);
   }
 
   async _fetchAngleAnalysis(primaryContext, bgContext, feedback) {
@@ -6192,24 +6170,19 @@ ${primaryContext}${bgContext}`
     };
   }
 
-  renderInlineAngleCards(angles) {
-    const container = this.dom.workspaceContent;
+  // =========================================
+  // ANGLE SELECTION MODAL
+  // =========================================
+
+  showAngleSelectModal(angles, loading) {
+    const container = this.dom.angleSelectCards;
     if (!container) return;
 
-    // Hide other workspace states
-    if (this.dom.workspaceEmpty) this.dom.workspaceEmpty.style.display = 'none';
-    const loadingEl = document.getElementById('pr-loading-state');
-    if (loadingEl) loadingEl.style.display = 'none';
-    const generatedEl = document.getElementById('pr-workspace-generated');
-    if (generatedEl) generatedEl.style.display = 'none';
-    const tabsEl = document.getElementById('pr-content-tabs');
-    if (tabsEl) tabsEl.style.display = 'none';
-    const chatEl = document.getElementById('pr-workspace-chat');
-    if (chatEl) chatEl.style.display = 'none';
-
-    // Remove any previous inline angle cards
-    const prev = container.querySelector('.pr-workspace-angles');
-    if (prev) prev.remove();
+    if (loading) {
+      container.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: var(--space-5);">Analyzing source material...</p>';
+      this.dom.angleSelectModal?.classList.add('visible');
+      return;
+    }
 
     const iconMap = {
       linkedin_post: 'ph-linkedin-logo',
@@ -6224,151 +6197,193 @@ ${primaryContext}${bgContext}`
       talking_points: 'ph-list-bullets'
     };
 
-    const typeLabels = {
-      blog_post: 'Blog Post',
-      linkedin_post: 'LinkedIn Post',
-      tweet_thread: 'Tweet',
-      email_blast: 'Email Blast',
-      media_pitch: 'Media Pitch',
-      op_ed: 'Op-Ed',
-      hot_take: 'Hot Take',
-      talking_points: 'Talking Points',
-      press_release: 'Press Release',
-      founder_quote: 'Founder Quote'
-    };
+    this._pendingAngles = angles;
 
-    const cardsHTML = angles.map((angle, i) => {
-      const planItems = (angle.contentPlan || []).map((p, pi) => {
-        const label = typeLabels[p.type] || p.type;
-        const audienceBadge = p.audience ? `<span class="pr-audience-badge pr-audience-${p.audience}">${p.audience}</span>` : '';
-        return `
-          <div class="pr-angle-card-plan-item" data-plan-index="${pi}">
-            <div class="pr-angle-card-plan-header">
-              <i class="ph-light ph-caret-right pr-plan-item-chevron"></i>
-              <span class="pr-angle-card-plan-label-text">${this.escapeHtml(label)}</span>
-              ${audienceBadge}
-            </div>
-            ${p.description ? `<div class="pr-angle-card-plan-desc"><p>${this.escapeHtml(p.description)}</p></div>` : ''}
-          </div>`;
+    container.innerHTML = angles.map((angle, i) => {
+      const typeIcons = (angle.contentPlan || []).slice(0, 6).map(item => {
+        const icon = iconMap[item.type] || 'ph-file-text';
+        return `<i class="ph-light ${icon}"></i>`;
       }).join('');
 
       return `
-        <div class="pr-angle-card" data-angle-index="${i}">
-          <div class="pr-angle-card-title">${this.escapeHtml(angle.angleTitle)}</div>
-          <div class="pr-angle-card-narrative">${this.escapeHtml(angle.angleNarrative)}</div>
-          <div class="pr-angle-card-row">
-            <i class="ph-light ph-caret-right pr-angle-chevron"></i>
-            <span class="pr-angle-card-plan-label">Content plan</span>
-            <button class="pr-angle-card-generate" data-angle-index="${i}" title="Generate content from this angle">
-              <i class="ph-light ph-lightning"></i>
-            </button>
-          </div>
-          <div class="pr-angle-card-body">
-            <div class="pr-angle-card-plan-list">${planItems}</div>
-          </div>
+        <div class="pr-angle-select-card" data-angle-index="${i}">
+          <div class="pr-angle-select-card-title">${this.escapeHtml(angle.angleTitle)}</div>
+          <div class="pr-angle-select-card-narrative">${this.escapeHtml(angle.angleNarrative)}</div>
+          <div class="pr-angle-select-card-types">${typeIcons}</div>
         </div>`;
     }).join('');
 
-    const wrapper = document.createElement('div');
-    wrapper.className = 'pr-workspace-angles';
-    wrapper.innerHTML = `<p class="pr-workspace-angles-heading">AI analyzed your source and proposed these angles. Expand to see the content plan, then click the lightning icon to generate.</p>${cardsHTML}`;
-    container.appendChild(wrapper);
+    container.querySelectorAll('.pr-angle-select-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const idx = parseInt(card.dataset.angleIndex);
+        this.acceptCustomAngle(idx);
+      });
+    });
 
-    // Attach expand/collapse handlers on angle card rows
-    wrapper.querySelectorAll('.pr-angle-card-row').forEach(row => {
+    this.dom.angleSelectModal?.classList.add('visible');
+  }
+
+  closeAngleSelectModal() {
+    this.dom.angleSelectModal?.classList.remove('visible');
+    this._pendingAngleSource = null;
+    this._pendingAngles = null;
+  }
+
+  acceptCustomAngle(angleIndex) {
+    const source = this._pendingAngleSource;
+    const angles = this._pendingAngles;
+    if (!source || !angles) return;
+
+    const selectedAngle = angles[angleIndex] || angles[0] || {};
+
+    // Build custom card entry
+    const card = {
+      id: 'custom_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      sourceId: source.id,
+      sourceTitle: source.title || 'Untitled',
+      sourceContent: (source.content || '').substring(0, 2000),
+      angleTitle: selectedAngle.angleTitle || '',
+      angleNarrative: selectedAngle.angleNarrative || '',
+      contentPlan: selectedAngle.contentPlan || [],
+      createdAt: new Date().toISOString()
+    };
+
+    this._customCards.push(card);
+    this.saveCustomCards();
+    this.renderCustomCards();
+    this.closeAngleSelectModal();
+  }
+
+  // =========================================
+  // CUSTOM CARDS (Strategy > Custom tab)
+  // =========================================
+
+  loadCustomCards() {
+    try {
+      const saved = localStorage.getItem('pr_custom_cards');
+      if (saved) this._customCards = JSON.parse(saved);
+    } catch (e) { /* ignore */ }
+    this.renderCustomCards();
+  }
+
+  saveCustomCards() {
+    try {
+      localStorage.setItem('pr_custom_cards', JSON.stringify(this._customCards));
+    } catch (e) { /* ignore */ }
+  }
+
+  renderCustomCards() {
+    const container = this.dom.customCardsList;
+    if (!container) return;
+
+    if (this._customCards.length === 0) {
+      container.innerHTML = '<p class="pr-news-hooks-empty">No custom sources yet. Click + to add one.</p>';
+      return;
+    }
+
+    let html = '<div class="pr-news-items">';
+    this._customCards.forEach((card, i) => {
+      const showAngleRow = card.angleTitle || card.angleNarrative;
+
+      html += `
+        <div class="pr-news-item" data-custom-index="${i}">
+          <span class="pr-news-headline">${this.escapeHtml(card.angleTitle || card.sourceTitle)}</span>
+          <div class="pr-news-meta">
+            <span class="pr-news-outlet">${this.escapeHtml(card.sourceTitle)}</span>
+          </div>
+          <p class="pr-news-summary">${this.escapeHtml(card.angleNarrative)}</p>
+          ${showAngleRow ? `
+          <div class="pr-news-angle">
+            <div class="pr-news-angle-row">
+              <i class="ph-light ph-caret-right pr-angle-chevron"></i>
+              <span class="pr-news-angle-title">Content plan</span>
+              <button class="pr-create-content-btn" data-custom-index="${i}">
+                <i class="ph-light ph-lightning"></i>
+              </button>
+            </div>
+            <div class="pr-news-angle-body">
+              ${(() => {
+                const cp = card.contentPlan;
+                if (!cp || !Array.isArray(cp) || cp.length === 0) return '';
+                return '<div class="pr-news-plan-list">' + cp.map((p, pi) => {
+                  const label = CONTENT_TYPES.find(t => t.id === p.type)?.label || p.type;
+                  const audienceBadge = p.audience ? '<span class="pr-audience-badge pr-audience-' + p.audience + '">' + p.audience + '</span>' : '';
+                  return '<div class="pr-news-plan-item" data-plan-index="' + pi + '">' +
+                    '<div class="pr-news-plan-header">' +
+                    '<i class="ph-light ph-caret-right pr-plan-item-chevron"></i>' +
+                    '<span class="pr-news-plan-label">' + this.escapeHtml(label) + '</span>' +
+                    audienceBadge +
+                    '</div>' +
+                    (p.description ? '<div class="pr-news-plan-desc"><p>' + this.escapeHtml(p.description) + '</p></div>' : '') +
+                    '</div>';
+                }).join('') + '</div>';
+              })()}
+            </div>
+          </div>
+          ` : `
+          <div class="pr-news-angle-row pr-news-angle-row-noangle">
+            <button class="pr-create-content-btn" data-custom-index="${i}">
+              <i class="ph-light ph-lightning"></i>
+            </button>
+          </div>
+          `}
+        </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+
+    // Attach event listeners
+    this.attachCustomCardListeners(container);
+  }
+
+  attachCustomCardListeners(container) {
+    // Angle row expand/collapse toggle
+    container.querySelectorAll('.pr-news-angle-row').forEach(row => {
       row.addEventListener('click', (e) => {
-        if (e.target.closest('.pr-angle-card-generate')) return;
-        const card = row.closest('.pr-angle-card');
+        if (e.target.closest('.pr-create-content-btn')) return;
+        const card = row.closest('.pr-news-item');
         if (card) card.classList.toggle('expanded');
       });
     });
 
-    // Attach expand/collapse handlers on plan item headers
-    wrapper.querySelectorAll('.pr-angle-card-plan-header').forEach(header => {
-      header.addEventListener('click', () => {
-        const item = header.closest('.pr-angle-card-plan-item');
+    // Plan item expand/collapse
+    container.querySelectorAll('.pr-news-plan-header').forEach(header => {
+      header.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const item = header.closest('.pr-news-plan-item');
         if (item) item.classList.toggle('expanded');
       });
     });
 
-    // Attach generate button handlers
-    wrapper.querySelectorAll('.pr-angle-card-generate').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    // Create Content button
+    container.querySelectorAll('.pr-create-content-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        const idx = parseInt(btn.dataset.angleIndex);
-        this.confirmAngleFromCard(idx);
+        const index = parseInt(btn.dataset.customIndex);
+        const card = this._customCards[index];
+        if (!card) return;
+
+        btn.disabled = true;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<svg class="spinning" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path></svg>';
+
+        // Build pseudo news item from custom card
+        const pseudoNewsItem = {
+          headline: card.angleTitle || card.sourceTitle,
+          url: card.id,
+          content_plan: card.contentPlan,
+          summary: card.sourceContent,
+          angle_title: card.angleTitle,
+          angle_narrative: card.angleNarrative,
+          _customCard: card
+        };
+
+        await this.launchCreateWorkspace(pseudoNewsItem);
+
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
       });
     });
-  }
-
-  confirmAngleFromCard(angleIndex) {
-    const pending = this._pendingAngleData;
-    if (!pending) return;
-
-    const selectedAngle = pending.angles[angleIndex] || pending.angles[0] || {};
-    const angleTitle = selectedAngle.angleTitle || '';
-    const angleNarrative = selectedAngle.angleNarrative || '';
-    const contentPlan = selectedAngle.contentPlan || [];
-
-    // Remove inline angle cards from workspace
-    const anglesEl = this.dom.workspaceContent?.querySelector('.pr-workspace-angles');
-    if (anglesEl) anglesEl.remove();
-
-    const { key, customTitle, selectedSources, primarySource } = pending;
-
-    // Build pseudo news item
-    const pseudoNewsItem = {
-      headline: customTitle,
-      url: key,
-      content_plan: contentPlan,
-      summary: (primarySource.content || '').substring(0, 2000),
-      angle_title: angleTitle,
-      angle_narrative: angleNarrative
-    };
-
-    this._activeNewsItem = pseudoNewsItem;
-    this._activeContentPlan = contentPlan;
-    this._tabContent = new Map();
-    this._activeTabId = null;
-    this._activeStoryKey = key;
-
-    // Create the story entry
-    this._stories.set(key, {
-      newsItem: pseudoNewsItem,
-      contentPlan,
-      tabContent: new Map(),
-      activeTabId: null,
-      currentOutput: null,
-      chatHTML: '',
-      suggestionsHTML: '',
-      archived: false,
-      custom: true,
-      customTitle,
-      angleTitle,
-      angleNarrative,
-      sourceIds: selectedSources.map(s => s.id),
-      primarySourceId: primarySource.id
-    });
-
-    this.renderStorySelector();
-    this.renderContentPlanTabs(contentPlan);
-
-    // Set angle context for content generation
-    this.prAgent.angleContext = {
-      narrative: angleNarrative,
-      target: contentPlan[0]?.target || '',
-      description: contentPlan[0]?.description || ''
-    };
-
-    // Generate content for all tabs
-    const firstTabId = 'plan_0';
-    this.switchContentTab(firstTabId);
-    contentPlan.forEach((item, i) => {
-      const tabId = `plan_${i}`;
-      this.generateTabContent(tabId, item, pseudoNewsItem);
-    });
-
-    this._pendingAngleData = null;
   }
 
   setupLeftPanelToggles() {

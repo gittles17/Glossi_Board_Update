@@ -108,64 +108,105 @@
       <!-- Strategy Stage Content -->
       <div class="pr-sources-panel pr-stage-content active" id="pr-sources-panel" data-stage="strategy">
 
-        <!-- Full-Width News Hooks -->
-        <div class="pr-strategy-layout">
-          <div class="pr-workflow-section pr-news-hooks-section">
-            <div class="pr-workflow-header pr-news-hooks-toolbar">
-              <h2 class="pr-workflow-title">What's Happening Now</h2>
-              <div class="pr-news-hooks-controls">
-                <div class="pr-search-expandable-wrap">
-                  <button class="pr-toolbar-btn" id="pr-search-toggle" title="Search articles" aria-label="Search articles">
-                    <i class="ph-light ph-magnifying-glass"></i>
-                  </button>
-                  <div class="pr-search-expandable" id="pr-search-expandable" style="display:none">
-                    <input type="text" class="pr-news-search" id="pr-news-search" placeholder="Search articles..." autocomplete="off">
-                    <button class="pr-news-search-clear" id="pr-news-search-clear" style="display:none" title="Clear search" aria-label="Clear search">&times;</button>
-                  </div>
-                </div>
-                <div class="pr-add-url-wrap-outer">
-                  <button class="pr-toolbar-btn" id="pr-add-url-btn" title="Add article by URL" aria-label="Add article by URL">
-                    <i class="ph-light ph-plus"></i>
-                  </button>
-                  <div class="pr-add-url-input-wrap" id="pr-add-url-input-wrap" style="display:none">
-                    <div class="pr-add-url-field">
-                      <input type="url" class="pr-add-url-input" id="pr-add-url-input" placeholder="Paste article URL..." autocomplete="off">
-                      <button class="pr-add-url-clear" id="pr-add-url-clear" style="display:none" title="Clear" aria-label="Clear">&times;</button>
-                    </div>
-                    <button class="pr-add-url-submit" id="pr-add-url-submit" title="Analyze" aria-label="Analyze">
-                      <i class="ph-light ph-paper-plane-tilt"></i>
+        <!-- Strategy Sub-Tabs -->
+        <div class="pr-strategy-tabs">
+          <button class="pr-strategy-tab active" data-strategy-tab="news">News</button>
+          <button class="pr-strategy-tab" data-strategy-tab="custom">Custom</button>
+        </div>
+
+        <!-- News Panel -->
+        <div class="pr-strategy-panel active" id="pr-strategy-news" data-strategy-tab="news">
+          <div class="pr-strategy-layout">
+            <div class="pr-workflow-section pr-news-hooks-section">
+              <div class="pr-workflow-header pr-news-hooks-toolbar">
+                <h2 class="pr-workflow-title">What's Happening Now</h2>
+                <div class="pr-news-hooks-controls">
+                  <div class="pr-search-expandable-wrap">
+                    <button class="pr-toolbar-btn" id="pr-search-toggle" title="Search articles" aria-label="Search articles">
+                      <i class="ph-light ph-magnifying-glass"></i>
                     </button>
+                    <div class="pr-search-expandable" id="pr-search-expandable" style="display:none">
+                      <input type="text" class="pr-news-search" id="pr-news-search" placeholder="Search articles..." autocomplete="off">
+                      <button class="pr-news-search-clear" id="pr-news-search-clear" style="display:none" title="Clear search" aria-label="Clear search">&times;</button>
+                    </div>
                   </div>
-                </div>
-                <div class="pr-filter-wrap">
-                  <button class="pr-toolbar-btn" id="pr-filter-toggle" title="Filters" aria-label="Filters">
-                    <i class="ph-light ph-funnel"></i>
-                    <span class="pr-filter-active-dot" id="pr-filter-active-dot" style="display:none"></span>
+                  <div class="pr-add-url-wrap-outer">
+                    <button class="pr-toolbar-btn" id="pr-add-url-btn" title="Add article by URL" aria-label="Add article by URL">
+                      <i class="ph-light ph-plus"></i>
+                    </button>
+                    <div class="pr-add-url-input-wrap" id="pr-add-url-input-wrap" style="display:none">
+                      <div class="pr-add-url-field">
+                        <input type="url" class="pr-add-url-input" id="pr-add-url-input" placeholder="Paste article URL..." autocomplete="off">
+                        <button class="pr-add-url-clear" id="pr-add-url-clear" style="display:none" title="Clear" aria-label="Clear">&times;</button>
+                      </div>
+                      <button class="pr-add-url-submit" id="pr-add-url-submit" title="Analyze" aria-label="Analyze">
+                        <i class="ph-light ph-paper-plane-tilt"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="pr-filter-wrap">
+                    <button class="pr-toolbar-btn" id="pr-filter-toggle" title="Filters" aria-label="Filters">
+                      <i class="ph-light ph-funnel"></i>
+                      <span class="pr-filter-active-dot" id="pr-filter-active-dot" style="display:none"></span>
+                    </button>
+                    <div class="pr-filter-dropdown" id="pr-filter-dropdown" style="display:none">
+                      <div class="pr-filter-dropdown-section">
+                        <span class="pr-filter-dropdown-label">Date range</span>
+                        <label class="pr-filter-radio"><input type="radio" name="pr-date-range" value="7"> Last 7 days</label>
+                        <label class="pr-filter-radio"><input type="radio" name="pr-date-range" value="30"> Last 30 days</label>
+                        <label class="pr-filter-radio"><input type="radio" name="pr-date-range" value="60" checked> Last 60 days</label>
+                        <label class="pr-filter-radio"><input type="radio" name="pr-date-range" value="all"> All time</label>
+                      </div>
+                      <div class="pr-filter-dropdown-divider"></div>
+                      <div class="pr-filter-dropdown-section">
+                        <span class="pr-filter-dropdown-label">Outlets</span>
+                        <div class="pr-filter-outlet-list" id="pr-filter-outlet-list"></div>
+                      </div>
+                      <div class="pr-filter-dropdown-divider"></div>
+                      <button class="pr-filter-dropdown-clear" id="pr-filter-clear-all">Clear all filters</button>
+                    </div>
+                  </div>
+                  <button class="pr-toolbar-btn" id="pr-fetch-news-btn" title="Refresh" aria-label="Refresh">
+                    <i class="ph-light ph-arrows-clockwise"></i>
                   </button>
-                  <div class="pr-filter-dropdown" id="pr-filter-dropdown" style="display:none">
-                    <div class="pr-filter-dropdown-section">
-                      <span class="pr-filter-dropdown-label">Date range</span>
-                      <label class="pr-filter-radio"><input type="radio" name="pr-date-range" value="7"> Last 7 days</label>
-                      <label class="pr-filter-radio"><input type="radio" name="pr-date-range" value="30"> Last 30 days</label>
-                      <label class="pr-filter-radio"><input type="radio" name="pr-date-range" value="60" checked> Last 60 days</label>
-                      <label class="pr-filter-radio"><input type="radio" name="pr-date-range" value="all"> All time</label>
-                    </div>
-                    <div class="pr-filter-dropdown-divider"></div>
-                    <div class="pr-filter-dropdown-section">
-                      <span class="pr-filter-dropdown-label">Outlets</span>
-                      <div class="pr-filter-outlet-list" id="pr-filter-outlet-list"></div>
-                    </div>
-                    <div class="pr-filter-dropdown-divider"></div>
-                    <button class="pr-filter-dropdown-clear" id="pr-filter-clear-all">Clear all filters</button>
-                  </div>
                 </div>
-                <button class="pr-toolbar-btn" id="pr-fetch-news-btn" title="Refresh" aria-label="Refresh">
-                  <i class="ph-light ph-arrows-clockwise"></i>
-                </button>
+              </div>
+              <div class="pr-news-hooks-list" id="pr-news-hooks-list">
+                <div class="pr-news-hooks-empty">No news hooks yet</div>
               </div>
             </div>
-            <div class="pr-news-hooks-list" id="pr-news-hooks-list">
-              <div class="pr-news-hooks-empty">No news hooks yet</div>
+          </div>
+        </div>
+
+        <!-- Custom Panel -->
+        <div class="pr-strategy-panel" id="pr-strategy-custom" data-strategy-tab="custom">
+          <div class="pr-strategy-layout">
+            <div class="pr-workflow-section">
+              <div class="pr-workflow-header">
+                <h2 class="pr-workflow-title">Custom Sources</h2>
+                <button class="pr-toolbar-btn" id="pr-custom-add-source-btn" title="Add Source" aria-label="Add Source">
+                  <i class="ph-light ph-plus"></i>
+                </button>
+              </div>
+              <div class="pr-custom-cards-list" id="pr-custom-cards-list">
+                <p class="pr-news-hooks-empty">No custom sources yet. Click + to add one.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Angle Selection Modal -->
+        <div class="modal-overlay" id="pr-angle-select-modal">
+          <div class="modal modal-large">
+            <div class="modal-header">
+              <h2>Choose an Angle</h2>
+              <button class="btn-icon modal-close" id="pr-angle-select-close" title="Close" aria-label="Close">
+                <i class="ph-light ph-x"></i>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p class="modal-description">AI analyzed your source and proposed these angles. Pick one to add to your Custom board.</p>
+              <div class="pr-angle-select-cards" id="pr-angle-select-cards"></div>
             </div>
           </div>
         </div>
