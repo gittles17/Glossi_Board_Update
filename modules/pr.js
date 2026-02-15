@@ -10083,6 +10083,16 @@ class DistributeManager {
     output.phase = 'edit';
     output.status = 'draft';
 
+    // Immediately remove the queue item from the DOM
+    const itemEl = document.querySelector(`.pr-distribute-queue-item[data-output-id="${outputId}"]`);
+    if (itemEl) itemEl.remove();
+
+    // Show empty state if no review items remain in DOM
+    const reviewList = document.getElementById('pr-distribute-review-list');
+    if (reviewList && !reviewList.querySelector('.pr-distribute-queue-item')) {
+      reviewList.innerHTML = '<div class="pr-distribute-queue-empty">No items in review</div>';
+    }
+
     if (this.activeReviewItem?.id === outputId) {
       this.activeReviewItem = null;
       const emptyState = document.getElementById('pr-distribute-empty-state');
