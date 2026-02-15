@@ -278,7 +278,7 @@
                   <option value="founder_quote">Founder Quote / Soundbite</option>
                   <option value="blog_post">Blog Post</option>
                   <option value="linkedin_post">LinkedIn Post</option>
-                  <option value="tweet_thread">Tweet Thread</option>
+                  <option value="tweet_thread">Tweet</option>
                   <option value="briefing_doc">Briefing Document</option>
                   <option value="talking_points">Talking Points</option>
                   <option value="op_ed">Op-Ed / Bylined Article</option>
@@ -585,17 +585,17 @@
 
         <!-- Source Type Tabs -->
         <div class="pr-source-tabs">
-          <button class="pr-source-tab active" data-type="text">
+          <button class="pr-source-tab active" data-type="file">
+            <i class="ph-light ph-file-text"></i>
+            Upload File
+          </button>
+          <button class="pr-source-tab" data-type="text">
             <i class="ph-light ph-file-text"></i>
             Paste Text
           </button>
           <button class="pr-source-tab" data-type="url">
             <i class="ph-light ph-link"></i>
             URL
-          </button>
-          <button class="pr-source-tab" data-type="file">
-            <i class="ph-light ph-file-text"></i>
-            Upload File
           </button>
           <button class="pr-source-tab" data-type="audio">
             <i class="ph-light ph-microphone"></i>
@@ -604,7 +604,7 @@
         </div>
 
         <!-- Paste Text Panel -->
-        <div class="pr-source-panel active" id="pr-panel-text">
+        <div class="pr-source-panel" id="pr-panel-text">
           <div class="notes-input-section">
             <label for="pr-source-title">Title (optional)</label>
             <input type="text" id="pr-source-title" class="input" placeholder="e.g., Q1 Product Update">
@@ -629,7 +629,7 @@
         </div>
 
         <!-- File Upload Panel -->
-        <div class="pr-source-panel" id="pr-panel-file">
+        <div class="pr-source-panel active" id="pr-panel-file">
           <div class="notes-input-section">
             <label for="pr-source-title-file">Title (optional)</label>
             <input type="text" id="pr-source-title-file" class="input" placeholder="e.g., Press Kit PDF">

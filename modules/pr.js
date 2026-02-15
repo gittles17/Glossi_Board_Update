@@ -62,7 +62,7 @@ LinkedIn Post: Perspective piece energy. Share a take. Back it with what you've 
 
 Blog Post: Write like Linear's "Now" blog. First-person where appropriate. Opinionated. Substantive. Not content marketing. Real thinking about real problems in the space.
 
-Tweet Thread: Each tweet stands alone. No "1/" numbering. First tweet is the hook. Last tweet is the call to action or link. Keep each under 280 characters.
+Tweet: One single tweet. The best possible tweet for this topic. Maximum 280 characters. Punchy, opinionated, shareable. No threads. Think Cursor or Linear on X: one sharp observation that makes people stop scrolling.
 
 Founder Quote / Soundbite: Short. Quotable. Something a journalist would actually use. Not corporate speak.
 
@@ -117,7 +117,7 @@ const CONTENT_TYPES = [
   { id: 'founder_quote', label: 'Founder Quote / Soundbite' },
   { id: 'blog_post', label: 'Blog Post' },
   { id: 'linkedin_post', label: 'LinkedIn Post' },
-  { id: 'tweet_thread', label: 'Tweet Thread' },
+  { id: 'tweet_thread', label: 'Tweet' },
   { id: 'briefing_doc', label: 'Briefing Document' },
   { id: 'talking_points', label: 'Talking Points' },
   { id: 'op_ed', label: 'Op-Ed / Bylined Article' },
@@ -948,7 +948,7 @@ class PRAgent {
     });
     const fileInput = document.getElementById('pr-source-file-input');
     if (fileInput) fileInput.value = '';
-    this.switchSourceTab('text');
+    this.switchSourceTab('file');
     // Clear file preview
     const filePreview = document.getElementById('pr-file-preview');
     if (filePreview) {
@@ -4779,7 +4779,7 @@ class NewsMonitor {
       const standardTypes = [
         { type: 'linkedin_post', description: 'Key insight as a founder perspective post', audience: 'brands' },
         { type: 'blog_post', description: 'In-depth analysis with product angle', audience: 'brands' },
-        { type: 'tweet_thread', description: 'Key insight as a concise thread', audience: 'builders' },
+        { type: 'tweet_thread', description: 'One sharp, punchy tweet (280 chars max)', audience: 'builders' },
         { type: 'email_blast', description: 'Signal boost to subscriber list', audience: 'brands' }
       ];
       const existingTypes = new Set(contentPlan.map(p => p.type));
@@ -6066,6 +6066,14 @@ class NewsMonitor {
     if (createTab) createTab.click();
     await new Promise(resolve => setTimeout(resolve, 150));
 
+    // Hide any existing content tabs, chat, and workspace actions while generating angles
+    const tabsEl = document.getElementById('pr-content-tabs');
+    if (tabsEl) tabsEl.style.display = 'none';
+    const chatEl = document.getElementById('pr-workspace-chat');
+    if (chatEl) chatEl.style.display = 'none';
+    const emptyEl = document.getElementById('pr-workspace-empty');
+    if (emptyEl) emptyEl.style.display = 'none';
+
     // Analyze source material via AI
     this.prAgent.showLoading();
     let angleTitle = 'Content from ' + customTitle;
@@ -6073,7 +6081,7 @@ class NewsMonitor {
     let contentPlan = [
       { type: 'blog_post', description: 'In-depth analysis with product angle', priority: 1, audience: 'brands' },
       { type: 'linkedin_post', description: 'Key insight as a founder perspective post', priority: 2, audience: 'brands' },
-      { type: 'tweet_thread', description: 'Key insight as a concise thread', priority: 3, audience: 'builders' },
+      { type: 'tweet_thread', description: 'One sharp, punchy tweet (280 chars max)', priority: 3, audience: 'builders' },
       { type: 'email_blast', description: 'Signal boost to subscriber list', priority: 4, audience: 'brands' }
     ];
 
@@ -6219,7 +6227,7 @@ ${primaryContext}${bgContext}`
     const typeLabels = {
       blog_post: 'Blog Post',
       linkedin_post: 'LinkedIn Post',
-      tweet_thread: 'Tweet Thread',
+      tweet_thread: 'Tweet',
       email_blast: 'Email Blast',
       media_pitch: 'Media Pitch',
       op_ed: 'Op-Ed',
@@ -6460,14 +6468,14 @@ ${primaryContext}${bgContext}`
       contentPlan = isUrgent
         ? [
             { type: 'hot_take', description: 'Quick, opinionated reaction while the news is fresh', priority: 1, audience: 'builders' },
-            { type: 'tweet_thread', description: 'Punchy thread distilling the key takeaway', priority: 2, audience: 'builders' },
+            { type: 'tweet_thread', description: 'One sharp, punchy tweet (280 chars max)', priority: 2, audience: 'builders' },
             { type: 'media_pitch', description: 'Pitch to relevant reporters with Glossi angle', priority: 3, audience: 'press' },
             { type: 'email_blast', description: 'Signal boost to subscriber list', priority: 4, audience: 'brands' }
           ]
         : isCompetitor
         ? [
             { type: 'op_ed', description: 'Bylined take on what competitors miss', priority: 1, audience: 'builders' },
-            { type: 'tweet_thread', description: 'Thread breaking down the competitive landscape', priority: 2, audience: 'builders' },
+            { type: 'tweet_thread', description: 'One sharp, punchy tweet on the competitive move (280 chars max)', priority: 2, audience: 'builders' },
             { type: 'linkedin_post', description: 'Founder perspective on the market move', priority: 3, audience: 'brands' },
             { type: 'blog_post', description: 'Deeper analysis with Glossi differentiation', priority: 4, audience: 'brands' }
           ]
@@ -6476,12 +6484,12 @@ ${primaryContext}${bgContext}`
             { type: 'op_ed', description: 'Opinionated perspective on this trend', priority: 1, audience: 'builders' },
             { type: 'linkedin_post', description: 'Founder POV distilled to one key insight', priority: 2, audience: 'brands' },
             { type: 'blog_post', description: 'Deeper analysis with Glossi angle', priority: 3, audience: 'brands' },
-            { type: 'tweet_thread', description: 'Concise thread capturing the trend shift', priority: 4, audience: 'builders' }
+            { type: 'tweet_thread', description: 'One sharp, punchy tweet on the trend (280 chars max)', priority: 4, audience: 'builders' }
           ]
         : [
             { type: 'blog_post', description: 'In-depth analysis with product angle', priority: 1, audience: 'brands' },
             { type: 'linkedin_post', description: 'Key insight as a founder perspective post', priority: 2, audience: 'brands' },
-            { type: 'tweet_thread', description: 'Key insight as a concise thread', priority: 3, audience: 'builders' },
+            { type: 'tweet_thread', description: 'One sharp, punchy tweet (280 chars max)', priority: 3, audience: 'builders' },
             { type: 'talking_points', description: 'Internal prep points for team', priority: 4, audience: 'internal' }
           ];
     }
@@ -6577,7 +6585,7 @@ ${primaryContext}${bgContext}`
       'founder_quote': 'Founder Quote',
       'blog_post': 'Blog Post',
       'linkedin_post': 'LinkedIn Post',
-      'tweet_thread': 'Tweet Thread',
+      'tweet_thread': 'Tweet',
       'briefing_doc': 'Briefing Doc',
       'talking_points': 'Talking Points',
       'op_ed': 'Op-Ed',
@@ -7155,7 +7163,7 @@ class CalendarManager {
             <label for="cal-item-type">Type</label>
             <select id="cal-item-type" class="input">
               <option value="linkedin_post">LinkedIn Post</option>
-              <option value="tweet_thread">Tweet Thread</option>
+              <option value="tweet_thread">Tweet</option>
               <option value="blog_post">Blog Post</option>
               <option value="press_release">Press Release</option>
               <option value="media_pitch">Media Pitch</option>
@@ -7291,7 +7299,7 @@ class AngleManager {
         why_now: 'Persistent problem, always relevant',
         content_plan: [
           { type: 'op_ed', description: 'Why every AI-generated product image is slowly eroding your brand (and what to do about it)', target: 'Company blog', priority: 1, audience: 'brands', completed: false },
-          { type: 'tweet_thread', description: 'Side-by-side thread: AI-generated vs. composited product shots. Let the pixels speak.', target: 'Twitter/X', priority: 2, audience: 'builders', completed: false },
+          { type: 'tweet_thread', description: 'One punchy tweet: the visual quality gap brands keep ignoring.', target: 'Twitter/X', priority: 2, audience: 'builders', completed: false },
           { type: 'email_blast', description: 'The brand consistency problem nobody talks about, with a Glossi angle', target: 'Email list', priority: 3, audience: 'brands', completed: false }
         ],
         isDefault: true,
@@ -8218,7 +8226,7 @@ class AngleManager {
       'founder_quote': 'Founder Quote',
       'blog_post': 'Blog Post',
       'linkedin_post': 'LinkedIn Post',
-      'tweet_thread': 'Tweet Thread',
+      'tweet_thread': 'Tweet',
       'briefing_doc': 'Briefing Doc',
       'talking_points': 'Talking Points',
       'op_ed': 'Op-Ed',

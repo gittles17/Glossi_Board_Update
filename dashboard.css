@@ -12706,6 +12706,14 @@ a.dropdown-item {
   position: sticky;
   top: 0;
   z-index: 12;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.pr-content-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .pr-content-tab {
