@@ -1,0 +1,13 @@
+---
+description: Prevent Cursor from creating plan/summary markdown files
+globs:
+alwaysApply: true
+---
+
+# No Plan or Summary Files
+
+NEVER create markdown files for plans, summaries, reports, checklists, or logs. This includes files in a `docs/` folder or any standalone `.md` files used to document what was done.
+
+- Do NOT create files like `SUMMARY.md`, `UPDATE_LOG.md`, `FINAL_STATUS.md`, `TESTING_GUIDE.md`, etc.
+- Keep all plans, summaries, and status updates in the chat conversation only.
+- The only exceptions are `README.md` and files the user explicitly asks you to create.

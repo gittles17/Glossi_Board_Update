@@ -3052,11 +3052,11 @@ class PRAgent {
   }
 
   _getGlossiWordmarkSVG() {
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="90" height="26" viewBox="58.11 148.29 190.58 56.11"><g fill="#171717"><path transform="matrix(1,0,0,-1,60.1131,177.542)" d="M0 0C0 14.242 8.697 24.58 23.281 24.58 35.47 24.58 43.892 17.186 45.878 5.409H39.921C38.141 14.173 32.046 19.309 23.281 19.309 12.668 19.309 6.026 11.981 6.026 0 6.026-12.121 12.806-19.584 22.665-19.584 31.635-19.584 37.318-13.49 37.318-4.795H21.159V.135H38.003C43.002 .135 45.672-2.398 45.672-7.053V-24.104H40.537V-7.738H40.399C39.509-18.283 33.278-24.857 22.665-24.857 9.45-24.857 0-15.133 0 0"/><path transform="matrix(1,0,0,-1,0,352.69)" d="M115.161 202.399H120.844V151.044H115.161Z"/><path transform="matrix(1,0,0,-1,158.2982,183.159)" d="M0 0C0 8.148-4.725 13.697-11.983 13.697-19.242 13.697-23.966 8.148-23.966 0-23.966-9.312-18.557-14.311-11.983-14.311-4.246-14.311 0-7.874 0 0M-29.786 0C-29.786 12.121-21.843 18.626-11.983 18.626-.411 18.626 5.82 10.272 5.82 0 5.82-12.531-1.78-19.24-11.983-19.24-23.624-19.24-29.786-10.955-29.786 0"/><path transform="matrix(1,0,0,-1,169.6596,190.2101)" d="M0 0H5.547C5.957-4.726 10.271-7.328 15.749-7.328 20.885-7.328 23.35-5.342 23.35-1.713 23.35 1.711 20.679 2.465 16.913 3.766L11.641 5.546C6.3 7.326 .959 8.969 .959 15.543 .959 21.705 5.752 25.678 13.694 25.678 21.706 25.678 27.253 21.364 28.143 13.284H22.596C21.98 18.349 18.419 20.814 13.489 20.814 9.038 20.814 6.437 18.83 6.437 15.681 6.437 11.914 10.408 11.161 13.421 10.134L18.352 8.49C24.993 6.3 28.965 4.039 28.965-1.986 28.965-8.355 24.309-12.189 15.475-12.189 6.847-12.189 .48-7.67 0 0"/><path transform="matrix(1,0,0,-1,203.6884,190.2101)" d="M0 0H5.547C5.957-4.726 10.271-7.328 15.749-7.328 20.885-7.328 23.35-5.342 23.35-1.713 23.35 1.711 20.679 2.465 16.913 3.766L11.641 5.546C6.3 7.326 .959 8.969 .959 15.543 .959 21.705 5.752 25.678 13.696 25.678 21.706 25.678 27.253 21.364 28.143 13.284H22.596C21.98 18.349 18.419 20.814 13.489 20.814 9.038 20.814 6.437 18.83 6.437 15.681 6.437 11.914 10.408 11.161 13.421 10.134L18.352 8.49C24.993 6.3 28.965 4.039 28.965-1.986 28.965-8.355 24.309-12.189 15.475-12.189 6.847-12.189 .48-7.67 0 0"/><path transform="matrix(1,0,0,-1,0,352.69)" d="M239.634 187.335H245.317V151.044H239.634ZM238.265 197.676C238.265 200.072 240.113 201.852 242.51 201.852 244.906 201.852 246.687 200.072 246.687 197.676 246.687 195.277 244.906 193.429 242.51 193.429 240.113 193.429 238.265 195.277 238.265 197.676"/></g></svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="51" height="15" viewBox="58.11 148.29 190.58 56.11"><g fill="#171717"><path transform="matrix(1,0,0,-1,60.1131,177.542)" d="M0 0C0 14.242 8.697 24.58 23.281 24.58 35.47 24.58 43.892 17.186 45.878 5.409H39.921C38.141 14.173 32.046 19.309 23.281 19.309 12.668 19.309 6.026 11.981 6.026 0 6.026-12.121 12.806-19.584 22.665-19.584 31.635-19.584 37.318-13.49 37.318-4.795H21.159V.135H38.003C43.002 .135 45.672-2.398 45.672-7.053V-24.104H40.537V-7.738H40.399C39.509-18.283 33.278-24.857 22.665-24.857 9.45-24.857 0-15.133 0 0"/><path transform="matrix(1,0,0,-1,0,352.69)" d="M115.161 202.399H120.844V151.044H115.161Z"/><path transform="matrix(1,0,0,-1,158.2982,183.159)" d="M0 0C0 8.148-4.725 13.697-11.983 13.697-19.242 13.697-23.966 8.148-23.966 0-23.966-9.312-18.557-14.311-11.983-14.311-4.246-14.311 0-7.874 0 0M-29.786 0C-29.786 12.121-21.843 18.626-11.983 18.626-.411 18.626 5.82 10.272 5.82 0 5.82-12.531-1.78-19.24-11.983-19.24-23.624-19.24-29.786-10.955-29.786 0"/><path transform="matrix(1,0,0,-1,169.6596,190.2101)" d="M0 0H5.547C5.957-4.726 10.271-7.328 15.749-7.328 20.885-7.328 23.35-5.342 23.35-1.713 23.35 1.711 20.679 2.465 16.913 3.766L11.641 5.546C6.3 7.326 .959 8.969 .959 15.543 .959 21.705 5.752 25.678 13.694 25.678 21.706 25.678 27.253 21.364 28.143 13.284H22.596C21.98 18.349 18.419 20.814 13.489 20.814 9.038 20.814 6.437 18.83 6.437 15.681 6.437 11.914 10.408 11.161 13.421 10.134L18.352 8.49C24.993 6.3 28.965 4.039 28.965-1.986 28.965-8.355 24.309-12.189 15.475-12.189 6.847-12.189 .48-7.67 0 0"/><path transform="matrix(1,0,0,-1,203.6884,190.2101)" d="M0 0H5.547C5.957-4.726 10.271-7.328 15.749-7.328 20.885-7.328 23.35-5.342 23.35-1.713 23.35 1.711 20.679 2.465 16.913 3.766L11.641 5.546C6.3 7.326 .959 8.969 .959 15.543 .959 21.705 5.752 25.678 13.696 25.678 21.706 25.678 27.253 21.364 28.143 13.284H22.596C21.98 18.349 18.419 20.814 13.489 20.814 9.038 20.814 6.437 18.83 6.437 15.681 6.437 11.914 10.408 11.161 13.421 10.134L18.352 8.49C24.993 6.3 28.965 4.039 28.965-1.986 28.965-8.355 24.309-12.189 15.475-12.189 6.847-12.189 .48-7.67 0 0"/><path transform="matrix(1,0,0,-1,0,352.69)" d="M239.634 187.335H245.317V151.044H239.634ZM238.265 197.676C238.265 200.072 240.113 201.852 242.51 201.852 244.906 201.852 246.687 200.072 246.687 197.676 246.687 195.277 244.906 193.429 242.51 193.429 240.113 193.429 238.265 195.277 238.265 197.676"/></g></svg>`;
   }
 
   _getGlossiLogoMarkSVG() {
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="28" viewBox="0 0 306.8 352.69"><path d="m306.8,166.33v73.65c0,8.39-6.83,15.11-15.22,15.11h-80.59c-7.05,0-13.43,1.23-17.91,3.81-4.25,2.35-6.49,5.6-6.49,10.52v68.28c0,8.28-6.72,15-15,15H14.66c-8.06,0-14.66-6.72-14.66-14.77V54.17c0-8.39,6.72-15.22,15.11-15.22h35.59c7.05,0,13.43-1.12,17.91-3.58,4.14-2.24,6.49-5.37,6.49-10.3v-9.96c0-8.39,6.83-15.11,15.11-15.11h126.26c8.39,0,15.11,6.72,15.11,15.11v15.11c0,8.39-6.72,15.11-15.11,15.11h-124.58c-5.37.11-10.75.56-14.66,2.46-1.79.89-3.13,2.13-4.14,3.69-1.01,1.68-1.79,4.03-1.79,7.72v185.58c0,2.24,1.79,3.92,3.92,3.92h95.7c5.26,0,10.3-.56,13.88-2.35,1.68-.9,2.91-2.01,3.81-3.58,1.01-1.57,1.68-3.81,1.68-7.28v-69.17c0-8.39,6.83-15.11,15.22-15.11h86.07c8.39,0,15.22,6.72,15.22,15.11Z" fill="#EC5F3F"/></svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="25" height="29" viewBox="0 0 306.8 352.69"><path d="m306.8,166.33v73.65c0,8.39-6.83,15.11-15.22,15.11h-80.59c-7.05,0-13.43,1.23-17.91,3.81-4.25,2.35-6.49,5.6-6.49,10.52v68.28c0,8.28-6.72,15-15,15H14.66c-8.06,0-14.66-6.72-14.66-14.77V54.17c0-8.39,6.72-15.22,15.11-15.22h35.59c7.05,0,13.43-1.12,17.91-3.58,4.14-2.24,6.49-5.37,6.49-10.3v-9.96c0-8.39,6.83-15.11,15.11-15.11h126.26c8.39,0,15.11,6.72,15.11,15.11v15.11c0,8.39-6.72,15.11-15.11,15.11h-124.58c-5.37.11-10.75.56-14.66,2.46-1.79.89-3.13,2.13-4.14,3.69-1.01,1.68-1.79,4.03-1.79,7.72v185.58c0,2.24,1.79,3.92,3.92,3.92h95.7c5.26,0,10.3-.56,13.88-2.35,1.68-.9,2.91-2.01,3.81-3.58,1.01-1.57,1.68-3.81,1.68-7.28v-69.17c0-8.39,6.83-15.11,15.22-15.11h86.07c8.39,0,15.22,6.72,15.22,15.11Z" fill="#EC5F3F"/></svg>`;
   }
 
   _deduplicateTitleFromContent(contentHTML, title) {
@@ -3107,7 +3107,7 @@ class PRAgent {
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:'cv02','cv03','cv04','cv11';line-height:1.6;font-size:15px;letter-spacing:-0.01em}
 .export-nav{height:60px;display:flex;align-items:center;padding:0 24px;border-bottom:1px solid rgba(0,0,0,0.06)}
-.export-nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.export-nav-logo{display:flex;align-items:center;gap:11px;text-decoration:none}
 .export-wrap{max-width:680px;margin:0 auto;padding:48px 24px 48px}
 .export-header{padding-bottom:48px;margin-bottom:48px;border-bottom:1px solid rgba(0,0,0,0.06)}
 .export-meta{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:#EC5F3F;margin-bottom:20px}
@@ -3136,7 +3136,13 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
 .export-source-cite .source-outlet{color:#737373;font-style:italic}
 .export-source-cite .source-outlet::before{content:'\\2014 ';color:#a3a3a3}
 .export-footer{text-align:center;margin-top:80px;padding-top:28px;border-top:1px solid rgba(0,0,0,0.06)}
-.export-footer-text{font-size:13px;color:#a3a3a3;letter-spacing:0.01em}
+.export-footer-logo{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px}
+.export-footer-logo svg:first-child{height:20px;width:auto}
+.export-footer-logo svg:last-child{height:10px;width:auto}
+.export-footer-links{font-size:13px;color:#a3a3a3;letter-spacing:0.01em}
+.export-footer-links a{color:#a3a3a3;text-decoration:none}
+.export-footer-links a:hover{color:#171717}
+.export-footer-sep{opacity:0.4;margin:0 8px}
 .pr-draft-content{all:unset;display:block}
 @media(max-width:768px){
 .export-title,.export-content h1{font-size:26px}
@@ -3166,7 +3172,12 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
     <span class="source-label">Source:</span> <a href="${this.escapeHtml(sourceInfo.url)}">${this.escapeHtml(sourceInfo.headline)}</a>${sourceInfo.outlet ? ` <span class="source-outlet">${this.escapeHtml(sourceInfo.outlet)}</span>` : ''}
   </div>` : ''}
   <footer class="export-footer">
-    <div class="export-footer-text">Created with Glossi</div>
+    <div class="export-footer-logo">${logoMark}${wordmark}</div>
+    <div class="export-footer-links">
+      <a href="https://www.glossi.io">glossi.io</a>
+      <span class="export-footer-sep">|</span>
+      <a href="mailto:will.erwin@glossi.io">will.erwin@glossi.io</a>
+    </div>
   </footer>
 </div>
 </body>
@@ -3201,7 +3212,7 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
         parts.push(`Source: "${sourceInfo.headline}"${sourceInfo.outlet ? ` - ${sourceInfo.outlet}` : ''}`);
         if (sourceInfo.url) parts.push(sourceInfo.url);
       }
-      parts.push('', divider, 'Created with Glossi');
+      parts.push('', divider, 'glossi.io | will.erwin@glossi.io');
       this.downloadFile(parts.join('\n'), `${filename}.txt`, 'text/plain');
 
     } else if (format === 'html') {
@@ -9549,7 +9560,8 @@ class DistributeManager {
     container.innerHTML = `
       <div class="pr-blog-nav">
         <div class="pr-blog-nav-logo">
-          <img src="assets/glossi-logo.svg" alt="Glossi">
+          <img src="assets/glossi-logo.svg" alt="" class="pr-blog-nav-mark">
+          <img src="assets/glossi-wordmark.svg" alt="Glossi" class="pr-blog-nav-wordmark">
         </div>
         <div class="pr-blog-nav-links">
           <span class="pr-blog-nav-link">Product</span>
@@ -9574,9 +9586,9 @@ class DistributeManager {
       </div>
       <div class="pr-blog-footer">
         <div class="pr-blog-footer-logo">
-          <img src="assets/glossi-logo.svg" alt="Glossi">
+          <img src="assets/glossi-logo.svg" alt="" class="pr-blog-footer-mark">
+          <img src="assets/glossi-wordmark.svg" alt="Glossi" class="pr-blog-footer-wordmark">
         </div>
-        <span class="pr-blog-footer-text">glossi.io</span>
       </div>
     `;
   }
@@ -9760,6 +9772,11 @@ class DistributeManager {
         <div class="pr-email-sig-name">Will Erwin</div>
         <div class="pr-email-sig-title">CEO</div>
         <div class="pr-email-sig-company">Glossi</div>
+        <div class="pr-email-sig-links">
+          <a href="https://www.glossi.io">glossi.io</a>
+          <span class="pr-email-sig-sep">|</span>
+          <a href="mailto:will.erwin@glossi.io">will.erwin@glossi.io</a>
+        </div>
       </div>
     `;
   }
