@@ -4352,8 +4352,8 @@ class NewsMonitor {
     this.dom.sourcesDrawerClose?.addEventListener('click', () => this.closeSourcesDrawer());
     this.dom.sourcesBackdrop?.addEventListener('click', () => this.closeSourcesDrawer());
 
-    // Expandable search
-    this.dom.searchToggle?.addEventListener('click', () => this.toggleSearch());
+    // Expandable search (stopPropagation so outside-click handler doesn't close immediately)
+    this.dom.searchToggle?.addEventListener('click', (e) => { e.stopPropagation(); this.toggleSearch(); });
 
     this.dom.searchInput?.addEventListener('input', () => {
       clearTimeout(this._searchDebounce);
@@ -4402,7 +4402,7 @@ class NewsMonitor {
       this.closeFilterDropdown();
     });
 
-    // Close filter dropdown on outside click
+    // Close dropdowns on outside click
     document.addEventListener('click', (e) => {
       if (this.dom.filterDropdown && this.dom.filterDropdown.style.display !== 'none') {
         if (!e.target.closest('.pr-filter-wrap')) {
@@ -4414,10 +4414,15 @@ class NewsMonitor {
           this.collapseSearch();
         }
       }
+      if (this.dom.addUrlWrap && this.dom.addUrlWrap.style.display !== 'none') {
+        if (!e.target.closest('.pr-add-url-wrap-outer')) {
+          this.hideAddUrlInput();
+        }
+      }
     });
 
-    // Add URL: toggle input
-    this.dom.addUrlBtn?.addEventListener('click', () => this.showAddUrlInput());
+    // Add URL: toggle input (stopPropagation so outside-click handler doesn't close immediately)
+    this.dom.addUrlBtn?.addEventListener('click', (e) => { e.stopPropagation(); this.showAddUrlInput(); });
     this.dom.addUrlCancel?.addEventListener('click', () => this.hideAddUrlInput());
     this.dom.addUrlSubmit?.addEventListener('click', () => this.submitUrl());
     this.dom.addUrlInput?.addEventListener('keydown', (e) => {
@@ -4428,6 +4433,8 @@ class NewsMonitor {
 
   showAddUrlInput() {
     if (this.dom.addUrlWrap) {
+      this.collapseSearch();
+      this.closeFilterDropdown();
       this.dom.addUrlWrap.style.display = 'flex';
       this.dom.addUrlInput?.focus();
     }
@@ -4542,6 +4549,8 @@ class NewsMonitor {
     if (isOpen) {
       this.collapseSearch();
     } else {
+      this.hideAddUrlInput();
+      this.closeFilterDropdown();
       this.dom.searchExpandable.style.display = 'flex';
       this.dom.searchInput?.focus();
     }

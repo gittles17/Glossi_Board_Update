@@ -9881,17 +9881,19 @@ h2.section-title-h4 {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent-green);
-  border: none;
+  background: transparent;
+  border: 1.5px solid var(--accent-green);
   border-radius: var(--radius-md);
-  color: var(--text-primary);
+  color: var(--accent-green);
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
 }
 
 .kb-send-btn:hover {
-  background: var(--accent-green-bright);
+  background: rgba(var(--accent-green-rgb), 0.1);
+  border-color: var(--accent-green-bright);
+  color: var(--accent-green-bright);
 }
 
 .kb-send-btn:disabled {
@@ -10840,10 +10842,10 @@ h2.section-title-h4 {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--accent-primary);
-    border: none;
+    background: transparent;
+    border: 1.5px solid var(--accent-green);
     border-radius: var(--radius-md);
-    color: var(--text-primary);
+    color: var(--accent-green);
     flex-shrink: 0;
   }
   
@@ -12004,8 +12006,8 @@ a.dropdown-item {
 }
 
 .pr-file-tree-leaf.active {
-  background: transparent;
-  color: var(--accent-primary);
+  background: rgba(var(--accent-green-rgb), 0.15);
+  color: var(--accent-green-bright);
   font-weight: 500;
 }
 
@@ -14174,17 +14176,19 @@ svg.spinning,
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent-primary);
-  border: none;
+  background: transparent;
+  border: 1.5px solid var(--accent-green);
   border-radius: var(--radius-sm);
-  color: var(--text-primary);
+  color: var(--accent-green);
   font-size: 14px;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .pr-workspace-chat-send:hover {
-  opacity: 0.85;
+  background: rgba(var(--accent-green-rgb), 0.1);
+  border-color: var(--accent-green-bright);
+  color: var(--accent-green-bright);
 }
 
 .pr-workspace-chat-send:disabled {
@@ -16851,7 +16855,7 @@ body.pr-resizing * {
 }
 
 .pr-angle-card.expanded .pr-angle-content-plan {
-  max-height: 500px;
+  max-height: 2000px;
 }
 
 .pr-content-plan-list {
@@ -17216,7 +17220,7 @@ body.pr-resizing * {
   font-size: 16px;
 }
 
-/* Expandable search */
+/* Expandable search - floating dropdown */
 .pr-search-expandable-wrap {
   display: flex;
   align-items: center;
@@ -17226,24 +17230,32 @@ body.pr-resizing * {
 .pr-search-expandable {
   display: flex;
   align-items: center;
-  position: relative;
-  margin-left: 4px;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  padding: var(--space-2);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 20;
 }
 
 .pr-search-expandable .pr-news-search {
-  padding: 5px 28px 5px 10px;
+  padding: 6px 28px 6px 10px;
   font-size: 12px;
-  background: var(--bg-elevated);
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  width: 180px;
+  width: 220px;
   transition: border-color 0.15s;
 }
 
 .pr-search-expandable .pr-news-search:focus {
   outline: none;
-  border-color: var(--accent-blue);
+  border-color: var(--accent-green);
 }
 
 .pr-search-expandable .pr-news-search::placeholder {
@@ -17271,7 +17283,7 @@ body.pr-resizing * {
   color: var(--text-primary);
 }
 
-/* Add URL */
+/* Add URL - floating dropdown */
 .pr-add-url-wrap-outer {
   display: flex;
   align-items: center;
@@ -17282,13 +17294,23 @@ body.pr-resizing * {
   display: flex;
   align-items: center;
   gap: 4px;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  padding: var(--space-2);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 20;
 }
 
 .pr-add-url-input {
   padding: 6px 10px;
   font-size: 13px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   width: 280px;
@@ -17310,17 +17332,19 @@ body.pr-resizing * {
   justify-content: center;
   width: 30px;
   height: 30px;
-  background: var(--accent-green);
-  border: none;
+  background: transparent;
+  border: 1.5px solid var(--accent-green);
   border-radius: var(--radius-sm);
-  color: var(--bg-primary);
+  color: var(--accent-green);
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: all 0.15s ease;
   flex-shrink: 0;
 }
 
 .pr-add-url-submit:hover {
-  opacity: 0.85;
+  background: rgba(var(--accent-green-rgb), 0.1);
+  border-color: var(--accent-green-bright);
+  color: var(--accent-green-bright);
 }
 
 .pr-add-url-submit:disabled {
