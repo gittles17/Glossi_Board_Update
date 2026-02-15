@@ -300,6 +300,29 @@ async function initDatabase() {
             updated_at TIMESTAMP DEFAULT NOW()
           )
         `);
+
+        // Distribution settings (LinkedIn profile info, channel configs)
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS pr_distribution_settings (
+            id SERIAL PRIMARY KEY,
+            user_id VARCHAR(50) DEFAULT 'default',
+            settings JSONB NOT NULL,
+            updated_at TIMESTAMP DEFAULT NOW()
+          )
+        `);
+
+        // Scheduled posts
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS pr_scheduled_posts (
+            id VARCHAR(50) PRIMARY KEY,
+            output_id VARCHAR(50) NOT NULL,
+            channel VARCHAR(50) NOT NULL,
+            scheduled_at TIMESTAMP NOT NULL,
+            status VARCHAR(20) DEFAULT 'pending',
+            published_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW()
+          )
+        `);
       })(),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Database init timed out after 8s')), 8000)
@@ -1746,6 +1769,91 @@ app.get('/api/pr/articles', async (req, res) => {
     res.json({ success: true, articles: result.rows });
   } catch (error) {
     console.error('Error loading articles:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// DISTRIBUTION ENDPOINTS
+// ============================================
+
+// Get distribution settings
+app.get('/api/pr/distribution-settings', async (req, res) => {
+  try {
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    const result = await pool.query(
+      'SELECT settings FROM pr_distribution_settings WHERE user_id = $1 ORDER BY id DESC LIMIT 1',
+      ['default']
+    );
+    const settings = result.rows.length > 0 ? result.rows[0].settings : null;
+    res.json({ success: true, settings });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Save distribution settings
+app.post('/api/pr/distribution-settings', async (req, res) => {
+  try {
+    const { settings } = req.body;
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    await pool.query('DELETE FROM pr_distribution_settings WHERE user_id = $1', ['default']);
+    await pool.query(
+      'INSERT INTO pr_distribution_settings (user_id, settings, updated_at) VALUES ($1, $2, NOW())',
+      ['default', JSON.stringify(settings)]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Schedule a post
+app.post('/api/pr/schedule', async (req, res) => {
+  try {
+    const { id, output_id, channel, scheduled_at } = req.body;
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    await pool.query(`
+      INSERT INTO pr_scheduled_posts (id, output_id, channel, scheduled_at, status, created_at)
+      VALUES ($1, $2, $3, $4, 'pending', NOW())
+      ON CONFLICT (id) DO UPDATE SET
+        output_id = $2, channel = $3, scheduled_at = $4, status = 'pending'
+    `, [id, output_id, channel, scheduled_at]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get scheduled posts
+app.get('/api/pr/scheduled', async (req, res) => {
+  try {
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    const result = await pool.query('SELECT * FROM pr_scheduled_posts ORDER BY scheduled_at ASC');
+    res.json({ success: true, posts: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Cancel a scheduled post
+app.delete('/api/pr/schedule/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    await pool.query('DELETE FROM pr_scheduled_posts WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });

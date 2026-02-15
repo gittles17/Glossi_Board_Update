@@ -204,6 +204,10 @@ class PRAgent {
     this.angleManager = new AngleManager(this);
     await this.angleManager.init();
     
+    // Initialize distribute manager
+    this.distributeManager = new DistributeManager(this);
+    await this.distributeManager.init();
+    
     // Add "Edit Foundation" button to sources header
     this.addEditFoundationButton();
     
@@ -3103,8 +3107,12 @@ class PRAgent {
   }
 
   showToast(message, type = 'success') {
-    // Disabled for cleaner, optimistic UI
-    return;
+    if (!this.dom.toastContainer) return;
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    this.dom.toastContainer.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
   }
 
   // =========================================
@@ -7692,4 +7700,515 @@ class AngleManager {
   }
 }
 
-export { PRAgent, CONTENT_TYPES, WizardManager, MediaManager, NewsMonitor, CalendarManager, AngleManager };
+// ============================================
+// DISTRIBUTE MANAGER
+// ============================================
+
+const LINKEDIN_PUBLISHABLE_TYPES = ['linkedin_post', 'blog_post', 'hot_take', 'founder_quote'];
+
+class DistributeManager {
+  constructor(prAgent) {
+    this.prAgent = prAgent;
+    this.settings = {
+      linkedin: { name: '', headline: '', photoUrl: '' }
+    };
+    this.scheduledPosts = [];
+    this.activeReviewItem = null;
+  }
+
+  async init() {
+    await this.loadSettings();
+    await this.loadScheduledPosts();
+    this.setupEventListeners();
+    this.render();
+  }
+
+  async loadSettings() {
+    try {
+      const res = await this.prAgent.apiCall('/api/pr/distribution-settings');
+      if (res.success && res.settings) {
+        this.settings = { ...this.settings, ...res.settings };
+      }
+    } catch (e) { /* use defaults */ }
+  }
+
+  async saveSettings() {
+    try {
+      await this.prAgent.apiCall('/api/pr/distribution-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: this.settings })
+      });
+    } catch (e) { /* silent */ }
+  }
+
+  async loadScheduledPosts() {
+    try {
+      const res = await this.prAgent.apiCall('/api/pr/scheduled');
+      if (res.success && res.posts) {
+        this.scheduledPosts = res.posts;
+      }
+    } catch (e) { /* silent */ }
+  }
+
+  setupEventListeners() {
+    // Settings panel open/close
+    const settingsBtn = document.getElementById('pr-distribute-settings-btn');
+    const settingsPanel = document.getElementById('pr-distribute-settings-panel');
+    const settingsClose = document.getElementById('pr-distribute-settings-close');
+    const settingsSave = document.getElementById('pr-distribute-settings-save');
+
+    settingsBtn?.addEventListener('click', () => {
+      this.populateSettingsForm();
+      if (settingsPanel) settingsPanel.style.display = 'flex';
+    });
+
+    settingsClose?.addEventListener('click', () => {
+      if (settingsPanel) settingsPanel.style.display = 'none';
+    });
+
+    settingsSave?.addEventListener('click', () => {
+      this.saveSettingsFromForm();
+      if (settingsPanel) settingsPanel.style.display = 'none';
+    });
+
+    // Photo URL preview
+    const photoInput = document.getElementById('pr-linkedin-photo');
+    photoInput?.addEventListener('input', () => {
+      this.updatePhotoPreview(photoInput.value);
+    });
+
+    // Published section toggle
+    const publishedToggle = document.getElementById('pr-distribute-published-toggle');
+    publishedToggle?.addEventListener('click', () => {
+      const list = document.getElementById('pr-distribute-published-list');
+      const isExpanded = publishedToggle.classList.toggle('expanded');
+      if (list) list.style.display = isExpanded ? 'block' : 'none';
+    });
+
+    // Back to Edit
+    document.getElementById('pr-distribute-back-btn')?.addEventListener('click', () => {
+      this.backToEdit();
+    });
+
+    // Publish Now
+    document.getElementById('pr-distribute-publish-btn')?.addEventListener('click', () => {
+      this.publishNow();
+    });
+
+    // Schedule
+    document.getElementById('pr-distribute-schedule-btn')?.addEventListener('click', () => {
+      this.openScheduleModal();
+    });
+
+    // Schedule modal
+    const scheduleModal = document.getElementById('pr-schedule-modal');
+    const scheduleClose = document.getElementById('pr-schedule-modal-close');
+    const scheduleCancel = document.getElementById('pr-schedule-cancel');
+    const scheduleConfirm = document.getElementById('pr-schedule-confirm');
+
+    scheduleClose?.addEventListener('click', () => {
+      scheduleModal?.classList.remove('visible');
+    });
+
+    scheduleCancel?.addEventListener('click', () => {
+      scheduleModal?.classList.remove('visible');
+    });
+
+    scheduleModal?.addEventListener('click', (e) => {
+      if (e.target === scheduleModal) scheduleModal.classList.remove('visible');
+    });
+
+    scheduleConfirm?.addEventListener('click', () => {
+      this.confirmSchedule();
+    });
+
+    // Send to Review button (in Create stage)
+    document.getElementById('pr-send-to-review-btn')?.addEventListener('click', () => {
+      this.sendCurrentToReview();
+    });
+
+    // Review queue click delegation
+    const reviewList = document.getElementById('pr-distribute-review-list');
+    const scheduledList = document.getElementById('pr-distribute-scheduled-list');
+    const publishedList = document.getElementById('pr-distribute-published-list');
+
+    [reviewList, scheduledList, publishedList].forEach(list => {
+      list?.addEventListener('click', (e) => {
+        const item = e.target.closest('.pr-distribute-queue-item');
+        if (item) {
+          const outputId = item.dataset.outputId;
+          if (outputId) this.selectReviewItem(outputId);
+        }
+      });
+    });
+  }
+
+  populateSettingsForm() {
+    const li = this.settings.linkedin || {};
+    const nameInput = document.getElementById('pr-linkedin-name');
+    const headlineInput = document.getElementById('pr-linkedin-headline');
+    const photoInput = document.getElementById('pr-linkedin-photo');
+    if (nameInput) nameInput.value = li.name || '';
+    if (headlineInput) headlineInput.value = li.headline || '';
+    if (photoInput) photoInput.value = li.photoUrl || '';
+    this.updatePhotoPreview(li.photoUrl || '');
+  }
+
+  saveSettingsFromForm() {
+    this.settings.linkedin = {
+      name: document.getElementById('pr-linkedin-name')?.value?.trim() || '',
+      headline: document.getElementById('pr-linkedin-headline')?.value?.trim() || '',
+      photoUrl: document.getElementById('pr-linkedin-photo')?.value?.trim() || ''
+    };
+    this.saveSettings();
+    if (this.activeReviewItem) {
+      this.renderLinkedInPreview(this.activeReviewItem);
+    }
+  }
+
+  updatePhotoPreview(url) {
+    const container = document.getElementById('pr-linkedin-photo-preview');
+    if (!container) return;
+    if (url && url.startsWith('http')) {
+      container.innerHTML = `<img src="${this.escapeHtml(url)}" alt="Profile photo preview">`;
+      container.classList.add('has-photo');
+    } else {
+      container.innerHTML = '';
+      container.classList.remove('has-photo');
+    }
+  }
+
+  // Send current content from Create stage to Review
+  async sendCurrentToReview() {
+    const nm = this.prAgent.newsMonitor;
+    if (!nm || !nm._activeStoryKey || nm._activeTabId == null) return;
+
+    const story = nm._stories.get(nm._activeStoryKey);
+    if (!story) return;
+
+    const tabId = nm._activeTabId;
+    const planIndex = parseInt(String(tabId).replace('plan_', ''), 10);
+    const planItem = story.contentPlan?.[planIndex];
+    if (!planItem) return;
+
+    // Find the matching output
+    const output = this.prAgent.outputs.find(o =>
+      o.story_key === nm._activeStoryKey && o.content_plan_index === planIndex
+    );
+    if (!output || !output.content) return;
+
+    // Update phase and status
+    output.phase = 'distribute';
+    output.status = 'review';
+
+    // Persist
+    try {
+      await this.prAgent.apiCall('/api/pr/outputs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(output)
+      });
+    } catch (e) { /* silent */ }
+
+    this.prAgent.saveOutputs();
+
+    // Switch to Distribute tab
+    const distributeNav = document.querySelector('.pr-nav-item[data-stage="distribute"]');
+    if (distributeNav) distributeNav.click();
+
+    // Select this item in the review queue
+    this.render();
+    this.selectReviewItem(output.id);
+  }
+
+  selectReviewItem(outputId) {
+    const output = this.prAgent.outputs.find(o => o.id === outputId);
+    if (!output) return;
+    this.activeReviewItem = output;
+
+    // Show preview, hide empty state
+    const emptyState = document.getElementById('pr-distribute-empty-state');
+    const previewContent = document.getElementById('pr-distribute-preview-content');
+    if (emptyState) emptyState.style.display = 'none';
+    if (previewContent) previewContent.style.display = 'block';
+
+    // Highlight active queue item
+    document.querySelectorAll('.pr-distribute-queue-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.outputId === outputId);
+    });
+
+    // Show/hide action buttons based on status
+    const backBtn = document.getElementById('pr-distribute-back-btn');
+    const publishBtn = document.getElementById('pr-distribute-publish-btn');
+    const scheduleBtn = document.getElementById('pr-distribute-schedule-btn');
+
+    if (output.status === 'review') {
+      if (backBtn) backBtn.style.display = '';
+      if (publishBtn) publishBtn.style.display = '';
+      if (scheduleBtn) scheduleBtn.style.display = '';
+    } else {
+      if (backBtn) backBtn.style.display = output.status === 'published' ? 'none' : '';
+      if (publishBtn) publishBtn.style.display = 'none';
+      if (scheduleBtn) scheduleBtn.style.display = 'none';
+    }
+
+    this.renderLinkedInPreview(output);
+    this.renderCharCount(output);
+  }
+
+  renderLinkedInPreview(output) {
+    const container = document.getElementById('pr-linkedin-preview');
+    if (!container) return;
+
+    const li = this.settings.linkedin || {};
+    const name = li.name || 'Your Name';
+    const headline = li.headline || 'Your Headline';
+    const photoUrl = li.photoUrl || '';
+    const content = output.content || '';
+
+    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
+
+    const avatarHtml = photoUrl
+      ? `<img src="${this.escapeHtml(photoUrl)}" alt="">`
+      : `<span class="pr-li-avatar-placeholder">${initials}</span>`;
+
+    // Truncate for preview (LinkedIn shows ~5 lines then "see more")
+    const lines = content.split('\n');
+    const isLong = lines.length > 5 || content.length > 500;
+    let displayText = content;
+    let seeMore = '';
+
+    if (isLong) {
+      const truncated = lines.slice(0, 5).join('\n');
+      displayText = truncated.length > 500 ? truncated.slice(0, 497) : truncated;
+      seeMore = `<span class="pr-li-see-more">...see more</span>`;
+    }
+
+    container.innerHTML = `
+      <div class="pr-li-header">
+        <div class="pr-li-avatar">${avatarHtml}</div>
+        <div class="pr-li-identity">
+          <div class="pr-li-name">${this.escapeHtml(name)}</div>
+          <div class="pr-li-headline">${this.escapeHtml(headline)}</div>
+          <div class="pr-li-timestamp">
+            1h
+            <svg class="pr-li-globe" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 110 14A7 7 0 018 1zm0 1.2A5.8 5.8 0 002.2 8 5.8 5.8 0 008 13.8 5.8 5.8 0 0013.8 8 5.8 5.8 0 008 2.2zm-.6 1.02V5.6H5.3a6.5 6.5 0 012.1-2.38zM8.6 3.22A6.5 6.5 0 0110.7 5.6H8.6V3.22zM4.84 6.8h2.56v2.4H5.1a6.7 6.7 0 01-.26-2.4zm3.76 0h2.56a6.7 6.7 0 01-.26 2.4H8.6V6.8zM5.3 10.4h2.1v2.38A6.5 6.5 0 015.3 10.4zm3.3 2.38V10.4h2.1a6.5 6.5 0 01-2.1 2.38z"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="pr-li-body ${isLong ? 'pr-li-body-truncated' : ''}">${this.escapeHtml(displayText)}${seeMore}</div>
+      <div class="pr-li-engagement">
+        <div class="pr-li-action"><i class="ph-light ph-thumbs-up"></i> Like</div>
+        <div class="pr-li-action"><i class="ph-light ph-chat-teardrop"></i> Comment</div>
+        <div class="pr-li-action"><i class="ph-light ph-repeat"></i> Repost</div>
+        <div class="pr-li-action"><i class="ph-light ph-paper-plane-tilt"></i> Send</div>
+      </div>
+    `;
+  }
+
+  renderCharCount(output) {
+    const el = document.getElementById('pr-distribute-char-count');
+    if (!el || !output) return;
+    const len = (output.content || '').length;
+    const limit = 3000;
+    el.textContent = `${len.toLocaleString()} / ${limit.toLocaleString()} characters`;
+    el.classList.toggle('over-limit', len > limit);
+  }
+
+  async backToEdit() {
+    if (!this.activeReviewItem) return;
+
+    this.activeReviewItem.phase = 'edit';
+    this.activeReviewItem.status = 'draft';
+
+    try {
+      await this.prAgent.apiCall('/api/pr/outputs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.activeReviewItem)
+      });
+    } catch (e) { /* silent */ }
+
+    this.prAgent.saveOutputs();
+    this.activeReviewItem = null;
+
+    // Reset preview
+    const emptyState = document.getElementById('pr-distribute-empty-state');
+    const previewContent = document.getElementById('pr-distribute-preview-content');
+    if (emptyState) emptyState.style.display = '';
+    if (previewContent) previewContent.style.display = 'none';
+
+    this.render();
+
+    // Switch to Create tab
+    const createNav = document.querySelector('.pr-nav-item[data-stage="create"]');
+    if (createNav) createNav.click();
+  }
+
+  async publishNow() {
+    if (!this.activeReviewItem) return;
+
+    const confirmed = await this.prAgent.showConfirm(
+      'This will mark the content as published. (Actual LinkedIn posting will be available once your account is connected.)',
+      'Publish to LinkedIn'
+    );
+    if (!confirmed) return;
+
+    this.activeReviewItem.status = 'published';
+    this.activeReviewItem.phase = 'distribute';
+
+    try {
+      await this.prAgent.apiCall('/api/pr/outputs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.activeReviewItem)
+      });
+    } catch (e) { /* silent */ }
+
+    this.prAgent.saveOutputs();
+    this.render();
+    this.selectReviewItem(this.activeReviewItem.id);
+  }
+
+  openScheduleModal() {
+    if (!this.activeReviewItem) return;
+
+    // Set default date to tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateInput = document.getElementById('pr-schedule-date');
+    if (dateInput) dateInput.value = tomorrow.toISOString().split('T')[0];
+
+    const modal = document.getElementById('pr-schedule-modal');
+    modal?.classList.add('visible');
+  }
+
+  async confirmSchedule() {
+    if (!this.activeReviewItem) return;
+
+    const dateVal = document.getElementById('pr-schedule-date')?.value;
+    const timeVal = document.getElementById('pr-schedule-time')?.value || '09:00';
+
+    if (!dateVal) return;
+
+    const scheduledAt = new Date(`${dateVal}T${timeVal}`);
+    if (isNaN(scheduledAt.getTime())) return;
+
+    // Create scheduled post record
+    const scheduleId = 'sched_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+    try {
+      await this.prAgent.apiCall('/api/pr/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: scheduleId,
+          output_id: this.activeReviewItem.id,
+          channel: 'linkedin',
+          scheduled_at: scheduledAt.toISOString()
+        })
+      });
+    } catch (e) { /* silent */ }
+
+    // Update output status
+    this.activeReviewItem.status = 'scheduled';
+    this.activeReviewItem.phase = 'distribute';
+
+    try {
+      await this.prAgent.apiCall('/api/pr/outputs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.activeReviewItem)
+      });
+    } catch (e) { /* silent */ }
+
+    this.prAgent.saveOutputs();
+
+    // Close modal
+    document.getElementById('pr-schedule-modal')?.classList.remove('visible');
+
+    // Reload scheduled posts
+    await this.loadScheduledPosts();
+    this.render();
+    this.selectReviewItem(this.activeReviewItem.id);
+  }
+
+  // Render the full review queue
+  render() {
+    this.renderQueueSection('review');
+    this.renderQueueSection('scheduled');
+    this.renderQueueSection('published');
+
+    // Update published count
+    const publishedCount = this.prAgent.outputs.filter(o => o.status === 'published').length;
+    const countBadge = document.getElementById('pr-distribute-published-count');
+    if (countBadge) countBadge.textContent = publishedCount;
+  }
+
+  renderQueueSection(status) {
+    const listId = {
+      review: 'pr-distribute-review-list',
+      scheduled: 'pr-distribute-scheduled-list',
+      published: 'pr-distribute-published-list'
+    }[status];
+
+    const container = document.getElementById(listId);
+    if (!container) return;
+
+    const items = this.prAgent.outputs.filter(o => o.status === status);
+
+    if (items.length === 0) {
+      const emptyMsg = {
+        review: 'No items in review',
+        scheduled: 'No scheduled posts',
+        published: 'No published posts'
+      }[status];
+      container.innerHTML = `<div class="pr-distribute-queue-empty">${emptyMsg}</div>`;
+      return;
+    }
+
+    container.innerHTML = items.map(output => {
+      const typeLabel = CONTENT_TYPES.find(t => t.id === output.content_type)?.label || output.content_type;
+      const title = output.title || output.news_headline || 'Untitled';
+      const isLinkedIn = LINKEDIN_PUBLISHABLE_TYPES.includes(output.content_type);
+      const isActive = this.activeReviewItem?.id === output.id;
+
+      let metaText = '';
+      if (status === 'scheduled') {
+        const scheduled = this.scheduledPosts.find(p => p.output_id === output.id);
+        if (scheduled) {
+          const d = new Date(scheduled.scheduled_at);
+          metaText = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' +
+                     d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        }
+      } else if (output.created_at || output.createdAt) {
+        const d = new Date(output.created_at || output.createdAt);
+        metaText = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+
+      return `
+        <div class="pr-distribute-queue-item ${isActive ? 'active' : ''}" data-output-id="${this.escapeHtml(output.id)}">
+          <div class="pr-distribute-queue-item-icon">
+            <i class="ph-light ${isLinkedIn ? 'ph-linkedin-logo' : 'ph-file-text'}"></i>
+          </div>
+          <div class="pr-distribute-queue-item-body">
+            <div class="pr-distribute-queue-item-title" title="${this.escapeHtml(title)}">${this.escapeHtml(title)}</div>
+            <div class="pr-distribute-queue-item-meta">
+              <span class="pr-distribute-queue-item-type">${this.escapeHtml(typeLabel)}</span>
+              ${metaText ? `<span>${metaText}</span>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+}
+
+export { PRAgent, CONTENT_TYPES, WizardManager, MediaManager, NewsMonitor, CalendarManager, AngleManager, DistributeManager };

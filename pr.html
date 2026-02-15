@@ -253,6 +253,11 @@
                     <button class="pr-export-item" id="pr-export-html">Download as HTML</button>
                   </div>
                 </div>
+                <div class="pr-action-divider"></div>
+                <button class="pr-send-to-review-btn" id="pr-send-to-review-btn" title="Send to Distribute for review and publishing">
+                  <i class="ph-light ph-share-network"></i>
+                  Send to Review
+                </button>
               </div>
             </div>
 
@@ -347,21 +352,125 @@
       <div class="pr-resizer" id="pr-resizer-right" data-resize="right"></div>
 
       <!-- Distribute Stage Content -->
-      <div class="pr-right-panel pr-stage-content" id="pr-right-panel" data-stage="distribute">
-        <div class="pr-right-panel-body">
-          <!-- Distribution Strategy Section (appears after generation) -->
-          <div class="pr-distribution-section" id="pr-distribution-section" style="display: none;">
-            <div class="pr-section-header">
-              <h2 class="pr-section-title">Distribution</h2>
+      <div class="pr-stage-content" id="pr-distribute-stage" data-stage="distribute">
+        <div class="pr-distribute-layout">
+
+          <!-- Left: Review Queue -->
+          <div class="pr-distribute-queue" id="pr-distribute-queue">
+            <div class="pr-distribute-queue-header">
+              <span class="pr-panel-label">Distribute</span>
+              <button class="pr-distribute-settings-btn" id="pr-distribute-settings-btn" title="Channel Settings" aria-label="Channel Settings">
+                <i class="ph-light ph-gear"></i>
+              </button>
             </div>
-            <div class="pr-strategy-body">
-              <div class="pr-right-panel-content" id="pr-right-panel-content"></div>
+
+            <div class="pr-distribute-section">
+              <div class="pr-distribute-section-label">In Review</div>
+              <div class="pr-distribute-queue-list" id="pr-distribute-review-list">
+                <div class="pr-distribute-queue-empty">No items in review</div>
+              </div>
+            </div>
+
+            <div class="pr-distribute-section">
+              <div class="pr-distribute-section-label">Scheduled</div>
+              <div class="pr-distribute-queue-list" id="pr-distribute-scheduled-list">
+                <div class="pr-distribute-queue-empty">No scheduled posts</div>
+              </div>
+            </div>
+
+            <div class="pr-distribute-section">
+              <div class="pr-distribute-section-label pr-distribute-published-toggle" id="pr-distribute-published-toggle">
+                <i class="ph-light ph-caret-right pr-distribute-toggle-icon"></i>
+                Published
+                <span class="pr-distribute-count-badge" id="pr-distribute-published-count">0</span>
+              </div>
+              <div class="pr-distribute-queue-list" id="pr-distribute-published-list" style="display:none">
+              </div>
             </div>
           </div>
-          
-          <div class="pr-empty-state">
-            <p>Distribution tools coming soon</p>
+
+          <!-- Right: Preview + Actions -->
+          <div class="pr-distribute-preview-area" id="pr-distribute-preview-area">
+
+            <!-- Empty state -->
+            <div class="pr-distribute-empty-state" id="pr-distribute-empty-state">
+              <div class="pr-empty-message">
+                <i class="ph-light ph-share-network" style="font-size: 48px; opacity: 0.3;"></i>
+                <p>Send content to review from the Create tab to preview and publish.</p>
+              </div>
+            </div>
+
+            <!-- Preview content (hidden by default) -->
+            <div class="pr-distribute-preview-content" id="pr-distribute-preview-content" style="display:none">
+
+              <!-- Channel selector -->
+              <div class="pr-distribute-channel-bar">
+                <span class="pr-distribute-channel-label">Preview as:</span>
+                <button class="pr-distribute-channel-btn active" data-channel="linkedin">
+                  <i class="ph-light ph-linkedin-logo"></i> LinkedIn
+                </button>
+              </div>
+
+              <!-- LinkedIn Preview Card -->
+              <div class="pr-linkedin-preview-wrap">
+                <div class="pr-linkedin-preview" id="pr-linkedin-preview"></div>
+              </div>
+
+              <!-- Character count -->
+              <div class="pr-distribute-char-count" id="pr-distribute-char-count"></div>
+
+              <!-- Action bar -->
+              <div class="pr-distribute-actions">
+                <button class="pr-distribute-back-btn" id="pr-distribute-back-btn">
+                  <i class="ph-light ph-arrow-left"></i>
+                  Back to Edit
+                </button>
+                <div class="pr-distribute-publish-group">
+                  <button class="pr-distribute-schedule-btn" id="pr-distribute-schedule-btn">
+                    <i class="ph-light ph-clock"></i>
+                    Schedule
+                  </button>
+                  <button class="pr-distribute-publish-btn" id="pr-distribute-publish-btn">
+                    <i class="ph-light ph-paper-plane-tilt"></i>
+                    Publish Now
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
+
+          <!-- Settings Panel (overlay) -->
+          <div class="pr-distribute-settings-panel" id="pr-distribute-settings-panel" style="display:none">
+            <div class="pr-distribute-settings-header">
+              <h3>Channel Settings</h3>
+              <button class="pr-distribute-settings-close" id="pr-distribute-settings-close" title="Close" aria-label="Close">
+                <i class="ph-light ph-x"></i>
+              </button>
+            </div>
+            <div class="pr-distribute-settings-body">
+              <div class="pr-distribute-settings-section">
+                <h4>LinkedIn Profile</h4>
+                <p class="pr-distribute-settings-hint">This info is used for the LinkedIn post preview mockup.</p>
+                <div class="pr-distribute-field">
+                  <label for="pr-linkedin-name">Display Name</label>
+                  <input type="text" id="pr-linkedin-name" class="input" placeholder="e.g., Jonathan Gitlin">
+                </div>
+                <div class="pr-distribute-field">
+                  <label for="pr-linkedin-headline">Headline</label>
+                  <input type="text" id="pr-linkedin-headline" class="input" placeholder="e.g., CEO & Co-Founder at Glossi">
+                </div>
+                <div class="pr-distribute-field">
+                  <label for="pr-linkedin-photo">Profile Photo URL</label>
+                  <input type="url" id="pr-linkedin-photo" class="input" placeholder="https://...">
+                  <div class="pr-linkedin-photo-preview" id="pr-linkedin-photo-preview"></div>
+                </div>
+              </div>
+            </div>
+            <div class="pr-distribute-settings-footer">
+              <button class="btn btn-primary" id="pr-distribute-settings-save">Save Settings</button>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -519,6 +628,36 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="confirm-modal-cancel">Cancel</button>
         <button class="btn btn-danger" id="confirm-modal-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schedule Post Modal -->
+  <div class="modal-overlay" id="pr-schedule-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Schedule Post</h2>
+        <button class="btn-icon modal-close" id="pr-schedule-modal-close" title="Close" aria-label="Close">
+          <i class="ph-light ph-x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="pr-distribute-field">
+          <label for="pr-schedule-date">Date</label>
+          <input type="date" id="pr-schedule-date" class="input">
+        </div>
+        <div class="pr-distribute-field">
+          <label for="pr-schedule-time">Time</label>
+          <input type="time" id="pr-schedule-time" class="input" value="09:00">
+        </div>
+        <p class="pr-distribute-settings-hint" style="margin-top: var(--space-3)">The post will be queued for publishing at this time. Actual posting will be available once your LinkedIn account is connected.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="pr-schedule-cancel">Cancel</button>
+        <button class="btn btn-primary" id="pr-schedule-confirm">
+          <i class="ph-light ph-clock"></i>
+          Schedule
+        </button>
       </div>
     </div>
   </div>
@@ -733,7 +872,7 @@
           this.leftResizer = document.getElementById('pr-resizer-left');
           this.rightResizer = document.getElementById('pr-resizer-right');
           this.leftPanel = document.getElementById('pr-sources-panel');
-          this.rightPanel = document.getElementById('pr-right-panel');
+          this.rightPanel = document.getElementById('pr-distribute-stage');
           
           this.init();
           this.loadSavedWidths();
