@@ -7743,7 +7743,7 @@ class DistributeManager {
     };
     this.scheduledPosts = [];
     this.activeReviewItem = null;
-    this.activeChannel = 'blog';
+    this.activeChannel = null;
     this._mediaUrlMode = null;
     this.linkedInConnected = false;
     this.linkedInOrgName = null;
@@ -7906,15 +7906,12 @@ class DistributeManager {
       this.addHashtagPrompt();
     });
 
-    // Channel switching (LinkedIn / Blog)
+    // Channel switching (LinkedIn / Blog / Email / Twitter)
     document.querySelectorAll('.pr-distribute-channel-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const channel = btn.dataset.channel;
         if (!channel) return;
-        document.querySelectorAll('.pr-distribute-channel-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.activeChannel = channel;
-        this.updateChannelVisibility(channel);
+        this.setActiveChannel(channel);
       });
     });
 
@@ -8087,6 +8084,9 @@ class DistributeManager {
 
     this.prAgent.saveOutputs();
 
+    // Pre-set the channel for this content type
+    this.activeChannel = this.getChannelForContentType(output.content_type);
+
     // Switch to Distribute tab
     const distributeNav = document.querySelector('.pr-nav-item[data-stage="distribute"]');
     if (distributeNav) distributeNav.click();
@@ -8172,19 +8172,18 @@ class DistributeManager {
       }).catch(() => {});
     }
 
+    // Render all previews
     this.renderLinkedInPreview(output);
     this.renderBlogPreview(output);
+    this.renderEmailPreview(output);
+    this.renderTwitterPreview(output);
     this.renderHashtags(output);
     this.renderFirstComment(output);
     this.renderCharCount(output);
 
-    // Show/hide media bar based on status
-    const mediaBar = document.getElementById('pr-distribute-media-bar');
-    if (mediaBar) mediaBar.style.display = output.status === 'review' ? 'flex' : 'none';
-
-    // Apply current channel visibility
-    const channel = this.activeChannel || 'linkedin';
-    this.updateChannelVisibility(channel);
+    // Auto-select the best channel for this content type
+    const bestChannel = this.getChannelForContentType(output.content_type);
+    this.setActiveChannel(bestChannel);
   }
 
   renderLinkedInPreview(output) {
@@ -8307,31 +8306,51 @@ class DistributeManager {
     el.classList.toggle('over-limit', len > limit);
   }
 
+  getChannelForContentType(contentType) {
+    const map = {
+      'linkedin_post': 'linkedin',
+      'blog_post': 'blog',
+      'email_blast': 'email',
+      'media_pitch': 'email',
+      'pitch': 'email',
+      'tweet_thread': 'twitter',
+      'hot_take': 'twitter'
+    };
+    return map[contentType] || 'blog';
+  }
+
+  setActiveChannel(channel) {
+    this.activeChannel = channel;
+    document.querySelectorAll('.pr-distribute-channel-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.channel === channel);
+    });
+    this.updateChannelVisibility(channel);
+  }
+
   updateChannelVisibility(channel) {
-    const linkedinWrap = document.getElementById('pr-linkedin-preview-wrap');
-    const blogWrap = document.getElementById('pr-blog-preview-wrap');
+    const wraps = {
+      linkedin: document.getElementById('pr-linkedin-preview-wrap'),
+      blog: document.getElementById('pr-blog-preview-wrap'),
+      email: document.getElementById('pr-email-preview-wrap'),
+      twitter: document.getElementById('pr-twitter-preview-wrap')
+    };
     const firstCommentWrap = document.getElementById('pr-li-first-comment-wrap');
     const hashtagsWrap = document.getElementById('pr-distribute-hashtags');
     const charCount = document.getElementById('pr-distribute-char-count');
     const mediaBar = document.getElementById('pr-distribute-media-bar');
     const mediaUrlInput = document.getElementById('pr-distribute-media-url-input');
 
-    if (channel === 'linkedin') {
-      if (linkedinWrap) linkedinWrap.style.display = '';
-      if (blogWrap) blogWrap.style.display = 'none';
-      if (firstCommentWrap) firstCommentWrap.style.display = this.activeReviewItem?.first_comment ? '' : 'none';
-      if (hashtagsWrap) hashtagsWrap.style.display = (this.activeReviewItem?.hashtags?.length) ? '' : 'none';
-      if (charCount) charCount.style.display = '';
-      if (mediaBar) mediaBar.style.display = this.activeReviewItem?.status === 'review' ? 'flex' : 'none';
-    } else if (channel === 'blog') {
-      if (linkedinWrap) linkedinWrap.style.display = 'none';
-      if (blogWrap) blogWrap.style.display = '';
-      if (firstCommentWrap) firstCommentWrap.style.display = 'none';
-      if (hashtagsWrap) hashtagsWrap.style.display = 'none';
-      if (charCount) charCount.style.display = 'none';
-      if (mediaBar) mediaBar.style.display = 'none';
-      if (mediaUrlInput) mediaUrlInput.style.display = 'none';
-    }
+    // Hide all preview wraps, then show the active one
+    Object.values(wraps).forEach(w => { if (w) w.style.display = 'none'; });
+    if (wraps[channel]) wraps[channel].style.display = '';
+
+    // LinkedIn-specific controls
+    const isLinkedin = channel === 'linkedin';
+    if (firstCommentWrap) firstCommentWrap.style.display = isLinkedin && this.activeReviewItem?.first_comment ? '' : 'none';
+    if (hashtagsWrap) hashtagsWrap.style.display = isLinkedin && this.activeReviewItem?.hashtags?.length ? '' : 'none';
+    if (charCount) charCount.style.display = isLinkedin ? '' : 'none';
+    if (mediaBar) mediaBar.style.display = isLinkedin && this.activeReviewItem?.status === 'review' ? 'flex' : 'none';
+    if (!isLinkedin && mediaUrlInput) mediaUrlInput.style.display = 'none';
   }
 
   renderBlogPreview(output) {
@@ -8500,6 +8519,132 @@ class DistributeManager {
     result = result.replace(/_(.+?)_/g, '<em>$1</em>');
     result = result.replace(/(https?:\/\/[^\s<]+)/g, '<a style="color: #EC5F3F; text-decoration: none;">$1</a>');
     return result;
+  }
+
+  renderEmailPreview(output) {
+    const container = document.getElementById('pr-email-preview');
+    if (!container) return;
+
+    const title = output.title || output.news_headline || 'Untitled';
+    const content = output.content || '';
+    const createdAt = output.created_at ? new Date(output.created_at) : new Date();
+    const dateStr = createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+      ', ' + createdAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+    const isMediaPitch = output.content_type === 'media_pitch' || output.content_type === 'pitch';
+    const toLabel = isMediaPitch ? 'journalist@publication.com' : 'recipient@company.com';
+
+    // Parse subject from title or first line
+    let subject = title;
+    if (subject.toLowerCase().startsWith('subject:')) {
+      subject = subject.replace(/^subject:\s*/i, '');
+    }
+
+    // Convert content to paragraphs
+    const paragraphs = content.split(/\n\n+/).filter(p => p.trim());
+    const bodyHtml = paragraphs.map(p => {
+      const escaped = this.escapeHtml(p.trim());
+      return `<p>${escaped.replace(/\n/g, '<br>')}</p>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="pr-email-toolbar">
+        <span class="pr-email-toolbar-btn"><i class="ph-light ph-arrow-left"></i></span>
+        <span class="pr-email-toolbar-btn"><i class="ph-light ph-archive-box"></i></span>
+        <span class="pr-email-toolbar-btn"><i class="ph-light ph-trash"></i></span>
+        <span class="pr-email-toolbar-btn"><i class="ph-light ph-envelope-open"></i></span>
+        <span style="flex:1"></span>
+        <span class="pr-email-toolbar-btn"><i class="ph-light ph-arrow-bend-up-left"></i></span>
+        <span class="pr-email-toolbar-btn"><i class="ph-light ph-dots-three"></i></span>
+      </div>
+      <div class="pr-email-header">
+        <div class="pr-email-subject">${this.escapeHtml(subject)}</div>
+        <div class="pr-email-meta">
+          <div class="pr-email-avatar"><span>G</span></div>
+          <div class="pr-email-meta-details">
+            <div class="pr-email-from">
+              Glossi
+              <span class="pr-email-from-addr">&lt;hello@glossi.io&gt;</span>
+            </div>
+            <div class="pr-email-to">to ${this.escapeHtml(toLabel)}</div>
+          </div>
+          <div class="pr-email-date">${dateStr}</div>
+        </div>
+      </div>
+      <div class="pr-email-body">${bodyHtml}</div>
+      <div class="pr-email-signature">
+        <div class="pr-email-sig-name">Will Erwin</div>
+        <div class="pr-email-sig-title">CEO</div>
+        <div class="pr-email-sig-company">Glossi</div>
+      </div>
+    `;
+  }
+
+  renderTwitterPreview(output) {
+    const container = document.getElementById('pr-twitter-preview');
+    if (!container) return;
+
+    const content = output.content || '';
+    const createdAt = output.created_at ? new Date(output.created_at) : new Date();
+    const timeStr = createdAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+    // Split content into tweets (by double newline, or by 280-char chunks)
+    const rawTweets = content.split(/\n\n+/).filter(t => t.trim());
+    const tweets = [];
+    for (const raw of rawTweets) {
+      const trimmed = raw.trim();
+      if (trimmed.length <= 280) {
+        tweets.push(trimmed);
+      } else {
+        // Split long blocks into 280-char tweets at sentence boundaries
+        const sentences = trimmed.match(/[^.!?]+[.!?]+\s*/g) || [trimmed];
+        let current = '';
+        for (const sentence of sentences) {
+          if ((current + sentence).length > 280 && current) {
+            tweets.push(current.trim());
+            current = sentence;
+          } else {
+            current += sentence;
+          }
+        }
+        if (current.trim()) tweets.push(current.trim());
+      }
+    }
+
+    const tweetsHtml = tweets.map((tweet, i) => {
+      const isLast = i === tweets.length - 1;
+      const charCount = tweet.length;
+      const isOver = charCount > 280;
+
+      return `
+        <div class="pr-twitter-tweet">
+          <div class="pr-twitter-tweet-left">
+            <div class="pr-twitter-avatar">
+              <img src="assets/glossi-logo.svg" alt="">
+            </div>
+            ${!isLast ? '<div class="pr-twitter-thread-line"></div>' : ''}
+          </div>
+          <div class="pr-twitter-tweet-body">
+            <div class="pr-twitter-tweet-header">
+              <span class="pr-twitter-name">Glossi</span>
+              <span class="pr-twitter-handle">@glossimade</span>
+              <span class="pr-twitter-time">${timeStr}</span>
+            </div>
+            <div class="pr-twitter-text">${this.escapeHtml(tweet)}</div>
+            <div class="pr-twitter-char-count ${isOver ? 'over' : ''}">${charCount}/280</div>
+            <div class="pr-twitter-engagement">
+              <span class="pr-twitter-action"><i class="ph-light ph-chat-circle"></i> </span>
+              <span class="pr-twitter-action"><i class="ph-light ph-repeat"></i> </span>
+              <span class="pr-twitter-action"><i class="ph-light ph-heart"></i> </span>
+              <span class="pr-twitter-action"><i class="ph-light ph-chart-bar"></i> </span>
+              <span class="pr-twitter-action"><i class="ph-light ph-export"></i></span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = tweetsHtml || '<div style="padding: 24px; color: #71767b; text-align: center;">No content to preview</div>';
   }
 
   // Media handling
