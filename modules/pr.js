@@ -8322,7 +8322,9 @@ class DistributeManager {
   setActiveChannel(channel) {
     this.activeChannel = channel;
     document.querySelectorAll('.pr-distribute-channel-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.channel === channel);
+      const matches = b.dataset.channel === channel;
+      b.classList.toggle('active', matches);
+      b.style.display = matches ? '' : 'none';
     });
     this.updateChannelVisibility(channel);
   }
