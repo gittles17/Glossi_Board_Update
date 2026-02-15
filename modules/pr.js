@@ -2728,21 +2728,33 @@ class PRAgent {
     const total = generatedTabs.length;
     let completed = 0;
 
+    const nm = this.newsMonitor;
+
+    // Show refining overlay so user sees activity
+    this.showRefiningOverlay();
     this.showToast(`Regenerating 0/${total} in new tone...`, 'success');
 
-    const nm = this.newsMonitor;
-    const selectedSources = this.sources.filter(s => s.selected);
-    if (selectedSources.length === 0) {
-      this.showToast('No sources selected', 'error');
+    // Use selected sources, or fall back to all sources if none selected
+    let useSources = this.sources.filter(s => s.selected);
+    if (useSources.length === 0) useSources = this.sources;
+    if (useSources.length === 0) {
+      this.hideRefiningOverlay();
+      this.showToast('No sources available for regeneration', 'error');
       return;
     }
 
-    const sourcesContext = selectedSources.map((s, i) => {
+    const sourcesContext = useSources.map((s, i) => {
       return `[Source ${i + 1}] (ID: ${s.id})\nTitle: ${s.title}\nType: ${s.type}\nContent:\n${s.content}\n---`;
     }).join('\n\n');
 
-    const promises = generatedTabs.map(async ({ tabId, entry, planItem, label, newsItem }) => {
+    const promises = generatedTabs.map(async ({ tabId, planItem, label, newsItem }) => {
       try {
+        // Re-fetch entry from the Map (not the captured reference) for freshness
+        const liveEntry = nm?._tabContent?.get(tabId);
+        if (!liveEntry || !liveEntry.output) {
+          return { tabId, success: false, error: 'No output found for tab' };
+        }
+
         const typeLabel = label;
         let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
         const angleNarrative = newsItem?.angle_narrative || newsItem?.relevance || newsItem?.summary || '';
@@ -2769,7 +2781,8 @@ class PRAgent {
         });
 
         if (!response.ok) {
-          throw new Error(`API request failed (${response.status})`);
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || `API request failed (${response.status})`);
         }
 
         const data = await response.json();
@@ -2785,12 +2798,12 @@ class PRAgent {
         if (parsed.citations) {
           parsed.citations = parsed.citations.map((c, i) => {
             const srcIndex = c.index || (i + 1);
-            const matchedSource = selectedSources[srcIndex - 1];
+            const matchedSource = useSources[srcIndex - 1];
             return { ...c, index: srcIndex, sourceId: matchedSource?.id || null, verified: c.sourceId !== null && c.verified !== false };
           });
         }
 
-        const output = entry.output;
+        const output = liveEntry.output;
         if (!output.drafts) this.migrateContentToDrafts(output);
 
         const newVersion = output.drafts.length + 1;
@@ -2806,7 +2819,7 @@ class PRAgent {
         output.citations = parsed.citations || output.citations;
         output.title = this.extractTitle(parsed.content, typeLabel);
 
-        entry.output = output;
+        liveEntry.output = output;
 
         try {
           await fetch('/api/pr/outputs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(output) });
@@ -2828,13 +2841,16 @@ class PRAgent {
     const successCount = results.filter(r => r.success).length;
     const failCount = results.filter(r => !r.success).length;
 
+    // Re-render the currently active tab with fresh content
+    this.hideRefiningOverlay();
     if (nm) {
       const activeEntry = nm._tabContent.get(nm._activeTabId);
       if (activeEntry && activeEntry.output) {
         this.currentOutput = activeEntry.output;
         this._viewingDraftIndex = 0;
-        this.renderDrafts();
+        this.renderGeneratedContent(activeEntry.output);
         this.renderVersionPill();
+        this.showWorkspace();
       }
     }
 
