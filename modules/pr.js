@@ -7973,10 +7973,19 @@ class DistributeManager {
     const planItem = story.contentPlan?.[planIndex];
     if (!planItem) return;
 
-    // Find the matching output
-    const output = this.prAgent.outputs.find(o =>
-      o.story_key === nm._activeStoryKey && o.content_plan_index === planIndex
-    );
+    // Find the matching output: prefer tabContent (in-memory source of truth), fallback to outputs array
+    const tabEntry = nm._tabContent?.get(tabId);
+    let output = tabEntry?.output;
+    if (!output) {
+      output = this.prAgent.outputs.find(o =>
+        o.story_key === nm._activeStoryKey && o.content_plan_index === planIndex
+      );
+    }
+    if (!output) {
+      output = this.prAgent.outputs.find(o =>
+        o.story_key === nm._activeStoryKey && String(o.content_plan_index) === String(planIndex)
+      );
+    }
     if (!output || !output.content) return;
 
     // Update phase and status
