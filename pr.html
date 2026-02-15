@@ -203,6 +203,12 @@
             </div>
             <div class="modal-body">
               <div class="pr-angle-select-cards" id="pr-angle-select-cards"></div>
+              <div class="pr-angle-feedback-row" id="pr-angle-feedback-row" style="display:none">
+                <input type="text" class="pr-angle-feedback-input" id="pr-angle-feedback-input" placeholder="Describe the direction you want...">
+                <button class="pr-angle-feedback-submit" id="pr-angle-feedback-submit" title="Regenerate angles">
+                  <i class="ph-light ph-arrows-clockwise"></i> Regenerate
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -235,21 +241,10 @@
               </button>
             </div>
 
-            <!-- File Tree (Articles) -->
+            <!-- File Tree (Articles + Custom unified) -->
             <div class="pr-file-tree" id="pr-file-tree">
               <div class="pr-file-tree-empty">
                 <p>Click "Create Content" on a news card to get started.</p>
-              </div>
-            </div>
-
-            <div class="pr-panel-label-row pr-custom-label-row" id="pr-custom-label-row" style="display:none">
-              <span class="pr-panel-label">Custom</span>
-            </div>
-
-            <!-- File Tree (Custom) -->
-            <div class="pr-file-tree" id="pr-custom-file-tree" style="display:none">
-              <div class="pr-file-tree-empty">
-                <p>Select sources and click "Create Content" to get started.</p>
               </div>
             </div>
 
@@ -273,7 +268,9 @@
 
             <!-- Content Plan Tabs + Actions -->
             <div class="pr-content-tabs" id="pr-content-tabs" style="display:none">
-              <!-- tabs are rendered dynamically -->
+              <div class="pr-content-tabs-scroll" id="pr-content-tabs-scroll">
+                <!-- tabs are rendered dynamically -->
+              </div>
               <div class="pr-workspace-actions" style="display:none" id="pr-workspace-actions">
                 <div class="pr-version-pill-wrap">
                   <button class="pr-version-pill" id="pr-version-pill" title="Version history" aria-label="Version history">

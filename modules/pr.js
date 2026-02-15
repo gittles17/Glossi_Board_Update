@@ -4721,6 +4721,11 @@ class NewsMonitor {
     this._customCards = [];
     this._customSourceFlow = false;
     this._pendingAngleSource = null;
+
+    // News card archive state (persisted to localStorage)
+    this._archivedNewsIds = new Set();
+    this._newsArchivedExpanded = false;
+    this._customArchivedExpanded = false;
   }
 
   async init() {
@@ -4729,6 +4734,7 @@ class NewsMonitor {
     this.setupFileTree();
     this.setupPanelResize();
     this.loadCustomCards();
+    this.loadArchivedNewsIds();
     await this.loadCachedNews();
   }
 
@@ -5355,7 +5361,11 @@ class NewsMonitor {
     // Apply filters
     const filteredNews = this.getFilteredNews();
 
-    if (filteredNews.length === 0) {
+    // Separate active vs archived
+    const activeNews = filteredNews.filter(item => !this._archivedNewsIds.has(item.url || item.headline));
+    const archivedNews = filteredNews.filter(item => this._archivedNewsIds.has(item.url || item.headline));
+
+    if (activeNews.length === 0 && archivedNews.length === 0) {
       if (this.newsHooks.length === 0) {
         this.dom.newsHooksList.innerHTML = `
           <p class="pr-news-hooks-empty">No news hooks yet. Click Refresh to search.</p>
@@ -5373,8 +5383,8 @@ class NewsMonitor {
     }
 
     // Slice to show only displayed count
-    const displayedItems = filteredNews.slice(0, this.displayedNewsCount);
-    const remainingCount = filteredNews.length - this.displayedNewsCount;
+    const displayedItems = activeNews.slice(0, this.displayedNewsCount);
+    const remainingCount = activeNews.length - this.displayedNewsCount;
     
     let html = '<div class="pr-news-items">';
     
@@ -5394,8 +5404,10 @@ class NewsMonitor {
       const displayAngleNarrative = angleNarrative || (isFallback ? item.relevance : '');
       const showAngleRow = displayAngleTitle || displayAngleNarrative;
       
+      const newsId = item.url || item.headline;
       html += `
-        <div class="pr-news-item ${isStale ? 'stale' : ''}">
+        <div class="pr-news-item ${isStale ? 'stale' : ''}" data-news-id="${this.escapeHtml(newsId)}">
+          <button class="pr-news-card-archive" data-archive-news-id="${this.escapeHtml(newsId)}" title="Archive"><i class="ph-light ph-archive"></i></button>
           <a href="${item.url}" target="_blank" class="pr-news-headline">${this.escapeHtml(item.headline)}</a>
           <div class="pr-news-meta">
             <span class="pr-news-outlet">${this.escapeHtml(item.outlet)}</span>
@@ -5459,6 +5471,25 @@ class NewsMonitor {
       `;
     }
     
+    // Archived news section
+    if (archivedNews.length > 0) {
+      html += `<div class="pr-news-archived-section ${this._newsArchivedExpanded ? 'expanded' : ''}">
+        <div class="pr-news-archived-header" data-toggle="news-archived">
+          <i class="ph-light ph-caret-right"></i>
+          <span>Archived (${archivedNews.length})</span>
+        </div>
+        <div class="pr-news-archived-list">
+          ${archivedNews.map(item => {
+            const nid = item.url || item.headline;
+            return `<div class="pr-news-archived-item">
+              <span class="pr-news-archived-item-title" title="${this.escapeHtml(item.headline)}">${this.escapeHtml(item.headline)}</span>
+              <button class="pr-news-unarchive-btn" data-unarchive-news-id="${this.escapeHtml(nid)}" title="Restore"><i class="ph-light ph-arrow-counter-clockwise"></i></button>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }
+
     this.dom.newsHooksList.innerHTML = html;
     this.attachNewsEventListenersToContainer(this.dom.newsHooksList);
     
@@ -5466,6 +5497,28 @@ class NewsMonitor {
     const showMoreBtn = this.dom.newsHooksList.querySelector('.pr-show-more-news-btn');
     if (showMoreBtn) {
       showMoreBtn.addEventListener('click', () => this.showMoreNews());
+    }
+
+    // Attach news archive/unarchive listeners
+    this.dom.newsHooksList.querySelectorAll('[data-archive-news-id]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.archiveNewsCard(btn.dataset.archiveNewsId);
+      });
+    });
+    this.dom.newsHooksList.querySelectorAll('[data-unarchive-news-id]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.unarchiveNewsCard(btn.dataset.unarchiveNewsId);
+      });
+    });
+    const newsArchivedHeader = this.dom.newsHooksList.querySelector('[data-toggle="news-archived"]');
+    if (newsArchivedHeader) {
+      newsArchivedHeader.addEventListener('click', () => {
+        this._newsArchivedExpanded = !this._newsArchivedExpanded;
+        const section = newsArchivedHeader.closest('.pr-news-archived-section');
+        if (section) section.classList.toggle('expanded', this._newsArchivedExpanded);
+      });
     }
   }
 
@@ -5513,6 +5566,35 @@ class NewsMonitor {
         btn.innerHTML = originalHTML;
       });
     });
+  }
+
+  // =========================================
+  // NEWS CARD ARCHIVE
+  // =========================================
+
+  loadArchivedNewsIds() {
+    try {
+      const saved = localStorage.getItem('pr_archived_news_ids');
+      if (saved) this._archivedNewsIds = new Set(JSON.parse(saved));
+    } catch (e) { /* ignore */ }
+  }
+
+  saveArchivedNewsIds() {
+    try {
+      localStorage.setItem('pr_archived_news_ids', JSON.stringify([...this._archivedNewsIds]));
+    } catch (e) { /* ignore */ }
+  }
+
+  archiveNewsCard(newsId) {
+    this._archivedNewsIds.add(newsId);
+    this.saveArchivedNewsIds();
+    this.renderNews();
+  }
+
+  unarchiveNewsCard(newsId) {
+    this._archivedNewsIds.delete(newsId);
+    this.saveArchivedNewsIds();
+    this.renderNews();
   }
 
   // =========================================
@@ -5788,8 +5870,6 @@ class NewsMonitor {
 
   renderFileTree() {
     const container = document.getElementById('pr-file-tree');
-    const customContainer = document.getElementById('pr-custom-file-tree');
-    const customLabelRow = document.getElementById('pr-custom-label-row');
 
     // Separate stories into articles vs custom, then active vs archived
     const articleActive = [];
@@ -5805,29 +5885,9 @@ class NewsMonitor {
       }
     }
 
-    // Render custom section
-    const hasCustom = customActive.length > 0 || customArchived.length > 0;
-    if (customLabelRow) customLabelRow.style.display = hasCustom ? '' : 'none';
-    if (customContainer) {
-      customContainer.style.display = hasCustom ? '' : 'none';
-      if (hasCustom) {
-        let customHTML = '';
-        for (const [key, story] of customActive) {
-          customHTML += this._renderStoryNode(key, story);
-        }
-        if (customActive.length === 0) {
-          customHTML += `<div class="pr-file-tree-empty"><p>Select sources and click "Create Content" to get started.</p></div>`;
-        }
-        if (customArchived.length > 0) {
-          customHTML += this._renderArchivedSection(customArchived);
-        }
-        customContainer.innerHTML = customHTML;
-      }
-    }
-
-    // Render article section (original behavior)
     if (!container) return;
 
+    const hasCustom = customActive.length > 0 || customArchived.length > 0;
     const activeStories = articleActive;
     const archivedStories = articleArchived;
 
@@ -5866,6 +5926,17 @@ class NewsMonitor {
     // Archived section
     if (archivedStories.length > 0) {
       html += this._renderArchivedSection(archivedStories);
+    }
+
+    // Custom section (below articles, same container)
+    if (hasCustom) {
+      html += `<div class="pr-panel-label-row pr-custom-label-row"><span class="pr-panel-label">Custom</span></div>`;
+      for (const [key, story] of customActive) {
+        html += this._renderStoryNode(key, story);
+      }
+      if (customArchived.length > 0) {
+        html += this._renderArchivedSection(customArchived);
+      }
     }
 
     container.innerHTML = html;
@@ -5967,7 +6038,6 @@ class NewsMonitor {
 
   setupFileTree() {
     const container = document.getElementById('pr-file-tree');
-    const customContainer = document.getElementById('pr-custom-file-tree');
 
     // Select mode toggle button
     const selectToggle = document.getElementById('pr-select-toggle');
@@ -6074,7 +6144,6 @@ class NewsMonitor {
     };
 
     if (container) container.addEventListener('click', handleTreeClick);
-    if (customContainer) customContainer.addEventListener('click', handleTreeClick);
   }
 
   populateLeftPanel(newsItem) {
@@ -6106,8 +6175,14 @@ class NewsMonitor {
 
     let angles = [{ angleTitle: 'Content from ' + customTitle, angleNarrative: '', contentPlan: defaultPlan }];
 
-    // Show modal with loading state
+    // Store context for regeneration via feedback
     this._pendingAngleSource = source;
+    this._pendingPrimaryContext = primaryContext;
+    this._pendingBgContext = bgContext;
+    this._pendingDefaultPlan = defaultPlan;
+    this._pendingCustomTitle = customTitle;
+
+    // Show modal with loading state
     this.showAngleSelectModal(angles, true);
 
     try {
@@ -6127,6 +6202,30 @@ class NewsMonitor {
 
     // Re-render modal with actual angles
     this.showAngleSelectModal(angles, false);
+  }
+
+  async regenerateAnglesWithFeedback(feedback) {
+    if (!this._pendingPrimaryContext) return;
+
+    this.showAngleSelectModal([], true);
+
+    try {
+      const result = await this._fetchAngleAnalysis(this._pendingPrimaryContext, this._pendingBgContext, feedback);
+      let angles = [];
+      if (result.angles && result.angles.length > 0) {
+        angles = result.angles.map(a => ({
+          angleTitle: a.angleTitle || 'Content from ' + (this._pendingCustomTitle || 'source'),
+          angleNarrative: a.angleNarrative || '',
+          contentPlan: a.contentPlan || this._pendingDefaultPlan
+        }));
+      }
+      angles.forEach(a => {
+        if (a.contentPlan) a.contentPlan.sort((x, y) => (x.priority || 99) - (y.priority || 99));
+      });
+      this.showAngleSelectModal(angles, false);
+    } catch (e) {
+      this.showAngleSelectModal([{ angleTitle: 'Fallback angle', angleNarrative: 'Could not regenerate. Try again.', contentPlan: this._pendingDefaultPlan }], false);
+    }
   }
 
   async _fetchAngleAnalysis(primaryContext, bgContext, feedback) {
@@ -6194,8 +6293,13 @@ ${primaryContext}${bgContext}`
     const container = this.dom.angleSelectCards;
     if (!container) return;
 
+    const feedbackRow = document.getElementById('pr-angle-feedback-row');
+    const feedbackInput = document.getElementById('pr-angle-feedback-input');
+    const feedbackSubmit = document.getElementById('pr-angle-feedback-submit');
+
     if (loading) {
       container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:var(--space-6);"><svg class="spinning" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><circle cx="12" cy="12" r="10" opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path></svg></div>';
+      if (feedbackRow) feedbackRow.style.display = 'none';
       this.dom.angleSelectModal?.classList.add('visible');
       return;
     }
@@ -6235,6 +6339,21 @@ ${primaryContext}${bgContext}`
         this.acceptCustomAngle(idx);
       });
     });
+
+    // Show feedback row and wire up regenerate
+    if (feedbackRow) {
+      feedbackRow.style.display = 'flex';
+      if (feedbackInput) feedbackInput.value = '';
+      const newSubmit = feedbackSubmit?.cloneNode(true);
+      if (feedbackSubmit && newSubmit) {
+        feedbackSubmit.parentNode.replaceChild(newSubmit, feedbackSubmit);
+        newSubmit.addEventListener('click', () => {
+          const text = feedbackInput?.value?.trim();
+          if (!text) return;
+          this.regenerateAnglesWithFeedback(text);
+        });
+      }
+    }
 
     this.dom.angleSelectModal?.classList.add('visible');
   }
@@ -6288,21 +6407,74 @@ ${primaryContext}${bgContext}`
     } catch (e) { /* ignore */ }
   }
 
+  archiveCustomCard(index) {
+    const card = this._customCards[index];
+    if (!card) return;
+    card.archived = true;
+    this.saveCustomCards();
+    this.renderCustomCards();
+
+    // Auto-delete the associated source
+    if (card.sourceId) {
+      try {
+        fetch(`/api/pr/sources/${encodeURIComponent(card.sourceId)}`, { method: 'DELETE' });
+        this.prAgent.sources = this.prAgent.sources.filter(s => s.id !== card.sourceId);
+        this.prAgent.renderSources();
+      } catch (e) { /* silent */ }
+    }
+  }
+
+  unarchiveCustomCard(index) {
+    const card = this._customCards[index];
+    if (!card) return;
+    card.archived = false;
+    this.saveCustomCards();
+    this.renderCustomCards();
+
+    // Re-add the source if it was removed
+    if (card.sourceId && card.sourceTitle) {
+      const existing = this.prAgent.sources.find(s => s.id === card.sourceId);
+      if (!existing) {
+        const restoredSource = {
+          id: card.sourceId,
+          title: card.sourceTitle,
+          content: card.sourceContent || '',
+          type: 'text',
+          folder: 'Content Sources'
+        };
+        this.prAgent.sources.push(restoredSource);
+        this.prAgent.renderSources();
+        try {
+          fetch('/api/pr/sources', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(restoredSource)
+          });
+        } catch (e) { /* silent */ }
+      }
+    }
+  }
+
   renderCustomCards() {
     const container = this.dom.customCardsList;
     if (!container) return;
 
-    if (this._customCards.length === 0) {
+    const activeCards = this._customCards.filter(c => !c.archived);
+    const archivedCards = this._customCards.filter(c => c.archived);
+
+    if (activeCards.length === 0 && archivedCards.length === 0) {
       container.innerHTML = '<p class="pr-news-hooks-empty">No custom sources yet. Click + to add one.</p>';
       return;
     }
 
     let html = '<div class="pr-news-items">';
-    this._customCards.forEach((card, i) => {
+    activeCards.forEach((card) => {
+      const i = this._customCards.indexOf(card);
       const showAngleRow = card.angleTitle || card.angleNarrative;
 
       html += `
         <div class="pr-news-item" data-custom-index="${i}">
+          <button class="pr-news-card-archive" data-archive-custom-index="${i}" title="Archive"><i class="ph-light ph-archive"></i></button>
           <span class="pr-news-headline">${this.escapeHtml(card.angleTitle || card.sourceTitle)}</span>
           <div class="pr-news-meta">
             <span class="pr-news-outlet">${this.escapeHtml(card.sourceTitle)}</span>
@@ -6346,10 +6518,56 @@ ${primaryContext}${bgContext}`
         </div>`;
     });
     html += '</div>';
+
+    // Archived custom cards section
+    if (archivedCards.length > 0) {
+      html += `<div class="pr-news-archived-section ${this._customArchivedExpanded ? 'expanded' : ''}">
+        <div class="pr-news-archived-header" data-toggle="custom-archived">
+          <i class="ph-light ph-caret-right"></i>
+          <span>Archived (${archivedCards.length})</span>
+        </div>
+        <div class="pr-news-archived-list">
+          ${archivedCards.map(card => {
+            const idx = this._customCards.indexOf(card);
+            return `<div class="pr-news-archived-item">
+              <span class="pr-news-archived-item-title" title="${this.escapeHtml(card.angleTitle || card.sourceTitle)}">${this.escapeHtml(card.angleTitle || card.sourceTitle)}</span>
+              <button class="pr-news-unarchive-btn" data-unarchive-custom-index="${idx}" title="Restore"><i class="ph-light ph-arrow-counter-clockwise"></i></button>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }
+
+    if (activeCards.length === 0 && archivedCards.length > 0) {
+      html = '<p class="pr-news-hooks-empty">All custom sources archived.</p>' + html;
+    }
+
     container.innerHTML = html;
 
     // Attach event listeners
     this.attachCustomCardListeners(container);
+
+    // Archive/unarchive listeners for custom cards
+    container.querySelectorAll('[data-archive-custom-index]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.archiveCustomCard(parseInt(btn.dataset.archiveCustomIndex));
+      });
+    });
+    container.querySelectorAll('[data-unarchive-custom-index]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.unarchiveCustomCard(parseInt(btn.dataset.unarchiveCustomIndex));
+      });
+    });
+    const customArchivedHeader = container.querySelector('[data-toggle="custom-archived"]');
+    if (customArchivedHeader) {
+      customArchivedHeader.addEventListener('click', () => {
+        this._customArchivedExpanded = !this._customArchivedExpanded;
+        const section = customArchivedHeader.closest('.pr-news-archived-section');
+        if (section) section.classList.toggle('expanded', this._customArchivedExpanded);
+      });
+    }
   }
 
   attachCustomCardListeners(container) {
@@ -6576,11 +6794,12 @@ ${primaryContext}${bgContext}`
 
   renderContentPlanTabs(contentPlan) {
     const tabsContainer = document.getElementById('pr-content-tabs');
+    const scrollContainer = document.getElementById('pr-content-tabs-scroll');
     if (!tabsContainer) return;
 
     tabsContainer.style.display = 'flex';
-    const actionsEl = tabsContainer.querySelector('.pr-workspace-actions');
-    tabsContainer.querySelectorAll('.pr-content-tab').forEach(t => t.remove());
+    const target = scrollContainer || tabsContainer;
+    target.querySelectorAll('.pr-content-tab').forEach(t => t.remove());
 
     contentPlan.forEach((item, index) => {
       const tabId = `plan_${index}`;
@@ -6607,11 +6826,7 @@ ${primaryContext}${bgContext}`
         this.closeContentTab(tabId);
       });
 
-      if (actionsEl) {
-        tabsContainer.insertBefore(tab, actionsEl);
-      } else {
-        tabsContainer.appendChild(tab);
-      }
+      target.appendChild(tab);
     });
   }
 
