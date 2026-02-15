@@ -767,6 +767,7 @@ class PRAgent {
     // Export menu items
     document.getElementById('pr-export-text')?.addEventListener('click', () => this.exportAs('text'));
     document.getElementById('pr-export-html')?.addEventListener('click', () => this.exportAs('html'));
+    document.getElementById('pr-export-pdf')?.addEventListener('click', () => this.exportAs('pdf'));
 
     // Close export menu on outside click
     document.addEventListener('click', () => {
@@ -3029,15 +3030,175 @@ class PRAgent {
     });
   }
 
+  _getExportTitle() {
+    const output = this.currentOutput;
+    return output?.title || output?.news_headline || 'Glossi Content';
+  }
+
+  _getExportTypeLabel() {
+    const output = this.currentOutput;
+    if (!output?.content_type) return '';
+    return CONTENT_TYPES.find(t => t.id === output.content_type)?.label || output.content_type;
+  }
+
+  _sanitizeFilename(title) {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .substring(0, 80) || 'glossi-content';
+  }
+
+  _getGlossiWordmarkSVG() {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="35" viewBox="58.11 148.29 190.58 56.11"><g fill="#ffffff"><path transform="matrix(1,0,0,-1,60.1131,177.542)" d="M0 0C0 14.242 8.697 24.58 23.281 24.58 35.47 24.58 43.892 17.186 45.878 5.409H39.921C38.141 14.173 32.046 19.309 23.281 19.309 12.668 19.309 6.026 11.981 6.026 0 6.026-12.121 12.806-19.584 22.665-19.584 31.635-19.584 37.318-13.49 37.318-4.795H21.159V.135H38.003C43.002 .135 45.672-2.398 45.672-7.053V-24.104H40.537V-7.738H40.399C39.509-18.283 33.278-24.857 22.665-24.857 9.45-24.857 0-15.133 0 0"/><path transform="matrix(1,0,0,-1,0,352.69)" d="M115.161 202.399H120.844V151.044H115.161Z"/><path transform="matrix(1,0,0,-1,158.2982,183.159)" d="M0 0C0 8.148-4.725 13.697-11.983 13.697-19.242 13.697-23.966 8.148-23.966 0-23.966-9.312-18.557-14.311-11.983-14.311-4.246-14.311 0-7.874 0 0M-29.786 0C-29.786 12.121-21.843 18.626-11.983 18.626-.411 18.626 5.82 10.272 5.82 0 5.82-12.531-1.78-19.24-11.983-19.24-23.624-19.24-29.786-10.955-29.786 0"/><path transform="matrix(1,0,0,-1,169.6596,190.2101)" d="M0 0H5.547C5.957-4.726 10.271-7.328 15.749-7.328 20.885-7.328 23.35-5.342 23.35-1.713 23.35 1.711 20.679 2.465 16.913 3.766L11.641 5.546C6.3 7.326 .959 8.969 .959 15.543 .959 21.705 5.752 25.678 13.694 25.678 21.706 25.678 27.253 21.364 28.143 13.284H22.596C21.98 18.349 18.419 20.814 13.489 20.814 9.038 20.814 6.437 18.83 6.437 15.681 6.437 11.914 10.408 11.161 13.421 10.134L18.352 8.49C24.993 6.3 28.965 4.039 28.965-1.986 28.965-8.355 24.309-12.189 15.475-12.189 6.847-12.189 .48-7.67 0 0"/><path transform="matrix(1,0,0,-1,203.6884,190.2101)" d="M0 0H5.547C5.957-4.726 10.271-7.328 15.749-7.328 20.885-7.328 23.35-5.342 23.35-1.713 23.35 1.711 20.679 2.465 16.913 3.766L11.641 5.546C6.3 7.326 .959 8.969 .959 15.543 .959 21.705 5.752 25.678 13.696 25.678 21.706 25.678 27.253 21.364 28.143 13.284H22.596C21.98 18.349 18.419 20.814 13.489 20.814 9.038 20.814 6.437 18.83 6.437 15.681 6.437 11.914 10.408 11.161 13.421 10.134L18.352 8.49C24.993 6.3 28.965 4.039 28.965-1.986 28.965-8.355 24.309-12.189 15.475-12.189 6.847-12.189 .48-7.67 0 0"/><path transform="matrix(1,0,0,-1,0,352.69)" d="M239.634 187.335H245.317V151.044H239.634ZM238.265 197.676C238.265 200.072 240.113 201.852 242.51 201.852 244.906 201.852 246.687 200.072 246.687 197.676 246.687 195.277 244.906 193.429 242.51 193.429 240.113 193.429 238.265 195.277 238.265 197.676"/></g></svg>`;
+  }
+
+  _buildBrandedHTML(title, typeLabel, dateStr, contentHTML) {
+    const wordmark = this._getGlossiWordmarkSVG();
+    const typePill = typeLabel ? `<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;letter-spacing:0.02em;color:#5BB09A;background:rgba(91,176,154,0.15);margin-left:16px;">${this.escapeHtml(typeLabel)}</span>` : '';
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${this.escapeHtml(title)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Instrument Sans',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;padding:48px 24px;min-height:100vh}
+.export-wrap{max-width:700px;margin:0 auto}
+.export-header{display:flex;align-items:center;margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.export-header-left{display:flex;align-items:center}
+.export-meta{margin-top:8px;font-size:13px;color:#737373;letter-spacing:0.01em}
+.export-card{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:40px;margin-bottom:32px}
+.export-card h1{font-size:24px;font-weight:600;line-height:1.25;letter-spacing:-0.02em;margin-bottom:24px;color:#fff}
+.export-card h2{font-size:20px;font-weight:600;line-height:1.3;letter-spacing:-0.01em;margin-top:28px;margin-bottom:12px;color:#fff}
+.export-card h3{font-size:17px;font-weight:600;line-height:1.35;margin-top:24px;margin-bottom:8px;color:#fff}
+.export-card p{font-size:15px;line-height:1.65;color:#e5e5e5;margin-bottom:16px}
+.export-card ul,.export-card ol{padding-left:20px;margin-bottom:16px}
+.export-card li{font-size:15px;line-height:1.65;color:#e5e5e5;margin-bottom:6px}
+.export-card strong{color:#fff;font-weight:600}
+.export-card em{font-style:italic;color:#a3a3a3}
+.export-card blockquote{border-left:3px solid #5BB09A;padding-left:16px;margin:16px 0;color:#a3a3a3;font-style:italic}
+.export-card a{color:#7AAED4;text-decoration:none}
+.export-card pre,.export-card code{font-family:'IBM Plex Mono',monospace;font-size:13px;background:rgba(255,255,255,0.05);border-radius:4px;padding:2px 6px}
+.export-card pre{padding:16px;overflow-x:auto;margin-bottom:16px}
+.export-card hr{border:none;border-top:1px solid rgba(255,255,255,0.08);margin:24px 0}
+.export-footer{text-align:center;padding-top:24px;border-top:1px solid rgba(255,255,255,0.06)}
+.export-footer-text{font-size:12px;color:#525252;letter-spacing:0.02em}
+.pr-draft-content{all:unset;display:block}
+</style>
+</head>
+<body>
+<div class="export-wrap">
+  <div class="export-header">
+    <div class="export-header-left">
+      ${wordmark}
+      ${typePill}
+    </div>
+  </div>
+  <div class="export-card">
+    <h1>${this.escapeHtml(title)}</h1>
+    ${contentHTML}
+  </div>
+  <div class="export-footer">
+    <div class="export-meta">${this.escapeHtml(dateStr)}</div>
+    <div class="export-footer-text" style="margin-top:8px">Created with Glossi</div>
+  </div>
+</div>
+</body>
+</html>`;
+  }
+
   exportAs(format) {
     this.dom.exportMenu?.classList.remove('active');
-    const text = this.getCleanText();
+
+    const title = this._getExportTitle();
+    const typeLabel = this._getExportTypeLabel();
+    const filename = this._sanitizeFilename(title);
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     if (format === 'text') {
-      this.downloadFile(text, 'pr-content.txt', 'text/plain');
+      const body = this.getCleanText();
+      const divider = String.fromCharCode(9472).repeat(40);
+      const branded = [
+        'GLOSSI',
+        divider,
+        '',
+        title,
+        [typeLabel, dateStr].filter(Boolean).join('  |  '),
+        '',
+        divider,
+        '',
+        body,
+        '',
+        divider,
+        'Created with Glossi'
+      ].join('\n');
+      this.downloadFile(branded, `${filename}.txt`, 'text/plain');
+
     } else if (format === 'html') {
-      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PR Content</title><style>body{font-family:system-ui,sans-serif;max-width:700px;margin:40px auto;line-height:1.6;color:#333}h1,h2,h3{color:#111}ul,ol{padding-left:20px}</style></head><body>${this.dom.generatedContent?.innerHTML || ''}</body></html>`;
-      this.downloadFile(html, 'pr-content.html', 'text/html');
+      const contentHTML = this._getCleanContentHTML();
+      const html = this._buildBrandedHTML(title, typeLabel, dateStr, contentHTML);
+      this.downloadFile(html, `${filename}.html`, 'text/html');
+
+    } else if (format === 'pdf') {
+      this._exportPDF(title, typeLabel, dateStr, filename);
+    }
+  }
+
+  _getCleanContentHTML() {
+    if (!this.dom.generatedContent) return '';
+    const clone = this.dom.generatedContent.cloneNode(true);
+    clone.querySelectorAll('.pr-citation, .pr-needs-source, .pr-citation-approved').forEach(el => el.remove());
+    return clone.innerHTML;
+  }
+
+  async _exportPDF(title, typeLabel, dateStr, filename) {
+    if (typeof html2pdf === 'undefined') {
+      this.showToast?.('PDF export library not loaded. Please try again.', 'error');
+      return;
+    }
+
+    const contentHTML = this._getCleanContentHTML();
+    const html = this._buildBrandedHTML(title, typeLabel, dateStr, contentHTML);
+
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = '794px';
+    container.innerHTML = html;
+    document.body.appendChild(container);
+
+    const target = container.querySelector('.export-wrap') || container;
+
+    try {
+      await html2pdf().set({
+        margin: 0,
+        filename: `${filename}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#000000',
+          logging: false
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait'
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      }).from(target).save();
+    } catch (e) {
+      this.showToast?.('Failed to generate PDF. Please try again.', 'error');
+    } finally {
+      document.body.removeChild(container);
     }
   }
 

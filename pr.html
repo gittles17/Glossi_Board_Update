@@ -292,6 +292,7 @@
                   <div class="pr-export-menu" id="pr-export-menu">
                     <button class="pr-export-item" id="pr-export-text">Copy as text</button>
                     <button class="pr-export-item" id="pr-export-html">Download as HTML</button>
+                    <button class="pr-export-item" id="pr-export-pdf">Download as PDF</button>
                   </div>
                 </div>
                 <div class="pr-action-divider"></div>
@@ -985,6 +986,8 @@
 
   <!-- PDF.js for file processing -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- html2pdf.js for branded PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   </script>
