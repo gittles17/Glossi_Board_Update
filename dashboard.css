@@ -18322,9 +18322,9 @@ body.pr-resizing * {
 }
 
 .pr-distribute-channel-btn.active[data-channel="blog"] {
-  border-color: #171717;
-  color: #171717;
-  background: rgba(23, 23, 23, 0.06);
+  border-color: #0a66c2;
+  color: #0a66c2;
+  background: rgba(10, 102, 194, 0.06);
 }
 
 /* ============================================
