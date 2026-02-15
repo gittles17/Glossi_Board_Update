@@ -18416,7 +18416,7 @@ body.pr-resizing * {
 }
 
 .pr-li-body-truncated {
-  max-height: 4.5em;
+  max-height: calc(4.5em + 24px);
   overflow: hidden;
   position: relative;
 }
