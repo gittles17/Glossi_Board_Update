@@ -4614,6 +4614,21 @@ class NewsMonitor {
         priority: (o.content_plan_index || 0) + 1
       }));
 
+      // Enrich existing plans with standard types if missing
+      const standardTypes = [
+        { type: 'linkedin_post', description: 'Key insight as a founder perspective post', audience: 'brands' },
+        { type: 'blog_post', description: 'In-depth analysis with product angle', audience: 'brands' },
+        { type: 'tweet_thread', description: 'Key insight as a concise thread', audience: 'builders' },
+        { type: 'email_blast', description: 'Signal boost to subscriber list', audience: 'brands' }
+      ];
+      const existingTypes = new Set(contentPlan.map(p => p.type));
+      let nextPriority = contentPlan.length + 1;
+      for (const std of standardTypes) {
+        if (!existingTypes.has(std.type)) {
+          contentPlan.push({ ...std, priority: nextPriority++ });
+        }
+      }
+
       // Build tabContent map from saved outputs
       // Match outputs to plan items by content_type first, then by content_plan_index
       const tabContent = new Map();
