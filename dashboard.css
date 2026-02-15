@@ -15561,7 +15561,7 @@ svg.spinning,
 }
 
 .pr-news-item.expanded .pr-news-angle-body {
-  max-height: 500px;
+  max-height: 2000px;
   padding-top: var(--space-2);
 }
 
