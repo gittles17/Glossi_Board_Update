@@ -15403,6 +15403,7 @@ svg.spinning,
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-5);
   padding: var(--space-5) var(--space-6);
+  align-items: start;
 }
 
 @media (max-width: 1200px) {
