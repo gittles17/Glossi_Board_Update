@@ -13342,6 +13342,13 @@ svg.spinning,
 .pr-news-hooks-list {
   flex: 1;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.pr-news-hooks-list:has(.pr-news-hooks-empty) {
+  justify-content: center;
+  align-items: center;
 }
 
 /* ============================================
