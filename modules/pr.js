@@ -7710,7 +7710,7 @@ class DistributeManager {
   constructor(prAgent) {
     this.prAgent = prAgent;
     this.settings = {
-      linkedin: { name: '', headline: '', photoUrl: '' }
+      linkedin: { name: 'Glossi', headline: 'A real-time content creation platform that brings products to life.', photoUrl: 'assets/glossi-logo.svg' }
     };
     this.scheduledPosts = [];
     this.activeReviewItem = null;
@@ -7910,7 +7910,7 @@ class DistributeManager {
   updatePhotoPreview(url) {
     const container = document.getElementById('pr-linkedin-photo-preview');
     if (!container) return;
-    if (url && url.startsWith('http')) {
+    if (url && (url.startsWith('http') || url.startsWith('assets/'))) {
       container.innerHTML = `<img src="${this.escapeHtml(url)}" alt="Profile photo preview">`;
       container.classList.add('has-photo');
     } else {
@@ -8065,9 +8065,9 @@ class DistributeManager {
     if (!container) return;
 
     const li = this.settings.linkedin || {};
-    const name = li.name || 'Your Name';
-    const headline = li.headline || 'Your Headline';
-    const photoUrl = li.photoUrl || '';
+    const name = li.name || 'Glossi';
+    const headline = li.headline || 'A real-time content creation platform that brings products to life.';
+    const photoUrl = li.photoUrl || 'assets/glossi-logo.svg';
     const content = output.content || '';
     const hashtags = output.hashtags || [];
     const media = output.media_attachments || [];
@@ -8313,8 +8313,8 @@ class DistributeManager {
     wrap.style.display = 'block';
 
     const li = this.settings.linkedin || {};
-    const name = li.name || 'Your Name';
-    const photoUrl = li.photoUrl || '';
+    const name = li.name || 'Glossi';
+    const photoUrl = li.photoUrl || 'assets/glossi-logo.svg';
     const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
 
     const avatarHtml = photoUrl

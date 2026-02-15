@@ -18333,7 +18333,8 @@ body.pr-resizing * {
 .pr-li-avatar img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  padding: 8px;
 }
 
 .pr-li-avatar-placeholder {
@@ -18818,7 +18819,8 @@ body.pr-resizing * {
 .pr-li-comment-avatar img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  padding: 6px;
 }
 
 .pr-li-comment-avatar-placeholder {
