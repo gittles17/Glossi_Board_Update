@@ -3088,7 +3088,7 @@ class PRAgent {
     return container.innerHTML;
   }
 
-  _buildBrandedHTML(title, typeLabel, dateStr, contentHTML) {
+  _buildBrandedHTML(title, typeLabel, dateStr, contentHTML, sourceInfo) {
     const logoMark = this._getGlossiLogoMarkSVG();
     const wordmark = this._getGlossiWordmarkSVG();
     const metaParts = [dateStr, typeLabel].filter(Boolean);
@@ -3130,6 +3130,11 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
 .export-content pre{padding:16px;overflow-x:auto;margin-bottom:24px}
 .export-content hr{border:none;height:1px;background:rgba(0,0,0,0.06);margin:64px 0}
 .export-content img{max-width:100%;height:auto;border-radius:8px;margin:24px 0}
+.export-source-cite{margin-top:48px;padding:20px 24px;background:#fafafa;border:1px solid rgba(0,0,0,0.06);border-radius:10px;font-size:14px;line-height:1.5;color:#525252}
+.export-source-cite .source-label{font-weight:600;color:#171717;font-size:11px;text-transform:uppercase;letter-spacing:0.05em}
+.export-source-cite a{color:#171717;text-decoration:underline;text-underline-offset:2px}
+.export-source-cite .source-outlet{color:#737373;font-style:italic}
+.export-source-cite .source-outlet::before{content:'\\2014 ';color:#a3a3a3}
 .export-footer{text-align:center;margin-top:80px;padding-top:28px;border-top:1px solid rgba(0,0,0,0.06)}
 .export-footer-text{font-size:13px;color:#a3a3a3;letter-spacing:0.01em}
 .pr-draft-content{all:unset;display:block}
@@ -3157,6 +3162,9 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
   <article class="export-content">
     ${cleanContent}
   </article>
+  ${sourceInfo ? `<div class="export-source-cite">
+    <span class="source-label">Source:</span> <a href="${this.escapeHtml(sourceInfo.url)}">${this.escapeHtml(sourceInfo.headline)}</a>${sourceInfo.outlet ? ` <span class="source-outlet">${this.escapeHtml(sourceInfo.outlet)}</span>` : ''}
+  </div>` : ''}
   <footer class="export-footer">
     <div class="export-footer-text">Created with Glossi</div>
   </footer>
@@ -3172,11 +3180,12 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
     const typeLabel = this._getExportTypeLabel();
     const filename = this._sanitizeFilename(title);
     const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const sourceInfo = this._getExportSourceInfo();
 
     if (format === 'text') {
-      const body = this.getCleanText();
+      const body = this.getCleanText(sourceInfo);
       const divider = String.fromCharCode(9472).repeat(40);
-      const branded = [
+      const parts = [
         'GLOSSI',
         divider,
         '',
@@ -3185,38 +3194,78 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
         '',
         divider,
         '',
-        body,
-        '',
-        divider,
-        'Created with Glossi'
-      ].join('\n');
-      this.downloadFile(branded, `${filename}.txt`, 'text/plain');
+        body
+      ];
+      if (sourceInfo) {
+        parts.push('', divider);
+        parts.push(`Source: "${sourceInfo.headline}"${sourceInfo.outlet ? ` - ${sourceInfo.outlet}` : ''}`);
+        if (sourceInfo.url) parts.push(sourceInfo.url);
+      }
+      parts.push('', divider, 'Created with Glossi');
+      this.downloadFile(parts.join('\n'), `${filename}.txt`, 'text/plain');
 
     } else if (format === 'html') {
-      const contentHTML = this._getCleanContentHTML();
-      const html = this._buildBrandedHTML(title, typeLabel, dateStr, contentHTML);
+      const contentHTML = this._getCleanContentHTML(sourceInfo);
+      const html = this._buildBrandedHTML(title, typeLabel, dateStr, contentHTML, sourceInfo);
       this.downloadFile(html, `${filename}.html`, 'text/html');
 
     } else if (format === 'pdf') {
-      this._exportPDF(title, typeLabel, dateStr, filename);
+      this._exportPDF(title, typeLabel, dateStr, filename, sourceInfo);
     }
   }
 
-  _getCleanContentHTML() {
+  _getExportSourceInfo() {
+    const nm = this.newsMonitor;
+    if (!nm || !nm._activeStoryKey) return null;
+    const story = nm._stories.get(nm._activeStoryKey);
+    if (!story || !story.newsItem) return null;
+    const item = story.newsItem;
+    if (!item.url || !item.headline || item._customCard) return null;
+    return {
+      headline: item.headline,
+      outlet: item.outlet || '',
+      url: item.url
+    };
+  }
+
+  _stripSourceReferences(text, sourceInfo) {
+    let result = text;
+    if (sourceInfo && sourceInfo.outlet) {
+      const outletRef = `(${sourceInfo.outlet})`;
+      let firstReplaced = false;
+      result = result.replace(/\[Source\s+\d+(?:\s*,\s*Source\s+\d+)*\]/gi, (match) => {
+        if (!firstReplaced) {
+          firstReplaced = true;
+          return outletRef;
+        }
+        return '';
+      });
+    } else {
+      result = result.replace(/\[Source\s+\d+(?:\s*,\s*Source\s+\d+)*\]/gi, '');
+    }
+    return result
+      .replace(/\[NEEDS\s+SOURCE\]/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/\s+([.,;:!?])/g, '$1');
+  }
+
+  _getCleanContentHTML(sourceInfo) {
     if (!this.dom.generatedContent) return '';
     const clone = this.dom.generatedContent.cloneNode(true);
     clone.querySelectorAll('.pr-citation, .pr-needs-source, .pr-citation-approved').forEach(el => el.remove());
-    return clone.innerHTML;
+    let html = clone.innerHTML;
+    html = this._stripSourceReferences(html, sourceInfo);
+    return html;
   }
 
-  async _exportPDF(title, typeLabel, dateStr, filename) {
+  async _exportPDF(title, typeLabel, dateStr, filename, sourceInfo) {
     if (typeof html2pdf === 'undefined') {
       this.showToast?.('PDF export library not loaded. Please try again.', 'error');
       return;
     }
 
-    const contentHTML = this._getCleanContentHTML();
-    const html = this._buildBrandedHTML(title, typeLabel, dateStr, contentHTML);
+    const contentHTML = this._getCleanContentHTML(sourceInfo);
+    const html = this._buildBrandedHTML(title, typeLabel, dateStr, contentHTML, sourceInfo);
 
     const container = document.createElement('div');
     container.style.position = 'fixed';
@@ -3253,11 +3302,13 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
     }
   }
 
-  getCleanText() {
+  getCleanText(sourceInfo) {
     if (!this.dom.generatedContent) return '';
     const clone = this.dom.generatedContent.cloneNode(true);
     clone.querySelectorAll('.pr-citation, .pr-needs-source, .pr-citation-approved').forEach(el => el.remove());
-    return clone.innerText.trim();
+    let text = clone.innerText.trim();
+    text = this._stripSourceReferences(text, sourceInfo);
+    return text;
   }
 
   downloadFile(content, filename, mimeType) {
