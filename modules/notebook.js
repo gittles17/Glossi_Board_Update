@@ -359,11 +359,23 @@ class Notebook {
    * Setup event listeners
    */
   setupEventListeners() {
-    // Toggle sidebar (desktop)
+    // Toggle sources drawer (overlay)
     const toggleSidebar = document.getElementById('kb-toggle-sidebar');
     if (toggleSidebar) {
       toggleSidebar.addEventListener('click', () => {
-        document.getElementById('kb-sources-sidebar')?.classList.toggle('collapsed');
+        this.toggleDrawer('sources');
+      });
+    }
+    const sourcesClose = document.getElementById('kb-sources-close');
+    if (sourcesClose) {
+      sourcesClose.addEventListener('click', () => {
+        this.closeDrawer('sources');
+      });
+    }
+    const sourcesBackdrop = document.getElementById('kb-sources-backdrop');
+    if (sourcesBackdrop) {
+      sourcesBackdrop.addEventListener('click', () => {
+        this.closeDrawer('sources');
       });
     }
     
@@ -429,11 +441,23 @@ class Notebook {
       });
     }
 
-    // Toggle reports panel
+    // Toggle reports drawer (overlay)
     const toggleReports = document.getElementById('kb-toggle-reports');
     if (toggleReports) {
       toggleReports.addEventListener('click', () => {
-        document.getElementById('kb-reports-panel')?.classList.toggle('collapsed');
+        this.toggleDrawer('reports');
+      });
+    }
+    const reportsClose = document.getElementById('kb-reports-close');
+    if (reportsClose) {
+      reportsClose.addEventListener('click', () => {
+        this.closeDrawer('reports');
+      });
+    }
+    const reportsBackdrop = document.getElementById('kb-reports-backdrop');
+    if (reportsBackdrop) {
+      reportsBackdrop.addEventListener('click', () => {
+        this.closeDrawer('reports');
       });
     }
 
@@ -537,6 +561,57 @@ class Notebook {
         }
       });
     });
+  }
+
+  /**
+   * Toggle an overlay drawer open/closed
+   */
+  toggleDrawer(name) {
+    const isOpen = this.isDrawerOpen(name);
+    if (isOpen) {
+      this.closeDrawer(name);
+    } else {
+      this.openDrawer(name);
+    }
+  }
+
+  openDrawer(name) {
+    const panel = name === 'sources'
+      ? document.getElementById('kb-sources-sidebar')
+      : document.getElementById('kb-reports-panel');
+    const backdrop = name === 'sources'
+      ? document.getElementById('kb-sources-backdrop')
+      : document.getElementById('kb-reports-backdrop');
+    const btn = name === 'sources'
+      ? document.getElementById('kb-toggle-sidebar')
+      : document.getElementById('kb-toggle-reports');
+
+    if (panel) panel.classList.add('open');
+    if (backdrop) backdrop.classList.add('visible');
+    if (btn) btn.classList.add('active');
+  }
+
+  closeDrawer(name) {
+    const panel = name === 'sources'
+      ? document.getElementById('kb-sources-sidebar')
+      : document.getElementById('kb-reports-panel');
+    const backdrop = name === 'sources'
+      ? document.getElementById('kb-sources-backdrop')
+      : document.getElementById('kb-reports-backdrop');
+    const btn = name === 'sources'
+      ? document.getElementById('kb-toggle-sidebar')
+      : document.getElementById('kb-toggle-reports');
+
+    if (panel) panel.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('visible');
+    if (btn) btn.classList.remove('active');
+  }
+
+  isDrawerOpen(name) {
+    const panel = name === 'sources'
+      ? document.getElementById('kb-sources-sidebar')
+      : document.getElementById('kb-reports-panel');
+    return panel ? panel.classList.contains('open') : false;
   }
 
   /**

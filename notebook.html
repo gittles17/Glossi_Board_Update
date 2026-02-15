@@ -25,7 +25,6 @@
         <img src="assets/glossi-logo.svg" alt="" class="nav-logo-icon">
         <img src="assets/glossi-wordmark.svg" alt="Glossi" class="logo-img">
       </a>
-      <span class="nav-page-title">Notebook</span>
     </div>
     <div class="nav-right">
       <nav class="nav-links">
@@ -73,12 +72,10 @@
     </div>
     
     <div class="notebook notebook-fullpage" id="notebook">
-      <!-- Sources Sidebar (Collapsible) -->
+
+      <!-- Sources Drawer (overlay, slides from left) -->
       <div class="kb-sources-sidebar" id="kb-sources-sidebar">
         <div class="kb-sources-header">
-          <button class="kb-toggle-sidebar" id="kb-toggle-sidebar" title="Toggle Sources" aria-label="Toggle Sources">
-            <i class="ph-light ph-sidebar"></i>
-          </button>
           <span class="kb-sources-title">Sources</span>
           <span class="kb-sources-count" id="kb-sources-count">0</span>
           <button class="kb-toggle-all-btn" id="kb-toggle-all-btn" title="Toggle all sources on/off" aria-label="Toggle all sources on/off">
@@ -86,6 +83,9 @@
           </button>
           <button class="kb-create-folder-btn" id="kb-create-folder-btn" title="Create Folder" aria-label="Create Folder">
             <i class="ph-light ph-plus"></i>
+          </button>
+          <button class="kb-drawer-close" id="kb-sources-close" title="Close" aria-label="Close">
+            <i class="ph-light ph-x"></i>
           </button>
         </div>
         <div class="kb-sources-list kb-drop-zone" id="kb-sources-list">
@@ -104,21 +104,31 @@
           <span>Add source</span>
         </button>
       </div>
+      <div class="kb-drawer-backdrop" id="kb-sources-backdrop"></div>
 
-      <!-- Resize Handle: Sources <-> Workspace -->
-      <div class="kb-resize-handle" id="kb-resize-left" title="Drag to resize"></div>
-
-      <!-- Main Workspace -->
+      <!-- Main Workspace (full width) -->
       <div class="kb-workspace" id="kb-workspace">
 
-        <!-- Chat/Conversation Area -->
-        <div class="kb-chat-container">
-          <div class="kb-chat-header">
-            <span class="kb-chat-title">Chat</span>
+        <!-- Workspace toolbar with drawer triggers -->
+        <div class="kb-workspace-toolbar">
+          <button class="kb-toolbar-btn" id="kb-toggle-sidebar" title="Sources" aria-label="Sources">
+            <i class="ph-light ph-folder"></i>
+            <span class="kb-toolbar-badge" id="kb-sources-badge"></span>
+          </button>
+          <span class="kb-chat-title">Chat</span>
+          <div class="kb-toolbar-right">
             <button class="kb-clear-btn" id="kb-clear-btn" title="Clear chat" aria-label="Clear chat">
               <i class="ph-light ph-trash"></i>
             </button>
+            <button class="kb-toolbar-btn" id="kb-toggle-reports" title="Reports" aria-label="Reports">
+              <i class="ph-light ph-file-text"></i>
+              <span class="kb-toolbar-badge" id="kb-reports-badge"></span>
+            </button>
           </div>
+        </div>
+
+        <!-- Chat/Conversation Area -->
+        <div class="kb-chat-container">
           <div class="kb-chat-area" id="kb-chat-area">
             <div class="kb-messages" id="kb-messages">
               <!-- Messages rendered dynamically -->
@@ -145,19 +155,16 @@
         </div>
       </div>
 
-      <!-- Resize Handle: Workspace <-> Reports -->
-      <div class="kb-resize-handle" id="kb-resize-right" title="Drag to resize"></div>
-
-      <!-- Reports Panel (Collapsible) -->
+      <!-- Reports Drawer (overlay, slides from right) -->
       <div class="kb-reports-panel" id="kb-reports-panel">
         <div class="kb-reports-header">
-          <button class="kb-toggle-reports" id="kb-toggle-reports" title="Toggle Reports" aria-label="Toggle Reports">
-            <i class="ph-light ph-file-text"></i>
-          </button>
           <span class="kb-reports-title">Reports</span>
           <span class="kb-reports-count" id="kb-reports-count">0</span>
           <button class="kb-add-report-btn" id="kb-add-report-btn" title="Generate Report" aria-label="Generate Report">
             <i class="ph-light ph-plus"></i>
+          </button>
+          <button class="kb-drawer-close" id="kb-reports-close" title="Close" aria-label="Close">
+            <i class="ph-light ph-x"></i>
           </button>
         </div>
         <div class="kb-reports-list" id="kb-reports-list">
@@ -168,6 +175,8 @@
           </div>
         </div>
       </div>
+      <div class="kb-drawer-backdrop" id="kb-reports-backdrop"></div>
+
     </div>
   </main>
 
@@ -504,90 +513,7 @@
         }
       });
       
-      // Pane resize functionality
-      setupPaneResize();
     });
-    
-    function setupPaneResize() {
-      const sourcesSidebar = document.getElementById('kb-sources-sidebar');
-      const reportsPanel = document.getElementById('kb-reports-panel');
-      const resizeLeft = document.getElementById('kb-resize-left');
-      const resizeRight = document.getElementById('kb-resize-right');
-      
-      let isResizing = false;
-      let currentHandle = null;
-      let startX = 0;
-      let startWidth = 0;
-      
-      // Load saved widths from localStorage
-      const savedSourcesWidth = localStorage.getItem('kb-sources-width');
-      const savedReportsWidth = localStorage.getItem('kb-reports-width');
-      
-      if (savedSourcesWidth && sourcesSidebar) {
-        sourcesSidebar.style.width = savedSourcesWidth + 'px';
-        sourcesSidebar.style.minWidth = savedSourcesWidth + 'px';
-      }
-      if (savedReportsWidth && reportsPanel) {
-        reportsPanel.style.width = savedReportsWidth + 'px';
-        reportsPanel.style.minWidth = savedReportsWidth + 'px';
-      }
-      
-      function startResize(e, handle, targetElement, direction) {
-        isResizing = true;
-        currentHandle = handle;
-        startX = e.clientX;
-        startWidth = targetElement.offsetWidth;
-        
-        handle.classList.add('dragging');
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-        
-        const onMouseMove = (e) => {
-          if (!isResizing) return;
-          
-          const delta = direction === 'left' 
-            ? e.clientX - startX 
-            : startX - e.clientX;
-          
-          const newWidth = Math.max(150, Math.min(500, startWidth + delta));
-          targetElement.style.width = newWidth + 'px';
-          targetElement.style.minWidth = newWidth + 'px';
-        };
-        
-        const onMouseUp = () => {
-          if (!isResizing) return;
-          
-          isResizing = false;
-          handle.classList.remove('dragging');
-          document.body.style.cursor = '';
-          document.body.style.userSelect = '';
-          
-          // Save width to localStorage
-          const storageKey = handle === resizeLeft ? 'kb-sources-width' : 'kb-reports-width';
-          localStorage.setItem(storageKey, targetElement.offsetWidth);
-          
-          document.removeEventListener('mousemove', onMouseMove);
-          document.removeEventListener('mouseup', onMouseUp);
-        };
-        
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-      }
-      
-      if (resizeLeft && sourcesSidebar) {
-        resizeLeft.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          startResize(e, resizeLeft, sourcesSidebar, 'left');
-        });
-      }
-      
-      if (resizeRight && reportsPanel) {
-        resizeRight.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          startResize(e, resizeRight, reportsPanel, 'right');
-        });
-      }
-    }
   </script>
 </body>
 </html>
