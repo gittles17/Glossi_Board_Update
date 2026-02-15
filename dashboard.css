@@ -355,13 +355,13 @@ body::after {
 .nav-logo-link {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 11px;
   text-decoration: none;
   padding: 6px 0;
 }
 
 .nav-logo-icon {
-  height: 36px;
+  height: 29px;
   width: auto;
   opacity: 0.95;
   transition: opacity var(--duration-fast);
@@ -373,7 +373,7 @@ body::after {
 }
 
 .logo-img {
-  height: 22px;
+  height: 18px;
   width: auto;
   opacity: 0.95;
   transition: opacity var(--duration-fast);
