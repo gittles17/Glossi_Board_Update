@@ -9336,14 +9336,19 @@ class DistributeManager {
       }).catch(() => {});
     }
 
-    // Render all previews
-    this.renderLinkedInPreview(output);
-    this.renderBlogPreview(output);
-    this.renderEmailPreview(output);
-    this.renderTwitterPreview(output);
-    this.renderHashtags(output);
-    this.renderFirstComment(output);
-    this.renderCharCount(output);
+    // Render all previews (isolated so one failure doesn't break the rest)
+    const previews = [
+      () => this.renderLinkedInPreview(output),
+      () => this.renderBlogPreview(output),
+      () => this.renderEmailPreview(output),
+      () => this.renderTwitterPreview(output),
+      () => this.renderHashtags(output),
+      () => this.renderFirstComment(output),
+      () => this.renderCharCount(output)
+    ];
+    for (const fn of previews) {
+      try { fn(); } catch (_) { /* isolate preview errors */ }
+    }
 
     // Auto-select the best channel for this content type
     const bestChannel = this.getChannelForContentType(output.content_type);
