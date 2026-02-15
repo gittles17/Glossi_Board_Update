@@ -6248,9 +6248,9 @@ ${primaryContext}${bgContext}`
         if (e.target.closest('.pr-tab-close')) return;
         this.switchContentTab(tabId);
         
-        // Generate if not already generated
+        // Generate if not already generated or if previous generation failed
         const entry = this._tabContent.get(tabId);
-        if (!entry) {
+        if (!entry || (!entry.loading && !entry.output)) {
           this.generateTabContent(tabId, this._activeContentPlan[index], this._activeNewsItem);
         }
       });
