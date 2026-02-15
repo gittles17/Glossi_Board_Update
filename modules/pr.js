@@ -891,6 +891,13 @@ class PRAgent {
 
   openSourceModal() {
     this.resetSourceModal();
+    this._editingSourceId = null;
+    const modalTitle = document.getElementById('pr-source-modal-title');
+    if (modalTitle) modalTitle.textContent = 'Add Source';
+    const saveBtn = document.getElementById('pr-source-save');
+    if (saveBtn) {
+      saveBtn.innerHTML = '<i class="ph-light ph-plus"></i> Add Source';
+    }
     this.dom.sourceModal?.classList.add('visible');
     setTimeout(() => {
       document.getElementById('pr-source-title')?.focus();
@@ -898,6 +905,13 @@ class PRAgent {
   }
 
   closeSourceModal() {
+    this._editingSourceId = null;
+    const modalTitle = document.getElementById('pr-source-modal-title');
+    if (modalTitle) modalTitle.textContent = 'Add Source';
+    const saveBtn = document.getElementById('pr-source-save');
+    if (saveBtn) {
+      saveBtn.innerHTML = '<i class="ph-light ph-plus"></i> Add Source';
+    }
     this.dom.sourceModal?.classList.remove('visible');
   }
 
@@ -923,6 +937,42 @@ class PRAgent {
     this.stopRecording();
     const audioPreview = document.getElementById('pr-audio-preview');
     if (audioPreview) audioPreview.style.display = 'none';
+  }
+
+  editSource(id) {
+    const source = this.sources.find(s => s.id === id);
+    if (!source) return;
+
+    this.resetSourceModal();
+    this._editingSourceId = id;
+
+    // Map source type to the correct tab
+    const tabType = source.type || 'text';
+    const tabMap = { text: 'text', url: 'url', file: 'text', audio: 'text' };
+    const activeTab = tabMap[tabType] || 'text';
+    this.switchSourceTab(activeTab);
+
+    if (activeTab === 'text') {
+      const titleInput = document.getElementById('pr-source-title');
+      const textInput = document.getElementById('pr-source-text');
+      if (titleInput) titleInput.value = source.title || '';
+      if (textInput) textInput.value = source.content || '';
+    } else if (activeTab === 'url') {
+      const titleInput = document.getElementById('pr-source-title-url');
+      const urlInput = document.getElementById('pr-source-url');
+      if (titleInput) titleInput.value = source.title || '';
+      if (urlInput) urlInput.value = source.url || '';
+    }
+
+    // Update modal title and save button text
+    const modalTitle = document.getElementById('pr-source-modal-title');
+    if (modalTitle) modalTitle.textContent = 'Edit Source';
+    const saveBtn = document.getElementById('pr-source-save');
+    if (saveBtn) {
+      saveBtn.innerHTML = '<i class="ph-light ph-check"></i> Save Changes';
+    }
+
+    this.dom.sourceModal?.classList.add('visible');
   }
 
   switchSourceTab(type) {
@@ -977,6 +1027,34 @@ class PRAgent {
     }
 
     const autoTitle = title || this.generateTitle(content, type);
+
+    // Edit mode: update existing source
+    if (this._editingSourceId) {
+      const existing = this.sources.find(s => s.id === this._editingSourceId);
+      if (existing) {
+        existing.title = autoTitle;
+        existing.content = content;
+        if (url) existing.url = url;
+        if (fileName) existing.fileName = fileName;
+
+        try {
+          await fetch('/api/pr/sources', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(existing)
+          });
+        } catch (error) {
+          // silent
+        }
+
+        this._editingSourceId = null;
+        this.saveSources();
+        this.renderSources();
+        this.updateGenerateButton();
+        this.closeSourceModal();
+        return;
+      }
+    }
 
     const source = {
       id: 'src_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
@@ -1346,7 +1424,7 @@ class PRAgent {
           <label class="pr-source-checkbox">
             <input type="checkbox" ${source.selected ? 'checked' : ''} data-action="toggle" data-id="${source.id}" ${source.loading ? 'disabled' : ''}>
           </label>
-          <div class="pr-source-info" data-action="open-wizard" data-id="${source.id}">
+          <div class="pr-source-info" data-action="edit-source" data-id="${source.id}">
             <div class="pr-source-header">
               <span class="pr-source-type-icon">${typeIcons[source.type] || typeIcons.text}</span>
               <span class="pr-source-title">${this.escapeHtml(source.title)}</span>
@@ -1419,13 +1497,9 @@ class PRAgent {
           e.stopPropagation();
           this.deleteSource(el.dataset.id);
         });
-      } else if (action === 'open-wizard') {
+      } else if (action === 'edit-source') {
         el.addEventListener('click', () => {
-          if (this.wizard) {
-            this.wizard.open();
-          } else {
-            console.error('Wizard not initialized');
-          }
+          this.editSource(el.dataset.id);
         });
       }
     });
@@ -4592,7 +4666,8 @@ class NewsMonitor {
 
       // Detect if this is a custom story (key starts with custom_ or any output has is_custom)
       const isCustom = key.startsWith('custom_') || storyOutputs.some(o => o.is_custom === true);
-      const category = storyOutputs.find(o => o.category)?.category || 'general';
+      const angleTitle = storyOutputs.find(o => o.angle_title)?.angle_title || '';
+      const angleNarrative = storyOutputs.find(o => o.angle_narrative)?.angle_narrative || '';
 
       const headline = storyOutputs[0].news_headline || 'Untitled';
 
@@ -4709,7 +4784,8 @@ class NewsMonitor {
         archived: isArchived,
         custom: isCustom,
         customTitle: isCustom ? headline : undefined,
-        category: isCustom ? category : undefined,
+        angleTitle: isCustom ? angleTitle : undefined,
+        angleNarrative: isCustom ? angleNarrative : undefined,
         sourceIds: sourceIds,
         primarySourceId: primarySourceId
       });
@@ -4765,8 +4841,15 @@ class NewsMonitor {
       filterActiveDot: document.getElementById('pr-filter-active-dot'),
       filterClearAll: document.getElementById('pr-filter-clear-all'),
       createFromSourcesBtn: document.getElementById('pr-create-from-sources-btn'),
-      categoryBar: document.getElementById('pr-category-bar'),
-      categorySelect: document.getElementById('pr-category-select')
+      angleModal: document.getElementById('pr-angle-modal'),
+      angleTitleInput: document.getElementById('pr-angle-title'),
+      angleNarrativeInput: document.getElementById('pr-angle-narrative'),
+      anglePlanList: document.getElementById('pr-angle-plan-list'),
+      angleFeedbackInput: document.getElementById('pr-angle-feedback'),
+      angleRegenBtn: document.getElementById('pr-angle-regen-btn'),
+      angleConfirmBtn: document.getElementById('pr-angle-confirm'),
+      angleCancelBtn: document.getElementById('pr-angle-cancel'),
+      angleCloseBtn: document.getElementById('pr-angle-modal-close')
     };
   }
 
@@ -4776,8 +4859,14 @@ class NewsMonitor {
     // Create Content from Sources button
     this.dom.createFromSourcesBtn?.addEventListener('click', () => this.launchCustomWorkspace());
 
-    // Category dropdown change
-    this.dom.categorySelect?.addEventListener('change', () => this.onCategoryChange());
+    // Angle modal events
+    this.dom.angleConfirmBtn?.addEventListener('click', () => this.confirmAngleAndGenerate());
+    this.dom.angleCancelBtn?.addEventListener('click', () => this.closeAngleModal());
+    this.dom.angleCloseBtn?.addEventListener('click', () => this.closeAngleModal());
+    this.dom.angleRegenBtn?.addEventListener('click', () => {
+      const feedback = this.dom.angleFeedbackInput?.value?.trim() || '';
+      this.regenerateAngle(feedback);
+    });
 
     // Sources drawer toggle
     this.dom.sourcesToggleBtn?.addEventListener('click', () => this.toggleSourcesDrawer());
@@ -5875,7 +5964,6 @@ class NewsMonitor {
 
   populateLeftPanel(newsItem) {
     this.renderFileTree();
-    this.updateCategoryBar();
   }
 
   updateCreateFromSourcesBtn() {
@@ -5883,37 +5971,6 @@ class NewsMonitor {
     if (!btn) return;
     const selectedCount = this.prAgent.sources.filter(s => s.selected).length;
     btn.disabled = selectedCount === 0;
-  }
-
-  updateCategoryBar() {
-    const bar = this.dom.categoryBar;
-    if (!bar) return;
-    const story = this._activeStoryKey ? this._stories.get(this._activeStoryKey) : null;
-    if (story && story.custom) {
-      bar.style.display = 'flex';
-      if (this.dom.categorySelect && story.category) {
-        this.dom.categorySelect.value = story.category;
-      }
-    } else {
-      bar.style.display = 'none';
-    }
-  }
-
-  onCategoryChange() {
-    const story = this._activeStoryKey ? this._stories.get(this._activeStoryKey) : null;
-    if (!story || !story.custom) return;
-    story.category = this.dom.categorySelect.value;
-    // Persist category to all outputs for this story
-    for (const [, entry] of (story.tabContent || new Map())) {
-      if (entry.output) {
-        entry.output.category = story.category;
-        fetch('/api/pr/outputs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(entry.output)
-        }).catch(() => {});
-      }
-    }
   }
 
   async launchCustomWorkspace() {
@@ -5929,25 +5986,20 @@ class NewsMonitor {
     const primarySource = sorted[0];
     const contextSources = sorted.slice(1);
 
-    // Title from the primary source
     const customTitle = primarySource.title || 'Untitled';
-
     const key = `custom_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 
-    // Save current story state before switching
     this.saveCurrentStoryState();
-
-    // Close the sources drawer
     this.closeSourcesDrawer();
 
-    // Switch to Create tab
     const createTab = document.querySelector('.pr-nav-item[data-stage="create"]');
     if (createTab) createTab.click();
     await new Promise(resolve => setTimeout(resolve, 150));
 
-    // Detect category and build content plan via AI
+    // Analyze source material via AI
     this.prAgent.showLoading();
-    let category = 'general';
+    let angleTitle = 'Content from ' + customTitle;
+    let angleNarrative = '';
     let contentPlan = [
       { type: 'blog_post', description: 'In-depth analysis with product angle', priority: 1, audience: 'brands' },
       { type: 'linkedin_post', description: 'Key insight as a founder perspective post', priority: 2, audience: 'brands' },
@@ -5955,67 +6007,212 @@ class NewsMonitor {
       { type: 'email_blast', description: 'Signal boost to subscriber list', priority: 4, audience: 'brands' }
     ];
 
+    const primaryContext = `PRIMARY SOURCE (this is the main material to create content from):\nTitle: ${primarySource.title}\nType: ${primarySource.type}\nContent:\n${(primarySource.content || '').substring(0, 5000)}`;
+
+    let bgContext = '';
+    if (contextSources.length > 0) {
+      bgContext = '\n\nBACKGROUND CONTEXT (company knowledge for additional detail, NOT the main focus):\n' +
+        contextSources.map((s, i) => {
+          return `[Context ${i + 1}] Title: ${s.title}\nContent:\n${(s.content || '').substring(0, 1500)}`;
+        }).join('\n---\n');
+    }
+
     try {
-      const primaryContext = `PRIMARY SOURCE (this is the main material to create content from):\nTitle: ${primarySource.title}\nType: ${primarySource.type}\nContent:\n${(primarySource.content || '').substring(0, 5000)}`;
-
-      let bgContext = '';
-      if (contextSources.length > 0) {
-        bgContext = '\n\nBACKGROUND CONTEXT (company knowledge for additional detail, NOT the main focus):\n' +
-          contextSources.map((s, i) => {
-            return `[Context ${i + 1}] Title: ${s.title}\nContent:\n${(s.content || '').substring(0, 1500)}`;
-          }).join('\n---\n');
-      }
-
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1024,
-          system: 'You are a content strategist. Analyze the PRIMARY SOURCE material and determine what kind of content should be created from it. The background context is only for company knowledge. Return ONLY valid JSON.',
-          messages: [{
-            role: 'user',
-            content: `Analyze the PRIMARY SOURCE below and determine:
-1. What TYPE of source material this is (e.g., customer testimonials, feature notes, changelog, case study notes, thought leadership draft, press release, etc.)
-2. The best content CATEGORY from: feature_update, case_study, thought_leadership, product_announcement, how_to_guide, investor_update, hiring_culture, general
-3. A content plan with 4-5 content types that are specifically appropriate for THIS type of source material.
-
-For example:
-- Customer testimonials should produce: customer spotlight posts, social proof content, case study articles, sales enablement material
-- Feature updates should produce: changelog blog posts, product announcement tweets, update emails
-- Thought leadership notes should produce: op-eds, LinkedIn thought pieces, tweet threads
-
-Each content plan item should have: type (one of: blog_post, linkedin_post, tweet_thread, email_blast, media_pitch, op_ed, hot_take, talking_points), description (specific to the source material), priority (1-5), audience (brands/builders/press/internal).
-
-Return JSON: { "sourceType": "...", "category": "...", "contentPlan": [...] }
-
-${primaryContext}${bgContext}`
-          }]
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const rawText = data.content?.[0]?.text || '';
-        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          if (parsed.category) category = parsed.category;
-          if (parsed.contentPlan && Array.isArray(parsed.contentPlan) && parsed.contentPlan.length > 0) {
-            contentPlan = parsed.contentPlan;
-          }
-        }
-      }
+      const result = await this._fetchAngleAnalysis(primaryContext, bgContext);
+      if (result.angleTitle) angleTitle = result.angleTitle;
+      if (result.angleNarrative) angleNarrative = result.angleNarrative;
+      if (result.contentPlan && result.contentPlan.length > 0) contentPlan = result.contentPlan;
     } catch (e) { /* fall back to defaults */ }
 
     contentPlan.sort((a, b) => (a.priority || 99) - (b.priority || 99));
+    this.prAgent.hideLoading();
 
-    // Build a minimal newsItem-like object for compatibility
+    // Store pending data for after user confirms the angle
+    this._pendingAngleData = {
+      key,
+      customTitle,
+      selectedSources,
+      primarySource,
+      contextSources,
+      primaryContext,
+      bgContext,
+      angleTitle,
+      angleNarrative,
+      contentPlan
+    };
+
+    // Show the angle approval modal
+    this.showAngleModal(angleTitle, angleNarrative, contentPlan);
+  }
+
+  async _fetchAngleAnalysis(primaryContext, bgContext, feedback) {
+    const feedbackClause = feedback
+      ? `\n\nUSER FEEDBACK on a previous angle proposal (incorporate this):\n${feedback}`
+      : '';
+
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        system: 'You are a content strategist. Analyze the PRIMARY SOURCE material and determine the best angle and content plan. The background context is only for company knowledge. Return ONLY valid JSON.',
+        messages: [{
+          role: 'user',
+          content: `Analyze the PRIMARY SOURCE below and determine:
+1. An ANGLE TITLE (3-8 words) that captures the strategic angle for content creation. This should describe the narrative lens, not just the category. Examples: "Customer Proof Points as Growth Engine", "Enterprise Validation Through Real Usage Data", "Founder Contrarian Take on Industry Shift".
+2. An ANGLE NARRATIVE (2-3 sentences) explaining how you will approach the source material, what story threads you will pull, and how the content will be positioned.
+3. A content plan with 4-5 content types that are specifically appropriate for THIS type of source material and angle.
+
+Each content plan item should have: type (one of: blog_post, linkedin_post, tweet_thread, email_blast, media_pitch, op_ed, hot_take, talking_points), description (specific to the source material and angle), priority (1-5), audience (brands/builders/press/internal).
+
+Return JSON: { "angleTitle": "...", "angleNarrative": "...", "contentPlan": [...] }
+${feedbackClause}
+${primaryContext}${bgContext}`
+        }]
+      })
+    });
+
+    if (!response.ok) return {};
+    const data = await response.json();
+    const rawText = data.content?.[0]?.text || '';
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return {};
+    const parsed = JSON.parse(jsonMatch[0]);
+    return {
+      angleTitle: parsed.angleTitle || '',
+      angleNarrative: parsed.angleNarrative || '',
+      contentPlan: (parsed.contentPlan && Array.isArray(parsed.contentPlan) && parsed.contentPlan.length > 0) ? parsed.contentPlan : null
+    };
+  }
+
+  showAngleModal(angleTitle, angleNarrative, contentPlan) {
+    if (this.dom.angleTitleInput) this.dom.angleTitleInput.value = angleTitle;
+    if (this.dom.angleNarrativeInput) this.dom.angleNarrativeInput.value = angleNarrative;
+    if (this.dom.angleFeedbackInput) this.dom.angleFeedbackInput.value = '';
+
+    this._renderAnglePlanChecklist(contentPlan);
+    this.dom.angleModal?.classList.add('visible');
+  }
+
+  _renderAnglePlanChecklist(contentPlan) {
+    const container = this.dom.anglePlanList;
+    if (!container) return;
+
+    const iconMap = {
+      linkedin_post: 'ph-linkedin-logo',
+      blog_post: 'ph-article',
+      email_blast: 'ph-envelope',
+      media_pitch: 'ph-envelope',
+      tweet_thread: 'ph-x-logo',
+      press_release: 'ph-newspaper',
+      hot_take: 'ph-fire',
+      founder_quote: 'ph-quotes',
+      op_ed: 'ph-pen-nib',
+      talking_points: 'ph-list-bullets'
+    };
+
+    const typeLabels = {
+      blog_post: 'Blog Post',
+      linkedin_post: 'LinkedIn Post',
+      tweet_thread: 'Tweet Thread',
+      email_blast: 'Email Blast',
+      media_pitch: 'Media Pitch',
+      op_ed: 'Op-Ed',
+      hot_take: 'Hot Take',
+      talking_points: 'Talking Points',
+      press_release: 'Press Release',
+      founder_quote: 'Founder Quote'
+    };
+
+    container.innerHTML = contentPlan.map((item, i) => {
+      const icon = iconMap[item.type] || 'ph-file-text';
+      const label = typeLabels[item.type] || item.type;
+      const desc = item.description || '';
+      return `
+        <label class="pr-angle-plan-item" data-index="${i}">
+          <input type="checkbox" checked data-plan-index="${i}">
+          <i class="ph-light ${icon}"></i>
+          <span class="pr-angle-plan-item-label">
+            <span class="pr-angle-plan-item-type">${this.escapeHtml(label)}</span>
+            ${desc ? `<span class="pr-angle-plan-item-desc">${this.escapeHtml(desc)}</span>` : ''}
+          </span>
+        </label>
+      `;
+    }).join('');
+  }
+
+  closeAngleModal() {
+    this.dom.angleModal?.classList.remove('visible');
+    this._pendingAngleData = null;
+  }
+
+  async regenerateAngle(feedback) {
+    const pending = this._pendingAngleData;
+    if (!pending) return;
+
+    const btn = this.dom.angleRegenBtn;
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="spinning" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path></svg> Regenerating...';
+    }
+
+    try {
+      const result = await this._fetchAngleAnalysis(pending.primaryContext, pending.bgContext, feedback);
+      if (result.angleTitle) {
+        pending.angleTitle = result.angleTitle;
+        if (this.dom.angleTitleInput) this.dom.angleTitleInput.value = result.angleTitle;
+      }
+      if (result.angleNarrative) {
+        pending.angleNarrative = result.angleNarrative;
+        if (this.dom.angleNarrativeInput) this.dom.angleNarrativeInput.value = result.angleNarrative;
+      }
+      if (result.contentPlan && result.contentPlan.length > 0) {
+        result.contentPlan.sort((a, b) => (a.priority || 99) - (b.priority || 99));
+        pending.contentPlan = result.contentPlan;
+        this._renderAnglePlanChecklist(result.contentPlan);
+      }
+    } catch (e) { /* keep existing values */ }
+
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ph-light ph-arrows-clockwise"></i> Regenerate';
+    }
+    if (this.dom.angleFeedbackInput) this.dom.angleFeedbackInput.value = '';
+  }
+
+  confirmAngleAndGenerate() {
+    const pending = this._pendingAngleData;
+    if (!pending) return;
+
+    // Read potentially edited values from the modal
+    const angleTitle = this.dom.angleTitleInput?.value?.trim() || pending.angleTitle;
+    const angleNarrative = this.dom.angleNarrativeInput?.value?.trim() || pending.angleNarrative;
+
+    // Filter content plan to only checked items
+    const checkboxes = this.dom.anglePlanList?.querySelectorAll('input[type="checkbox"]') || [];
+    const checkedPlan = [];
+    checkboxes.forEach(cb => {
+      const idx = parseInt(cb.dataset.planIndex);
+      if (cb.checked && pending.contentPlan[idx]) {
+        checkedPlan.push(pending.contentPlan[idx]);
+      }
+    });
+    const contentPlan = checkedPlan.length > 0 ? checkedPlan : pending.contentPlan;
+
+    // Close the modal
+    this.dom.angleModal?.classList.remove('visible');
+
+    const { key, customTitle, selectedSources, primarySource } = pending;
+
+    // Build pseudo news item
     const pseudoNewsItem = {
       headline: customTitle,
       url: key,
       content_plan: contentPlan,
-      summary: (primarySource.content || '').substring(0, 2000)
+      summary: (primarySource.content || '').substring(0, 2000),
+      angle_title: angleTitle,
+      angle_narrative: angleNarrative
     };
 
     this._activeNewsItem = pseudoNewsItem;
@@ -6036,30 +6233,31 @@ ${primaryContext}${bgContext}`
       archived: false,
       custom: true,
       customTitle,
-      category,
+      angleTitle,
+      angleNarrative,
       sourceIds: selectedSources.map(s => s.id),
       primarySourceId: primarySource.id
     });
 
     this.renderStorySelector();
     this.renderContentPlanTabs(contentPlan);
-    this.updateCategoryBar();
 
-    // Set angle context from primary source
+    // Set angle context for content generation
     this.prAgent.angleContext = {
-      narrative: (primarySource.content || '').substring(0, 2000),
+      narrative: angleNarrative,
       target: contentPlan[0]?.target || '',
       description: contentPlan[0]?.description || ''
     };
 
-    // Auto-generate content for all tabs
-    this.prAgent.hideLoading();
+    // Generate content for all tabs
     const firstTabId = 'plan_0';
     this.switchContentTab(firstTabId);
     contentPlan.forEach((item, i) => {
       const tabId = `plan_${i}`;
       this.generateTabContent(tabId, item, pseudoNewsItem);
     });
+
+    this._pendingAngleData = null;
   }
 
   setupLeftPanelToggles() {
@@ -6425,18 +6623,9 @@ ${primaryContext}${bgContext}`
       const primarySource = selectedSources.find(s => s.id === activeStory.primarySourceId);
       const contextSources = selectedSources.filter(s => s.id !== activeStory.primarySourceId);
 
-      // Category context
-      if (activeStory.category && activeStory.category !== 'general') {
-        const categoryLabels = {
-          feature_update: 'Feature Update',
-          case_study: 'Case Study',
-          thought_leadership: 'Thought Leadership',
-          product_announcement: 'Product Announcement',
-          how_to_guide: 'How-to Guide',
-          investor_update: 'Investor Update',
-          hiring_culture: 'Hiring / Culture'
-        };
-        userMessage += `CONTENT CATEGORY: ${categoryLabels[activeStory.category] || activeStory.category}\nWrite in the style appropriate for this category.\n\n`;
+      // Angle context (approved by user)
+      if (activeStory.angleTitle || activeStory.angleNarrative) {
+        userMessage += `ANGLE: ${activeStory.angleTitle || ''}\n${activeStory.angleNarrative || ''}\nUse this angle as your narrative framework for all content.\n\n`;
       }
 
       if (planItem.description) {
@@ -6465,17 +6654,8 @@ ${primaryContext}${bgContext}`
         return `[Source ${i + 1}] (ID: ${s.id})\nTitle: ${s.title}\nType: ${s.type}\nContent:\n${s.content}\n---`;
       }).join('\n\n');
 
-      if (isCustom && activeStory.category && activeStory.category !== 'general') {
-        const categoryLabels = {
-          feature_update: 'Feature Update',
-          case_study: 'Case Study',
-          thought_leadership: 'Thought Leadership',
-          product_announcement: 'Product Announcement',
-          how_to_guide: 'How-to Guide',
-          investor_update: 'Investor Update',
-          hiring_culture: 'Hiring / Culture'
-        };
-        userMessage += `CONTENT CATEGORY: ${categoryLabels[activeStory.category] || activeStory.category}\nWrite in the style appropriate for this category.\n\n`;
+      if (isCustom && (activeStory.angleTitle || activeStory.angleNarrative)) {
+        userMessage += `ANGLE: ${activeStory.angleTitle || ''}\n${activeStory.angleNarrative || ''}\nUse this angle as your narrative framework for all content.\n\n`;
       } else {
         const angleNarrative = newsItem.angle_narrative || newsItem.relevance || newsItem.summary || '';
         if (angleNarrative) {
@@ -6553,7 +6733,8 @@ ${primaryContext}${bgContext}`
         news_headline: newsItem.headline || null,
         content_plan_index: planIndex,
         is_custom: isCustom || false,
-        category: isCustom ? (activeStory.category || 'general') : null
+        angle_title: isCustom ? (activeStory.angleTitle || null) : null,
+        angle_narrative: isCustom ? (activeStory.angleNarrative || null) : null
       };
 
       const prevEntryDone = this._tabContent.get(tabId);

@@ -242,21 +242,6 @@
           <!-- Right Panel (2/3): Workspace -->
           <div class="pr-create-right">
 
-            <!-- Category Badge (shown for custom stories) -->
-            <div class="pr-category-bar" id="pr-category-bar" style="display:none">
-              <span class="pr-category-label">Category:</span>
-              <select class="pr-category-select" id="pr-category-select">
-                <option value="feature_update">Feature Update</option>
-                <option value="case_study">Case Study</option>
-                <option value="thought_leadership">Thought Leadership</option>
-                <option value="product_announcement">Product Announcement</option>
-                <option value="how_to_guide">How-to Guide</option>
-                <option value="investor_update">Investor Update</option>
-                <option value="hiring_culture">Hiring / Culture</option>
-                <option value="general">General</option>
-              </select>
-            </div>
-
             <!-- Content Plan Tabs + Actions -->
             <div class="pr-content-tabs" id="pr-content-tabs" style="display:none">
               <!-- tabs are rendered dynamically -->
@@ -586,7 +571,7 @@
   <div class="modal-overlay" id="pr-source-modal">
     <div class="modal modal-large">
       <div class="modal-header">
-        <h2>Add Source</h2>
+        <h2 id="pr-source-modal-title">Add Source</h2>
         <button class="btn-icon modal-close" id="pr-source-modal-close" title="Close" aria-label="Close">
           <i class="ph-light ph-x"></i>
         </button>
@@ -763,6 +748,51 @@
         <button class="btn btn-primary" id="pr-schedule-confirm">
           <i class="ph-light ph-clock"></i>
           Schedule
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Angle Approval Modal -->
+  <div class="modal-overlay" id="pr-angle-modal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2>Review AI Angle</h2>
+        <button class="btn-icon modal-close" id="pr-angle-modal-close" title="Close" aria-label="Close">
+          <i class="ph-light ph-x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description">The AI analyzed your source material and proposed the following angle. Review, edit, or regenerate before generating content.</p>
+
+        <div class="pr-angle-field">
+          <label for="pr-angle-title">Angle</label>
+          <input type="text" id="pr-angle-title" class="input" placeholder="e.g. Customer Proof Points as Growth Engine">
+        </div>
+
+        <div class="pr-angle-field">
+          <label for="pr-angle-narrative">Narrative approach</label>
+          <textarea id="pr-angle-narrative" class="input" rows="3" placeholder="How the AI will approach the source material and connect it to your positioning..."></textarea>
+        </div>
+
+        <div class="pr-angle-field">
+          <label>Content plan</label>
+          <div class="pr-angle-plan-list" id="pr-angle-plan-list"></div>
+        </div>
+
+        <div class="pr-angle-regen-row">
+          <input type="text" id="pr-angle-feedback" class="input" placeholder="Optional feedback, e.g. focus more on enterprise validation...">
+          <button class="btn btn-secondary" id="pr-angle-regen-btn">
+            <i class="ph-light ph-arrows-clockwise"></i>
+            Regenerate
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="pr-angle-cancel">Cancel</button>
+        <button class="btn btn-primary" id="pr-angle-confirm">
+          <i class="ph-light ph-lightning"></i>
+          Confirm and Generate
         </button>
       </div>
     </div>
