@@ -9535,27 +9535,7 @@ class DistributeManager {
       ? `<div class="pr-blog-featured-img"><img src="${this.escapeHtml(featuredImage)}" alt=""></div>`
       : '';
 
-    // Strip leading headline from body if it matches the title (already shown in header)
-    let blogBodyContent = content;
-    const blogLines = blogBodyContent.split('\n');
-    // Remove leading blank lines
-    while (blogLines.length > 0 && blogLines[0].trim() === '') {
-      blogLines.shift();
-    }
-    // Remove first line if it matches the title (with or without markdown heading prefix)
-    if (blogLines.length > 0) {
-      const firstLine = blogLines[0].replace(/^#+\s*/, '').trim();
-      if (firstLine === title.trim() || firstLine.toLowerCase() === title.trim().toLowerCase()) {
-        blogLines.shift();
-        // Remove blank line after stripped title
-        while (blogLines.length > 0 && blogLines[0].trim() === '') {
-          blogLines.shift();
-        }
-      }
-    }
-    blogBodyContent = blogLines.join('\n');
-
-    const bodyHtml = this.markdownToBlogHtml(blogBodyContent);
+    const bodyHtml = this._deduplicateTitleFromContent(this.markdownToBlogHtml(content), title);
 
     container.innerHTML = `
       <div class="pr-blog-nav">
@@ -9736,12 +9716,13 @@ class DistributeManager {
     }
     bodyContent = contentLines.join('\n').trim();
 
-    // Convert content to paragraphs
+    // Convert content to paragraphs and deduplicate title
     const paragraphs = bodyContent.split(/\n\n+/).filter(p => p.trim());
-    const bodyHtml = paragraphs.map(p => {
+    const rawBodyHtml = paragraphs.map(p => {
       const escaped = this.escapeHtml(p.trim());
       return `<p>${escaped.replace(/\n/g, '<br>')}</p>`;
     }).join('');
+    const bodyHtml = this._deduplicateTitleFromContent(rawBodyHtml, subject);
 
     container.innerHTML = `
       <div class="pr-email-toolbar">
