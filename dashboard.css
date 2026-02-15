@@ -373,7 +373,7 @@ body::after {
 }
 
 .logo-img {
-  height: 18px;
+  height: 15px;
   width: auto;
   opacity: 0.95;
   transition: opacity var(--duration-fast);
