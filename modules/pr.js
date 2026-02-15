@@ -7714,6 +7714,7 @@ class DistributeManager {
     };
     this.scheduledPosts = [];
     this.activeReviewItem = null;
+    this.activeChannel = 'linkedin';
     this._mediaUrlMode = null;
     this.linkedInConnected = false;
     this.linkedInOrgName = null;
@@ -7874,6 +7875,18 @@ class DistributeManager {
     // Hashtag add button
     document.getElementById('pr-distribute-hashtag-add')?.addEventListener('click', () => {
       this.addHashtagPrompt();
+    });
+
+    // Channel switching (LinkedIn / Blog)
+    document.querySelectorAll('.pr-distribute-channel-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const channel = btn.dataset.channel;
+        if (!channel) return;
+        document.querySelectorAll('.pr-distribute-channel-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.activeChannel = channel;
+        this.updateChannelVisibility(channel);
+      });
     });
 
     // LinkedIn connect/disconnect
@@ -8094,6 +8107,7 @@ class DistributeManager {
     }
 
     this.renderLinkedInPreview(output);
+    this.renderBlogPreview(output);
     this.renderHashtags(output);
     this.renderFirstComment(output);
     this.renderCharCount(output);
@@ -8101,6 +8115,10 @@ class DistributeManager {
     // Show/hide media bar based on status
     const mediaBar = document.getElementById('pr-distribute-media-bar');
     if (mediaBar) mediaBar.style.display = output.status === 'review' ? 'flex' : 'none';
+
+    // Apply current channel visibility
+    const channel = this.activeChannel || 'linkedin';
+    this.updateChannelVisibility(channel);
   }
 
   renderLinkedInPreview(output) {
@@ -8221,6 +8239,201 @@ class DistributeManager {
     const limit = 3000;
     el.textContent = `${len.toLocaleString()} / ${limit.toLocaleString()} characters`;
     el.classList.toggle('over-limit', len > limit);
+  }
+
+  updateChannelVisibility(channel) {
+    const linkedinWrap = document.getElementById('pr-linkedin-preview-wrap');
+    const blogWrap = document.getElementById('pr-blog-preview-wrap');
+    const firstCommentWrap = document.getElementById('pr-li-first-comment-wrap');
+    const hashtagsWrap = document.getElementById('pr-distribute-hashtags');
+    const charCount = document.getElementById('pr-distribute-char-count');
+    const mediaBar = document.getElementById('pr-distribute-media-bar');
+    const mediaUrlInput = document.getElementById('pr-distribute-media-url-input');
+
+    if (channel === 'linkedin') {
+      if (linkedinWrap) linkedinWrap.style.display = '';
+      if (blogWrap) blogWrap.style.display = 'none';
+      if (firstCommentWrap) firstCommentWrap.style.display = this.activeReviewItem?.first_comment ? '' : 'none';
+      if (hashtagsWrap) hashtagsWrap.style.display = (this.activeReviewItem?.hashtags?.length) ? '' : 'none';
+      if (charCount) charCount.style.display = '';
+      if (mediaBar) mediaBar.style.display = this.activeReviewItem?.status === 'review' ? 'flex' : 'none';
+    } else if (channel === 'blog') {
+      if (linkedinWrap) linkedinWrap.style.display = 'none';
+      if (blogWrap) blogWrap.style.display = '';
+      if (firstCommentWrap) firstCommentWrap.style.display = 'none';
+      if (hashtagsWrap) hashtagsWrap.style.display = 'none';
+      if (charCount) charCount.style.display = 'none';
+      if (mediaBar) mediaBar.style.display = 'none';
+      if (mediaUrlInput) mediaUrlInput.style.display = 'none';
+    }
+  }
+
+  renderBlogPreview(output) {
+    const container = document.getElementById('pr-blog-preview');
+    if (!container) return;
+
+    const title = output.title || output.news_headline || 'Untitled Post';
+    const content = output.content || '';
+    const media = output.media_attachments || [];
+    const createdAt = output.created_at ? new Date(output.created_at) : new Date();
+
+    const dateStr = createdAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+    const featuredImage = media.length > 0 && media[0].type === 'image' ? media[0].url : null;
+    const featuredImageHtml = featuredImage
+      ? `<div class="pr-blog-featured-img"><img src="${this.escapeHtml(featuredImage)}" alt=""></div>`
+      : '';
+
+    const bodyHtml = this.markdownToBlogHtml(content);
+
+    container.innerHTML = `
+      <div class="pr-blog-nav">
+        <div class="pr-blog-nav-logo">
+          <img src="assets/glossi-logo.svg" alt="Glossi">
+        </div>
+        <div class="pr-blog-nav-links">
+          <span class="pr-blog-nav-link">Product</span>
+          <span class="pr-blog-nav-link">Blog</span>
+          <span class="pr-blog-nav-link">About</span>
+        </div>
+      </div>
+      <div class="pr-blog-header">
+        <div class="pr-blog-meta">
+          <span>${this.escapeHtml(dateStr)}</span>
+          <span class="pr-blog-meta-separator">/</span>
+          <span>Glossi</span>
+        </div>
+        <h1 class="pr-blog-title">${this.escapeHtml(title)}</h1>
+      </div>
+      ${featuredImageHtml}
+      <div class="pr-blog-body">${bodyHtml}</div>
+      <div class="pr-blog-cta">
+        <h3>Protect your product. Protect your brand.</h3>
+        <p>Glossi is the visual production platform that safeguards the integrity of your product and brand identity across every asset, at any scale.</p>
+        <span class="pr-blog-cta-btn">Start rendering</span>
+      </div>
+      <div class="pr-blog-footer">
+        <div class="pr-blog-footer-logo">
+          <img src="assets/glossi-logo.svg" alt="Glossi">
+        </div>
+        <span class="pr-blog-footer-text">glossi.io</span>
+      </div>
+    `;
+  }
+
+  markdownToBlogHtml(text) {
+    if (!text) return '<p></p>';
+
+    const escaped = this.escapeHtml(text);
+    const lines = escaped.split('\n');
+    const blocks = [];
+    let currentBlock = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      if (trimmed === '') {
+        if (currentBlock.length > 0) {
+          blocks.push(currentBlock.join('\n'));
+          currentBlock = [];
+        }
+        continue;
+      }
+
+      if (trimmed === '---' || trimmed === '***' || trimmed === '___') {
+        if (currentBlock.length > 0) {
+          blocks.push(currentBlock.join('\n'));
+          currentBlock = [];
+        }
+        blocks.push('---');
+        continue;
+      }
+
+      currentBlock.push(line);
+    }
+
+    if (currentBlock.length > 0) {
+      blocks.push(currentBlock.join('\n'));
+    }
+
+    let html = '';
+
+    for (const block of blocks) {
+      const trimmedBlock = block.trim();
+
+      if (trimmedBlock === '---') {
+        html += '<hr>';
+        continue;
+      }
+
+      if (trimmedBlock.startsWith('### ')) {
+        html += `<h3>${this.applyInlineFormatting(trimmedBlock.slice(4))}</h3>`;
+        continue;
+      }
+
+      if (trimmedBlock.startsWith('## ')) {
+        html += `<h2>${this.applyInlineFormatting(trimmedBlock.slice(3))}</h2>`;
+        continue;
+      }
+
+      if (trimmedBlock.startsWith('# ')) {
+        html += `<h2>${this.applyInlineFormatting(trimmedBlock.slice(2))}</h2>`;
+        continue;
+      }
+
+      if (trimmedBlock.startsWith('&gt; ')) {
+        const quoteText = trimmedBlock.split('\n').map(l => l.replace(/^&gt;\s?/, '')).join(' ');
+        html += `<blockquote><p>${this.applyInlineFormatting(quoteText)}</p></blockquote>`;
+        continue;
+      }
+
+      const listLines = trimmedBlock.split('\n');
+      const isBulletList = listLines.every(l => /^\s*[-*]\s/.test(l));
+      const isNumberedList = listLines.every(l => /^\s*\d+[.)]\s/.test(l));
+
+      if (isBulletList) {
+        const items = listLines.map(l => `<li>${this.applyInlineFormatting(l.replace(/^\s*[-*]\s/, ''))}</li>`).join('');
+        html += `<ul>${items}</ul>`;
+        continue;
+      }
+
+      if (isNumberedList) {
+        const items = listLines.map(l => `<li>${this.applyInlineFormatting(l.replace(/^\s*\d+[.)]\s/, ''))}</li>`).join('');
+        html += `<ol>${items}</ol>`;
+        continue;
+      }
+
+      const paragraphLines = trimmedBlock.split('\n');
+      let paraHtml = '';
+      for (const pLine of paragraphLines) {
+        const pTrimmed = pLine.trim();
+        if (pTrimmed.startsWith('### ')) {
+          if (paraHtml) { html += `<p>${this.applyInlineFormatting(paraHtml)}</p>`; paraHtml = ''; }
+          html += `<h3>${this.applyInlineFormatting(pTrimmed.slice(4))}</h3>`;
+        } else if (pTrimmed.startsWith('## ')) {
+          if (paraHtml) { html += `<p>${this.applyInlineFormatting(paraHtml)}</p>`; paraHtml = ''; }
+          html += `<h2>${this.applyInlineFormatting(pTrimmed.slice(3))}</h2>`;
+        } else {
+          paraHtml += (paraHtml ? ' ' : '') + pTrimmed;
+        }
+      }
+      if (paraHtml) {
+        html += `<p>${this.applyInlineFormatting(paraHtml)}</p>`;
+      }
+    }
+
+    return html || '<p></p>';
+  }
+
+  applyInlineFormatting(text) {
+    let result = text;
+    result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    result = result.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    result = result.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    result = result.replace(/_(.+?)_/g, '<em>$1</em>');
+    result = result.replace(/(https?:\/\/[^\s<]+)/g, '<a style="color: #EC5F3F; text-decoration: none;">$1</a>');
+    return result;
   }
 
   // Media handling
