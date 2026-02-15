@@ -4663,7 +4663,6 @@ class NewsMonitor {
   setupDOM() {
     this.dom = {
       fetchNewsBtn: document.getElementById('pr-fetch-news-btn'),
-      reanalyzeNewsBtn: document.getElementById('pr-reanalyze-news-btn'),
       newsHooksList: document.getElementById('pr-news-hooks-list'),
       sourcesDrawer: document.getElementById('pr-sources-drawer'),
       sourcesBackdrop: document.getElementById('pr-sources-backdrop'),
@@ -4689,7 +4688,6 @@ class NewsMonitor {
 
   setupEventListeners() {
     this.dom.fetchNewsBtn?.addEventListener('click', () => this.refreshNews());
-    this.dom.reanalyzeNewsBtn?.addEventListener('click', () => this.reanalyzeNews());
 
     // Sources drawer toggle
     this.dom.sourcesToggleBtn?.addEventListener('click', () => this.toggleSourcesDrawer());
@@ -5067,43 +5065,6 @@ class NewsMonitor {
       if (this.dom.fetchNewsBtn) {
         this.dom.fetchNewsBtn.disabled = false;
         this.dom.fetchNewsBtn.classList.remove('spinning');
-      }
-    }
-  }
-
-  async reanalyzeNews() {
-    if (this.dom.reanalyzeNewsBtn) {
-      this.dom.reanalyzeNewsBtn.disabled = true;
-      this.dom.reanalyzeNewsBtn.classList.add('spinning');
-    }
-
-    if (this.dom.newsHooksList) {
-      this.dom.newsHooksList.innerHTML = '<p class="pr-news-hooks-empty">Re-analyzing all articles with updated content intelligence...</p>';
-    }
-
-    try {
-      const response = await fetch('/api/pr/news-hooks/reanalyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to re-analyze');
-      }
-
-      this.newsHooks = data.news || [];
-      this.renderNews();
-      this.prAgent.showToast(`Re-analyzed ${data.updated || 0} articles`, 'success');
-    } catch (error) {
-      if (this.dom.newsHooksList) {
-        this.dom.newsHooksList.innerHTML = '<p class="pr-news-hooks-empty">Failed to re-analyze. Try again.</p>';
-      }
-    } finally {
-      if (this.dom.reanalyzeNewsBtn) {
-        this.dom.reanalyzeNewsBtn.disabled = false;
-        this.dom.reanalyzeNewsBtn.classList.remove('spinning');
       }
     }
   }
