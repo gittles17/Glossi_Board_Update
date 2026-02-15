@@ -1105,6 +1105,32 @@ app.post('/api/pr/news-hooks', async (req, res) => {
     const finalArticles = articlesToAnalyze.slice(0, 30);
     console.log(`Sending ${finalArticles.length} articles from ${Object.keys(articlesByOutlet).length} outlets to Claude for analysis`);
     
+    // Fetch talking points for strategic context
+    let talkingPointsContext = '';
+    if (useDatabase) {
+      try {
+        const dashResult = await pool.query("SELECT data FROM app_data WHERE key = 'dashboard_data'");
+        if (dashResult.rows.length > 0 && dashResult.rows[0]?.data) {
+          const dashData = typeof dashResult.rows[0].data === 'string' ? JSON.parse(dashResult.rows[0].data) : dashResult.rows[0].data;
+          if (dashData.talkingPoints && dashData.talkingPoints.length > 0) {
+            const grouped = {};
+            dashData.talkingPoints.forEach(tp => {
+              const cat = tp.category || 'general';
+              if (!grouped[cat]) grouped[cat] = [];
+              grouped[cat].push(tp.title + (tp.content ? ': ' + tp.content : ''));
+            });
+            talkingPointsContext = '\nCOMPANY TALKING POINTS (use these to shape content angles):\n' +
+              Object.entries(grouped).map(([cat, points]) =>
+                `${cat.toUpperCase()}:\n${points.map(p => '- ' + p).join('\n')}`
+              ).join('\n') +
+              '\nFavor content types that let these messages land naturally. If a talking point is relevant to the article, choose content formats that carry that argument well (op-ed, blog post) over surface-level formats.\n';
+          }
+        }
+      } catch (tpError) {
+        console.error('Error fetching talking points for context:', tpError.message);
+      }
+    }
+
     const analysisPrompt = `You are curating strategic news for Glossi, an AI-powered 3D product visualization platform.
 
 GLOSSI'S MARKET:
@@ -1112,7 +1138,7 @@ GLOSSI'S MARKET:
 - Customers: Enterprise brands (CPG, fashion, beauty, e-commerce)
 - Buyers: CMOs, creative directors, e-commerce directors
 - Use case: Product marketing, e-commerce catalogs, social media content
-
+${talkingPointsContext}
 INCLUDE ARTICLES ABOUT:
 
 **CORE TOPICS (HIGHEST PRIORITY - aim for 8-10 articles from these):**
@@ -1178,18 +1204,42 @@ Return articles in this JSON format:
       "angle_title": "Short story angle name (3-6 words, e.g. 'AI Photography Goes Enterprise')",
       "angle_narrative": "1-2 sentences explaining the story angle AND how it connects to Glossi. Weave in the Glossi tie-in naturally, not as a separate thought. Example: 'As enterprise brands scramble to adopt AI for product content, Glossi's compositing-first approach solves the brand consistency problem that pure generation tools cannot.'",
       "content_plan": [
-        {"type": "linkedin_post", "description": "Brief description of what this piece would cover", "priority": 1},
-        {"type": "media_pitch", "description": "Brief description of the pitch angle", "priority": 2}
+        {"type": "hot_take", "description": "Quick reaction: what this means for product teams still relying on photoshoots", "priority": 1, "audience": "builders"},
+        {"type": "blog_post", "description": "Deep dive on why compositing-first matters more after this news", "priority": 2, "audience": "brands"},
+        {"type": "email_blast", "description": "Signal boost to subscriber list with the key insight", "priority": 3, "audience": "brands"}
       ]
     }
   ]
 }
 
 CONTENT PLAN RULES:
-- Each article should have 2-3 content pieces in its content_plan
-- Valid content types: linkedin_post, media_pitch, blog_post, press_release, tweet_thread, founder_quote, talking_points, briefing_doc, product_announcement
-- Order by priority (1 = highest)
-- Pick types that make sense for the article (e.g. breaking news = media_pitch first, thought leadership = linkedin_post first)
+
+CONTEXT: Glossi is a seed-stage startup building awareness with builders (devs, designers, PMs) and brand/marketing teams. The content voice is product-led, opinionated, and intentional (think Cursor, Linear, Canva). Never corporate. Never hype. Never generic startup marketing. Every piece should feel like it was worth writing.
+
+ACTIVE CHANNELS: LinkedIn, Twitter/X, company blog, email list, press outreach. Only suggest content for these channels.
+
+VALID CONTENT TYPES: linkedin_post, media_pitch, blog_post, press_release, tweet_thread, founder_quote, talking_points, briefing_doc, product_announcement, op_ed, email_blast, investor_snippet, hot_take
+
+SELECTION HEURISTICS (pick based on article type, not a default template):
+- Breaking/time-sensitive news: media_pitch + hot_take + email_blast
+- Competitor or market shift: op_ed + tweet_thread + linkedin_post
+- Thought leadership / trend piece: op_ed + linkedin_post + blog_post
+- Product/feature relevance: product_announcement + blog_post + email_blast
+- Funding/business signal: investor_snippet + press_release + linkedin_post
+- Customer/industry story: blog_post + linkedin_post + founder_quote
+- Technical deep-dive: blog_post + tweet_thread + hot_take
+- "Everyone gets this wrong": hot_take + op_ed + tweet_thread
+
+DYNAMIC PLAN SIZE (based on relevance to Glossi):
+- High relevance + high urgency: 4-5 content pieces
+- Medium relevance: 3-4 content pieces
+- Low relevance: 2 content pieces
+
+DIVERSIFICATION: Do NOT default to linkedin_post + media_pitch for every article. Look at the batch as a whole. If multiple articles would get the same lead type, vary them. Prioritize the content type that best fits each specific article's angle.
+
+AUDIENCE TAG: Each content piece MUST include an "audience" field with one of: "builders", "brands", "investors", "press", "internal"
+
+TONE FOR DESCRIPTIONS: Write content plan descriptions like a sharp comms lead, not a template. Instead of "Thought leadership post tied to this news" write something like "Founder take: why compositing beats generation for brand teams, told through this news hook." Be specific to the article.
 
 CRITICAL: Only include articles you're recommending. Do NOT include articles with "EXCLUDED" or "Not relevant" in the relevance field. If you think an article should be excluded, simply don't add it to the JSON array.
 
@@ -1486,13 +1536,21 @@ Analyze this article and return a JSON object with:
   "angle_title": "Short story angle name for Glossi (3-6 words)",
   "angle_narrative": "1-2 sentences explaining the story angle AND how it connects to Glossi. Weave in the Glossi tie-in naturally.",
   "content_plan": [
-    {"type": "linkedin_post", "description": "Brief description", "priority": 1},
-    {"type": "media_pitch", "description": "Brief description", "priority": 2}
+    {"type": "hot_take", "description": "Quick founder reaction: what this signals for AI product photography", "priority": 1, "audience": "builders"},
+    {"type": "op_ed", "description": "Bylined take on why this validates compositing over pure generation", "priority": 2, "audience": "brands"},
+    {"type": "email_blast", "description": "Key insight distilled for subscriber list", "priority": 3, "audience": "brands"}
   ],
   "relevance": "Topic connection explanation"
 }
 
-CONTENT PLAN: Include 2-3 content pieces. Valid types: linkedin_post, media_pitch, blog_post, press_release, tweet_thread, founder_quote, talking_points.
+CONTENT PLAN RULES:
+- Glossi is seed-stage, building awareness with builders and brand teams. Voice is product-led, opinionated, intentional. Not corporate, not hype, not generic.
+- Active channels: LinkedIn, Twitter/X, blog, email, press.
+- Valid types: linkedin_post, media_pitch, blog_post, press_release, tweet_thread, founder_quote, talking_points, briefing_doc, product_announcement, op_ed, email_blast, investor_snippet, hot_take
+- Include 2-4 pieces. More for high-relevance articles, fewer for tangential ones.
+- Each piece MUST have an "audience" field: "builders", "brands", "investors", "press", or "internal"
+- Do NOT default to linkedin_post + media_pitch. Pick types that fit THIS specific article.
+- Write specific descriptions, not templates. Example: "Founder take: why this proves compositing beats generation" not "Thought leadership post."
 
 Return ONLY valid JSON.`;
 
@@ -1717,6 +1775,15 @@ Each angle should be a clear NARRATIVE, not a content type. Something a journali
 
 For each angle, include a content plan: what specific pieces to create and where to publish them, in priority order.
 
+CONTENT PLAN RULES:
+- Glossi is seed-stage, building awareness with builders (devs, designers, PMs) and brand teams. Voice is product-led, opinionated, intentional (think Cursor, Linear, Canva). Not corporate, not hype, not generic.
+- Active channels: LinkedIn, Twitter/X, company blog, email list, press outreach.
+- Valid types: linkedin_post, media_pitch, blog_post, press_release, tweet_thread, founder_quote, talking_points, briefing_doc, product_announcement, op_ed, email_blast, investor_snippet, hot_take
+- High urgency angles: 4-5 content pieces. Medium: 3-4. Low: 2-3.
+- Each piece MUST have an "audience" field: "builders", "brands", "investors", "press", or "internal"
+- Do NOT default to linkedin_post + media_pitch for every angle. Vary the mix across angles.
+- Write specific, sharp descriptions. Not "Founder perspective on..." but "Why world models prove compositing was the right bet, told from the builder's POV."
+
 Return ONLY valid JSON in this exact structure:
 {
   "angles": [
@@ -1727,8 +1794,9 @@ Return ONLY valid JSON in this exact structure:
       "urgency": "high" | "medium" | "low",
       "why_now": "One sentence on timing",
       "content_plan": [
-        { "type": "linkedin_post", "description": "Founder perspective on...", "target": "LinkedIn", "priority": 1 },
-        { "type": "media_pitch", "description": "Pitch to AI reporters about...", "target": "TechCrunch", "priority": 2 }
+        { "type": "hot_take", "description": "Quick reaction: what everyone misses about world models and product viz", "target": "Twitter/X", "priority": 1, "audience": "builders" },
+        { "type": "op_ed", "description": "Bylined piece on why compositing-first was the right architecture bet", "target": "Company blog", "priority": 2, "audience": "brands" },
+        { "type": "media_pitch", "description": "Pitch to AI reporters: Glossi built for the world model era before it arrived", "target": "TechCrunch", "priority": 3, "audience": "press" }
       ]
     }
   ]

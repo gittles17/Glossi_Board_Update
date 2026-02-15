@@ -233,6 +233,9 @@
                   </button>
                   <div class="pr-version-menu" id="pr-version-menu" style="display:none"></div>
                 </div>
+                <button class="pr-action-btn" id="pr-tone-btn" title="Tone" aria-label="Tone">
+                  <i class="ph-light ph-megaphone-simple"></i>
+                </button>
                 <button class="pr-action-btn" id="pr-copy-btn" title="Copy to clipboard" aria-label="Copy to clipboard">
                   <i class="ph-light ph-copy"></i>
                 </button>
@@ -261,6 +264,10 @@
                   <option value="tweet_thread">Tweet Thread</option>
                   <option value="briefing_doc">Briefing Document</option>
                   <option value="talking_points">Talking Points</option>
+                  <option value="op_ed">Op-Ed / Bylined Article</option>
+                  <option value="email_blast">Email Blast</option>
+                  <option value="investor_snippet">Investor Update Snippet</option>
+                  <option value="hot_take">Hot Take</option>
                   <option value="custom">Custom</option>
                 </select>
                 <button class="pr-generate-btn" id="pr-generate-btn" disabled style="display:none">
@@ -679,27 +686,6 @@
           <div class="wizard-field">
             <label for="wizard-investor-pitch">What's the thing you say in investor meetings that always lands?</label>
             <textarea id="wizard-investor-pitch" class="input textarea" rows="3" placeholder="What resonates most with investors?"></textarea>
-          </div>
-          <div class="wizard-field">
-            <label>Tone Preference</label>
-            <div class="wizard-radio-group">
-              <label class="wizard-radio">
-                <input type="radio" name="wizard-tone" value="understated" checked>
-                <span>Understated and confident (like Linear)</span>
-              </label>
-              <label class="wizard-radio">
-                <input type="radio" name="wizard-tone" value="technical">
-                <span>Technical and precise (like Cursor)</span>
-              </label>
-              <label class="wizard-radio">
-                <input type="radio" name="wizard-tone" value="bold">
-                <span>Bold and direct (like a founder who knows they're right)</span>
-              </label>
-              <label class="wizard-radio">
-                <input type="radio" name="wizard-tone" value="all">
-                <span>All of the above</span>
-              </label>
-            </div>
           </div>
         </div>
       </div>

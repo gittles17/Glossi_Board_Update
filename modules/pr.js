@@ -120,6 +120,10 @@ const CONTENT_TYPES = [
   { id: 'tweet_thread', label: 'Tweet Thread' },
   { id: 'briefing_doc', label: 'Briefing Document' },
   { id: 'talking_points', label: 'Talking Points' },
+  { id: 'op_ed', label: 'Op-Ed / Bylined Article' },
+  { id: 'email_blast', label: 'Email Blast' },
+  { id: 'investor_snippet', label: 'Investor Update Snippet' },
+  { id: 'hot_take', label: 'Hot Take' },
   { id: 'custom', label: 'Custom' }
 ];
 
@@ -625,6 +629,7 @@ class PRAgent {
       generatedContent: document.getElementById('pr-generated-content'),
       loadingState: document.getElementById('pr-loading-state'),
       workspaceChat: document.getElementById('pr-workspace-chat'),
+      toneBtn: document.getElementById('pr-tone-btn'),
       copyBtn: document.getElementById('pr-copy-btn'),
       exportBtn: document.getElementById('pr-export-btn'),
       exportMenu: document.getElementById('pr-export-menu'),
@@ -720,6 +725,9 @@ class PRAgent {
 
     // Regenerate button
     this.dom.regenerateBtn?.addEventListener('click', () => this.generateContent());
+
+    // Tone button
+    this.dom.toneBtn?.addEventListener('click', () => this.openToneModal());
 
     // Copy button
     this.dom.copyBtn?.addEventListener('click', () => this.copyContent());
@@ -2158,7 +2166,7 @@ class PRAgent {
     }
   }
 
-  showWorkspace() {
+  showWorkspace(skipSuggestions = false) {
     this.hideLoading();
     if (this.dom.workspaceEmpty) this.dom.workspaceEmpty.style.display = 'none';
     if (this.dom.workspaceGenerated) this.dom.workspaceGenerated.style.display = 'block';
@@ -2176,8 +2184,10 @@ class PRAgent {
       workspaceTab.click();
     }
 
-    // Generate suggestions for the content area
-    this.generateSuggestions();
+    // Generate suggestions for the content area (skip when switching tabs with stored suggestions)
+    if (!skipSuggestions) {
+      this.generateSuggestions();
+    }
   }
 
   renderGeneratedContent(output) {
@@ -2482,7 +2492,7 @@ class PRAgent {
               ${angle.content_plan.map(item => `
                 <div class="pr-plan-check ${item.completed ? 'done' : ''}">
                   <span class="pr-plan-icon">${item.completed ? '✅' : item.priority === 1 ? '➡️' : '⬜'}</span>
-                  <span class="pr-plan-text">${this.angleManager.formatContentType(item.type)} — ${this.escapeHtml(item.description)}</span>
+                  <span class="pr-plan-text">${this.angleManager.formatContentType(item.type)}${item.audience ? ` <span class="pr-audience-badge pr-audience-${item.audience}">${item.audience}</span>` : ''} ${this.escapeHtml(item.description)}</span>
                 </div>
               `).join('')}
             </div>
@@ -2567,6 +2577,76 @@ class PRAgent {
   // =========================================
   // COPY & EXPORT
   // =========================================
+
+  openToneModal() {
+    const currentTone = this.settings?.['wizard-tone'] || 'understated';
+    const toneOptions = [
+      { value: 'understated', label: 'Understated and confident (like Linear)' },
+      { value: 'technical', label: 'Technical and precise (like Cursor)' },
+      { value: 'bold', label: 'Bold and direct (like a founder who knows they\'re right)' },
+      { value: 'all', label: 'All of the above' }
+    ];
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay visible';
+    modal.innerHTML = `
+      <div class="modal" style="max-width: 420px;">
+        <div class="modal-header">
+          <h2>Tone</h2>
+          <button class="btn-icon modal-close"><i class="ph-light ph-x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: var(--space-5) var(--space-6);">
+          <div class="wizard-radio-group">
+            ${toneOptions.map(opt => `
+              <label class="wizard-radio">
+                <input type="radio" name="tone-modal-choice" value="${opt.value}" ${opt.value === currentTone ? 'checked' : ''}>
+                <span>${opt.label}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+        <div class="modal-footer" style="padding: var(--space-4) var(--space-6); border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: var(--space-2);">
+          <button class="btn btn-secondary modal-close">Cancel</button>
+          <button class="btn btn-primary" id="tone-modal-save">Save</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.querySelectorAll('.modal-close').forEach(btn => btn.addEventListener('click', () => modal.remove()));
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+    modal.querySelector('#tone-modal-save').addEventListener('click', async () => {
+      const selected = modal.querySelector('input[name="tone-modal-choice"]:checked');
+      if (!selected) return;
+
+      const newTone = selected.value;
+      if (!this.settings) this.settings = {};
+      this.settings['wizard-tone'] = newTone;
+
+      try {
+        await fetch('/api/pr/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.settings)
+        });
+      } catch (e) { /* silent */ }
+
+      // Update the Founder Voice source if it exists
+      const voiceSource = this.sources.find(s => s.title === 'Founder Voice & Messaging');
+      if (voiceSource && voiceSource.content) {
+        voiceSource.content = voiceSource.content.replace(
+          /TONE PREFERENCE:\n.+/,
+          `TONE PREFERENCE:\n${newTone}`
+        );
+        this.saveSources();
+      }
+
+      this.showToast('Tone updated', 'success');
+      modal.remove();
+    });
+  }
 
   copyContent() {
     if (!this.dom.generatedContent) return;
@@ -2821,19 +2901,33 @@ class PRAgent {
     const message = input?.value?.trim();
     if (!message || !this.currentOutput) return;
 
+    // Capture target output and tab at the START so tab switching mid-flight is safe
+    const targetOutput = this.currentOutput;
+    const nm = this.newsMonitor;
+    const targetTabId = nm?._activeTabId;
+
     // Clear input
     input.value = '';
     input.disabled = true;
     
     const sendBtn = document.getElementById('pr-send-btn');
     if (sendBtn) sendBtn.disabled = true;
+
+    // Mark tab as refining in _tabContent and show indicator on the tab button
+    if (nm && targetTabId) {
+      const entry = nm._tabContent.get(targetTabId);
+      if (entry) entry.refining = true;
+      nm.updateTabIndicator(targetTabId, true);
+    }
     
-    // Show refining overlay
-    this.showRefiningOverlay();
+    // Show refining overlay only if this tab is currently active
+    if (!nm || nm._activeTabId === targetTabId) {
+      this.showRefiningOverlay();
+    }
 
     try {
-      // Build context
-      const context = this.buildChatContext();
+      // Build context from the captured target output (not this.currentOutput)
+      const context = this.buildChatContext(targetOutput);
       
       const systemPrompt = `You are a PR content refinement assistant for Glossi. The user has generated PR content and wants to refine it.
 
@@ -2869,14 +2963,14 @@ Apply the requested refinement and return ONLY the complete refined content (no 
 
       const refinedContent = response.content[0].text.trim();
 
-      // Migrate to drafts if needed
-      if (!this.currentOutput.drafts) {
-        this.currentOutput = this.migrateContentToDrafts(this.currentOutput);
+      // Migrate to drafts if needed (operate on targetOutput, not this.currentOutput)
+      if (!targetOutput.drafts) {
+        this.migrateContentToDrafts(targetOutput);
       }
 
       // Create new draft version
-      const newVersion = this.currentOutput.drafts.length + 1;
-      this.currentOutput.drafts.unshift({
+      const newVersion = targetOutput.drafts.length + 1;
+      targetOutput.drafts.unshift({
         content: refinedContent,
         version: newVersion,
         timestamp: Date.now(),
@@ -2884,26 +2978,50 @@ Apply the requested refinement and return ONLY the complete refined content (no 
       });
 
       // Keep only the latest 10 drafts
-      if (this.currentOutput.drafts.length > 10) {
-        this.currentOutput.drafts = this.currentOutput.drafts.slice(0, 10);
+      if (targetOutput.drafts.length > 10) {
+        targetOutput.drafts = targetOutput.drafts.slice(0, 10);
       }
-      
-      // Render updated drafts
-      this.renderDrafts();
-      
-      // Save
-      await this.saveOutputs();
 
-      // Generate new suggestions
-      await this.generateSuggestions();
+      // Update the _tabContent entry with the refined output
+      if (nm && targetTabId) {
+        const entry = nm._tabContent.get(targetTabId);
+        if (entry) {
+          entry.output = targetOutput;
+          entry.refining = false;
+        }
+        nm.updateTabIndicator(targetTabId, false);
+      }
+
+      // Only update DOM if the user is still viewing the refined tab
+      const stillActive = !nm || nm._activeTabId === targetTabId;
+      if (stillActive) {
+        this.currentOutput = targetOutput;
+        this.renderDrafts();
+        this.hideRefiningOverlay();
+        await this.saveOutputs();
+        await this.generateSuggestions();
+      } else {
+        // Tab switched away; save silently, suggestions will generate on re-visit
+        await this.saveOutputs();
+        this.hideRefiningOverlay();
+      }
 
     } catch (error) {
-      console.error('Error in refinement:', error);
-      this.showRefiningError('Refinement failed. Please try again.');
-      setTimeout(() => this.hideRefiningOverlay(), 2000);
+      // Clear refining state on the target tab
+      if (nm && targetTabId) {
+        const entry = nm._tabContent.get(targetTabId);
+        if (entry) entry.refining = false;
+        nm.updateTabIndicator(targetTabId, false);
+      }
+      if (!nm || nm._activeTabId === targetTabId) {
+        this.showRefiningError('Refinement failed. Please try again.');
+        setTimeout(() => this.hideRefiningOverlay(), 2000);
+      }
       return;
     } finally {
-      this.hideRefiningOverlay();
+      if (!nm || nm._activeTabId === targetTabId) {
+        this.hideRefiningOverlay();
+      }
       input.disabled = false;
       if (sendBtn) sendBtn.disabled = false;
       input.focus();
@@ -2972,13 +3090,19 @@ Return ONLY the JSON array, nothing else.`;
       ).join('');
 
     } catch (error) {
-      console.error('Error generating suggestions:', error);
       // Fallback to default suggestions
       container.innerHTML = `
         <button class="pr-suggestion-btn" data-suggestion="Make more direct">Make more direct</button>
         <button class="pr-suggestion-btn" data-suggestion="Shorten by 20%">Shorten by 20%</button>
         <button class="pr-suggestion-btn" data-suggestion="Add specific metrics">Add specific metrics</button>
       `;
+    }
+
+    // Store suggestions in the active tab's _tabContent entry
+    const nm = this.newsMonitor;
+    if (nm) {
+      const activeEntry = nm._tabContent?.get(nm._activeTabId);
+      if (activeEntry) activeEntry.suggestionsHTML = container.innerHTML;
     }
     
   }
@@ -2995,23 +3119,24 @@ Return ONLY the JSON array, nothing else.`;
     return div.innerHTML;
   }
 
-  buildChatContext() {
+  buildChatContext(output) {
+    const target = output || this.currentOutput;
     const parts = [];
 
     // Current content - include all drafts
-    if (this.currentOutput) {
-      parts.push(`CONTENT TYPE: ${this.currentOutput.content_type}`);
+    if (target) {
+      parts.push(`CONTENT TYPE: ${target.content_type}`);
       
-      if (this.currentOutput.drafts && this.currentOutput.drafts.length > 0) {
-        parts.push(`\nDRAFT VERSIONS (${this.currentOutput.drafts.length} total):`);
-        this.currentOutput.drafts.forEach((draft, i) => {
+      if (target.drafts && target.drafts.length > 0) {
+        parts.push(`\nDRAFT VERSIONS (${target.drafts.length} total):`);
+        target.drafts.forEach((draft, i) => {
           const label = i === 0 ? 'LATEST DRAFT' : `VERSION ${draft.version}`;
           const promptInfo = draft.prompt ? ` (refined with: "${draft.prompt}")` : '';
           parts.push(`\n${label}${promptInfo}:\n${draft.content}`);
         });
-      } else if (this.currentOutput.content) {
+      } else if (target.content) {
         // Backward compatibility
-        parts.push(`\nCURRENT CONTENT:\n${this.currentOutput.content}`);
+        parts.push(`\nCURRENT CONTENT:\n${target.content}`);
       }
     }
 
@@ -3024,8 +3149,8 @@ Return ONLY the JSON array, nothing else.`;
     }
 
     // Strategy
-    if (this.currentOutput?.strategy) {
-      parts.push('\n\nSTRATEGY RECOMMENDATIONS:\n' + JSON.stringify(this.currentOutput.strategy, null, 2));
+    if (target?.strategy) {
+      parts.push('\n\nSTRATEGY RECOMMENDATIONS:\n' + JSON.stringify(target.strategy, null, 2));
     }
 
     return parts.join('\n');
@@ -3314,8 +3439,6 @@ class WizardManager {
     data['wizard-elevator-pitch'] = document.getElementById('wizard-elevator-pitch')?.value || '';
     data['wizard-strong-opinion'] = document.getElementById('wizard-strong-opinion')?.value || '';
     data['wizard-investor-pitch'] = document.getElementById('wizard-investor-pitch')?.value || '';
-    const toneRadio = document.querySelector('input[name="wizard-tone"]:checked');
-    data['wizard-tone'] = toneRadio?.value || 'understated';
     
     return data;
   }
@@ -3476,9 +3599,6 @@ ${data['wizard-strong-opinion'] || '[Not provided - add details to improve PR ou
 
 WHAT RESONATES WITH INVESTORS:
 ${data['wizard-investor-pitch'] || '[Not provided - add details to improve PR output]'}
-
-TONE PREFERENCE:
-${data['wizard-tone'] || 'understated'}
     `.trim();
     
     sources.push({
@@ -4281,7 +4401,9 @@ class NewsMonitor {
         }
         tabContent.set(tabId, {
           loading: false,
-          output: { ...output, drafts: drafts || [] }
+          output: { ...output, drafts: drafts || [] },
+          refining: false,
+          suggestionsHTML: ''
         });
       });
 
@@ -4803,11 +4925,13 @@ class NewsMonitor {
                 if (!cp || !Array.isArray(cp) || cp.length === 0) return '';
                 return `<div class="pr-news-plan-list">${cp.map((p, pi) => {
                   const label = CONTENT_TYPES.find(t => t.id === p.type)?.label || p.type;
+                  const audienceBadge = p.audience ? `<span class="pr-audience-badge pr-audience-${p.audience}">${p.audience}</span>` : '';
                   return `
                     <div class="pr-news-plan-item" data-plan-index="${pi}">
                       <div class="pr-news-plan-header">
                         <i class="ph-light ph-caret-right pr-plan-item-chevron"></i>
                         <span class="pr-news-plan-label">${this.escapeHtml(label)}</span>
+                        ${audienceBadge}
                       </div>
                       ${p.description ? `<div class="pr-news-plan-desc"><p>${this.escapeHtml(p.description)}</p></div>` : ''}
                     </div>`;
@@ -4908,12 +5032,17 @@ class NewsMonitor {
     if (!this._activeStoryKey || !this._stories.has(this._activeStoryKey)) return;
     // Persist any in-progress text edits before saving story state
     this.prAgent.saveCurrentEdits();
+    // Save current tab's suggestions into its per-tab entry
+    const suggestionsEl = document.getElementById('pr-suggestions');
+    if (this._activeTabId && this._tabContent) {
+      const activeEntry = this._tabContent.get(this._activeTabId);
+      if (activeEntry && suggestionsEl) activeEntry.suggestionsHTML = suggestionsEl.innerHTML;
+    }
     const story = this._stories.get(this._activeStoryKey);
     story.tabContent = this._tabContent ? new Map(this._tabContent) : new Map();
     story.activeTabId = this._activeTabId;
     story.currentOutput = this.prAgent.currentOutput;
-    // Save suggestions from DOM
-    const suggestionsEl = document.getElementById('pr-suggestions');
+    // Also save at story level for backward compatibility
     if (suggestionsEl) story.suggestionsHTML = suggestionsEl.innerHTML;
   }
 
@@ -5264,11 +5393,33 @@ class NewsMonitor {
       try { contentPlan = JSON.parse(contentPlan); } catch (e) { contentPlan = null; }
     }
     if (!contentPlan || !Array.isArray(contentPlan) || contentPlan.length === 0) {
-      contentPlan = [
-        { type: 'linkedin_post', description: 'Thought leadership post tied to this news', priority: 1 },
-        { type: 'media_pitch', description: 'Pitch email to relevant journalists', priority: 2 },
-        { type: 'blog_post', description: 'In-depth analysis post', priority: 3 }
-      ];
+      const angleTitle = (newsItem.angle_title || '').toLowerCase();
+      const isUrgent = newsItem.urgency === 'high';
+      const isCompetitor = /compet|versus|vs\b|rival|alternative|launches|raises/.test(angleTitle);
+      const isTrend = /trend|shift|future|landscape|wave|era/.test(angleTitle);
+      contentPlan = isUrgent
+        ? [
+            { type: 'hot_take', description: 'Quick, opinionated reaction while the news is fresh', priority: 1, audience: 'builders' },
+            { type: 'media_pitch', description: 'Pitch to relevant reporters with Glossi angle', priority: 2, audience: 'press' },
+            { type: 'email_blast', description: 'Signal boost to subscriber list', priority: 3, audience: 'brands' }
+          ]
+        : isCompetitor
+        ? [
+            { type: 'op_ed', description: 'Bylined take on what competitors miss', priority: 1, audience: 'builders' },
+            { type: 'tweet_thread', description: 'Thread breaking down the competitive landscape', priority: 2, audience: 'builders' },
+            { type: 'linkedin_post', description: 'Founder perspective on the market move', priority: 3, audience: 'brands' }
+          ]
+        : isTrend
+        ? [
+            { type: 'op_ed', description: 'Opinionated perspective on this trend', priority: 1, audience: 'builders' },
+            { type: 'linkedin_post', description: 'Founder POV distilled to one key insight', priority: 2, audience: 'brands' },
+            { type: 'blog_post', description: 'Deeper analysis with Glossi angle', priority: 3, audience: 'brands' }
+          ]
+        : [
+            { type: 'blog_post', description: 'In-depth analysis with product angle', priority: 1, audience: 'brands' },
+            { type: 'tweet_thread', description: 'Key insight as a concise thread', priority: 2, audience: 'builders' },
+            { type: 'talking_points', description: 'Internal prep points for team', priority: 3, audience: 'internal' }
+          ];
     }
 
     // Sort by priority
@@ -5364,6 +5515,10 @@ class NewsMonitor {
       'tweet_thread': 'Tweet Thread',
       'briefing_doc': 'Briefing Doc',
       'talking_points': 'Talking Points',
+      'op_ed': 'Op-Ed',
+      'email_blast': 'Email Blast',
+      'investor_snippet': 'Investor Snippet',
+      'hot_take': 'Hot Take',
       'custom': 'Custom'
     };
     return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -5372,6 +5527,19 @@ class NewsMonitor {
   switchContentTab(tabId) {
     const tabsContainer = document.getElementById('pr-content-tabs');
     if (!tabsContainer) return;
+
+    // Save state of the tab we are leaving
+    const prevTabId = this._activeTabId;
+    if (prevTabId && prevTabId !== tabId) {
+      const prevEntry = this._tabContent.get(prevTabId);
+      if (prevEntry) {
+        // Preserve inline edits
+        this.prAgent.saveCurrentEdits();
+        // Preserve suggestions HTML
+        const sugEl = document.getElementById('pr-suggestions');
+        if (sugEl) prevEntry.suggestionsHTML = sugEl.innerHTML;
+      }
+    }
 
     // Update active tab visuals
     tabsContainer.querySelectorAll('.pr-content-tab').forEach(t => {
@@ -5394,19 +5562,41 @@ class NewsMonitor {
     if (entry) {
       if (entry.loading) {
         this.prAgent.showLoading();
+        this.prAgent.hideRefiningOverlay();
       } else if (entry.output) {
         this.prAgent.currentOutput = entry.output;
         this.prAgent.renderGeneratedContent(entry.output);
-        this.prAgent.showWorkspace();
+        // Skip suggestion generation since we restore per-tab suggestions below
+        const hasSavedSuggestions = !!(entry.suggestionsHTML);
+        this.prAgent.showWorkspace(hasSavedSuggestions);
         this.prAgent.hideLoading();
         this.renderVersionHistory(entry.output);
+      }
+
+      // Restore per-tab suggestions
+      const sugEl = document.getElementById('pr-suggestions');
+      if (sugEl) sugEl.innerHTML = entry.suggestionsHTML || '';
+
+      // Show or hide the refining overlay based on this tab's state
+      if (entry.refining) {
+        this.prAgent.showRefiningOverlay();
+      } else {
+        this.prAgent.hideRefiningOverlay();
       }
     } else {
       // No content yet - show empty state with generate prompt
       if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
       if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
       this.prAgent.hideLoading();
+      this.prAgent.hideRefiningOverlay();
+      const sugEl = document.getElementById('pr-suggestions');
+      if (sugEl) sugEl.innerHTML = '';
     }
+  }
+
+  updateTabIndicator(tabId, isRefining) {
+    const tabEl = document.querySelector(`.pr-content-tab[data-tab-id="${tabId}"]`);
+    if (tabEl) tabEl.classList.toggle('refining', isRefining);
   }
 
   closeContentTab(tabId) {
@@ -5442,8 +5632,9 @@ class NewsMonitor {
 
     const typeLabel = CONTENT_TYPES.find(t => t.id === planItem.type)?.label || planItem.type;
 
-    // Mark tab as loading
-    this._tabContent.set(tabId, { loading: true, output: null });
+    // Mark tab as loading (preserve existing refining/suggestionsHTML if re-generating)
+    const prevEntry = this._tabContent.get(tabId);
+    this._tabContent.set(tabId, { loading: true, output: null, refining: prevEntry?.refining || false, suggestionsHTML: prevEntry?.suggestionsHTML || '' });
     if (this._activeTabId === tabId) {
       this.prAgent.showLoading();
     }
@@ -5525,7 +5716,8 @@ class NewsMonitor {
         content_plan_index: planIndex
       };
 
-      this._tabContent.set(tabId, { loading: false, output });
+      const prevEntryDone = this._tabContent.get(tabId);
+      this._tabContent.set(tabId, { loading: false, output, refining: prevEntryDone?.refining || false, suggestionsHTML: prevEntryDone?.suggestionsHTML || '' });
 
       // Save to PRAgent outputs
       this.prAgent.outputs.push(output);
@@ -5545,7 +5737,8 @@ class NewsMonitor {
       }
 
     } catch (err) {
-      this._tabContent.set(tabId, { loading: false, output: null, error: err.message });
+      const prevEntryErr = this._tabContent.get(tabId);
+      this._tabContent.set(tabId, { loading: false, output: null, error: err.message, refining: prevEntryErr?.refining || false, suggestionsHTML: prevEntryErr?.suggestionsHTML || '' });
       if (this._activeTabId === tabId) {
         this.prAgent.hideLoading();
         this.prAgent.showToast(err.message || 'Generation failed', 'error');
@@ -5973,8 +6166,9 @@ class AngleManager {
         urgency: 'low',
         why_now: 'Persistent problem, always relevant',
         content_plan: [
-          { type: 'linkedin_post', description: 'Why AI-generated product images break your brand', target: 'LinkedIn', priority: 1, completed: false },
-          { type: 'blog_post', description: 'The brand decay problem in AI imagery', target: 'Company blog', priority: 2, completed: false }
+          { type: 'op_ed', description: 'Why every AI-generated product image is slowly eroding your brand (and what to do about it)', target: 'Company blog', priority: 1, audience: 'brands', completed: false },
+          { type: 'tweet_thread', description: 'Side-by-side thread: AI-generated vs. composited product shots. Let the pixels speak.', target: 'Twitter/X', priority: 2, audience: 'builders', completed: false },
+          { type: 'email_blast', description: 'The brand consistency problem nobody talks about, with a Glossi angle', target: 'Email list', priority: 3, audience: 'brands', completed: false }
         ],
         isDefault: true,
         generatedAt: new Date().toISOString()
@@ -5987,9 +6181,10 @@ class AngleManager {
         urgency: 'high',
         why_now: 'World model announcements and funding rounds happening now',
         content_plan: [
-          { type: 'linkedin_post', description: 'Founder take on world model funding wave', target: 'LinkedIn', priority: 1, completed: false },
-          { type: 'media_pitch', description: 'How Glossi\'s architecture was built for world models', target: 'TechCrunch / VentureBeat', priority: 2, completed: false },
-          { type: 'tweet_thread', description: 'What world models mean for product visualization', target: 'Twitter/X', priority: 3, completed: false }
+          { type: 'hot_take', description: 'Everyone is excited about world models. Here is what they are missing: the product still needs to be real.', target: 'Twitter/X', priority: 1, audience: 'builders', completed: false },
+          { type: 'blog_post', description: 'Deep dive: how Glossi\'s compositing-first architecture was built for the world model era', target: 'Company blog', priority: 2, audience: 'brands', completed: false },
+          { type: 'media_pitch', description: 'Pitch to AI reporters: the startup that built for world models before they arrived', target: 'TechCrunch / VentureBeat', priority: 3, audience: 'press', completed: false },
+          { type: 'investor_snippet', description: 'World model validation proof point for investor updates', target: 'Investor comms', priority: 4, audience: 'investors', completed: false }
         ],
         isDefault: true,
         generatedAt: new Date().toISOString()
@@ -6002,8 +6197,9 @@ class AngleManager {
         urgency: 'low',
         why_now: 'Evergreen explainer angle',
         content_plan: [
-          { type: 'linkedin_post', description: 'The green screen analogy for AI product viz', target: 'LinkedIn', priority: 1, completed: false },
-          { type: 'talking_points', description: 'Elevator pitch using the analogy', target: 'General', priority: 2, completed: false }
+          { type: 'linkedin_post', description: 'The green screen analogy, explained in one post. Your product is the actor. AI builds the set.', target: 'LinkedIn', priority: 1, audience: 'brands', completed: false },
+          { type: 'founder_quote', description: 'Punchy soundbite version of the analogy for press and pitch conversations', target: 'General', priority: 2, audience: 'press', completed: false },
+          { type: 'talking_points', description: 'Elevator pitch script built around the green screen frame', target: 'Internal', priority: 3, audience: 'internal', completed: false }
         ],
         isDefault: true,
         generatedAt: new Date().toISOString()
@@ -6234,7 +6430,7 @@ class AngleManager {
                 <li class="${item.completed ? 'completed' : ''}">
                   <div class="pr-plan-item-row">
                     <div class="pr-plan-item-info">
-                      ${item.completed ? '✅' : `${item.priority}.`} <strong>${this.formatContentType(item.type)}</strong> - ${this.escapeHtml(item.description)}
+                      ${item.completed ? '✅' : `${item.priority}.`} <strong>${this.formatContentType(item.type)}</strong>${item.audience ? ` <span class="pr-audience-badge pr-audience-${item.audience}">${item.audience}</span>` : ''} ${this.escapeHtml(item.description)}
                       ${item.target ? `<span class="pr-plan-target">Target: ${this.escapeHtml(item.target)}</span>` : ''}
                     </div>
                     <button class="btn btn-sm pr-generate-piece-btn" data-angle-id="${angle.id}" data-plan-index="${idx}">
@@ -6900,7 +7096,11 @@ class AngleManager {
       'linkedin_post': 'LinkedIn Post',
       'tweet_thread': 'Tweet Thread',
       'briefing_doc': 'Briefing Doc',
-      'talking_points': 'Talking Points'
+      'talking_points': 'Talking Points',
+      'op_ed': 'Op-Ed',
+      'email_blast': 'Email Blast',
+      'investor_snippet': 'Investor Snippet',
+      'hot_take': 'Hot Take'
     };
     return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
