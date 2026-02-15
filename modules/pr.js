@@ -9535,7 +9535,7 @@ class DistributeManager {
       ? `<div class="pr-blog-featured-img"><img src="${this.escapeHtml(featuredImage)}" alt=""></div>`
       : '';
 
-    const bodyHtml = this._deduplicateTitleFromContent(this.markdownToBlogHtml(content), title);
+    const bodyHtml = this.prAgent._deduplicateTitleFromContent(this.markdownToBlogHtml(content), title);
 
     container.innerHTML = `
       <div class="pr-blog-nav">
@@ -9722,7 +9722,7 @@ class DistributeManager {
       const escaped = this.escapeHtml(p.trim());
       return `<p>${escaped.replace(/\n/g, '<br>')}</p>`;
     }).join('');
-    const bodyHtml = this._deduplicateTitleFromContent(rawBodyHtml, subject);
+    const bodyHtml = this.prAgent._deduplicateTitleFromContent(rawBodyHtml, subject);
 
     container.innerHTML = `
       <div class="pr-email-toolbar">
