@@ -5897,25 +5897,29 @@ class NewsMonitor {
       contentPlan = isUrgent
         ? [
             { type: 'hot_take', description: 'Quick, opinionated reaction while the news is fresh', priority: 1, audience: 'builders' },
-            { type: 'media_pitch', description: 'Pitch to relevant reporters with Glossi angle', priority: 2, audience: 'press' },
-            { type: 'email_blast', description: 'Signal boost to subscriber list', priority: 3, audience: 'brands' }
+            { type: 'tweet_thread', description: 'Punchy thread distilling the key takeaway', priority: 2, audience: 'builders' },
+            { type: 'media_pitch', description: 'Pitch to relevant reporters with Glossi angle', priority: 3, audience: 'press' },
+            { type: 'email_blast', description: 'Signal boost to subscriber list', priority: 4, audience: 'brands' }
           ]
         : isCompetitor
         ? [
             { type: 'op_ed', description: 'Bylined take on what competitors miss', priority: 1, audience: 'builders' },
             { type: 'tweet_thread', description: 'Thread breaking down the competitive landscape', priority: 2, audience: 'builders' },
-            { type: 'linkedin_post', description: 'Founder perspective on the market move', priority: 3, audience: 'brands' }
+            { type: 'linkedin_post', description: 'Founder perspective on the market move', priority: 3, audience: 'brands' },
+            { type: 'blog_post', description: 'Deeper analysis with Glossi differentiation', priority: 4, audience: 'brands' }
           ]
         : isTrend
         ? [
             { type: 'op_ed', description: 'Opinionated perspective on this trend', priority: 1, audience: 'builders' },
             { type: 'linkedin_post', description: 'Founder POV distilled to one key insight', priority: 2, audience: 'brands' },
-            { type: 'blog_post', description: 'Deeper analysis with Glossi angle', priority: 3, audience: 'brands' }
+            { type: 'blog_post', description: 'Deeper analysis with Glossi angle', priority: 3, audience: 'brands' },
+            { type: 'tweet_thread', description: 'Concise thread capturing the trend shift', priority: 4, audience: 'builders' }
           ]
         : [
             { type: 'blog_post', description: 'In-depth analysis with product angle', priority: 1, audience: 'brands' },
-            { type: 'tweet_thread', description: 'Key insight as a concise thread', priority: 2, audience: 'builders' },
-            { type: 'talking_points', description: 'Internal prep points for team', priority: 3, audience: 'internal' }
+            { type: 'linkedin_post', description: 'Key insight as a founder perspective post', priority: 2, audience: 'brands' },
+            { type: 'tweet_thread', description: 'Key insight as a concise thread', priority: 3, audience: 'builders' },
+            { type: 'talking_points', description: 'Internal prep points for team', priority: 4, audience: 'internal' }
           ];
     }
 
