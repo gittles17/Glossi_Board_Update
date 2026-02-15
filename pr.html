@@ -416,6 +416,43 @@
                 <div class="pr-linkedin-preview" id="pr-linkedin-preview"></div>
               </div>
 
+              <!-- First Comment Preview (link in comment) -->
+              <div class="pr-li-first-comment-wrap" id="pr-li-first-comment-wrap" style="display:none">
+                <div class="pr-li-first-comment-label">First comment (link posted here for better reach):</div>
+                <div class="pr-li-first-comment" id="pr-li-first-comment"></div>
+              </div>
+
+              <!-- Media Attachment Bar -->
+              <div class="pr-distribute-media-bar" id="pr-distribute-media-bar">
+                <span class="pr-distribute-media-label">Attach:</span>
+                <button class="pr-distribute-media-btn" id="pr-media-upload-btn" title="Upload image">
+                  <i class="ph-light ph-image"></i> Image
+                </button>
+                <button class="pr-distribute-media-btn" id="pr-media-url-btn" title="Paste image URL">
+                  <i class="ph-light ph-link"></i> Image URL
+                </button>
+                <button class="pr-distribute-media-btn" id="pr-media-video-btn" title="Paste video URL">
+                  <i class="ph-light ph-video-camera"></i> Video URL
+                </button>
+                <input type="file" id="pr-media-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
+              </div>
+
+              <!-- Media URL Input (hidden by default) -->
+              <div class="pr-distribute-media-url-input" id="pr-distribute-media-url-input" style="display:none">
+                <input type="url" id="pr-media-url-value" class="input" placeholder="Paste URL...">
+                <button class="btn btn-primary btn-sm" id="pr-media-url-confirm">Add</button>
+                <button class="btn btn-secondary btn-sm" id="pr-media-url-cancel">Cancel</button>
+              </div>
+
+              <!-- Hashtag Pills -->
+              <div class="pr-distribute-hashtags" id="pr-distribute-hashtags" style="display:none">
+                <div class="pr-distribute-hashtags-label">Hashtags:</div>
+                <div class="pr-distribute-hashtags-list" id="pr-distribute-hashtags-list"></div>
+                <button class="pr-distribute-hashtag-add" id="pr-distribute-hashtag-add" title="Add hashtag">
+                  <i class="ph-light ph-plus"></i>
+                </button>
+              </div>
+
               <!-- Character count -->
               <div class="pr-distribute-char-count" id="pr-distribute-char-count"></div>
 

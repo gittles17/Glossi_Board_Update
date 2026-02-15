@@ -18645,6 +18645,344 @@ body.pr-resizing * {
   object-fit: cover;
 }
 
+/* ============================================
+   LINKEDIN MEDIA ATTACHMENTS
+   ============================================ */
+
+/* Media in preview card */
+.pr-li-media {
+  width: 100%;
+  overflow: hidden;
+}
+
+.pr-li-media img {
+  width: 100%;
+  display: block;
+  max-height: 400px;
+  object-fit: cover;
+}
+
+.pr-li-media-video {
+  position: relative;
+  background: #000;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pr-li-media-video img {
+  max-height: none;
+  object-fit: contain;
+}
+
+.pr-li-video-play {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 24px;
+}
+
+/* Link preview card (OG) */
+.pr-li-link-preview {
+  border-top: 1px solid #383838;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: default;
+}
+
+.pr-li-link-preview-image {
+  width: 100%;
+  max-height: 250px;
+  overflow: hidden;
+}
+
+.pr-li-link-preview-image img {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.pr-li-link-preview-body {
+  padding: 10px 16px 12px;
+  background: #1e2328;
+}
+
+.pr-li-link-preview-domain {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 2px;
+}
+
+.pr-li-link-preview-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pr-li-link-preview-desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.3;
+  margin-top: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Media remove button */
+.pr-li-media-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: background 0.15s;
+}
+
+.pr-li-media-remove:hover {
+  background: rgba(220, 50, 50, 0.8);
+}
+
+.pr-li-media {
+  position: relative;
+}
+
+/* First comment preview */
+.pr-li-first-comment-wrap {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.pr-li-first-comment-label {
+  font: 400 11px/1 var(--font-mono);
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pr-li-first-comment {
+  background: #1b1f23;
+  border: 1px solid #383838;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.pr-li-comment-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.pr-li-comment-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #38434f;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pr-li-comment-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pr-li-comment-avatar-placeholder {
+  font: 500 12px/1 -apple-system, sans-serif;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.pr-li-comment-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.pr-li-comment-text {
+  font-size: 13px;
+  color: #5ba3d9;
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+/* Media attachment bar */
+.pr-distribute-media-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.pr-distribute-media-label {
+  font: 500 11px/1 var(--font-mono);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 2px;
+}
+
+.pr-distribute-media-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border-color);
+  background: none;
+  color: var(--text-secondary);
+  font: 400 12px/1 var(--font-sans);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pr-distribute-media-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
+
+.pr-distribute-media-btn.active {
+  border-color: #0a66c2;
+  color: #5ba3d9;
+  background: rgba(10, 102, 194, 0.06);
+}
+
+.pr-distribute-media-btn i {
+  font-size: 14px;
+}
+
+.pr-distribute-media-url-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-3);
+}
+
+.pr-distribute-media-url-input .input {
+  flex: 1;
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* Hashtag pills */
+.pr-distribute-hashtags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+.pr-distribute-hashtags-label {
+  font: 500 11px/1 var(--font-mono);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 2px;
+}
+
+.pr-distribute-hashtags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pr-distribute-hashtag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: rgba(10, 102, 194, 0.1);
+  color: #5ba3d9;
+  font: 500 12px/1.2 var(--font-sans);
+  border: 1px solid rgba(10, 102, 194, 0.2);
+}
+
+.pr-distribute-hashtag-remove {
+  background: none;
+  border: none;
+  color: rgba(91, 163, 217, 0.5);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.pr-distribute-hashtag-remove:hover {
+  color: #ef4444;
+}
+
+.pr-distribute-hashtag-add {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px dashed var(--border-color);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.pr-distribute-hashtag-add:hover {
+  border-color: #5ba3d9;
+  color: #5ba3d9;
+}
+
+/* Hashtag blue rendering in post body */
+.pr-li-hashtag {
+  color: #5ba3d9;
+  cursor: default;
+}
+
+.pr-li-link {
+  color: #5ba3d9;
+  cursor: default;
+}
+
 /* Distribute tab responsive */
 @media (max-width: 768px) {
   .pr-distribute-layout {

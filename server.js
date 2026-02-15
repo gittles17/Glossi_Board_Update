@@ -187,6 +187,21 @@ async function initDatabase() {
             END IF;
           END $$;
         `);
+
+        // Migration: Add distribution columns (media, hashtags, first_comment)
+        await pool.query(`
+          DO $$ 
+          BEGIN 
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_name='pr_outputs' AND column_name='media_attachments'
+            ) THEN
+              ALTER TABLE pr_outputs ADD COLUMN media_attachments JSONB;
+              ALTER TABLE pr_outputs ADD COLUMN hashtags JSONB;
+              ALTER TABLE pr_outputs ADD COLUMN first_comment TEXT;
+            END IF;
+          END $$;
+        `);
         
         // Media outlets (user-added customs)
         await pool.query(`
@@ -688,23 +703,22 @@ app.get('/api/pr/outputs', async (req, res) => {
 // Save output
 app.post('/api/pr/outputs', async (req, res) => {
   try {
-    const { id, content_type, title, content, sources, citations, strategy, status, phase, story_key, news_headline, drafts, content_plan_index } = req.body;
+    const { id, content_type, title, content, sources, citations, strategy, status, phase, story_key, news_headline, drafts, content_plan_index, media_attachments, hashtags, first_comment } = req.body;
     
     if (!useDatabase) {
       return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     await pool.query(`
-      INSERT INTO pr_outputs (id, content_type, title, content, sources, citations, strategy, status, phase, story_key, news_headline, drafts, content_plan_index, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+      INSERT INTO pr_outputs (id, content_type, title, content, sources, citations, strategy, status, phase, story_key, news_headline, drafts, content_plan_index, media_attachments, hashtags, first_comment, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
       ON CONFLICT (id) DO UPDATE SET
         content_type = $2, title = $3, content = $4, sources = $5, citations = $6, strategy = $7, status = $8, phase = $9,
-        story_key = $10, news_headline = $11, drafts = $12, content_plan_index = $13
-    `, [id, content_type, title, content, JSON.stringify(sources), JSON.stringify(citations), JSON.stringify(strategy), status, phase || 'edit', story_key || null, news_headline || null, JSON.stringify(drafts || null), content_plan_index != null ? content_plan_index : null]);
+        story_key = $10, news_headline = $11, drafts = $12, content_plan_index = $13, media_attachments = $14, hashtags = $15, first_comment = $16
+    `, [id, content_type, title, content, JSON.stringify(sources), JSON.stringify(citations), JSON.stringify(strategy), status, phase || 'edit', story_key || null, news_headline || null, JSON.stringify(drafts || null), content_plan_index != null ? content_plan_index : null, JSON.stringify(media_attachments || null), JSON.stringify(hashtags || null), first_comment || null]);
     
     res.json({ success: true });
   } catch (error) {
-    console.error('Error saving output:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1769,6 +1783,84 @@ app.get('/api/pr/articles', async (req, res) => {
     res.json({ success: true, articles: result.rows });
   } catch (error) {
     console.error('Error loading articles:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// MEDIA & OG ENDPOINTS
+// ============================================
+
+// Upload image for distribution preview
+app.post('/api/pr/upload-media', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowed.includes(req.file.mimetype)) {
+      return res.status(400).json({ success: false, error: 'Only JPEG, PNG, GIF, and WebP images are supported' });
+    }
+    const base64 = req.file.buffer.toString('base64');
+    const dataUrl = `data:${req.file.mimetype};base64,${base64}`;
+    res.json({
+      success: true,
+      url: dataUrl,
+      filename: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Fetch Open Graph metadata from a URL
+app.post('/api/pr/og-metadata', async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'No URL provided' });
+    }
+    if (!isAllowedUrl(url)) {
+      return res.status(400).json({ success: false, error: 'Invalid or blocked URL' });
+    }
+
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      timeout: 10000,
+      maxContentLength: 500000
+    });
+
+    const html = response.data;
+
+    const getMetaContent = (property) => {
+      const patterns = [
+        new RegExp(`<meta[^>]+(?:property|name)=["']${property}["'][^>]+content=["']([^"']+)["']`, 'i'),
+        new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${property}["']`, 'i')
+      ];
+      for (const pattern of patterns) {
+        const match = html.match(pattern);
+        if (match) return match[1];
+      }
+      return null;
+    };
+
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+
+    const ogData = {
+      title: getMetaContent('og:title') || getMetaContent('twitter:title') || (titleMatch ? titleMatch[1].trim() : ''),
+      description: getMetaContent('og:description') || getMetaContent('twitter:description') || getMetaContent('description') || '',
+      image: getMetaContent('og:image') || getMetaContent('twitter:image') || '',
+      siteName: getMetaContent('og:site_name') || '',
+      domain: new URL(url).hostname.replace('www.', ''),
+      url: url
+    };
+
+    res.json({ success: true, og: ogData });
+  } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });

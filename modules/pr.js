@@ -7714,6 +7714,7 @@ class DistributeManager {
     };
     this.scheduledPosts = [];
     this.activeReviewItem = null;
+    this._mediaUrlMode = null; // 'image' or 'video'
   }
 
   async init() {
@@ -7828,6 +7829,45 @@ class DistributeManager {
       this.sendCurrentToReview();
     });
 
+    // Media attachment buttons
+    document.getElementById('pr-media-upload-btn')?.addEventListener('click', () => {
+      document.getElementById('pr-media-file-input')?.click();
+    });
+
+    document.getElementById('pr-media-file-input')?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) this.uploadMediaFile(file);
+      e.target.value = '';
+    });
+
+    document.getElementById('pr-media-url-btn')?.addEventListener('click', () => {
+      this._mediaUrlMode = 'image';
+      this.showMediaUrlInput('Paste image URL...');
+    });
+
+    document.getElementById('pr-media-video-btn')?.addEventListener('click', () => {
+      this._mediaUrlMode = 'video';
+      this.showMediaUrlInput('Paste video URL...');
+    });
+
+    document.getElementById('pr-media-url-confirm')?.addEventListener('click', () => {
+      this.confirmMediaUrl();
+    });
+
+    document.getElementById('pr-media-url-cancel')?.addEventListener('click', () => {
+      this.hideMediaUrlInput();
+    });
+
+    document.getElementById('pr-media-url-value')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.confirmMediaUrl();
+      if (e.key === 'Escape') this.hideMediaUrlInput();
+    });
+
+    // Hashtag add button
+    document.getElementById('pr-distribute-hashtag-add')?.addEventListener('click', () => {
+      this.addHashtagPrompt();
+    });
+
     // Review queue click delegation
     const reviewList = document.getElementById('pr-distribute-review-list');
     const scheduledList = document.getElementById('pr-distribute-scheduled-list');
@@ -7902,6 +7942,33 @@ class DistributeManager {
     output.phase = 'distribute';
     output.status = 'review';
 
+    // Extract URLs from content and move to first comment
+    const extractedLink = this.extractFirstLink(output.content);
+    if (extractedLink) {
+      output.first_comment = extractedLink;
+      output.content = output.content.replace(extractedLink, '').trim();
+    }
+
+    // Initialize media_attachments if not present
+    if (!output.media_attachments) output.media_attachments = [];
+
+    // Fetch OG data for link if present
+    if (extractedLink) {
+      try {
+        const ogRes = await this.prAgent.apiCall('/api/pr/og-metadata', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: extractedLink })
+        });
+        if (ogRes.success && ogRes.og) {
+          output._ogData = ogRes.og;
+        }
+      } catch (e) { /* silent */ }
+    }
+
+    // AI-suggest hashtags
+    this.generateHashtags(output);
+
     // Persist
     try {
       await this.prAgent.apiCall('/api/pr/outputs', {
@@ -7920,6 +7987,36 @@ class DistributeManager {
     // Select this item in the review queue
     this.render();
     this.selectReviewItem(output.id);
+  }
+
+  extractFirstLink(text) {
+    if (!text) return null;
+    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g;
+    const match = text.match(urlRegex);
+    return match ? match[0] : null;
+  }
+
+  async generateHashtags(output) {
+    if (!output.content) return;
+    try {
+      const res = await this.prAgent.apiCall('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5',
+          max_tokens: 200,
+          system: 'You suggest LinkedIn hashtags. Return ONLY a JSON array of 2-3 hashtags (without the # symbol). Example: ["AI","ProductVisualization","Ecommerce"]. No explanation.',
+          messages: [{ role: 'user', content: `Suggest 2-3 LinkedIn hashtags for this post:\n\n${output.content.substring(0, 500)}` }]
+        })
+      });
+      const text = res.content?.[0]?.text || '[]';
+      const jsonMatch = text.match(/\[[\s\S]*?\]/);
+      if (jsonMatch) {
+        output.hashtags = JSON.parse(jsonMatch[0]).map(h => h.replace(/^#/, ''));
+        this.renderHashtags(output);
+        this.persistOutput(output);
+      }
+    } catch (e) { /* silent, hashtags are optional */ }
   }
 
   selectReviewItem(outputId) {
@@ -7954,7 +8051,13 @@ class DistributeManager {
     }
 
     this.renderLinkedInPreview(output);
+    this.renderHashtags(output);
+    this.renderFirstComment(output);
     this.renderCharCount(output);
+
+    // Show/hide media bar based on status
+    const mediaBar = document.getElementById('pr-distribute-media-bar');
+    if (mediaBar) mediaBar.style.display = output.status === 'review' ? 'flex' : 'none';
   }
 
   renderLinkedInPreview(output) {
@@ -7966,6 +8069,8 @@ class DistributeManager {
     const headline = li.headline || 'Your Headline';
     const photoUrl = li.photoUrl || '';
     const content = output.content || '';
+    const hashtags = output.hashtags || [];
+    const media = output.media_attachments || [];
 
     const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
 
@@ -7973,16 +8078,56 @@ class DistributeManager {
       ? `<img src="${this.escapeHtml(photoUrl)}" alt="">`
       : `<span class="pr-li-avatar-placeholder">${initials}</span>`;
 
+    // Build post body with hashtags appended
+    let fullText = content;
+    if (hashtags.length > 0) {
+      fullText += '\n\n' + hashtags.map(h => '#' + h).join(' ');
+    }
+
     // Truncate for preview (LinkedIn shows ~5 lines then "see more")
-    const lines = content.split('\n');
-    const isLong = lines.length > 5 || content.length > 500;
-    let displayText = content;
+    const lines = fullText.split('\n');
+    const isLong = lines.length > 5 || fullText.length > 500;
+    let displayText = fullText;
     let seeMore = '';
 
     if (isLong) {
       const truncated = lines.slice(0, 5).join('\n');
       displayText = truncated.length > 500 ? truncated.slice(0, 497) : truncated;
       seeMore = `<span class="pr-li-see-more">...see more</span>`;
+    }
+
+    // Format body text: make hashtags blue, links blue
+    const formattedBody = this.formatLinkedInBody(displayText) + seeMore;
+
+    // Build media HTML
+    let mediaHtml = '';
+    const canRemove = output.status === 'review';
+    const removeBtn = canRemove ? `<button class="pr-li-media-remove" data-action="remove-media" title="Remove"><i class="ph-light ph-x"></i></button>` : '';
+
+    if (media.length > 0) {
+      const attachment = media[0];
+      if (attachment.type === 'image') {
+        mediaHtml = `<div class="pr-li-media">${removeBtn}<img src="${this.escapeHtml(attachment.url)}" alt=""></div>`;
+      } else if (attachment.type === 'video') {
+        const thumb = attachment.thumbnail || '';
+        mediaHtml = `<div class="pr-li-media"><div class="pr-li-media-video">${removeBtn}${thumb ? `<img src="${this.escapeHtml(thumb)}" alt="">` : ''}<div class="pr-li-video-play"><i class="ph-light ph-play-fill"></i></div></div></div>`;
+      }
+    }
+
+    // Build link preview card (OG data)
+    let linkPreviewHtml = '';
+    if (output._ogData && output.first_comment) {
+      const og = output._ogData;
+      linkPreviewHtml = `
+        <div class="pr-li-link-preview">
+          ${og.image ? `<div class="pr-li-link-preview-image"><img src="${this.escapeHtml(og.image)}" alt=""></div>` : ''}
+          <div class="pr-li-link-preview-body">
+            <div class="pr-li-link-preview-domain">${this.escapeHtml(og.domain || '')}</div>
+            <div class="pr-li-link-preview-title">${this.escapeHtml(og.title || '')}</div>
+            ${og.description ? `<div class="pr-li-link-preview-desc">${this.escapeHtml(og.description)}</div>` : ''}
+          </div>
+        </div>
+      `;
     }
 
     container.innerHTML = `
@@ -7997,7 +8142,9 @@ class DistributeManager {
           </div>
         </div>
       </div>
-      <div class="pr-li-body ${isLong ? 'pr-li-body-truncated' : ''}">${this.escapeHtml(displayText)}${seeMore}</div>
+      <div class="pr-li-body ${isLong ? 'pr-li-body-truncated' : ''}">${formattedBody}</div>
+      ${mediaHtml}
+      ${linkPreviewHtml}
       <div class="pr-li-engagement">
         <div class="pr-li-action"><i class="ph-light ph-thumbs-up"></i> Like</div>
         <div class="pr-li-action"><i class="ph-light ph-chat-teardrop"></i> Comment</div>
@@ -8005,15 +8152,209 @@ class DistributeManager {
         <div class="pr-li-action"><i class="ph-light ph-paper-plane-tilt"></i> Send</div>
       </div>
     `;
+
+    // Wire up media remove button
+    container.querySelector('[data-action="remove-media"]')?.addEventListener('click', () => {
+      if (this.activeReviewItem) {
+        this.activeReviewItem.media_attachments = [];
+        this.persistOutput(this.activeReviewItem);
+        this.renderLinkedInPreview(this.activeReviewItem);
+      }
+    });
+  }
+
+  formatLinkedInBody(text) {
+    // Escape HTML first, then apply formatting
+    let html = this.escapeHtml(text);
+    // Hashtags: #word -> blue
+    html = html.replace(/#(\w+)/g, '<span class="pr-li-hashtag">#$1</span>');
+    // URLs: make blue
+    html = html.replace(/(https?:\/\/[^\s<]+)/g, '<span class="pr-li-link">$1</span>');
+    return html;
   }
 
   renderCharCount(output) {
     const el = document.getElementById('pr-distribute-char-count');
     if (!el || !output) return;
-    const len = (output.content || '').length;
+    const content = output.content || '';
+    const hashtags = output.hashtags || [];
+    const hashtagText = hashtags.length > 0 ? '\n\n' + hashtags.map(h => '#' + h).join(' ') : '';
+    const len = (content + hashtagText).length;
     const limit = 3000;
     el.textContent = `${len.toLocaleString()} / ${limit.toLocaleString()} characters`;
     el.classList.toggle('over-limit', len > limit);
+  }
+
+  // Media handling
+  showMediaUrlInput(placeholder) {
+    const wrap = document.getElementById('pr-distribute-media-url-input');
+    const input = document.getElementById('pr-media-url-value');
+    if (wrap) wrap.style.display = 'flex';
+    if (input) {
+      input.placeholder = placeholder;
+      input.value = '';
+      input.focus();
+    }
+  }
+
+  hideMediaUrlInput() {
+    const wrap = document.getElementById('pr-distribute-media-url-input');
+    if (wrap) wrap.style.display = 'none';
+    this._mediaUrlMode = null;
+  }
+
+  confirmMediaUrl() {
+    const input = document.getElementById('pr-media-url-value');
+    const url = input?.value?.trim();
+    if (!url) return;
+
+    if (this._mediaUrlMode === 'video') {
+      this.addMedia({ type: 'video', url, thumbnail: this.getVideoThumbnail(url) });
+    } else {
+      this.addMedia({ type: 'image', url });
+    }
+    this.hideMediaUrlInput();
+  }
+
+  getVideoThumbnail(url) {
+    // Extract YouTube thumbnail
+    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) return `https://img.youtube.com/vi/${ytMatch[1]}/maxresdefault.jpg`;
+    return '';
+  }
+
+  async uploadMediaFile(file) {
+    if (!this.activeReviewItem) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('/api/pr/upload-media', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        this.addMedia({ type: 'image', url: data.url, filename: data.filename });
+      }
+    } catch (e) { /* silent */ }
+  }
+
+  addMedia(attachment) {
+    if (!this.activeReviewItem) return;
+    if (!this.activeReviewItem.media_attachments) this.activeReviewItem.media_attachments = [];
+    // Replace existing (LinkedIn single image/video)
+    this.activeReviewItem.media_attachments = [attachment];
+    this.persistOutput(this.activeReviewItem);
+    this.renderLinkedInPreview(this.activeReviewItem);
+    this.renderCharCount(this.activeReviewItem);
+  }
+
+  // Hashtag rendering
+  renderHashtags(output) {
+    const wrap = document.getElementById('pr-distribute-hashtags');
+    const list = document.getElementById('pr-distribute-hashtags-list');
+    if (!wrap || !list) return;
+
+    const hashtags = output.hashtags || [];
+    if (hashtags.length === 0 && output.status !== 'review') {
+      wrap.style.display = 'none';
+      return;
+    }
+    wrap.style.display = 'flex';
+
+    const addBtn = document.getElementById('pr-distribute-hashtag-add');
+    if (addBtn) addBtn.style.display = output.status === 'review' ? '' : 'none';
+
+    list.innerHTML = hashtags.map((h, i) => `
+      <span class="pr-distribute-hashtag-pill" data-index="${i}">
+        #${this.escapeHtml(h)}
+        ${output.status === 'review' ? `<button class="pr-distribute-hashtag-remove" data-index="${i}" title="Remove"><i class="ph-light ph-x"></i></button>` : ''}
+      </span>
+    `).join('');
+
+    // Wire up remove buttons
+    list.querySelectorAll('.pr-distribute-hashtag-remove').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(btn.dataset.index, 10);
+        if (!isNaN(idx) && this.activeReviewItem?.hashtags) {
+          this.activeReviewItem.hashtags.splice(idx, 1);
+          this.persistOutput(this.activeReviewItem);
+          this.renderHashtags(this.activeReviewItem);
+          this.renderLinkedInPreview(this.activeReviewItem);
+          this.renderCharCount(this.activeReviewItem);
+        }
+      });
+    });
+  }
+
+  addHashtagPrompt() {
+    if (!this.activeReviewItem) return;
+    const tag = prompt('Enter hashtag (without #):');
+    if (!tag || !tag.trim()) return;
+    const cleaned = tag.trim().replace(/^#/, '').replace(/\s+/g, '');
+    if (!cleaned) return;
+    if (!this.activeReviewItem.hashtags) this.activeReviewItem.hashtags = [];
+    this.activeReviewItem.hashtags.push(cleaned);
+    this.persistOutput(this.activeReviewItem);
+    this.renderHashtags(this.activeReviewItem);
+    this.renderLinkedInPreview(this.activeReviewItem);
+    this.renderCharCount(this.activeReviewItem);
+  }
+
+  // First comment rendering
+  renderFirstComment(output) {
+    const wrap = document.getElementById('pr-li-first-comment-wrap');
+    const container = document.getElementById('pr-li-first-comment');
+    if (!wrap || !container) return;
+
+    const comment = output.first_comment;
+    if (!comment) {
+      wrap.style.display = 'none';
+      return;
+    }
+    wrap.style.display = 'block';
+
+    const li = this.settings.linkedin || {};
+    const name = li.name || 'Your Name';
+    const photoUrl = li.photoUrl || '';
+    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
+
+    const avatarHtml = photoUrl
+      ? `<img src="${this.escapeHtml(photoUrl)}" alt="">`
+      : `<span class="pr-li-comment-avatar-placeholder">${initials}</span>`;
+
+    // Build link preview inside comment if OG data
+    let commentLinkPreview = '';
+    if (output._ogData) {
+      const og = output._ogData;
+      commentLinkPreview = `
+        <div class="pr-li-link-preview" style="margin-top: 8px; border-radius: 6px; overflow: hidden; border: 1px solid #383838;">
+          ${og.image ? `<div class="pr-li-link-preview-image"><img src="${this.escapeHtml(og.image)}" alt=""></div>` : ''}
+          <div class="pr-li-link-preview-body">
+            <div class="pr-li-link-preview-domain">${this.escapeHtml(og.domain || '')}</div>
+            <div class="pr-li-link-preview-title">${this.escapeHtml(og.title || '')}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    container.innerHTML = `
+      <div class="pr-li-comment-header">
+        <div class="pr-li-comment-avatar">${avatarHtml}</div>
+        <div class="pr-li-comment-name">${this.escapeHtml(name)}</div>
+      </div>
+      <div class="pr-li-comment-text">${this.escapeHtml(comment)}</div>
+      ${commentLinkPreview}
+    `;
+  }
+
+  async persistOutput(output) {
+    try {
+      await this.prAgent.apiCall('/api/pr/outputs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(output)
+      });
+    } catch (e) { /* silent */ }
+    this.prAgent.saveOutputs();
   }
 
   async backToEdit() {
