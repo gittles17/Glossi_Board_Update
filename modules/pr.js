@@ -4546,6 +4546,11 @@ class NewsMonitor {
     // Multi-story workspace state
     this._stories = new Map();
     this._activeStoryKey = null;
+
+    // Archive state
+    this._selectMode = false;
+    this._selectedStoryKeys = new Set();
+    this._archivedExpanded = false;
   }
 
   async init() {
@@ -4622,6 +4627,9 @@ class NewsMonitor {
         });
       });
 
+      // Check archived status from any output in the group
+      const isArchived = storyOutputs.some(o => o.archived === true);
+
       // Create the story entry
       this._stories.set(key, {
         newsItem,
@@ -4630,12 +4638,13 @@ class NewsMonitor {
         activeTabId: 'plan_0',
         currentOutput: storyOutputs[0] || null,
         chatHTML: '',
-        suggestionsHTML: ''
+        suggestionsHTML: '',
+        archived: isArchived
       });
     });
 
-    // Restore the first story
-    const firstKey = storyKeys[0];
+    // Restore the first non-archived story
+    const firstKey = storyKeys.find(k => !this._stories.get(k)?.archived) || storyKeys[0];
     this._activeStoryKey = firstKey;
     this._activeNewsItem = this._stories.get(firstKey).newsItem;
     this._activeContentPlan = this._stories.get(firstKey).contentPlan;
@@ -5378,6 +5387,112 @@ class NewsMonitor {
     this.renderFileTree();
   }
 
+  async archiveStory(key) {
+    const story = this._stories.get(key);
+    if (!story) return;
+    story.archived = true;
+
+    // If archiving the active story, switch to next non-archived one
+    if (this._activeStoryKey === key) {
+      const nextKey = [...this._stories.keys()].find(k => k !== key && !this._stories.get(k)?.archived);
+      if (nextKey) {
+        this.restoreStoryState(nextKey);
+      } else {
+        this._activeStoryKey = null;
+        this._activeNewsItem = null;
+        this._tabContent = new Map();
+        this._activeTabId = null;
+        this.prAgent.currentOutput = null;
+        const tabsEl = document.getElementById('pr-content-tabs');
+        if (tabsEl) { tabsEl.style.display = 'none'; tabsEl.querySelectorAll('.pr-content-tab').forEach(t => t.remove()); }
+        if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
+        if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
+        if (this.prAgent.dom.workspaceChat) this.prAgent.dom.workspaceChat.style.display = 'none';
+      }
+    }
+
+    this.renderFileTree();
+
+    try {
+      await fetch('/api/pr/outputs/archive', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ story_key: key, archived: true })
+      });
+    } catch (e) { /* silent */ }
+  }
+
+  async unarchiveStory(key) {
+    const story = this._stories.get(key);
+    if (!story) return;
+    story.archived = false;
+    this.renderFileTree();
+
+    try {
+      await fetch('/api/pr/outputs/archive', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ story_key: key, archived: false })
+      });
+    } catch (e) { /* silent */ }
+  }
+
+  async archiveSelectedStories() {
+    const keys = [...this._selectedStoryKeys];
+    if (keys.length === 0) return;
+
+    keys.forEach(key => {
+      const story = this._stories.get(key);
+      if (story) story.archived = true;
+    });
+
+    // If active story was among selected, switch away
+    if (this._selectedStoryKeys.has(this._activeStoryKey)) {
+      const nextKey = [...this._stories.keys()].find(k => !this._stories.get(k)?.archived);
+      if (nextKey) {
+        this.restoreStoryState(nextKey);
+      } else {
+        this._activeStoryKey = null;
+        this._activeNewsItem = null;
+        this._tabContent = new Map();
+        this._activeTabId = null;
+        this.prAgent.currentOutput = null;
+        const tabsEl = document.getElementById('pr-content-tabs');
+        if (tabsEl) { tabsEl.style.display = 'none'; tabsEl.querySelectorAll('.pr-content-tab').forEach(t => t.remove()); }
+        if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
+        if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
+        if (this.prAgent.dom.workspaceChat) this.prAgent.dom.workspaceChat.style.display = 'none';
+      }
+    }
+
+    this._selectedStoryKeys.clear();
+    this._selectMode = false;
+    this.renderFileTree();
+
+    try {
+      await fetch('/api/pr/outputs/archive', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ story_keys: keys, archived: true })
+      });
+    } catch (e) { /* silent */ }
+  }
+
+  toggleSelectMode() {
+    this._selectMode = !this._selectMode;
+    if (!this._selectMode) this._selectedStoryKeys.clear();
+    this.renderFileTree();
+  }
+
+  toggleStorySelection(key) {
+    if (this._selectedStoryKeys.has(key)) {
+      this._selectedStoryKeys.delete(key);
+    } else {
+      this._selectedStoryKeys.add(key);
+    }
+    this.renderFileTree();
+  }
+
   renderFileTree() {
     const container = document.getElementById('pr-file-tree');
     if (!container) return;
@@ -5387,61 +5502,135 @@ class NewsMonitor {
       return;
     }
 
-    let html = '';
+    // Separate active and archived stories
+    const activeStories = [];
+    const archivedStories = [];
     for (const [key, story] of this._stories) {
-      const isActiveStory = key === this._activeStoryKey;
-      const headline = story.newsItem.headline || 'Untitled';
-      const contentPlan = story.contentPlan || [];
-
-      const childrenHTML = contentPlan.map((item, i) => {
-        const tabId = `plan_${i}`;
-        const typeLabel = CONTENT_TYPES.find(t => t.id === item.type)?.label || item.type;
-        const isActiveLeaf = isActiveStory && this._activeTabId === tabId;
-        return `
-          <div class="pr-file-tree-leaf ${isActiveLeaf ? 'active' : ''}" data-story-key="${this.escapeHtml(key)}" data-tab-id="${tabId}">
-            <span class="pr-file-tree-leaf-label">${this.escapeHtml(typeLabel)}</span>
-            <button class="pr-file-tree-leaf-delete" data-delete-story="${this.escapeHtml(key)}" data-delete-plan-index="${i}" title="Remove piece">
-              <i class="ph-light ph-x"></i>
-            </button>
-          </div>
-        `;
-      }).join('');
-
-      // Inline angle block
-      const angleTitle = story.newsItem.angle_title || '';
-      const angleNarrative = story.newsItem.angle_narrative || story.newsItem.relevance || '';
-      let angleHTML = '';
-      if (angleTitle || angleNarrative) {
-        angleHTML = `
-          <div class="pr-tree-angle">
-            <div class="pr-tree-angle-header">
-              <i class="ph-light ph-lightbulb pr-tree-angle-icon"></i>
-              <span class="pr-tree-angle-title">${this.escapeHtml(angleTitle)}</span>
-            </div>
-            ${angleNarrative ? `
-            <div class="pr-tree-angle-narrative">${this.escapeHtml(angleNarrative)}</div>
-            <span class="pr-tree-angle-readmore pr-tree-angle-toggle">read more</span>
-            <span class="pr-tree-angle-less pr-tree-angle-toggle">less</span>
-            ` : ''}
-          </div>
-        `;
+      if (story.archived) {
+        archivedStories.push([key, story]);
+      } else {
+        activeStories.push([key, story]);
       }
+    }
 
+    let html = '';
+
+    // Select mode toolbar
+    if (this._selectMode && activeStories.length > 0) {
+      const count = this._selectedStoryKeys.size;
       html += `
-        <div class="pr-file-tree-node ${isActiveStory ? 'expanded' : ''}" data-story-key="${this.escapeHtml(key)}">
-          <div class="pr-file-tree-header ${isActiveStory ? 'active' : ''}">
-            <i class="ph-light ph-caret-right pr-file-tree-chevron"></i>
-            <span class="pr-file-tree-label" title="${this.escapeHtml(headline)}">${this.escapeHtml(headline)}</span>
-            <button class="pr-file-tree-close" data-tree-close="${this.escapeHtml(key)}" title="Close story">
-              <i class="ph-light ph-x"></i>
-            </button>
+        <div class="pr-file-tree-bulk-bar">
+          <button class="pr-file-tree-bulk-archive" ${count === 0 ? 'disabled' : ''}>
+            <i class="ph-light ph-archive"></i> Archive${count > 0 ? ` (${count})` : ''}
+          </button>
+          <button class="pr-file-tree-bulk-cancel">Cancel</button>
+        </div>
+      `;
+    }
+
+    // Render active stories
+    for (const [key, story] of activeStories) {
+      html += this._renderStoryNode(key, story);
+    }
+
+    // Empty state if no active stories
+    if (activeStories.length === 0 && archivedStories.length > 0) {
+      html += `<div class="pr-file-tree-empty"><p>All articles archived.</p></div>`;
+    } else if (activeStories.length === 0) {
+      html += `<div class="pr-file-tree-empty"><p>Click "Create Content" on a news card to get started.</p></div>`;
+    }
+
+    // Archived section
+    if (archivedStories.length > 0) {
+      html += `
+        <div class="pr-file-tree-archived-section ${this._archivedExpanded ? 'expanded' : ''}">
+          <div class="pr-file-tree-archived-header">
+            <i class="ph-light ph-caret-right pr-file-tree-archived-chevron"></i>
+            <span class="pr-file-tree-archived-label">Archived</span>
+            <span class="pr-file-tree-archived-count">${archivedStories.length}</span>
           </div>
-          <div class="pr-file-tree-children">${childrenHTML}${angleHTML}</div>
+          <div class="pr-file-tree-archived-list">
+            ${archivedStories.map(([key, story]) => {
+              const headline = story.newsItem.headline || 'Untitled';
+              return `
+                <div class="pr-file-tree-archived-node" data-story-key="${this.escapeHtml(key)}">
+                  <span class="pr-file-tree-archived-node-label" title="${this.escapeHtml(headline)}">${this.escapeHtml(headline)}</span>
+                  <button class="pr-file-tree-unarchive" data-unarchive-key="${this.escapeHtml(key)}" title="Restore article">
+                    <i class="ph-light ph-arrow-counter-clockwise"></i>
+                  </button>
+                </div>
+              `;
+            }).join('')}
+          </div>
         </div>
       `;
     }
 
     container.innerHTML = html;
+  }
+
+  _renderStoryNode(key, story) {
+    const isActiveStory = key === this._activeStoryKey;
+    const headline = story.newsItem.headline || 'Untitled';
+    const contentPlan = story.contentPlan || [];
+
+    const childrenHTML = contentPlan.map((item, i) => {
+      const tabId = `plan_${i}`;
+      const typeLabel = CONTENT_TYPES.find(t => t.id === item.type)?.label || item.type;
+      const isActiveLeaf = isActiveStory && this._activeTabId === tabId;
+      return `
+        <div class="pr-file-tree-leaf ${isActiveLeaf ? 'active' : ''}" data-story-key="${this.escapeHtml(key)}" data-tab-id="${tabId}">
+          <span class="pr-file-tree-leaf-label">${this.escapeHtml(typeLabel)}</span>
+          <button class="pr-file-tree-leaf-delete" data-delete-story="${this.escapeHtml(key)}" data-delete-plan-index="${i}" title="Remove piece">
+            <i class="ph-light ph-x"></i>
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    // Inline angle block
+    const angleTitle = story.newsItem.angle_title || '';
+    const angleNarrative = story.newsItem.angle_narrative || story.newsItem.relevance || '';
+    let angleHTML = '';
+    if (angleTitle || angleNarrative) {
+      angleHTML = `
+        <div class="pr-tree-angle">
+          <div class="pr-tree-angle-header">
+            <i class="ph-light ph-lightbulb pr-tree-angle-icon"></i>
+            <span class="pr-tree-angle-title">${this.escapeHtml(angleTitle)}</span>
+          </div>
+          ${angleNarrative ? `
+          <div class="pr-tree-angle-narrative">${this.escapeHtml(angleNarrative)}</div>
+          <span class="pr-tree-angle-readmore pr-tree-angle-toggle">read more</span>
+          <span class="pr-tree-angle-less pr-tree-angle-toggle">less</span>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    const isSelected = this._selectMode && this._selectedStoryKeys.has(key);
+    const checkboxHTML = this._selectMode ? `
+      <label class="pr-file-tree-select-checkbox" data-select-key="${this.escapeHtml(key)}">
+        <input type="checkbox" ${isSelected ? 'checked' : ''} tabindex="-1">
+      </label>
+    ` : '';
+
+    return `
+      <div class="pr-file-tree-node ${isActiveStory ? 'expanded' : ''}" data-story-key="${this.escapeHtml(key)}">
+        <div class="pr-file-tree-header ${isActiveStory ? 'active' : ''}">
+          ${checkboxHTML}
+          <i class="ph-light ph-caret-right pr-file-tree-chevron"></i>
+          <span class="pr-file-tree-label" title="${this.escapeHtml(headline)}">${this.escapeHtml(headline)}</span>
+          <button class="pr-file-tree-archive-btn" data-archive-key="${this.escapeHtml(key)}" title="Archive article">
+            <i class="ph-light ph-archive"></i>
+          </button>
+          <button class="pr-file-tree-close" data-tree-close="${this.escapeHtml(key)}" title="Close story">
+            <i class="ph-light ph-x"></i>
+          </button>
+        </div>
+        <div class="pr-file-tree-children">${childrenHTML}${angleHTML}</div>
+      </div>
+    `;
   }
 
   // Kept for backward compat (called from restoreStoryState references)
@@ -5453,7 +5642,63 @@ class NewsMonitor {
     const container = document.getElementById('pr-file-tree');
     if (!container) return;
 
+    // Select mode toggle button
+    const selectToggle = document.getElementById('pr-select-toggle');
+    if (selectToggle) {
+      selectToggle.addEventListener('click', () => this.toggleSelectMode());
+    }
+
     container.addEventListener('click', (e) => {
+      // Bulk archive button
+      const bulkArchive = e.target.closest('.pr-file-tree-bulk-archive');
+      if (bulkArchive && !bulkArchive.disabled) {
+        e.stopPropagation();
+        this.archiveSelectedStories();
+        return;
+      }
+
+      // Bulk cancel button
+      const bulkCancel = e.target.closest('.pr-file-tree-bulk-cancel');
+      if (bulkCancel) {
+        e.stopPropagation();
+        this.toggleSelectMode();
+        return;
+      }
+
+      // Archive button on individual story
+      const archiveBtn = e.target.closest('[data-archive-key]');
+      if (archiveBtn) {
+        e.stopPropagation();
+        this.archiveStory(archiveBtn.dataset.archiveKey);
+        return;
+      }
+
+      // Unarchive button
+      const unarchiveBtn = e.target.closest('[data-unarchive-key]');
+      if (unarchiveBtn) {
+        e.stopPropagation();
+        this.unarchiveStory(unarchiveBtn.dataset.unarchiveKey);
+        return;
+      }
+
+      // Archived section header toggle
+      const archivedHeader = e.target.closest('.pr-file-tree-archived-header');
+      if (archivedHeader) {
+        this._archivedExpanded = !this._archivedExpanded;
+        const section = archivedHeader.closest('.pr-file-tree-archived-section');
+        if (section) section.classList.toggle('expanded', this._archivedExpanded);
+        return;
+      }
+
+      // Select mode checkbox
+      const checkbox = e.target.closest('.pr-file-tree-select-checkbox');
+      if (checkbox) {
+        e.stopPropagation();
+        const key = checkbox.dataset.selectKey;
+        if (key) this.toggleStorySelection(key);
+        return;
+      }
+
       // Close button
       const closeBtn = e.target.closest('[data-tree-close]');
       if (closeBtn) {
@@ -5655,7 +5900,8 @@ class NewsMonitor {
       activeTabId: null,
       currentOutput: null,
       chatHTML: '',
-      suggestionsHTML: ''
+      suggestionsHTML: '',
+      archived: false
     });
 
     // Render story selector and content plan tabs

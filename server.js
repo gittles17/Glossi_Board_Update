@@ -174,6 +174,19 @@ async function initDatabase() {
             END IF;
           END $$;
         `);
+
+        // Migration: Add archived column
+        await pool.query(`
+          DO $$ 
+          BEGIN 
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_name='pr_outputs' AND column_name='archived'
+            ) THEN
+              ALTER TABLE pr_outputs ADD COLUMN archived BOOLEAN DEFAULT false;
+            END IF;
+          END $$;
+        `);
         
         // Media outlets (user-added customs)
         await pool.query(`
@@ -686,6 +699,32 @@ app.delete('/api/pr/outputs/:id', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting output:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Archive/unarchive outputs by story_key (single or bulk)
+app.patch('/api/pr/outputs/archive', async (req, res) => {
+  try {
+    const { story_key, story_keys, archived } = req.body;
+    
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+
+    const keys = story_keys || (story_key ? [story_key] : []);
+    if (keys.length === 0) {
+      return res.status(400).json({ success: false, error: 'No story keys provided' });
+    }
+
+    const placeholders = keys.map((_, i) => `$${i + 2}`).join(', ');
+    await pool.query(
+      `UPDATE pr_outputs SET archived = $1 WHERE story_key IN (${placeholders})`,
+      [archived !== false, ...keys]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
