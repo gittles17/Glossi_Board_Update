@@ -3052,12 +3052,36 @@ class PRAgent {
   }
 
   _getGlossiWordmarkSVG() {
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="35" viewBox="58.11 148.29 190.58 56.11"><g fill="#ffffff"><path transform="matrix(1,0,0,-1,60.1131,177.542)" d="M0 0C0 14.242 8.697 24.58 23.281 24.58 35.47 24.58 43.892 17.186 45.878 5.409H39.921C38.141 14.173 32.046 19.309 23.281 19.309 12.668 19.309 6.026 11.981 6.026 0 6.026-12.121 12.806-19.584 22.665-19.584 31.635-19.584 37.318-13.49 37.318-4.795H21.159V.135H38.003C43.002 .135 45.672-2.398 45.672-7.053V-24.104H40.537V-7.738H40.399C39.509-18.283 33.278-24.857 22.665-24.857 9.45-24.857 0-15.133 0 0"/><path transform="matrix(1,0,0,-1,0,352.69)" d="M115.161 202.399H120.844V151.044H115.161Z"/><path transform="matrix(1,0,0,-1,158.2982,183.159)" d="M0 0C0 8.148-4.725 13.697-11.983 13.697-19.242 13.697-23.966 8.148-23.966 0-23.966-9.312-18.557-14.311-11.983-14.311-4.246-14.311 0-7.874 0 0M-29.786 0C-29.786 12.121-21.843 18.626-11.983 18.626-.411 18.626 5.82 10.272 5.82 0 5.82-12.531-1.78-19.24-11.983-19.24-23.624-19.24-29.786-10.955-29.786 0"/><path transform="matrix(1,0,0,-1,169.6596,190.2101)" d="M0 0H5.547C5.957-4.726 10.271-7.328 15.749-7.328 20.885-7.328 23.35-5.342 23.35-1.713 23.35 1.711 20.679 2.465 16.913 3.766L11.641 5.546C6.3 7.326 .959 8.969 .959 15.543 .959 21.705 5.752 25.678 13.694 25.678 21.706 25.678 27.253 21.364 28.143 13.284H22.596C21.98 18.349 18.419 20.814 13.489 20.814 9.038 20.814 6.437 18.83 6.437 15.681 6.437 11.914 10.408 11.161 13.421 10.134L18.352 8.49C24.993 6.3 28.965 4.039 28.965-1.986 28.965-8.355 24.309-12.189 15.475-12.189 6.847-12.189 .48-7.67 0 0"/><path transform="matrix(1,0,0,-1,203.6884,190.2101)" d="M0 0H5.547C5.957-4.726 10.271-7.328 15.749-7.328 20.885-7.328 23.35-5.342 23.35-1.713 23.35 1.711 20.679 2.465 16.913 3.766L11.641 5.546C6.3 7.326 .959 8.969 .959 15.543 .959 21.705 5.752 25.678 13.696 25.678 21.706 25.678 27.253 21.364 28.143 13.284H22.596C21.98 18.349 18.419 20.814 13.489 20.814 9.038 20.814 6.437 18.83 6.437 15.681 6.437 11.914 10.408 11.161 13.421 10.134L18.352 8.49C24.993 6.3 28.965 4.039 28.965-1.986 28.965-8.355 24.309-12.189 15.475-12.189 6.847-12.189 .48-7.67 0 0"/><path transform="matrix(1,0,0,-1,0,352.69)" d="M239.634 187.335H245.317V151.044H239.634ZM238.265 197.676C238.265 200.072 240.113 201.852 242.51 201.852 244.906 201.852 246.687 200.072 246.687 197.676 246.687 195.277 244.906 193.429 242.51 193.429 240.113 193.429 238.265 195.277 238.265 197.676"/></g></svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="90" height="26" viewBox="58.11 148.29 190.58 56.11"><g fill="#171717"><path transform="matrix(1,0,0,-1,60.1131,177.542)" d="M0 0C0 14.242 8.697 24.58 23.281 24.58 35.47 24.58 43.892 17.186 45.878 5.409H39.921C38.141 14.173 32.046 19.309 23.281 19.309 12.668 19.309 6.026 11.981 6.026 0 6.026-12.121 12.806-19.584 22.665-19.584 31.635-19.584 37.318-13.49 37.318-4.795H21.159V.135H38.003C43.002 .135 45.672-2.398 45.672-7.053V-24.104H40.537V-7.738H40.399C39.509-18.283 33.278-24.857 22.665-24.857 9.45-24.857 0-15.133 0 0"/><path transform="matrix(1,0,0,-1,0,352.69)" d="M115.161 202.399H120.844V151.044H115.161Z"/><path transform="matrix(1,0,0,-1,158.2982,183.159)" d="M0 0C0 8.148-4.725 13.697-11.983 13.697-19.242 13.697-23.966 8.148-23.966 0-23.966-9.312-18.557-14.311-11.983-14.311-4.246-14.311 0-7.874 0 0M-29.786 0C-29.786 12.121-21.843 18.626-11.983 18.626-.411 18.626 5.82 10.272 5.82 0 5.82-12.531-1.78-19.24-11.983-19.24-23.624-19.24-29.786-10.955-29.786 0"/><path transform="matrix(1,0,0,-1,169.6596,190.2101)" d="M0 0H5.547C5.957-4.726 10.271-7.328 15.749-7.328 20.885-7.328 23.35-5.342 23.35-1.713 23.35 1.711 20.679 2.465 16.913 3.766L11.641 5.546C6.3 7.326 .959 8.969 .959 15.543 .959 21.705 5.752 25.678 13.694 25.678 21.706 25.678 27.253 21.364 28.143 13.284H22.596C21.98 18.349 18.419 20.814 13.489 20.814 9.038 20.814 6.437 18.83 6.437 15.681 6.437 11.914 10.408 11.161 13.421 10.134L18.352 8.49C24.993 6.3 28.965 4.039 28.965-1.986 28.965-8.355 24.309-12.189 15.475-12.189 6.847-12.189 .48-7.67 0 0"/><path transform="matrix(1,0,0,-1,203.6884,190.2101)" d="M0 0H5.547C5.957-4.726 10.271-7.328 15.749-7.328 20.885-7.328 23.35-5.342 23.35-1.713 23.35 1.711 20.679 2.465 16.913 3.766L11.641 5.546C6.3 7.326 .959 8.969 .959 15.543 .959 21.705 5.752 25.678 13.696 25.678 21.706 25.678 27.253 21.364 28.143 13.284H22.596C21.98 18.349 18.419 20.814 13.489 20.814 9.038 20.814 6.437 18.83 6.437 15.681 6.437 11.914 10.408 11.161 13.421 10.134L18.352 8.49C24.993 6.3 28.965 4.039 28.965-1.986 28.965-8.355 24.309-12.189 15.475-12.189 6.847-12.189 .48-7.67 0 0"/><path transform="matrix(1,0,0,-1,0,352.69)" d="M239.634 187.335H245.317V151.044H239.634ZM238.265 197.676C238.265 200.072 240.113 201.852 242.51 201.852 244.906 201.852 246.687 200.072 246.687 197.676 246.687 195.277 244.906 193.429 242.51 193.429 240.113 193.429 238.265 195.277 238.265 197.676"/></g></svg>`;
+  }
+
+  _getGlossiLogoMarkSVG() {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="28" viewBox="0 0 306.8 352.69"><path d="m306.8,166.33v73.65c0,8.39-6.83,15.11-15.22,15.11h-80.59c-7.05,0-13.43,1.23-17.91,3.81-4.25,2.35-6.49,5.6-6.49,10.52v68.28c0,8.28-6.72,15-15,15H14.66c-8.06,0-14.66-6.72-14.66-14.77V54.17c0-8.39,6.72-15.22,15.11-15.22h35.59c7.05,0,13.43-1.12,17.91-3.58,4.14-2.24,6.49-5.37,6.49-10.3v-9.96c0-8.39,6.83-15.11,15.11-15.11h126.26c8.39,0,15.11,6.72,15.11,15.11v15.11c0,8.39-6.72,15.11-15.11,15.11h-124.58c-5.37.11-10.75.56-14.66,2.46-1.79.89-3.13,2.13-4.14,3.69-1.01,1.68-1.79,4.03-1.79,7.72v185.58c0,2.24,1.79,3.92,3.92,3.92h95.7c5.26,0,10.3-.56,13.88-2.35,1.68-.9,2.91-2.01,3.81-3.58,1.01-1.57,1.68-3.81,1.68-7.28v-69.17c0-8.39,6.83-15.11,15.22-15.11h86.07c8.39,0,15.22,6.72,15.22,15.11Z" fill="#EC5F3F"/></svg>`;
+  }
+
+  _deduplicateTitleFromContent(contentHTML, title) {
+    const container = document.createElement('div');
+    container.innerHTML = contentHTML;
+    const firstChild = container.firstElementChild;
+    if (!firstChild) return contentHTML;
+    const tagName = firstChild.tagName.toLowerCase();
+    if (tagName === 'h1' || tagName === 'h2' || tagName === 'h3' || tagName === 'p') {
+      const childText = firstChild.textContent.trim();
+      const titleNorm = title.trim();
+      if (childText === titleNorm || titleNorm.includes(childText) || childText.includes(titleNorm)) {
+        firstChild.remove();
+        return container.innerHTML;
+      }
+    }
+    return contentHTML;
   }
 
   _buildBrandedHTML(title, typeLabel, dateStr, contentHTML) {
+    const logoMark = this._getGlossiLogoMarkSVG();
     const wordmark = this._getGlossiWordmarkSVG();
-    const typePill = typeLabel ? `<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;letter-spacing:0.02em;color:#5BB09A;background:rgba(91,176,154,0.15);margin-left:16px;">${this.escapeHtml(typeLabel)}</span>` : '';
+    const metaParts = [dateStr, typeLabel].filter(Boolean);
+    const metaLine = metaParts.map(p => `<span>${this.escapeHtml(p)}</span>`).join('<span class="meta-sep">/</span>');
+    const cleanContent = this._deduplicateTitleFromContent(contentHTML, title);
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3066,49 +3090,64 @@ class PRAgent {
 <title>${this.escapeHtml(title)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#000;color:#fff;font-family:'Instrument Sans',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;padding:48px 24px;min-height:100vh}
-.export-wrap{max-width:700px;margin:0 auto}
-.export-header{display:flex;align-items:center;margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid rgba(255,255,255,0.08)}
-.export-header-left{display:flex;align-items:center}
-.export-meta{margin-top:8px;font-size:13px;color:#737373;letter-spacing:0.01em}
-.export-card{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:40px;margin-bottom:32px}
-.export-card h1{font-size:24px;font-weight:600;line-height:1.25;letter-spacing:-0.02em;margin-bottom:24px;color:#fff}
-.export-card h2{font-size:20px;font-weight:600;line-height:1.3;letter-spacing:-0.01em;margin-top:28px;margin-bottom:12px;color:#fff}
-.export-card h3{font-size:17px;font-weight:600;line-height:1.35;margin-top:24px;margin-bottom:8px;color:#fff}
-.export-card p{font-size:15px;line-height:1.65;color:#e5e5e5;margin-bottom:16px}
-.export-card ul,.export-card ol{padding-left:20px;margin-bottom:16px}
-.export-card li{font-size:15px;line-height:1.65;color:#e5e5e5;margin-bottom:6px}
-.export-card strong{color:#fff;font-weight:600}
-.export-card em{font-style:italic;color:#a3a3a3}
-.export-card blockquote{border-left:3px solid #5BB09A;padding-left:16px;margin:16px 0;color:#a3a3a3;font-style:italic}
-.export-card a{color:#7AAED4;text-decoration:none}
-.export-card pre,.export-card code{font-family:'IBM Plex Mono',monospace;font-size:13px;background:rgba(255,255,255,0.05);border-radius:4px;padding:2px 6px}
-.export-card pre{padding:16px;overflow-x:auto;margin-bottom:16px}
-.export-card hr{border:none;border-top:1px solid rgba(255,255,255,0.08);margin:24px 0}
-.export-footer{text-align:center;padding-top:24px;border-top:1px solid rgba(255,255,255,0.06)}
-.export-footer-text{font-size:12px;color:#525252;letter-spacing:0.02em}
+body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:'cv02','cv03','cv04','cv11';line-height:1.6;font-size:15px;letter-spacing:-0.01em}
+.export-nav{height:60px;display:flex;align-items:center;padding:0 24px;border-bottom:1px solid rgba(0,0,0,0.06)}
+.export-nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.export-wrap{max-width:680px;margin:0 auto;padding:48px 24px 48px}
+.export-header{padding-bottom:48px;margin-bottom:48px;border-bottom:1px solid rgba(0,0,0,0.06)}
+.export-meta{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:#EC5F3F;margin-bottom:20px}
+.meta-sep{opacity:0.5}
+.export-title{font-weight:600;font-size:clamp(32px,6vw,42px);line-height:1.1;letter-spacing:-0.03em;color:#171717;margin:0}
+.export-content h1{font-weight:600;font-size:clamp(32px,6vw,42px);line-height:1.1;letter-spacing:-0.03em;color:#171717;margin:0 0 24px}
+.export-content h2{font-weight:600;font-size:24px;line-height:1.3;letter-spacing:-0.02em;color:#171717;margin:64px 0 20px;padding-top:64px;border-top:1px solid rgba(0,0,0,0.06)}
+.export-content h2:first-child{border-top:none;padding-top:0;margin-top:0}
+.export-content h3{font-weight:600;font-size:17px;color:#171717;margin:40px 0 12px}
+.export-content h4{font-weight:600;font-size:15px;color:#171717;margin:0 0 6px}
+.export-content p{font-size:17px;line-height:1.75;color:#525252;margin-bottom:24px}
+.export-content ul,.export-content ol{padding-left:20px;margin-bottom:24px}
+.export-content li{font-size:17px;line-height:1.75;color:#525252;margin-bottom:6px}
+.export-content strong{color:#171717;font-weight:600}
+.export-content em{font-style:italic}
+.export-content blockquote{margin:40px 0;padding:0 0 0 24px;border-left:2px solid rgba(0,0,0,0.12);font-size:18px;line-height:1.6;color:#171717}
+.export-content blockquote p{font-size:18px;color:#171717;margin-bottom:0}
+.export-content a{color:#171717;text-decoration:underline;text-underline-offset:2px}
+.export-content pre,.export-content code{font-family:'IBM Plex Mono',monospace;font-size:13px;background:#f5f5f5;border-radius:4px;padding:2px 6px}
+.export-content pre{padding:16px;overflow-x:auto;margin-bottom:24px}
+.export-content hr{border:none;height:1px;background:rgba(0,0,0,0.06);margin:64px 0}
+.export-content img{max-width:100%;height:auto;border-radius:8px;margin:24px 0}
+.export-footer{text-align:center;margin-top:80px;padding-top:28px;border-top:1px solid rgba(0,0,0,0.06)}
+.export-footer-text{font-size:13px;color:#a3a3a3;letter-spacing:0.01em}
 .pr-draft-content{all:unset;display:block}
+@media(max-width:768px){
+.export-title,.export-content h1{font-size:26px}
+.export-content h2{font-size:21px}
+.export-content p,.export-content li{font-size:16px}
+.export-content blockquote{font-size:16px;padding-left:20px}
+.export-content blockquote p{font-size:16px}
+}
 </style>
 </head>
 <body>
+<nav class="export-nav">
+  <a class="export-nav-logo" href="https://www.glossi.io">
+    ${logoMark}
+    ${wordmark}
+  </a>
+</nav>
 <div class="export-wrap">
-  <div class="export-header">
-    <div class="export-header-left">
-      ${wordmark}
-      ${typePill}
-    </div>
-  </div>
-  <div class="export-card">
-    <h1>${this.escapeHtml(title)}</h1>
-    ${contentHTML}
-  </div>
-  <div class="export-footer">
-    <div class="export-meta">${this.escapeHtml(dateStr)}</div>
-    <div class="export-footer-text" style="margin-top:8px">Created with Glossi</div>
-  </div>
+  <header class="export-header">
+    <div class="export-meta">${metaLine}</div>
+    <h1 class="export-title">${this.escapeHtml(title)}</h1>
+  </header>
+  <article class="export-content">
+    ${cleanContent}
+  </article>
+  <footer class="export-footer">
+    <div class="export-footer-text">Created with Glossi</div>
+  </footer>
 </div>
 </body>
 </html>`;
@@ -3185,7 +3224,7 @@ body{background:#000;color:#fff;font-family:'Instrument Sans',system-ui,-apple-s
         html2canvas: {
           scale: 2,
           useCORS: true,
-          backgroundColor: '#000000',
+          backgroundColor: '#ffffff',
           logging: false
         },
         jsPDF: {
