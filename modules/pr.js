@@ -7714,7 +7714,9 @@ class DistributeManager {
     };
     this.scheduledPosts = [];
     this.activeReviewItem = null;
-    this._mediaUrlMode = null; // 'image' or 'video'
+    this._mediaUrlMode = null;
+    this.linkedInConnected = false;
+    this.linkedInOrgName = null;
   }
 
   async init() {
@@ -7722,6 +7724,7 @@ class DistributeManager {
     await this.loadScheduledPosts();
     this.setupEventListeners();
     this.render();
+    this.checkLinkedInStatus();
   }
 
   async loadSettings() {
@@ -7871,6 +7874,19 @@ class DistributeManager {
     // Hashtag add button
     document.getElementById('pr-distribute-hashtag-add')?.addEventListener('click', () => {
       this.addHashtagPrompt();
+    });
+
+    // LinkedIn connect/disconnect
+    document.getElementById('pr-linkedin-connect-btn')?.addEventListener('click', () => {
+      window.location.href = '/api/linkedin/connect';
+    });
+
+    document.getElementById('pr-linkedin-disconnect-btn')?.addEventListener('click', async () => {
+      try {
+        await this.prAgent.apiCall('/api/linkedin/disconnect', { method: 'POST' });
+        this.linkedInConnected = false;
+        this.updateLinkedInStatusUI(false);
+      } catch (e) { /* silent */ }
     });
 
     // Review queue click delegation
@@ -8477,29 +8493,105 @@ class DistributeManager {
     this.render();
   }
 
+  async checkLinkedInStatus() {
+    try {
+      const res = await this.prAgent.apiCall('/api/linkedin/status');
+      this.linkedInConnected = res.connected || false;
+      this.linkedInOrgName = res.org_name || null;
+      this.updateLinkedInStatusUI(this.linkedInConnected);
+    } catch (e) {
+      this.linkedInConnected = false;
+      this.updateLinkedInStatusUI(false);
+    }
+  }
+
+  updateLinkedInStatusUI(connected) {
+    const dot = document.querySelector('.pr-linkedin-status-dot');
+    const text = document.querySelector('.pr-linkedin-status-text');
+    const connectBtn = document.getElementById('pr-linkedin-connect-btn');
+    const disconnectBtn = document.getElementById('pr-linkedin-disconnect-btn');
+
+    if (dot) {
+      dot.classList.toggle('connected', connected);
+      dot.classList.toggle('disconnected', !connected);
+    }
+    if (text) {
+      text.textContent = connected
+        ? `Connected${this.linkedInOrgName ? ' to ' + this.linkedInOrgName : ''}`
+        : 'Not connected';
+    }
+    if (connectBtn) connectBtn.style.display = connected ? 'none' : '';
+    if (disconnectBtn) disconnectBtn.style.display = connected ? '' : 'none';
+  }
+
   async publishNow() {
     if (!this.activeReviewItem) return;
 
+    if (!this.linkedInConnected) {
+      const connect = await this.prAgent.showConfirm(
+        'Your LinkedIn account is not connected. Would you like to connect it now?',
+        'LinkedIn Not Connected'
+      );
+      if (connect) window.location.href = '/api/linkedin/connect';
+      return;
+    }
+
     const confirmed = await this.prAgent.showConfirm(
-      'This will mark the content as published. (Actual LinkedIn posting will be available once your account is connected.)',
+      'This will publish the post to your LinkedIn company page.',
       'Publish to LinkedIn'
     );
     if (!confirmed) return;
 
-    this.activeReviewItem.status = 'published';
-    this.activeReviewItem.phase = 'distribute';
+    // Show publishing state
+    const publishBtn = document.getElementById('pr-distribute-publish-btn');
+    if (publishBtn) {
+      publishBtn.disabled = true;
+      publishBtn.innerHTML = '<i class="ph-light ph-spinner ph-spin"></i> Publishing...';
+    }
 
     try {
-      await this.prAgent.apiCall('/api/pr/outputs', {
+      const result = await this.prAgent.apiCall('/api/linkedin/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(this.activeReviewItem)
+        body: JSON.stringify({
+          content: this.activeReviewItem.content,
+          hashtags: this.activeReviewItem.hashtags || [],
+          first_comment: this.activeReviewItem.first_comment || null
+        })
       });
-    } catch (e) { /* silent */ }
 
-    this.prAgent.saveOutputs();
-    this.render();
-    this.selectReviewItem(this.activeReviewItem.id);
+      if (result.success) {
+        this.activeReviewItem.status = 'published';
+        this.activeReviewItem.phase = 'distribute';
+
+        try {
+          await this.prAgent.apiCall('/api/pr/outputs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.activeReviewItem)
+          });
+        } catch (e) { /* silent */ }
+
+        this.prAgent.saveOutputs();
+        this.render();
+        this.selectReviewItem(this.activeReviewItem.id);
+      } else {
+        await this.prAgent.showConfirm(
+          `Publishing failed: ${result.error || 'Unknown error'}. Please try again.`,
+          'Publish Error'
+        );
+      }
+    } catch (e) {
+      await this.prAgent.showConfirm(
+        `Publishing failed: ${e.message || 'Network error'}. Please try again.`,
+        'Publish Error'
+      );
+    } finally {
+      if (publishBtn) {
+        publishBtn.disabled = false;
+        publishBtn.innerHTML = '<i class="ph-light ph-paper-plane-tilt"></i> Publish Now';
+      }
+    }
   }
 
   openScheduleModal() {

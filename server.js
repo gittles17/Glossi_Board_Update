@@ -351,6 +351,19 @@ async function initDatabase() {
             created_at TIMESTAMP DEFAULT NOW()
           )
         `);
+
+        // LinkedIn OAuth tokens
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS linkedin_tokens (
+            id VARCHAR(50) PRIMARY KEY DEFAULT 'default',
+            access_token TEXT NOT NULL,
+            refresh_token TEXT,
+            expires_at TIMESTAMP NOT NULL,
+            org_id TEXT,
+            org_name TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+          )
+        `);
       })(),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Database init timed out after 8s')), 8000)
@@ -1879,6 +1892,227 @@ app.post('/api/pr/og-metadata', async (req, res) => {
 });
 
 // ============================================
+// LINKEDIN OAUTH & PUBLISHING
+// ============================================
+
+const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
+const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET;
+const APP_URL = process.env.APP_URL || `http://127.0.0.1:${PORT}`;
+const LINKEDIN_REDIRECT_URI = `${APP_URL}/api/linkedin/callback`;
+const LINKEDIN_API_VERSION = '202502';
+
+// Helper: get valid LinkedIn tokens (with auto-refresh)
+async function getLinkedInTokens() {
+  if (!useDatabase) return null;
+  const result = await pool.query('SELECT * FROM linkedin_tokens WHERE id = $1', ['default']);
+  if (result.rows.length === 0) return null;
+  const tokens = result.rows[0];
+
+  // Check if expired and refresh if needed
+  if (new Date(tokens.expires_at) <= new Date()) {
+    if (!tokens.refresh_token) return null;
+    try {
+      const refreshRes = await axios.post('https://www.linkedin.com/oauth/v2/accessToken', null, {
+        params: {
+          grant_type: 'refresh_token',
+          refresh_token: tokens.refresh_token,
+          client_id: LINKEDIN_CLIENT_ID,
+          client_secret: LINKEDIN_CLIENT_SECRET
+        }
+      });
+      const newExpiry = new Date(Date.now() + refreshRes.data.expires_in * 1000);
+      await pool.query(
+        'UPDATE linkedin_tokens SET access_token = $1, refresh_token = COALESCE($2, refresh_token), expires_at = $3 WHERE id = $4',
+        [refreshRes.data.access_token, refreshRes.data.refresh_token || null, newExpiry, 'default']
+      );
+      tokens.access_token = refreshRes.data.access_token;
+      tokens.expires_at = newExpiry;
+    } catch (e) {
+      return null;
+    }
+  }
+  return tokens;
+}
+
+// Start OAuth flow
+app.get('/api/linkedin/connect', (req, res) => {
+  if (!LINKEDIN_CLIENT_ID) {
+    return res.status(500).send('LINKEDIN_CLIENT_ID not configured');
+  }
+  const state = Math.random().toString(36).substring(2, 15);
+  const scopes = 'w_organization_social r_organization_social';
+  const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(LINKEDIN_REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&state=${state}`;
+  res.redirect(authUrl);
+});
+
+// OAuth callback
+app.get('/api/linkedin/callback', async (req, res) => {
+  const { code, error } = req.query;
+  if (error || !code) {
+    return res.redirect('/pr.html?linkedin=error');
+  }
+
+  try {
+    // Exchange code for tokens
+    const tokenRes = await axios.post('https://www.linkedin.com/oauth/v2/accessToken', null, {
+      params: {
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: LINKEDIN_REDIRECT_URI,
+        client_id: LINKEDIN_CLIENT_ID,
+        client_secret: LINKEDIN_CLIENT_SECRET
+      }
+    });
+
+    const { access_token, refresh_token, expires_in } = tokenRes.data;
+    const expiresAt = new Date(Date.now() + expires_in * 1000);
+
+    // Fetch organization admin access to find org ID
+    let orgId = process.env.LINKEDIN_ORG_ID || null;
+    let orgName = null;
+
+    if (!orgId) {
+      try {
+        const orgRes = await axios.get('https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&projection=(elements*(organization~(localizedName),organization))', {
+          headers: {
+            'Authorization': `Bearer ${access_token}`,
+            'LinkedIn-Version': LINKEDIN_API_VERSION,
+            'X-Restli-Protocol-Version': '2.0.0'
+          }
+        });
+        if (orgRes.data.elements && orgRes.data.elements.length > 0) {
+          const orgUrn = orgRes.data.elements[0].organization;
+          orgId = orgUrn.split(':').pop();
+          orgName = orgRes.data.elements[0]['organization~']?.localizedName || null;
+        }
+      } catch (e) {
+        // Org detection failed, user can set LINKEDIN_ORG_ID manually
+      }
+    }
+
+    // Store tokens
+    if (useDatabase) {
+      await pool.query(`
+        INSERT INTO linkedin_tokens (id, access_token, refresh_token, expires_at, org_id, org_name)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (id) DO UPDATE SET
+          access_token = $2, refresh_token = $3, expires_at = $4, org_id = COALESCE($5, linkedin_tokens.org_id), org_name = COALESCE($6, linkedin_tokens.org_name)
+      `, ['default', access_token, refresh_token || null, expiresAt, orgId, orgName]);
+    }
+
+    res.redirect('/pr.html?linkedin=connected');
+  } catch (err) {
+    res.redirect('/pr.html?linkedin=error');
+  }
+});
+
+// Check connection status
+app.get('/api/linkedin/status', async (req, res) => {
+  try {
+    const tokens = await getLinkedInTokens();
+    if (tokens && tokens.access_token) {
+      res.json({
+        success: true,
+        connected: true,
+        org_id: tokens.org_id || null,
+        org_name: tokens.org_name || null,
+        expires_at: tokens.expires_at
+      });
+    } else {
+      res.json({ success: true, connected: false });
+    }
+  } catch (error) {
+    res.json({ success: true, connected: false });
+  }
+});
+
+// Disconnect
+app.post('/api/linkedin/disconnect', async (req, res) => {
+  try {
+    if (useDatabase) {
+      await pool.query('DELETE FROM linkedin_tokens WHERE id = $1', ['default']);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Publish post to LinkedIn
+app.post('/api/linkedin/publish', async (req, res) => {
+  try {
+    const tokens = await getLinkedInTokens();
+    if (!tokens || !tokens.access_token) {
+      return res.status(401).json({ success: false, error: 'LinkedIn not connected. Please connect your account first.' });
+    }
+
+    const orgId = tokens.org_id || process.env.LINKEDIN_ORG_ID;
+    if (!orgId) {
+      return res.status(400).json({ success: false, error: 'Organization ID not found. Set LINKEDIN_ORG_ID in environment variables or reconnect your account.' });
+    }
+
+    const { content, hashtags, first_comment } = req.body;
+    if (!content) {
+      return res.status(400).json({ success: false, error: 'Post content is required' });
+    }
+
+    // Build commentary with hashtags appended
+    let commentary = content;
+    if (hashtags && hashtags.length > 0) {
+      commentary += '\n\n' + hashtags.map(h => (h.startsWith('#') ? h : '#' + h)).join(' ');
+    }
+
+    // Create the post
+    const postPayload = {
+      author: `urn:li:organization:${orgId}`,
+      commentary,
+      visibility: 'PUBLIC',
+      distribution: {
+        feedDistribution: 'MAIN_FEED',
+        targetEntities: [],
+        thirdPartyDistributionChannels: []
+      },
+      lifecycleState: 'PUBLISHED'
+    };
+
+    const postRes = await axios.post('https://api.linkedin.com/rest/posts', postPayload, {
+      headers: {
+        'Authorization': `Bearer ${tokens.access_token}`,
+        'Content-Type': 'application/json',
+        'LinkedIn-Version': LINKEDIN_API_VERSION,
+        'X-Restli-Protocol-Version': '2.0.0'
+      }
+    });
+
+    const postUrn = postRes.headers['x-restli-id'] || null;
+
+    // Post first comment if provided
+    if (first_comment && postUrn) {
+      try {
+        await axios.post('https://api.linkedin.com/rest/socialActions/' + encodeURIComponent(postUrn) + '/comments', {
+          actor: `urn:li:organization:${orgId}`,
+          message: { text: first_comment }
+        }, {
+          headers: {
+            'Authorization': `Bearer ${tokens.access_token}`,
+            'Content-Type': 'application/json',
+            'LinkedIn-Version': LINKEDIN_API_VERSION,
+            'X-Restli-Protocol-Version': '2.0.0'
+          }
+        });
+      } catch (commentErr) {
+        // Post succeeded but comment failed, still report success
+      }
+    }
+
+    res.json({ success: true, post_urn: postUrn });
+  } catch (error) {
+    const errMsg = error.response?.data?.message || error.message;
+    res.status(error.response?.status || 500).json({ success: false, error: errMsg });
+  }
+});
+
+// ============================================
 // DISTRIBUTION ENDPOINTS
 // ============================================
 
@@ -2361,6 +2595,10 @@ function validateEnvironment() {
   
   if (!process.env.DATABASE_URL) {
     warnings.push('⚠️  DATABASE_URL not set - Using local file storage');
+  }
+
+  if (!process.env.LINKEDIN_CLIENT_ID || !process.env.LINKEDIN_CLIENT_SECRET) {
+    warnings.push('⚠️  LINKEDIN_CLIENT_ID/SECRET not set - LinkedIn publishing disabled');
   }
   
   if (warnings.length > 0) {
