@@ -9882,8 +9882,8 @@ h2.section-title-h4 {
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1.5px solid var(--accent-green);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-green);
+  border-radius: var(--radius-lg);
   color: var(--accent-green);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -10843,8 +10843,8 @@ h2.section-title-h4 {
     align-items: center;
     justify-content: center;
     background: transparent;
-    border: 1.5px solid var(--accent-green);
-    border-radius: var(--radius-md);
+    border: 1px solid var(--accent-green);
+    border-radius: var(--radius-lg);
     color: var(--accent-green);
     flex-shrink: 0;
   }
@@ -14177,8 +14177,8 @@ svg.spinning,
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1.5px solid var(--accent-green);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent-green);
+  border-radius: var(--radius-lg);
   color: var(--accent-green);
   font-size: 14px;
   cursor: pointer;
@@ -17333,8 +17333,8 @@ body.pr-resizing * {
   width: 30px;
   height: 30px;
   background: transparent;
-  border: 1.5px solid var(--accent-green);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent-green);
+  border-radius: var(--radius-lg);
   color: var(--accent-green);
   cursor: pointer;
   transition: all 0.15s ease;
