@@ -503,7 +503,19 @@ class PRAgent {
     // Clean up auto-added news hook sources (one-time migration)
     const beforeCount = this.sources.length;
     this.sources = this.sources.filter(s => !s.id || !s.id.startsWith('src_news_'));
-    if (this.sources.length < beforeCount) {
+
+    // Migrate ungrouped sources to Content Sources folder
+    let needsSave = this.sources.length < beforeCount;
+    this.sources.forEach(s => {
+      if (!s.folder || (s.folder !== 'About Glossi' && s.folder !== 'Content Sources')) {
+        // Legacy sources without a system folder get moved to Content Sources
+        if (!s.folder) {
+          s.folder = 'Content Sources';
+          needsSave = true;
+        }
+      }
+    });
+    if (needsSave) {
       this.saveSources();
     }
     
@@ -662,6 +674,16 @@ class PRAgent {
     // Source tabs
     this.dom.sourceTabs.forEach(tab => {
       tab.addEventListener('click', () => this.switchSourceTab(tab.dataset.type));
+    });
+
+    // Folder selector in Add Source modal
+    document.querySelectorAll('.pr-source-folder-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        document.querySelectorAll('.pr-source-folder-option').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        const radio = opt.querySelector('input[type="radio"]');
+        if (radio) radio.checked = true;
+      });
     });
 
     // Source search
@@ -937,6 +959,14 @@ class PRAgent {
     this.stopRecording();
     const audioPreview = document.getElementById('pr-audio-preview');
     if (audioPreview) audioPreview.style.display = 'none';
+    // Reset folder selector to Content Sources
+    const folderOptions = document.querySelectorAll('.pr-source-folder-option');
+    folderOptions.forEach(opt => {
+      const radio = opt.querySelector('input[type="radio"]');
+      const isContent = opt.dataset.folder === 'content';
+      opt.classList.toggle('selected', isContent);
+      if (radio) radio.checked = isContent;
+    });
   }
 
   editSource(id) {
@@ -963,6 +993,15 @@ class PRAgent {
       if (titleInput) titleInput.value = source.title || '';
       if (urlInput) urlInput.value = source.url || '';
     }
+
+    // Set correct folder radio
+    const folderValue = source.folder === 'About Glossi' ? 'glossi' : 'content';
+    document.querySelectorAll('.pr-source-folder-option').forEach(opt => {
+      const radio = opt.querySelector('input[type="radio"]');
+      const isMatch = opt.dataset.folder === folderValue;
+      opt.classList.toggle('selected', isMatch);
+      if (radio) radio.checked = isMatch;
+    });
 
     // Update modal title and save button text
     const modalTitle = document.getElementById('pr-source-modal-title');
@@ -1036,6 +1075,10 @@ class PRAgent {
         existing.content = content;
         if (url) existing.url = url;
         if (fileName) existing.fileName = fileName;
+        // Update folder from radio
+        const editFolderRadio = document.querySelector('input[name="pr-source-folder"]:checked');
+        const editFolderValue = editFolderRadio?.value || 'content';
+        existing.folder = editFolderValue === 'glossi' ? 'About Glossi' : 'Content Sources';
 
         try {
           await fetch('/api/pr/sources', {
@@ -1056,6 +1099,11 @@ class PRAgent {
       }
     }
 
+    // Determine which folder based on the radio selection
+    const folderRadio = document.querySelector('input[name="pr-source-folder"]:checked');
+    const folderValue = folderRadio?.value || 'content';
+    const folder = folderValue === 'glossi' ? 'About Glossi' : 'Content Sources';
+
     const source = {
       id: 'src_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
       title: autoTitle,
@@ -1063,6 +1111,7 @@ class PRAgent {
       content,
       url: url || undefined,
       fileName: fileName || undefined,
+      folder,
       createdAt: new Date().toISOString(),
       selected: true
     };
@@ -1077,7 +1126,7 @@ class PRAgent {
         body: JSON.stringify(source)
       });
     } catch (error) {
-      console.error('Error saving source:', error);
+      // silent
     }
     
     this.saveSources();
@@ -1089,6 +1138,11 @@ class PRAgent {
     this._pendingFileContent = null;
     this._pendingFileName = null;
     this._pendingTranscription = null;
+
+    // Auto-trigger angle analysis if a content source was added
+    if (folder === 'Content Sources' && this.newsMonitor) {
+      this.newsMonitor.launchCustomWorkspace();
+    }
   }
 
   generateTitle(content, type) {
@@ -1204,7 +1258,6 @@ class PRAgent {
       this.saveSources();
       this.renderSources();
       this.updateGenerateButton();
-      if (this.newsMonitor) this.newsMonitor.updateCreateFromSourcesBtn();
     }
   }
 
@@ -1403,11 +1456,10 @@ class PRAgent {
       audio: '<i class="ph-light ph-microphone"></i>'
     };
 
-    const renderSourceItem = (source) => {
+    const renderSourceItem = (source, isBackground = false) => {
       const rawDate = source.createdAt || source.created_at || source.addedAt;
       const parsed = rawDate ? new Date(rawDate) : null;
       const date = parsed && !isNaN(parsed.getTime()) ? parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-      const preview = (source.content || '').substring(0, 100);
       const loadingClass = source.loading ? 'loading' : '';
       const loadingIndicator = source.loading ? `
         <div class="pr-source-loading-overlay">
@@ -1419,11 +1471,8 @@ class PRAgent {
         </div>
       ` : '';
       return `
-        <div class="pr-source-item ${source.selected ? 'selected' : ''} ${loadingClass}" data-source-id="${source.id}" draggable="true">
+        <div class="pr-source-item ${loadingClass}" data-source-id="${source.id}" draggable="true">
           ${loadingIndicator}
-          <label class="pr-source-checkbox">
-            <input type="checkbox" ${source.selected ? 'checked' : ''} data-action="toggle" data-id="${source.id}" ${source.loading ? 'disabled' : ''}>
-          </label>
           <div class="pr-source-info" data-action="edit-source" data-id="${source.id}">
             <div class="pr-source-header">
               <span class="pr-source-type-icon">${typeIcons[source.type] || typeIcons.text}</span>
@@ -1437,21 +1486,57 @@ class PRAgent {
         </div>`;
     };
 
-    const folders = {};
-    const ungrouped = [];
-    this.sources.forEach(source => {
-      if (source.folder) {
-        if (!folders[source.folder]) folders[source.folder] = [];
-        folders[source.folder].push(source);
-      } else {
-        ungrouped.push(source);
-      }
-    });
+    // Separate sources into system folders
+    const glossiSources = this.sources.filter(s => s.folder === 'About Glossi');
+    const contentSources = this.sources.filter(s => s.folder === 'Content Sources');
+    const otherSources = this.sources.filter(s => s.folder && s.folder !== 'About Glossi' && s.folder !== 'Content Sources');
+    const ungrouped = this.sources.filter(s => !s.folder);
 
-    const allFolderNames = new Set([...Object.keys(folders), ...this.folders]);
+    const isGlossiExpanded = this.expandedFolders['About Glossi'] !== false;
+    const isContentExpanded = this.expandedFolders['Content Sources'] !== false;
+
     let html = '';
-    Array.from(allFolderNames).sort().forEach(folderName => {
-      const folderSources = folders[folderName] || [];
+
+    // About Glossi folder (always first)
+    html += `
+      <div class="pr-folder pr-system-folder ${isGlossiExpanded ? 'expanded' : ''}" data-folder="About Glossi">
+        <div class="pr-folder-header">
+          <i class="ph-light ph-caret-right pr-folder-chevron"></i>
+          <i class="ph-light ph-buildings pr-folder-icon"></i>
+          <span class="pr-folder-name">About Glossi</span>
+          <span class="pr-folder-count">${glossiSources.length}</span>
+        </div>
+        <div class="pr-folder-contents">
+          ${glossiSources.map(s => renderSourceItem(s, true)).join('')}
+          ${glossiSources.length === 0 ? '<p class="pr-folder-empty-hint">Add company info, pitch decks, product details</p>' : ''}
+        </div>
+      </div>
+    `;
+
+    // Content Sources folder (always second)
+    html += `
+      <div class="pr-folder pr-system-folder ${isContentExpanded ? 'expanded' : ''}" data-folder="Content Sources">
+        <div class="pr-folder-header">
+          <i class="ph-light ph-caret-right pr-folder-chevron"></i>
+          <i class="ph-light ph-file-text pr-folder-icon"></i>
+          <span class="pr-folder-name">Content Sources</span>
+          <span class="pr-folder-count">${contentSources.length}</span>
+        </div>
+        <div class="pr-folder-contents">
+          ${contentSources.map(s => renderSourceItem(s)).join('')}
+          ${contentSources.length === 0 ? '<p class="pr-folder-empty-hint">Add source material to generate content from</p>' : ''}
+        </div>
+      </div>
+    `;
+
+    // Other user-created folders (legacy compat)
+    const otherFolders = {};
+    otherSources.forEach(s => {
+      if (!otherFolders[s.folder]) otherFolders[s.folder] = [];
+      otherFolders[s.folder].push(s);
+    });
+    Object.keys(otherFolders).sort().forEach(folderName => {
+      const folderSources = otherFolders[folderName];
       const isExpanded = this.expandedFolders[folderName];
       html += `
         <div class="pr-folder ${isExpanded ? 'expanded' : ''}" data-folder="${this.escapeHtml(folderName)}">
@@ -1467,6 +1552,8 @@ class PRAgent {
         </div>
       `;
     });
+
+    // Ungrouped sources (migrate to Content Sources on next save)
     html += ungrouped.map(s => renderSourceItem(s)).join('');
 
     const dropIndicator = '<div class="pr-drop-indicator" id="pr-drop-indicator"><i class="ph-light ph-upload-simple"></i><span>Drop files here</span></div>';
@@ -1488,11 +1575,7 @@ class PRAgent {
     // Event delegation for source items
     this.dom.sourcesList.querySelectorAll('[data-action]').forEach(el => {
       const action = el.dataset.action;
-      if (action === 'toggle') {
-        el.addEventListener('change', () => {
-          this.toggleSourceSelection(el.dataset.id);
-        });
-      } else if (action === 'delete') {
+      if (action === 'delete') {
         el.addEventListener('click', (e) => {
           e.stopPropagation();
           this.deleteSource(el.dataset.id);
@@ -1509,9 +1592,6 @@ class PRAgent {
     
     // Update command center stats
     this.updateCommandCenterStats();
-
-    // Update Create Content from Sources button state
-    if (this.newsMonitor) this.newsMonitor.updateCreateFromSourcesBtn();
   }
 
   setupSourceDrag() {
@@ -4834,13 +4914,12 @@ class NewsMonitor {
       addUrlWrap: document.getElementById('pr-add-url-input-wrap'),
       addUrlInput: document.getElementById('pr-add-url-input'),
       addUrlSubmit: document.getElementById('pr-add-url-submit'),
-      addUrlCancel: document.getElementById('pr-add-url-cancel'),
+      addUrlClear: document.getElementById('pr-add-url-clear'),
       filterToggle: document.getElementById('pr-filter-toggle'),
       filterDropdown: document.getElementById('pr-filter-dropdown'),
       filterOutletList: document.getElementById('pr-filter-outlet-list'),
       filterActiveDot: document.getElementById('pr-filter-active-dot'),
       filterClearAll: document.getElementById('pr-filter-clear-all'),
-      createFromSourcesBtn: document.getElementById('pr-create-from-sources-btn'),
       angleModal: document.getElementById('pr-angle-modal'),
       angleTitleInput: document.getElementById('pr-angle-title'),
       angleNarrativeInput: document.getElementById('pr-angle-narrative'),
@@ -4855,9 +4934,6 @@ class NewsMonitor {
 
   setupEventListeners() {
     this.dom.fetchNewsBtn?.addEventListener('click', () => this.refreshNews());
-
-    // Create Content from Sources button
-    this.dom.createFromSourcesBtn?.addEventListener('click', () => this.launchCustomWorkspace());
 
     // Angle modal events
     this.dom.angleConfirmBtn?.addEventListener('click', () => this.confirmAngleAndGenerate());
@@ -4944,11 +5020,20 @@ class NewsMonitor {
 
     // Add URL: toggle input (stopPropagation so outside-click handler doesn't close immediately)
     this.dom.addUrlBtn?.addEventListener('click', (e) => { e.stopPropagation(); this.showAddUrlInput(); });
-    this.dom.addUrlCancel?.addEventListener('click', () => this.hideAddUrlInput());
     this.dom.addUrlSubmit?.addEventListener('click', () => this.submitUrl());
     this.dom.addUrlInput?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this.submitUrl();
       if (e.key === 'Escape') this.hideAddUrlInput();
+    });
+    this.dom.addUrlInput?.addEventListener('input', () => {
+      if (this.dom.addUrlClear) {
+        this.dom.addUrlClear.style.display = this.dom.addUrlInput.value.trim() ? 'flex' : 'none';
+      }
+    });
+    this.dom.addUrlClear?.addEventListener('click', () => {
+      if (this.dom.addUrlInput) this.dom.addUrlInput.value = '';
+      if (this.dom.addUrlClear) this.dom.addUrlClear.style.display = 'none';
+      this.dom.addUrlInput?.focus();
     });
   }
 
@@ -4964,6 +5049,7 @@ class NewsMonitor {
   hideAddUrlInput() {
     if (this.dom.addUrlWrap) this.dom.addUrlWrap.style.display = 'none';
     if (this.dom.addUrlInput) this.dom.addUrlInput.value = '';
+    if (this.dom.addUrlClear) this.dom.addUrlClear.style.display = 'none';
   }
 
   async submitUrl() {
@@ -5966,25 +6052,25 @@ class NewsMonitor {
     this.renderFileTree();
   }
 
-  updateCreateFromSourcesBtn() {
-    const btn = this.dom.createFromSourcesBtn;
-    if (!btn) return;
-    const selectedCount = this.prAgent.sources.filter(s => s.selected).length;
-    btn.disabled = selectedCount === 0;
-  }
-
   async launchCustomWorkspace() {
-    const selectedSources = this.prAgent.sources.filter(s => s.selected);
-    if (selectedSources.length === 0) return;
+    // Content Sources folder = primary material, About Glossi folder = background context
+    const contentSources = this.prAgent.sources.filter(s => s.folder === 'Content Sources');
+    const glossiSources = this.prAgent.sources.filter(s => s.folder === 'About Glossi');
 
-    // Identify the primary source (most recently added) vs background context
-    const sorted = [...selectedSources].sort((a, b) => {
+    if (contentSources.length === 0) return;
+
+    // All sources combined for the story
+    const selectedSources = [...contentSources, ...glossiSources];
+
+    // Primary source is the most recently added content source
+    const sorted = [...contentSources].sort((a, b) => {
       const da = new Date(a.created_at || a.createdAt || a.addedAt || 0);
       const db = new Date(b.created_at || b.createdAt || b.addedAt || 0);
       return db - da;
     });
     const primarySource = sorted[0];
-    const contextSources = sorted.slice(1);
+    // Context = other content sources + all Glossi sources
+    const contextSources = [...sorted.slice(1), ...glossiSources];
 
     const customTitle = primarySource.title || 'Untitled';
     const key = `custom_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
@@ -6017,14 +6103,28 @@ class NewsMonitor {
         }).join('\n---\n');
     }
 
+    let angles = [{
+      angleTitle,
+      angleNarrative,
+      contentPlan
+    }];
+
     try {
       const result = await this._fetchAngleAnalysis(primaryContext, bgContext);
-      if (result.angleTitle) angleTitle = result.angleTitle;
-      if (result.angleNarrative) angleNarrative = result.angleNarrative;
-      if (result.contentPlan && result.contentPlan.length > 0) contentPlan = result.contentPlan;
+      if (result.angles && result.angles.length > 0) {
+        angles = result.angles.map(a => ({
+          angleTitle: a.angleTitle || angleTitle,
+          angleNarrative: a.angleNarrative || '',
+          contentPlan: a.contentPlan || contentPlan
+        }));
+      }
     } catch (e) { /* fall back to defaults */ }
 
-    contentPlan.sort((a, b) => (a.priority || 99) - (b.priority || 99));
+    // Sort each angle's content plan
+    angles.forEach(a => {
+      if (a.contentPlan) a.contentPlan.sort((x, y) => (x.priority || 99) - (y.priority || 99));
+    });
+
     this.prAgent.hideLoading();
 
     // Store pending data for after user confirms the angle
@@ -6036,18 +6136,16 @@ class NewsMonitor {
       contextSources,
       primaryContext,
       bgContext,
-      angleTitle,
-      angleNarrative,
-      contentPlan
+      angles
     };
 
-    // Show the angle approval modal
-    this.showAngleModal(angleTitle, angleNarrative, contentPlan);
+    // Show the angle approval modal with all suggestions
+    this.showAngleModal(angles);
   }
 
   async _fetchAngleAnalysis(primaryContext, bgContext, feedback) {
     const feedbackClause = feedback
-      ? `\n\nUSER FEEDBACK on a previous angle proposal (incorporate this):\n${feedback}`
+      ? `\n\nUSER FEEDBACK on a previous angle proposal (incorporate this into all 3 new angles):\n${feedback}`
       : '';
 
     const response = await fetch('/api/chat', {
@@ -6055,44 +6153,125 @@ class NewsMonitor {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
-        system: 'You are a content strategist. Analyze the PRIMARY SOURCE material and determine the best angle and content plan. The background context is only for company knowledge. Return ONLY valid JSON.',
+        max_tokens: 2048,
+        system: 'You are a content strategist. Analyze the PRIMARY SOURCE material and propose 3 distinct angles for content creation. The background context is only for company knowledge. Return ONLY valid JSON.',
         messages: [{
           role: 'user',
-          content: `Analyze the PRIMARY SOURCE below and determine:
-1. An ANGLE TITLE (3-8 words) that captures the strategic angle for content creation. This should describe the narrative lens, not just the category. Examples: "Customer Proof Points as Growth Engine", "Enterprise Validation Through Real Usage Data", "Founder Contrarian Take on Industry Shift".
-2. An ANGLE NARRATIVE (2-3 sentences) explaining how you will approach the source material, what story threads you will pull, and how the content will be positioned.
-3. A content plan with 4-5 content types that are specifically appropriate for THIS type of source material and angle.
+          content: `Analyze the PRIMARY SOURCE below and propose 3 DISTINCT angles for content creation. Each angle should take a meaningfully different strategic approach to the same source material.
 
-Each content plan item should have: type (one of: blog_post, linkedin_post, tweet_thread, email_blast, media_pitch, op_ed, hot_take, talking_points), description (specific to the source material and angle), priority (1-5), audience (brands/builders/press/internal).
+For each angle, provide:
+1. An ANGLE TITLE (3-8 words) that captures the strategic narrative lens. Examples: "Customer Proof Points as Growth Engine", "Enterprise Validation Through Real Usage Data", "Founder Contrarian Take on Industry Shift".
+2. An ANGLE NARRATIVE (2-3 sentences) explaining how this angle approaches the source material, what story threads it pulls, and how the content will be positioned.
+3. A content plan with 4-5 content types specifically appropriate for THIS angle.
 
-Return JSON: { "angleTitle": "...", "angleNarrative": "...", "contentPlan": [...] }
+Each content plan item should have: type (one of: blog_post, linkedin_post, tweet_thread, email_blast, media_pitch, op_ed, hot_take, talking_points), description (specific to the angle), priority (1-5), audience (brands/builders/press/internal).
+
+Return JSON: { "angles": [{ "angleTitle": "...", "angleNarrative": "...", "contentPlan": [...] }, ...] }
 ${feedbackClause}
 ${primaryContext}${bgContext}`
         }]
       })
     });
 
-    if (!response.ok) return {};
+    if (!response.ok) return { angles: [] };
     const data = await response.json();
     const rawText = data.content?.[0]?.text || '';
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return {};
+    if (!jsonMatch) return { angles: [] };
     const parsed = JSON.parse(jsonMatch[0]);
+
+    // Support both formats: { angles: [...] } and legacy { angleTitle, angleNarrative, contentPlan }
+    if (parsed.angles && Array.isArray(parsed.angles) && parsed.angles.length > 0) {
+      return {
+        angles: parsed.angles.map(a => ({
+          angleTitle: a.angleTitle || '',
+          angleNarrative: a.angleNarrative || '',
+          contentPlan: (a.contentPlan && Array.isArray(a.contentPlan) && a.contentPlan.length > 0) ? a.contentPlan : null
+        }))
+      };
+    }
+    // Fallback: single angle response
     return {
-      angleTitle: parsed.angleTitle || '',
-      angleNarrative: parsed.angleNarrative || '',
-      contentPlan: (parsed.contentPlan && Array.isArray(parsed.contentPlan) && parsed.contentPlan.length > 0) ? parsed.contentPlan : null
+      angles: [{
+        angleTitle: parsed.angleTitle || '',
+        angleNarrative: parsed.angleNarrative || '',
+        contentPlan: (parsed.contentPlan && Array.isArray(parsed.contentPlan) && parsed.contentPlan.length > 0) ? parsed.contentPlan : null
+      }]
     };
   }
 
-  showAngleModal(angleTitle, angleNarrative, contentPlan) {
-    if (this.dom.angleTitleInput) this.dom.angleTitleInput.value = angleTitle;
-    if (this.dom.angleNarrativeInput) this.dom.angleNarrativeInput.value = angleNarrative;
-    if (this.dom.angleFeedbackInput) this.dom.angleFeedbackInput.value = '';
+  showAngleModal(angles) {
+    this._angleSuggestions = angles;
+    this._selectedAngleIndex = 0;
 
-    this._renderAnglePlanChecklist(contentPlan);
+    // Render suggestion cards
+    this._renderAngleSuggestionCards(angles);
+
+    // Populate detail fields from first angle
+    this._selectAngleSuggestion(0);
+
+    if (this.dom.angleFeedbackInput) this.dom.angleFeedbackInput.value = '';
     this.dom.angleModal?.classList.add('visible');
+  }
+
+  _renderAngleSuggestionCards(angles) {
+    const container = document.getElementById('pr-angle-suggestions');
+    if (!container) return;
+
+    const iconMap = {
+      linkedin_post: 'ph-linkedin-logo',
+      blog_post: 'ph-article',
+      email_blast: 'ph-envelope',
+      media_pitch: 'ph-envelope',
+      tweet_thread: 'ph-x-logo',
+      press_release: 'ph-newspaper',
+      hot_take: 'ph-fire',
+      founder_quote: 'ph-quotes',
+      op_ed: 'ph-pen-nib',
+      talking_points: 'ph-list-bullets'
+    };
+
+    container.innerHTML = angles.map((angle, i) => {
+      const typeIcons = (angle.contentPlan || []).slice(0, 5).map(item => {
+        const icon = iconMap[item.type] || 'ph-file-text';
+        return `<i class="ph-light ${icon}"></i>`;
+      }).join('');
+
+      return `
+        <div class="pr-angle-suggestion-card ${i === 0 ? 'selected' : ''}" data-angle-index="${i}">
+          <div class="pr-angle-suggestion-card-title">${this.escapeHtml(angle.angleTitle)}</div>
+          <div class="pr-angle-suggestion-card-narrative">${this.escapeHtml(angle.angleNarrative)}</div>
+          <div class="pr-angle-suggestion-card-types">${typeIcons}</div>
+        </div>
+      `;
+    }).join('');
+
+    // Click handlers for cards
+    container.querySelectorAll('.pr-angle-suggestion-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const idx = parseInt(card.dataset.angleIndex);
+        this._selectAngleSuggestion(idx);
+      });
+    });
+  }
+
+  _selectAngleSuggestion(index) {
+    this._selectedAngleIndex = index;
+    const angle = this._angleSuggestions[index];
+    if (!angle) return;
+
+    // Update card selection visuals
+    const container = document.getElementById('pr-angle-suggestions');
+    if (container) {
+      container.querySelectorAll('.pr-angle-suggestion-card').forEach(card => {
+        card.classList.toggle('selected', parseInt(card.dataset.angleIndex) === index);
+      });
+    }
+
+    // Populate detail fields
+    if (this.dom.angleTitleInput) this.dom.angleTitleInput.value = angle.angleTitle;
+    if (this.dom.angleNarrativeInput) this.dom.angleNarrativeInput.value = angle.angleNarrative;
+    if (angle.contentPlan) this._renderAnglePlanChecklist(angle.contentPlan);
   }
 
   _renderAnglePlanChecklist(contentPlan) {
@@ -6159,18 +6338,14 @@ ${primaryContext}${bgContext}`
 
     try {
       const result = await this._fetchAngleAnalysis(pending.primaryContext, pending.bgContext, feedback);
-      if (result.angleTitle) {
-        pending.angleTitle = result.angleTitle;
-        if (this.dom.angleTitleInput) this.dom.angleTitleInput.value = result.angleTitle;
-      }
-      if (result.angleNarrative) {
-        pending.angleNarrative = result.angleNarrative;
-        if (this.dom.angleNarrativeInput) this.dom.angleNarrativeInput.value = result.angleNarrative;
-      }
-      if (result.contentPlan && result.contentPlan.length > 0) {
-        result.contentPlan.sort((a, b) => (a.priority || 99) - (b.priority || 99));
-        pending.contentPlan = result.contentPlan;
-        this._renderAnglePlanChecklist(result.contentPlan);
+      if (result.angles && result.angles.length > 0) {
+        result.angles.forEach(a => {
+          if (a.contentPlan) a.contentPlan.sort((x, y) => (x.priority || 99) - (y.priority || 99));
+        });
+        pending.angles = result.angles;
+        this._angleSuggestions = result.angles;
+        this._renderAngleSuggestionCards(result.angles);
+        this._selectAngleSuggestion(0);
       }
     } catch (e) { /* keep existing values */ }
 
@@ -6186,19 +6361,21 @@ ${primaryContext}${bgContext}`
     if (!pending) return;
 
     // Read potentially edited values from the modal
-    const angleTitle = this.dom.angleTitleInput?.value?.trim() || pending.angleTitle;
-    const angleNarrative = this.dom.angleNarrativeInput?.value?.trim() || pending.angleNarrative;
+    const selectedAngle = pending.angles[this._selectedAngleIndex || 0] || pending.angles[0] || {};
+    const angleTitle = this.dom.angleTitleInput?.value?.trim() || selectedAngle.angleTitle || '';
+    const angleNarrative = this.dom.angleNarrativeInput?.value?.trim() || selectedAngle.angleNarrative || '';
 
     // Filter content plan to only checked items
+    const basePlan = selectedAngle.contentPlan || [];
     const checkboxes = this.dom.anglePlanList?.querySelectorAll('input[type="checkbox"]') || [];
     const checkedPlan = [];
     checkboxes.forEach(cb => {
       const idx = parseInt(cb.dataset.planIndex);
-      if (cb.checked && pending.contentPlan[idx]) {
-        checkedPlan.push(pending.contentPlan[idx]);
+      if (cb.checked && basePlan[idx]) {
+        checkedPlan.push(basePlan[idx]);
       }
     });
-    const contentPlan = checkedPlan.length > 0 ? checkedPlan : pending.contentPlan;
+    const contentPlan = checkedPlan.length > 0 ? checkedPlan : basePlan;
 
     // Close the modal
     this.dom.angleModal?.classList.remove('visible');

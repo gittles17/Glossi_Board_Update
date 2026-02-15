@@ -4886,6 +4886,123 @@ body.sidebar-open .top-nav {
   animation: spin 0.8s linear infinite;
 }
 
+/* Angle Suggestion Cards */
+.pr-angle-suggestions {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.pr-angle-suggestion-card {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) ease, background var(--duration-fast) ease;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pr-angle-suggestion-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.pr-angle-suggestion-card.selected {
+  border-color: var(--accent-primary);
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.pr-angle-suggestion-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.pr-angle-suggestion-card-narrative {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pr-angle-suggestion-card-types {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  margin-top: var(--space-1);
+}
+
+.pr-angle-suggestion-card-types i {
+  font-size: 14px;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* Source Folder Selector in Add Source Modal */
+.pr-source-folder-select {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.pr-source-folder-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-muted);
+  transition: all var(--duration-fast) ease;
+}
+
+.pr-source-folder-option input[type="radio"] {
+  display: none;
+}
+
+.pr-source-folder-option i {
+  font-size: 16px;
+}
+
+.pr-source-folder-option:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+}
+
+.pr-source-folder-option.selected {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+  background: rgba(59, 130, 246, 0.06);
+}
+
+/* System folder styles */
+.pr-folder.pr-system-folder .pr-folder-icon {
+  color: var(--accent-primary);
+}
+
+.pr-folder.pr-system-folder .pr-folder-header {
+  opacity: 1;
+}
+
+.pr-folder-empty-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  opacity: 0.6;
+  padding: var(--space-2) var(--space-3);
+  margin: 0;
+}
+
 /* ============================================
    TODO REVIEW MODAL
    ============================================ */
@@ -13187,35 +13304,7 @@ svg.spinning,
   border-color: var(--accent-green);
 }
 
-/* Create Content from Sources button */
-.pr-create-from-sources-btn {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  margin: 0 var(--space-3) var(--space-2);
-  background: var(--accent-blue);
-  border: none;
-  border-radius: var(--radius-md);
-  color: #fff;
-  font: 600 13px var(--font-sans);
-  cursor: pointer;
-  transition: all var(--duration-fast);
-}
-.pr-create-from-sources-btn:hover:not(:disabled) {
-  background: #2563eb;
-}
-.pr-create-from-sources-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-  background: var(--bg-card);
-  color: var(--text-muted);
-}
-.pr-create-from-sources-btn i {
-  font-size: 15px;
-}
+/* (Create Content from Sources button removed, replaced by auto-trigger) */
 
 /* Custom file tree label */
 .pr-custom-label-row {
@@ -15049,7 +15138,7 @@ svg.spinning,
   }
 
   .pr-add-url-input {
-    width: 180px;
+    width: 160px;
   }
 }
 
@@ -17795,14 +17884,20 @@ body.pr-resizing * {
   z-index: 20;
 }
 
+.pr-add-url-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .pr-add-url-input {
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: 6px 28px 6px 10px;
+  font-size: 12px;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  width: 280px;
+  width: 220px;
   transition: border-color 0.15s;
 }
 
@@ -17841,25 +17936,25 @@ body.pr-resizing * {
   cursor: not-allowed;
 }
 
-.pr-add-url-cancel {
+.pr-add-url-clear {
+  position: absolute;
+  right: 4px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 18px;
+  font-size: 14px;
   cursor: pointer;
   border-radius: var(--radius-sm);
   padding: 0;
-  flex-shrink: 0;
 }
 
-.pr-add-url-cancel:hover {
+.pr-add-url-clear:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Unified filter dropdown */

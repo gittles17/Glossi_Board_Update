@@ -87,15 +87,9 @@
             <div class="pr-workflow-header pr-sources-header">
               <h2 class="pr-workflow-title pr-sources-label">Sources</h2>
               <span class="pr-sources-count" id="pr-sources-count">0</span>
-              <button class="pr-create-folder-btn" id="pr-create-folder-btn" title="Create Folder" aria-label="Create Folder">
-                <i class="ph-light ph-plus"></i>
-              </button>
               <button class="pr-sources-drawer-close" id="pr-sources-drawer-close" title="Close" aria-label="Close">
                 <i class="ph-light ph-x"></i>
               </button>
-            </div>
-            <div class="pr-source-search-wrap">
-              <input type="text" class="pr-source-search" id="pr-source-search" placeholder="Search sources...">
             </div>
             <div class="pr-sources-list pr-drop-zone" id="pr-sources-list">
               <div class="pr-sources-empty" id="pr-sources-empty">
@@ -105,10 +99,6 @@
             <button class="pr-add-source-btn" id="pr-add-source-btn">
               <i class="ph-light ph-plus"></i>
               <span>Add Source</span>
-            </button>
-            <button class="pr-create-from-sources-btn" id="pr-create-from-sources-btn" disabled title="Select sources and create content">
-              <i class="ph-light ph-pencil-line"></i>
-              <span>Create Content</span>
             </button>
           </div>
         </div>
@@ -138,11 +128,13 @@
                     <i class="ph-light ph-plus"></i>
                   </button>
                   <div class="pr-add-url-input-wrap" id="pr-add-url-input-wrap" style="display:none">
-                    <input type="url" class="pr-add-url-input" id="pr-add-url-input" placeholder="Paste article URL..." autocomplete="off">
+                    <div class="pr-add-url-field">
+                      <input type="url" class="pr-add-url-input" id="pr-add-url-input" placeholder="Paste article URL..." autocomplete="off">
+                      <button class="pr-add-url-clear" id="pr-add-url-clear" style="display:none" title="Clear" aria-label="Clear">&times;</button>
+                    </div>
                     <button class="pr-add-url-submit" id="pr-add-url-submit" title="Analyze" aria-label="Analyze">
                       <i class="ph-light ph-paper-plane-tilt"></i>
                     </button>
-                    <button class="pr-add-url-cancel" id="pr-add-url-cancel" title="Cancel" aria-label="Cancel">&times;</button>
                   </div>
                 </div>
                 <div class="pr-filter-wrap">
@@ -577,6 +569,20 @@
         </button>
       </div>
       <div class="modal-body">
+        <!-- Folder Selector -->
+        <div class="pr-source-folder-select">
+          <label class="pr-source-folder-option selected" data-folder="content">
+            <input type="radio" name="pr-source-folder" value="content" checked>
+            <i class="ph-light ph-file-text"></i>
+            <span>Content Sources</span>
+          </label>
+          <label class="pr-source-folder-option" data-folder="glossi">
+            <input type="radio" name="pr-source-folder" value="glossi">
+            <i class="ph-light ph-buildings"></i>
+            <span>About Glossi</span>
+          </label>
+        </div>
+
         <!-- Source Type Tabs -->
         <div class="pr-source-tabs">
           <button class="pr-source-tab active" data-type="text">
@@ -763,7 +769,9 @@
         </button>
       </div>
       <div class="modal-body">
-        <p class="modal-description">The AI analyzed your source material and proposed the following angle. Review, edit, or regenerate before generating content.</p>
+        <p class="modal-description">The AI analyzed your source material and proposed the following angles. Pick one, then edit or regenerate if needed.</p>
+
+        <div class="pr-angle-suggestions" id="pr-angle-suggestions"></div>
 
         <div class="pr-angle-field">
           <label for="pr-angle-title">Angle</label>
