@@ -4920,29 +4920,13 @@ class NewsMonitor {
       filterOutletList: document.getElementById('pr-filter-outlet-list'),
       filterActiveDot: document.getElementById('pr-filter-active-dot'),
       filterClearAll: document.getElementById('pr-filter-clear-all'),
-      angleModal: document.getElementById('pr-angle-modal'),
-      angleTitleInput: document.getElementById('pr-angle-title'),
-      angleNarrativeInput: document.getElementById('pr-angle-narrative'),
-      anglePlanList: document.getElementById('pr-angle-plan-list'),
-      angleFeedbackInput: document.getElementById('pr-angle-feedback'),
-      angleRegenBtn: document.getElementById('pr-angle-regen-btn'),
-      angleConfirmBtn: document.getElementById('pr-angle-confirm'),
-      angleCancelBtn: document.getElementById('pr-angle-cancel'),
-      angleCloseBtn: document.getElementById('pr-angle-modal-close')
+      workspaceContent: document.getElementById('pr-workspace-content'),
+      workspaceEmpty: document.getElementById('pr-workspace-empty')
     };
   }
 
   setupEventListeners() {
     this.dom.fetchNewsBtn?.addEventListener('click', () => this.refreshNews());
-
-    // Angle modal events
-    this.dom.angleConfirmBtn?.addEventListener('click', () => this.confirmAngleAndGenerate());
-    this.dom.angleCancelBtn?.addEventListener('click', () => this.closeAngleModal());
-    this.dom.angleCloseBtn?.addEventListener('click', () => this.closeAngleModal());
-    this.dom.angleRegenBtn?.addEventListener('click', () => {
-      const feedback = this.dom.angleFeedbackInput?.value?.trim() || '';
-      this.regenerateAngle(feedback);
-    });
 
     // Sources drawer toggle
     this.dom.sourcesToggleBtn?.addEventListener('click', () => this.toggleSourcesDrawer());
@@ -6139,8 +6123,8 @@ class NewsMonitor {
       angles
     };
 
-    // Show the angle approval modal with all suggestions
-    this.showAngleModal(angles);
+    // Render inline angle cards in the workspace
+    this.renderInlineAngleCards(angles);
   }
 
   async _fetchAngleAnalysis(primaryContext, bgContext, feedback) {
@@ -6200,83 +6184,24 @@ ${primaryContext}${bgContext}`
     };
   }
 
-  showAngleModal(angles) {
-    this._angleSuggestions = angles;
-    this._selectedAngleIndex = 0;
-
-    // Render suggestion cards
-    this._renderAngleSuggestionCards(angles);
-
-    // Populate detail fields from first angle
-    this._selectAngleSuggestion(0);
-
-    if (this.dom.angleFeedbackInput) this.dom.angleFeedbackInput.value = '';
-    this.dom.angleModal?.classList.add('visible');
-  }
-
-  _renderAngleSuggestionCards(angles) {
-    const container = document.getElementById('pr-angle-suggestions');
+  renderInlineAngleCards(angles) {
+    const container = this.dom.workspaceContent;
     if (!container) return;
 
-    const iconMap = {
-      linkedin_post: 'ph-linkedin-logo',
-      blog_post: 'ph-article',
-      email_blast: 'ph-envelope',
-      media_pitch: 'ph-envelope',
-      tweet_thread: 'ph-x-logo',
-      press_release: 'ph-newspaper',
-      hot_take: 'ph-fire',
-      founder_quote: 'ph-quotes',
-      op_ed: 'ph-pen-nib',
-      talking_points: 'ph-list-bullets'
-    };
+    // Hide other workspace states
+    if (this.dom.workspaceEmpty) this.dom.workspaceEmpty.style.display = 'none';
+    const loadingEl = document.getElementById('pr-loading-state');
+    if (loadingEl) loadingEl.style.display = 'none';
+    const generatedEl = document.getElementById('pr-workspace-generated');
+    if (generatedEl) generatedEl.style.display = 'none';
+    const tabsEl = document.getElementById('pr-content-tabs');
+    if (tabsEl) tabsEl.style.display = 'none';
+    const chatEl = document.getElementById('pr-workspace-chat');
+    if (chatEl) chatEl.style.display = 'none';
 
-    container.innerHTML = angles.map((angle, i) => {
-      const typeIcons = (angle.contentPlan || []).slice(0, 5).map(item => {
-        const icon = iconMap[item.type] || 'ph-file-text';
-        return `<i class="ph-light ${icon}"></i>`;
-      }).join('');
-
-      return `
-        <div class="pr-angle-suggestion-card ${i === 0 ? 'selected' : ''}" data-angle-index="${i}">
-          <div class="pr-angle-suggestion-card-title">${this.escapeHtml(angle.angleTitle)}</div>
-          <div class="pr-angle-suggestion-card-narrative">${this.escapeHtml(angle.angleNarrative)}</div>
-          <div class="pr-angle-suggestion-card-types">${typeIcons}</div>
-        </div>
-      `;
-    }).join('');
-
-    // Click handlers for cards
-    container.querySelectorAll('.pr-angle-suggestion-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const idx = parseInt(card.dataset.angleIndex);
-        this._selectAngleSuggestion(idx);
-      });
-    });
-  }
-
-  _selectAngleSuggestion(index) {
-    this._selectedAngleIndex = index;
-    const angle = this._angleSuggestions[index];
-    if (!angle) return;
-
-    // Update card selection visuals
-    const container = document.getElementById('pr-angle-suggestions');
-    if (container) {
-      container.querySelectorAll('.pr-angle-suggestion-card').forEach(card => {
-        card.classList.toggle('selected', parseInt(card.dataset.angleIndex) === index);
-      });
-    }
-
-    // Populate detail fields
-    if (this.dom.angleTitleInput) this.dom.angleTitleInput.value = angle.angleTitle;
-    if (this.dom.angleNarrativeInput) this.dom.angleNarrativeInput.value = angle.angleNarrative;
-    if (angle.contentPlan) this._renderAnglePlanChecklist(angle.contentPlan);
-  }
-
-  _renderAnglePlanChecklist(contentPlan) {
-    const container = this.dom.anglePlanList;
-    if (!container) return;
+    // Remove any previous inline angle cards
+    const prev = container.querySelector('.pr-workspace-angles');
+    if (prev) prev.remove();
 
     const iconMap = {
       linkedin_post: 'ph-linkedin-logo',
@@ -6304,81 +6229,82 @@ ${primaryContext}${bgContext}`
       founder_quote: 'Founder Quote'
     };
 
-    container.innerHTML = contentPlan.map((item, i) => {
-      const icon = iconMap[item.type] || 'ph-file-text';
-      const label = typeLabels[item.type] || item.type;
-      const desc = item.description || '';
+    const cardsHTML = angles.map((angle, i) => {
+      const planItems = (angle.contentPlan || []).map((p, pi) => {
+        const label = typeLabels[p.type] || p.type;
+        const audienceBadge = p.audience ? `<span class="pr-audience-badge pr-audience-${p.audience}">${p.audience}</span>` : '';
+        return `
+          <div class="pr-angle-card-plan-item" data-plan-index="${pi}">
+            <div class="pr-angle-card-plan-header">
+              <i class="ph-light ph-caret-right pr-plan-item-chevron"></i>
+              <span class="pr-angle-card-plan-label-text">${this.escapeHtml(label)}</span>
+              ${audienceBadge}
+            </div>
+            ${p.description ? `<div class="pr-angle-card-plan-desc"><p>${this.escapeHtml(p.description)}</p></div>` : ''}
+          </div>`;
+      }).join('');
+
       return `
-        <label class="pr-angle-plan-item" data-index="${i}">
-          <input type="checkbox" checked data-plan-index="${i}">
-          <i class="ph-light ${icon}"></i>
-          <span class="pr-angle-plan-item-label">
-            <span class="pr-angle-plan-item-type">${this.escapeHtml(label)}</span>
-            ${desc ? `<span class="pr-angle-plan-item-desc">${this.escapeHtml(desc)}</span>` : ''}
-          </span>
-        </label>
-      `;
+        <div class="pr-angle-card" data-angle-index="${i}">
+          <div class="pr-angle-card-title">${this.escapeHtml(angle.angleTitle)}</div>
+          <div class="pr-angle-card-narrative">${this.escapeHtml(angle.angleNarrative)}</div>
+          <div class="pr-angle-card-row">
+            <i class="ph-light ph-caret-right pr-angle-chevron"></i>
+            <span class="pr-angle-card-plan-label">Content plan</span>
+            <button class="pr-angle-card-generate" data-angle-index="${i}" title="Generate content from this angle">
+              <i class="ph-light ph-lightning"></i>
+            </button>
+          </div>
+          <div class="pr-angle-card-body">
+            <div class="pr-angle-card-plan-list">${planItems}</div>
+          </div>
+        </div>`;
     }).join('');
-  }
 
-  closeAngleModal() {
-    this.dom.angleModal?.classList.remove('visible');
-    this._pendingAngleData = null;
-  }
+    const wrapper = document.createElement('div');
+    wrapper.className = 'pr-workspace-angles';
+    wrapper.innerHTML = `<p class="pr-workspace-angles-heading">AI analyzed your source and proposed these angles. Expand to see the content plan, then click the lightning icon to generate.</p>${cardsHTML}`;
+    container.appendChild(wrapper);
 
-  async regenerateAngle(feedback) {
-    const pending = this._pendingAngleData;
-    if (!pending) return;
-
-    const btn = this.dom.angleRegenBtn;
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<svg class="spinning" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path></svg> Regenerating...';
-    }
-
-    try {
-      const result = await this._fetchAngleAnalysis(pending.primaryContext, pending.bgContext, feedback);
-      if (result.angles && result.angles.length > 0) {
-        result.angles.forEach(a => {
-          if (a.contentPlan) a.contentPlan.sort((x, y) => (x.priority || 99) - (y.priority || 99));
-        });
-        pending.angles = result.angles;
-        this._angleSuggestions = result.angles;
-        this._renderAngleSuggestionCards(result.angles);
-        this._selectAngleSuggestion(0);
-      }
-    } catch (e) { /* keep existing values */ }
-
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="ph-light ph-arrows-clockwise"></i> Regenerate';
-    }
-    if (this.dom.angleFeedbackInput) this.dom.angleFeedbackInput.value = '';
-  }
-
-  confirmAngleAndGenerate() {
-    const pending = this._pendingAngleData;
-    if (!pending) return;
-
-    // Read potentially edited values from the modal
-    const selectedAngle = pending.angles[this._selectedAngleIndex || 0] || pending.angles[0] || {};
-    const angleTitle = this.dom.angleTitleInput?.value?.trim() || selectedAngle.angleTitle || '';
-    const angleNarrative = this.dom.angleNarrativeInput?.value?.trim() || selectedAngle.angleNarrative || '';
-
-    // Filter content plan to only checked items
-    const basePlan = selectedAngle.contentPlan || [];
-    const checkboxes = this.dom.anglePlanList?.querySelectorAll('input[type="checkbox"]') || [];
-    const checkedPlan = [];
-    checkboxes.forEach(cb => {
-      const idx = parseInt(cb.dataset.planIndex);
-      if (cb.checked && basePlan[idx]) {
-        checkedPlan.push(basePlan[idx]);
-      }
+    // Attach expand/collapse handlers on angle card rows
+    wrapper.querySelectorAll('.pr-angle-card-row').forEach(row => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('.pr-angle-card-generate')) return;
+        const card = row.closest('.pr-angle-card');
+        if (card) card.classList.toggle('expanded');
+      });
     });
-    const contentPlan = checkedPlan.length > 0 ? checkedPlan : basePlan;
 
-    // Close the modal
-    this.dom.angleModal?.classList.remove('visible');
+    // Attach expand/collapse handlers on plan item headers
+    wrapper.querySelectorAll('.pr-angle-card-plan-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const item = header.closest('.pr-angle-card-plan-item');
+        if (item) item.classList.toggle('expanded');
+      });
+    });
+
+    // Attach generate button handlers
+    wrapper.querySelectorAll('.pr-angle-card-generate').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(btn.dataset.angleIndex);
+        this.confirmAngleFromCard(idx);
+      });
+    });
+  }
+
+  confirmAngleFromCard(angleIndex) {
+    const pending = this._pendingAngleData;
+    if (!pending) return;
+
+    const selectedAngle = pending.angles[angleIndex] || pending.angles[0] || {};
+    const angleTitle = selectedAngle.angleTitle || '';
+    const angleNarrative = selectedAngle.angleNarrative || '';
+    const contentPlan = selectedAngle.contentPlan || [];
+
+    // Remove inline angle cards from workspace
+    const anglesEl = this.dom.workspaceContent?.querySelector('.pr-workspace-angles');
+    if (anglesEl) anglesEl.remove();
 
     const { key, customTitle, selectedSources, primarySource } = pending;
 
