@@ -4684,13 +4684,19 @@ class NewsMonitor {
       const isArchived = storyOutputs.some(o => o.archived === true);
 
       // Collect source IDs from outputs for custom stories
-      const sourceIds = isCustom
-        ? [...new Set(storyOutputs.flatMap(o => {
-            let s = o.sources;
-            if (typeof s === 'string') { try { s = JSON.parse(s); } catch { s = []; } }
-            return Array.isArray(s) ? s : [];
-          }))]
-        : null;
+      // The primary source ID is the first element of the sources array
+      let sourceIds = null;
+      let primarySourceId = null;
+      if (isCustom) {
+        const allSrcIds = storyOutputs.flatMap(o => {
+          let s = o.sources;
+          if (typeof s === 'string') { try { s = JSON.parse(s); } catch { s = []; } }
+          return Array.isArray(s) ? s : [];
+        });
+        // The first source ID from the first output is the primary
+        if (allSrcIds.length > 0) primarySourceId = allSrcIds[0];
+        sourceIds = [...new Set(allSrcIds)];
+      }
 
       this._stories.set(key, {
         newsItem,
@@ -4704,7 +4710,8 @@ class NewsMonitor {
         custom: isCustom,
         customTitle: isCustom ? headline : undefined,
         category: isCustom ? category : undefined,
-        sourceIds: sourceIds
+        sourceIds: sourceIds,
+        primarySourceId: primarySourceId
       });
     });
 
@@ -5913,13 +5920,17 @@ class NewsMonitor {
     const selectedSources = this.prAgent.sources.filter(s => s.selected);
     if (selectedSources.length === 0) return;
 
-    // Build a title from selected source titles
-    const titleParts = selectedSources.map(s => s.title).filter(Boolean);
-    const customTitle = titleParts.length === 1
-      ? titleParts[0]
-      : titleParts.length <= 3
-        ? titleParts.join(', ')
-        : titleParts.slice(0, 2).join(', ') + ` +${titleParts.length - 2} more`;
+    // Identify the primary source (most recently added) vs background context
+    const sorted = [...selectedSources].sort((a, b) => {
+      const da = new Date(a.created_at || a.createdAt || a.addedAt || 0);
+      const db = new Date(b.created_at || b.createdAt || b.addedAt || 0);
+      return db - da;
+    });
+    const primarySource = sorted[0];
+    const contextSources = sorted.slice(1);
+
+    // Title from the primary source
+    const customTitle = primarySource.title || 'Untitled';
 
     const key = `custom_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 
@@ -5945,10 +5956,15 @@ class NewsMonitor {
     ];
 
     try {
-      const sourcesContext = selectedSources.map((s, i) => {
-        const preview = (s.content || '').substring(0, 3000);
-        return `[Source ${i + 1}] Title: ${s.title}\nType: ${s.type}\nContent:\n${preview}`;
-      }).join('\n---\n');
+      const primaryContext = `PRIMARY SOURCE (this is the main material to create content from):\nTitle: ${primarySource.title}\nType: ${primarySource.type}\nContent:\n${(primarySource.content || '').substring(0, 5000)}`;
+
+      let bgContext = '';
+      if (contextSources.length > 0) {
+        bgContext = '\n\nBACKGROUND CONTEXT (company knowledge for additional detail, NOT the main focus):\n' +
+          contextSources.map((s, i) => {
+            return `[Context ${i + 1}] Title: ${s.title}\nContent:\n${(s.content || '').substring(0, 1500)}`;
+          }).join('\n---\n');
+      }
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -5956,19 +5972,24 @@ class NewsMonitor {
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 1024,
-          system: 'You are a content strategist. Analyze the provided source material and determine the best content category and content plan. Return ONLY valid JSON.',
+          system: 'You are a content strategist. Analyze the PRIMARY SOURCE material and determine what kind of content should be created from it. The background context is only for company knowledge. Return ONLY valid JSON.',
           messages: [{
             role: 'user',
-            content: `Analyze these sources and determine:
-1. The best content CATEGORY from: feature_update, case_study, thought_leadership, product_announcement, how_to_guide, investor_update, hiring_culture, general
-2. A content plan with 4-5 content types to create from this material.
+            content: `Analyze the PRIMARY SOURCE below and determine:
+1. What TYPE of source material this is (e.g., customer testimonials, feature notes, changelog, case study notes, thought leadership draft, press release, etc.)
+2. The best content CATEGORY from: feature_update, case_study, thought_leadership, product_announcement, how_to_guide, investor_update, hiring_culture, general
+3. A content plan with 4-5 content types that are specifically appropriate for THIS type of source material.
 
-Each content plan item should have: type (one of: blog_post, linkedin_post, tweet_thread, email_blast, media_pitch, op_ed, hot_take, talking_points), description, priority (1-5), audience (brands/builders/press/internal).
+For example:
+- Customer testimonials should produce: customer spotlight posts, social proof content, case study articles, sales enablement material
+- Feature updates should produce: changelog blog posts, product announcement tweets, update emails
+- Thought leadership notes should produce: op-eds, LinkedIn thought pieces, tweet threads
 
-Return JSON: { "category": "...", "contentPlan": [...] }
+Each content plan item should have: type (one of: blog_post, linkedin_post, tweet_thread, email_blast, media_pitch, op_ed, hot_take, talking_points), description (specific to the source material), priority (1-5), audience (brands/builders/press/internal).
 
-SOURCES:
-${sourcesContext}`
+Return JSON: { "sourceType": "...", "category": "...", "contentPlan": [...] }
+
+${primaryContext}${bgContext}`
           }]
         })
       });
@@ -5994,7 +6015,7 @@ ${sourcesContext}`
       headline: customTitle,
       url: key,
       content_plan: contentPlan,
-      summary: selectedSources.map(s => (s.content || '').substring(0, 500)).join('\n\n')
+      summary: (primarySource.content || '').substring(0, 2000)
     };
 
     this._activeNewsItem = pseudoNewsItem;
@@ -6016,16 +6037,17 @@ ${sourcesContext}`
       custom: true,
       customTitle,
       category,
-      sourceIds: selectedSources.map(s => s.id)
+      sourceIds: selectedSources.map(s => s.id),
+      primarySourceId: primarySource.id
     });
 
     this.renderStorySelector();
     this.renderContentPlanTabs(contentPlan);
     this.updateCategoryBar();
 
-    // Set angle context from sources
+    // Set angle context from primary source
     this.prAgent.angleContext = {
-      narrative: selectedSources.map(s => (s.content || '').substring(0, 500)).join('\n\n'),
+      narrative: (primarySource.content || '').substring(0, 2000),
       target: contentPlan[0]?.target || '',
       description: contentPlan[0]?.description || ''
     };
@@ -6395,39 +6417,80 @@ ${sourcesContext}`
     const dropdown = document.getElementById('pr-content-type');
     if (dropdown) dropdown.value = planItem.type;
 
-    // Build prompt
-    const sourcesContext = selectedSources.map((s, i) => {
-      return `[Source ${i + 1}] (ID: ${s.id})\nTitle: ${s.title}\nType: ${s.type}\nContent:\n${s.content}\n---`;
-    }).join('\n\n');
-
+    // Build prompt with primary/context separation for custom stories
     let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
 
-    // For custom stories, add category context instead of news angle
-    if (isCustom && activeStory.category && activeStory.category !== 'general') {
-      const categoryLabels = {
-        feature_update: 'Feature Update',
-        case_study: 'Case Study',
-        thought_leadership: 'Thought Leadership',
-        product_announcement: 'Product Announcement',
-        how_to_guide: 'How-to Guide',
-        investor_update: 'Investor Update',
-        hiring_culture: 'Hiring / Culture'
-      };
-      userMessage += `CONTENT CATEGORY: ${categoryLabels[activeStory.category] || activeStory.category}\nWrite in the style appropriate for this category.\n\n`;
-    } else {
-      const angleNarrative = newsItem.angle_narrative || newsItem.relevance || newsItem.summary || '';
-      if (angleNarrative) {
-        userMessage += `STORY ANGLE (use this as your narrative framework):\n${angleNarrative}\n\n`;
-      }
-    }
+    if (isCustom && activeStory.primarySourceId) {
+      // Separate primary source from background context
+      const primarySource = selectedSources.find(s => s.id === activeStory.primarySourceId);
+      const contextSources = selectedSources.filter(s => s.id !== activeStory.primarySourceId);
 
-    if (planItem.description) {
-      userMessage += `Brief: ${planItem.description}\n\n`;
+      // Category context
+      if (activeStory.category && activeStory.category !== 'general') {
+        const categoryLabels = {
+          feature_update: 'Feature Update',
+          case_study: 'Case Study',
+          thought_leadership: 'Thought Leadership',
+          product_announcement: 'Product Announcement',
+          how_to_guide: 'How-to Guide',
+          investor_update: 'Investor Update',
+          hiring_culture: 'Hiring / Culture'
+        };
+        userMessage += `CONTENT CATEGORY: ${categoryLabels[activeStory.category] || activeStory.category}\nWrite in the style appropriate for this category.\n\n`;
+      }
+
+      if (planItem.description) {
+        userMessage += `Brief: ${planItem.description}\n\n`;
+      }
+      if (planItem.target) {
+        userMessage += `Target: ${planItem.target}\n\n`;
+      }
+
+      userMessage += `IMPORTANT: The content MUST be primarily built from the PRIMARY SOURCE below. Use the background context only for company positioning and additional detail. The primary source material should drive the narrative, structure, and key points.\n\n`;
+
+      if (primarySource) {
+        userMessage += `PRIMARY SOURCE (build the content from this):\nTitle: ${primarySource.title}\nType: ${primarySource.type}\nContent:\n${primarySource.content}\n---\n\n`;
+      }
+
+      if (contextSources.length > 0) {
+        userMessage += `BACKGROUND CONTEXT (for company knowledge only, NOT the main focus):\n`;
+        userMessage += contextSources.map((s, i) => {
+          const preview = (s.content || '').substring(0, 2000);
+          return `[Context ${i + 1}] (ID: ${s.id})\nTitle: ${s.title}\nContent:\n${preview}\n---`;
+        }).join('\n\n');
+      }
+    } else {
+      // Non-custom stories or no primary source: original flat behavior
+      const sourcesContext = selectedSources.map((s, i) => {
+        return `[Source ${i + 1}] (ID: ${s.id})\nTitle: ${s.title}\nType: ${s.type}\nContent:\n${s.content}\n---`;
+      }).join('\n\n');
+
+      if (isCustom && activeStory.category && activeStory.category !== 'general') {
+        const categoryLabels = {
+          feature_update: 'Feature Update',
+          case_study: 'Case Study',
+          thought_leadership: 'Thought Leadership',
+          product_announcement: 'Product Announcement',
+          how_to_guide: 'How-to Guide',
+          investor_update: 'Investor Update',
+          hiring_culture: 'Hiring / Culture'
+        };
+        userMessage += `CONTENT CATEGORY: ${categoryLabels[activeStory.category] || activeStory.category}\nWrite in the style appropriate for this category.\n\n`;
+      } else {
+        const angleNarrative = newsItem.angle_narrative || newsItem.relevance || newsItem.summary || '';
+        if (angleNarrative) {
+          userMessage += `STORY ANGLE (use this as your narrative framework):\n${angleNarrative}\n\n`;
+        }
+      }
+
+      if (planItem.description) {
+        userMessage += `Brief: ${planItem.description}\n\n`;
+      }
+      if (planItem.target) {
+        userMessage += `Target: ${planItem.target}\n\n`;
+      }
+      userMessage += `SOURCES:\n${sourcesContext}`;
     }
-    if (planItem.target) {
-      userMessage += `Target: ${planItem.target}\n\n`;
-    }
-    userMessage += `SOURCES:\n${sourcesContext}`;
 
     try {
       const response = await fetch('/api/chat', {
@@ -6468,12 +6531,19 @@ ${sourcesContext}`
       }
 
       const planIndex = parseInt(tabId.replace('plan_', ''), 10);
+
+      // For custom stories, put the primary source ID first in the sources array
+      let sourceIds = selectedSources.map(s => s.id);
+      if (isCustom && activeStory.primarySourceId) {
+        sourceIds = [activeStory.primarySourceId, ...sourceIds.filter(id => id !== activeStory.primarySourceId)];
+      }
+
       const output = {
         id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
         content_type: planItem.type,
         title: this.prAgent.extractTitle(parsed.content, typeLabel),
         content: parsed.content,
-        sources: selectedSources.map(s => s.id),
+        sources: sourceIds,
         citations: parsed.citations || [],
         strategy: parsed.strategy || null,
         status: 'draft',
