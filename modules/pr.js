@@ -4615,24 +4615,53 @@ class NewsMonitor {
       }));
 
       // Build tabContent map from saved outputs
+      // Match outputs to plan items by content_type first, then by content_plan_index
       const tabContent = new Map();
+      const usedOutputIds = new Set();
+
+      // Pass 1: match by content_type to the plan
+      contentPlan.forEach((planItem, index) => {
+        const tabId = `plan_${index}`;
+        const match = storyOutputs.find(o => o.content_type === planItem.type && !usedOutputIds.has(o.id));
+        if (match) {
+          usedOutputIds.add(match.id);
+          let drafts = match.drafts;
+          if (typeof drafts === 'string') {
+            try { drafts = JSON.parse(drafts); } catch (e) { drafts = null; }
+          }
+          if (!drafts && match.content) {
+            drafts = [{ content: match.content, version: 1, timestamp: Date.now(), prompt: null }];
+          }
+          match.content_plan_index = index;
+          tabContent.set(tabId, {
+            loading: false,
+            output: { ...match, content_plan_index: index, drafts: drafts || [] },
+            refining: false,
+            suggestionsHTML: ''
+          });
+        }
+      });
+
+      // Pass 2: fill remaining tabs by content_plan_index for unmatched outputs
       storyOutputs.forEach(output => {
+        if (usedOutputIds.has(output.id)) return;
         const idx = output.content_plan_index || 0;
         const tabId = `plan_${idx}`;
-        // Parse drafts if stored as string
-        let drafts = output.drafts;
-        if (typeof drafts === 'string') {
-          try { drafts = JSON.parse(drafts); } catch (e) { drafts = null; }
+        if (!tabContent.has(tabId)) {
+          let drafts = output.drafts;
+          if (typeof drafts === 'string') {
+            try { drafts = JSON.parse(drafts); } catch (e) { drafts = null; }
+          }
+          if (!drafts && output.content) {
+            drafts = [{ content: output.content, version: 1, timestamp: Date.now(), prompt: null }];
+          }
+          tabContent.set(tabId, {
+            loading: false,
+            output: { ...output, drafts: drafts || [] },
+            refining: false,
+            suggestionsHTML: ''
+          });
         }
-        if (!drafts && output.content) {
-          drafts = [{ content: output.content, version: 1, timestamp: Date.now(), prompt: null }];
-        }
-        tabContent.set(tabId, {
-          loading: false,
-          output: { ...output, drafts: drafts || [] },
-          refining: false,
-          suggestionsHTML: ''
-        });
       });
 
       // Check archived status from any output in the group
@@ -8009,6 +8038,12 @@ class DistributeManager {
     if (!this.prAgent.outputs.includes(output)) {
       this.prAgent.outputs.push(output);
     }
+
+    // Sync content_type and content_plan_index with the plan item
+    if (planItem.type && output.content_type !== planItem.type) {
+      output.content_type = planItem.type;
+    }
+    output.content_plan_index = planIndex;
 
     // Update phase and status
     output.phase = 'distribute';
