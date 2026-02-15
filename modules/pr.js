@@ -3062,18 +3062,30 @@ class PRAgent {
   _deduplicateTitleFromContent(contentHTML, title) {
     const container = document.createElement('div');
     container.innerHTML = contentHTML;
-    const firstChild = container.firstElementChild;
-    if (!firstChild) return contentHTML;
-    const tagName = firstChild.tagName.toLowerCase();
-    if (tagName === 'h1' || tagName === 'h2' || tagName === 'h3' || tagName === 'p') {
-      const childText = firstChild.textContent.trim();
-      const titleNorm = title.trim();
-      if (childText === titleNorm || titleNorm.includes(childText) || childText.includes(titleNorm)) {
-        firstChild.remove();
-        return container.innerHTML;
+    const titleNorm = title.trim().toLowerCase();
+
+    let root = container;
+    const firstChild = root.firstElementChild;
+    if (firstChild && firstChild.classList.contains('pr-draft-content')) {
+      root = firstChild;
+    }
+
+    const candidate = root.firstElementChild;
+    if (!candidate) return contentHTML;
+
+    const candidateText = candidate.textContent.trim().toLowerCase();
+    const tag = candidate.tagName.toLowerCase();
+    const isHeadingOrPara = ['h1','h2','h3','h4','p','strong','b'].includes(tag);
+    const isParaWithStrong = tag === 'p' && candidate.children.length === 1 && ['strong','b'].includes(candidate.children[0]?.tagName?.toLowerCase() || '');
+
+    if (isHeadingOrPara || isParaWithStrong) {
+      const textToCheck = isParaWithStrong ? candidate.children[0].textContent.trim().toLowerCase() : candidateText;
+      if (textToCheck === titleNorm || titleNorm.includes(textToCheck) || textToCheck.includes(titleNorm)) {
+        candidate.remove();
       }
     }
-    return contentHTML;
+
+    return container.innerHTML;
   }
 
   _buildBrandedHTML(title, typeLabel, dateStr, contentHTML) {
