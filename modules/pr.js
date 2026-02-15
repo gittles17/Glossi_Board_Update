@@ -7850,6 +7850,11 @@ class DistributeManager {
       this.showMediaUrlInput('Paste video URL...');
     });
 
+    document.getElementById('pr-media-link-btn')?.addEventListener('click', () => {
+      this._mediaUrlMode = 'link';
+      this.showMediaUrlInput('Paste link URL...');
+    });
+
     document.getElementById('pr-media-url-confirm')?.addEventListener('click', () => {
       this.confirmMediaUrl();
     });
@@ -8225,12 +8230,42 @@ class DistributeManager {
     const url = input?.value?.trim();
     if (!url) return;
 
-    if (this._mediaUrlMode === 'video') {
+    if (this._mediaUrlMode === 'link') {
+      this.addFirstCommentLink(url);
+    } else if (this._mediaUrlMode === 'video') {
       this.addMedia({ type: 'video', url, thumbnail: this.getVideoThumbnail(url) });
     } else {
       this.addMedia({ type: 'image', url });
     }
     this.hideMediaUrlInput();
+  }
+
+  async addFirstCommentLink(url) {
+    if (!this.activeReviewItem) return;
+
+    this.activeReviewItem.first_comment = url;
+
+    try {
+      const ogRes = await this.prAgent.apiCall('/api/pr/og-metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      if (ogRes.success && ogRes.og) {
+        this.activeReviewItem.og_data = ogRes.og;
+      }
+    } catch (e) { /* silent */ }
+
+    this.persistOutput(this.activeReviewItem);
+    this.renderFirstComment(this.activeReviewItem);
+  }
+
+  removeFirstCommentLink() {
+    if (!this.activeReviewItem) return;
+    this.activeReviewItem.first_comment = null;
+    this.activeReviewItem.og_data = null;
+    this.persistOutput(this.activeReviewItem);
+    this.renderFirstComment(this.activeReviewItem);
   }
 
   getVideoThumbnail(url) {
@@ -8353,14 +8388,24 @@ class DistributeManager {
       `;
     }
 
+    const canRemove = output.status === 'review';
+    const removeLinkBtn = canRemove
+      ? `<button class="pr-li-comment-remove" data-action="remove-link" title="Remove link"><i class="ph-light ph-x"></i></button>`
+      : '';
+
     container.innerHTML = `
       <div class="pr-li-comment-header">
         <div class="pr-li-comment-avatar">${avatarHtml}</div>
         <div class="pr-li-comment-name">${this.escapeHtml(name)}</div>
+        ${removeLinkBtn}
       </div>
       <div class="pr-li-comment-text">${this.escapeHtml(comment)}</div>
       ${commentLinkPreview}
     `;
+
+    container.querySelector('[data-action="remove-link"]')?.addEventListener('click', () => {
+      this.removeFirstCommentLink();
+    });
   }
 
   async persistOutput(output) {

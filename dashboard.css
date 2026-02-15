@@ -18867,6 +18867,33 @@ body.pr-resizing * {
   font-size: 13px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.8);
+  flex: 1;
+}
+
+.pr-li-comment-remove {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.pr-li-first-comment:hover .pr-li-comment-remove {
+  opacity: 1;
+}
+
+.pr-li-comment-remove:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
 }
 
 .pr-li-comment-text {
