@@ -788,6 +788,22 @@ app.delete('/api/pr/outputs/:id', async (req, res) => {
   }
 });
 
+// Delete all outputs for a story_key
+app.delete('/api/pr/outputs/story/:storyKey', async (req, res) => {
+  try {
+    const { storyKey } = req.params;
+    
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    
+    await pool.query('DELETE FROM pr_outputs WHERE story_key = $1', [storyKey]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Archive/unarchive outputs by story_key (single or bulk)
 app.patch('/api/pr/outputs/archive', async (req, res) => {
   try {

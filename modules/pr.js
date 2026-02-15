@@ -4939,12 +4939,14 @@ class NewsMonitor {
     this.dom.fetchNewsBtn?.addEventListener('click', () => this.refreshNews());
 
     // Strategy sub-tab switching
+    const addSourceBtn = this.dom.customAddSourceBtn;
     document.querySelectorAll('.pr-strategy-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('.pr-strategy-tab').forEach(t => t.classList.toggle('active', t === tab));
         document.querySelectorAll('.pr-strategy-panel').forEach(p => {
           p.classList.toggle('active', p.dataset.strategyTab === tab.dataset.strategyTab);
         });
+        if (addSourceBtn) addSourceBtn.style.display = tab.dataset.strategyTab === 'custom' ? '' : 'none';
       });
     });
 
@@ -5596,6 +5598,12 @@ class NewsMonitor {
 
   closeStory(key) {
     this._stories.delete(key);
+
+    // Delete all outputs for this story from the database
+    try {
+      fetch(`/api/pr/outputs/story/${encodeURIComponent(key)}`, { method: 'DELETE' });
+    } catch (e) { /* silent */ }
+
     if (this._activeStoryKey === key) {
       // Switch to next available story or show empty
       const keys = [...this._stories.keys()];
@@ -5627,8 +5635,16 @@ class NewsMonitor {
     const isActive = storyKey === this._activeStoryKey;
     const oldLength = story.contentPlan.length;
 
-    // Rebuild tabContent map with shifted indices (remove deleted, shift later ones down)
+    // Delete the specific output from the database if it exists
     const oldTabContent = isActive ? this._tabContent : (story.tabContent || new Map());
+    const deletedEntry = oldTabContent.get(`plan_${planIndex}`);
+    if (deletedEntry?.output?.id) {
+      try {
+        fetch(`/api/pr/outputs/${encodeURIComponent(deletedEntry.output.id)}`, { method: 'DELETE' });
+      } catch (e) { /* silent */ }
+    }
+
+    // Rebuild tabContent map with shifted indices (remove deleted, shift later ones down)
     const newTabContent = new Map();
     for (let i = 0; i < oldLength; i++) {
       if (i === planIndex) continue;
@@ -6179,7 +6195,7 @@ ${primaryContext}${bgContext}`
     if (!container) return;
 
     if (loading) {
-      container.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: var(--space-5);">Analyzing source material...</p>';
+      container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:var(--space-6);"><svg class="spinning" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><circle cx="12" cy="12" r="10" opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" opacity="0.75"></path></svg></div>';
       this.dom.angleSelectModal?.classList.add('visible');
       return;
     }
@@ -6519,6 +6535,9 @@ ${primaryContext}${bgContext}`
     this._activeTabId = null;
     this._activeStoryKey = key;
 
+    // Detect custom stories (from custom cards)
+    const isCustom = key.startsWith('custom_') || !!newsItem._customCard;
+
     // Create the story entry
     this._stories.set(key, {
       newsItem,
@@ -6528,7 +6547,11 @@ ${primaryContext}${bgContext}`
       currentOutput: null,
       chatHTML: '',
       suggestionsHTML: '',
-      archived: false
+      archived: false,
+      custom: isCustom,
+      customTitle: isCustom ? (newsItem.headline || 'Untitled') : undefined,
+      angleTitle: isCustom ? (newsItem.angle_title || '') : undefined,
+      angleNarrative: isCustom ? (newsItem.angle_narrative || '') : undefined
     });
 
     // Render story selector and content plan tabs
