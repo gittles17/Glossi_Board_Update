@@ -7875,6 +7875,13 @@ class DistributeManager {
 
     [reviewList, scheduledList, publishedList].forEach(list => {
       list?.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('.pr-distribute-queue-remove');
+        if (removeBtn) {
+          e.stopPropagation();
+          const removeId = removeBtn.dataset.removeId;
+          if (removeId) this.removeFromReview(removeId);
+          return;
+        }
         const item = e.target.closest('.pr-distribute-queue-item');
         if (item) {
           const outputId = item.dataset.outputId;
@@ -7961,7 +7968,7 @@ class DistributeManager {
           body: JSON.stringify({ url: extractedLink })
         });
         if (ogRes.success && ogRes.og) {
-          output._ogData = ogRes.og;
+          output.og_data = ogRes.og;
         }
       } catch (e) { /* silent */ }
     }
@@ -8050,6 +8057,21 @@ class DistributeManager {
       if (scheduleBtn) scheduleBtn.style.display = 'none';
     }
 
+    // Re-fetch OG data if output has a first_comment link but no og_data (e.g. older outputs)
+    if (output.first_comment && !output.og_data) {
+      this.prAgent.apiCall('/api/pr/og-metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: output.first_comment })
+      }).then(ogRes => {
+        if (ogRes.success && ogRes.og) {
+          output.og_data = ogRes.og;
+          this.persistOutput(output);
+          this.renderFirstComment(output);
+        }
+      }).catch(() => {});
+    }
+
     this.renderLinkedInPreview(output);
     this.renderHashtags(output);
     this.renderFirstComment(output);
@@ -8114,22 +8136,6 @@ class DistributeManager {
       }
     }
 
-    // Build link preview card (OG data)
-    let linkPreviewHtml = '';
-    if (output._ogData && output.first_comment) {
-      const og = output._ogData;
-      linkPreviewHtml = `
-        <div class="pr-li-link-preview">
-          ${og.image ? `<div class="pr-li-link-preview-image"><img src="${this.escapeHtml(og.image)}" alt=""></div>` : ''}
-          <div class="pr-li-link-preview-body">
-            <div class="pr-li-link-preview-domain">${this.escapeHtml(og.domain || '')}</div>
-            <div class="pr-li-link-preview-title">${this.escapeHtml(og.title || '')}</div>
-            ${og.description ? `<div class="pr-li-link-preview-desc">${this.escapeHtml(og.description)}</div>` : ''}
-          </div>
-        </div>
-      `;
-    }
-
     container.innerHTML = `
       <div class="pr-li-header">
         <div class="pr-li-avatar">${avatarHtml}</div>
@@ -8144,7 +8150,6 @@ class DistributeManager {
       </div>
       <div class="pr-li-body ${isLong ? 'pr-li-body-truncated' : ''}">${formattedBody}</div>
       ${mediaHtml}
-      ${linkPreviewHtml}
       <div class="pr-li-engagement">
         <div class="pr-li-action"><i class="ph-light ph-thumbs-up"></i> Like</div>
         <div class="pr-li-action"><i class="ph-light ph-chat-teardrop"></i> Comment</div>
@@ -8323,8 +8328,8 @@ class DistributeManager {
 
     // Build link preview inside comment if OG data
     let commentLinkPreview = '';
-    if (output._ogData) {
-      const og = output._ogData;
+    if (output.og_data) {
+      const og = output.og_data;
       commentLinkPreview = `
         <div class="pr-li-link-preview" style="margin-top: 8px; border-radius: 6px; overflow: hidden; border: 1px solid #383838;">
           ${og.image ? `<div class="pr-li-link-preview-image"><img src="${this.escapeHtml(og.image)}" alt=""></div>` : ''}
@@ -8385,6 +8390,34 @@ class DistributeManager {
     // Switch to Create tab
     const createNav = document.querySelector('.pr-nav-item[data-stage="create"]');
     if (createNav) createNav.click();
+  }
+
+  async removeFromReview(outputId) {
+    const output = this.prAgent.outputs.find(o => o.id === outputId);
+    if (!output) return;
+
+    output.phase = 'edit';
+    output.status = 'draft';
+
+    try {
+      await this.prAgent.apiCall('/api/pr/outputs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(output)
+      });
+    } catch (e) { /* silent */ }
+
+    this.prAgent.saveOutputs();
+
+    if (this.activeReviewItem?.id === outputId) {
+      this.activeReviewItem = null;
+      const emptyState = document.getElementById('pr-distribute-empty-state');
+      const previewContent = document.getElementById('pr-distribute-preview-content');
+      if (emptyState) emptyState.style.display = '';
+      if (previewContent) previewContent.style.display = 'none';
+    }
+
+    this.render();
   }
 
   async publishNow() {
@@ -8527,6 +8560,10 @@ class DistributeManager {
         metaText = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       }
 
+      const removeBtn = status === 'review'
+        ? `<button class="pr-distribute-queue-remove" data-remove-id="${this.escapeHtml(output.id)}" title="Remove from review"><i class="ph-light ph-x"></i></button>`
+        : '';
+
       return `
         <div class="pr-distribute-queue-item ${isActive ? 'active' : ''}" data-output-id="${this.escapeHtml(output.id)}">
           <div class="pr-distribute-queue-item-icon">
@@ -8539,6 +8576,7 @@ class DistributeManager {
               ${metaText ? `<span>${metaText}</span>` : ''}
             </div>
           </div>
+          ${removeBtn}
         </div>
       `;
     }).join('');
