@@ -457,38 +457,53 @@ app.get('/api/settings', (req, res) => {
 
 // Proxy endpoint for Anthropic API calls (avoids CORS)
 app.post('/api/chat', async (req, res) => {
-  try {
-    const { messages, system, model, max_tokens } = req.body;
-    
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Anthropic API key not configured in environment variables' 
+  const { messages, system, model, max_tokens } = req.body;
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({
+      success: false,
+      error: 'Anthropic API key not configured in environment variables'
+    });
+  }
+
+  const maxRetries = 3;
+  const retryableStatuses = [429, 502, 503, 529];
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await axios.post('https://api.anthropic.com/v1/messages', {
+        model: model || 'claude-opus-4-6',
+        max_tokens: max_tokens || 4096,
+        system: system || '',
+        messages
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        timeout: 180000
+      });
+
+      return res.json(response.data);
+    } catch (error) {
+      const status = error.response?.status;
+      const isRetryable = retryableStatuses.includes(status) || (!status && error.code === 'ECONNRESET');
+
+      if (isRetryable && attempt < maxRetries) {
+        const retryAfter = error.response?.headers?.['retry-after'];
+        const delay = retryAfter ? parseInt(retryAfter, 10) * 1000 : Math.min(1000 * Math.pow(2, attempt), 8000);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+
+      console.error('Chat API error:', error.response?.data || error.message);
+      return res.status(status || 500).json({
+        success: false,
+        error: error.response?.data?.error?.message || error.message
       });
     }
-    
-    const response = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: model || 'claude-opus-4-6',
-      max_tokens: max_tokens || 4096,
-      system: system || '',
-      messages
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      timeout: 180000
-    });
-    
-    res.json(response.data);
-  } catch (error) {
-    console.error('Chat API error:', error.response?.data || error.message);
-    res.status(error.response?.status || 500).json({
-      success: false,
-      error: error.response?.data?.error?.message || error.message
-    });
   }
 });
 

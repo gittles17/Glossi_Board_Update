@@ -7305,14 +7305,23 @@ ${primaryContext}${bgContext}`
       description: contentPlan[0]?.description || ''
     };
 
-    // Auto-generate all content plan tabs
-    // Start generation FIRST so _tabContent has loading entries before switchContentTab reads them
+    // Auto-generate all content plan tabs sequentially to avoid concurrent API overload
+    // Mark all tabs as loading first so switchContentTab shows the correct state
+    const loaderContextMap = { tweet: 'tweet', linkedin_post: 'linkedin', blog_post: 'blog', email_blast: 'email', product_announcement: 'product', talking_points: 'talking_points', investor_snippet: 'investor' };
     contentPlan.forEach((item, i) => {
       const tabId = `plan_${i}`;
-      this.generateTabContent(tabId, item, newsItem);
+      this._tabContent.set(tabId, { loading: true, output: null, refining: false, suggestionsHTML: '', loaderContext: loaderContextMap[item.type] || 'general' });
     });
     const firstTabId = `plan_0`;
     this.switchContentTab(firstTabId);
+
+    // Generate tabs sequentially (first tab starts immediately, rest wait for previous to finish)
+    (async () => {
+      for (let i = 0; i < contentPlan.length; i++) {
+        const tabId = `plan_${i}`;
+        await this.generateTabContent(tabId, contentPlan[i], newsItem);
+      }
+    })();
 
     // Update strategy cards to reflect in-workspace status
     this.renderNews();
