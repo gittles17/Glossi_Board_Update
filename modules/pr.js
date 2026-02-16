@@ -11114,7 +11114,8 @@ class DistributeManager {
     }
 
     try {
-      const media = this.activeReviewItem.media_attachments || [];
+      const tweetFormat = this.activeReviewItem.tweet_format || 'text';
+      const media = tweetFormat === 'visual' ? (this.activeReviewItem.media_attachments || []) : [];
       const imageAttachment = media.find(m => m.type === 'image');
       const payload = {
         content: isThread ? threadParts[0] : content,
