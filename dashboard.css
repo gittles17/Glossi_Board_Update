@@ -17966,6 +17966,15 @@ body.pr-resizing * {
   font-size: 16px;
 }
 
+.pr-toolbar-btn.spinning {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.pr-toolbar-btn.spinning i {
+  animation: spin 1s linear infinite;
+}
+
 /* Expandable search - floating dropdown */
 .pr-search-expandable-wrap {
   display: flex;
