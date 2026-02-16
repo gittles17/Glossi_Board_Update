@@ -1970,6 +1970,48 @@ app.post('/api/pr/upload-media', upload.single('file'), (req, res) => {
   }
 });
 
+// Shorten tweet text to fit within character limit
+app.post('/api/pr/shorten-tweet', async (req, res) => {
+  try {
+    const { content, max_chars, tweet_format } = req.body;
+    if (!content) {
+      return res.status(400).json({ success: false, error: 'content is required' });
+    }
+
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicKey) {
+      return res.status(503).json({ success: false, error: 'ANTHROPIC_API_KEY not configured' });
+    }
+
+    const limit = max_chars || 280;
+    const currentLength = content.length;
+
+    const response = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: 'claude-haiku-4-5',
+      max_tokens: 512,
+      system: `You rewrite tweets to fit within a strict character limit. Preserve the core message, tone, and key insight. Cut filler words, simplify phrasing, remove parentheticals and secondary details. The tweet must read as a complete, punchy thought. Return ONLY the rewritten tweet text. No quotes, no explanation, no preamble.`,
+      messages: [{ role: 'user', content: `This tweet is ${currentLength} characters. Rewrite it to fit within ${limit} characters. Format: ${tweet_format || 'text'}.\n\nTweet: "${content}"` }]
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01'
+      },
+      timeout: 30000
+    });
+
+    const shortened = response.data?.content?.[0]?.text?.trim();
+    if (!shortened) {
+      return res.json({ success: false, error: 'No shortened text generated' });
+    }
+
+    res.json({ success: true, content: shortened, length: shortened.length });
+  } catch (error) {
+    const msg = error.response?.data?.error?.message || error.message;
+    res.status(500).json({ success: false, error: msg });
+  }
+});
+
 // Generate visual prompt via Claude (analyzes tweet text, produces optimal Gemini image prompt)
 app.post('/api/pr/generate-visual-prompt', async (req, res) => {
   try {
@@ -1992,48 +2034,62 @@ EXACT STYLE TO MATCH (based on Cursor's @cursor_ai X/Twitter infographics):
 BACKGROUND:
 - Warm off-white/cream background, approximately #ede8e3 or #f0edea. Flat, solid, no gradients, no textures.
 
-HEADLINE:
-- Bold black headline text (#1a1a1a), top-left aligned, clean sans-serif font (Inter, Helvetica Neue, or similar).
-- 1-2 lines, bold weight, roughly 24-32px equivalent. Short, declarative, editorial.
-- The headline states the insight or finding. It is NOT a title card. It describes what the data shows.
+TYPOGRAPHY HIERARCHY (strict rules for maximum glanceability):
+People scan, they do not read. ~79% of users scan images. Every text element must have a clear, distinct role.
 
-DATA VISUALIZATION (this is the core of the infographic):
+- LEVEL 1 (Headline): Bold black (#1a1a1a), top-left aligned, clean sans-serif (Inter or similar). 24-32px equivalent. 1-2 lines max. Semibold weight. This is the largest text and appears exactly once. It states the insight, not a title.
+- LEVEL 2 (Data labels / axis values): Medium weight, clearly smaller than headline. 14-16px equivalent. Dark gray (#4a4a4a). Used for chart labels, axis values, category names.
+- LEVEL 3 (Supporting / annotations): Regular weight, smallest text. 11-13px equivalent. Muted gray (#8a8580). Used for footnotes, source attributions, secondary context.
+
+Hierarchy rules:
+- Each level must be visually distinct. Minimum 4px step between adjacent levels. No subtle differences.
+- No more than 3 text sizes in the entire image. Each additional size adds ambiguity.
+- Bold and accent colors used sparingly. When emphasis is everywhere, hierarchy collapses.
+- Spacing signals importance. More whitespace above headlines, tight spacing within data groups.
+- Position matters. Key text top-left where scanning patterns expect it.
+- NEVER use body-weight text at heading sizes. NEVER make labels as large as the headline.
+
+DATA VISUALIZATION (the core of the infographic):
 - Render actual data charts when the content involves numbers, comparisons, trends, or measurements.
-- Chart types to use: bar charts (vertical or horizontal), line charts, scatter plots, simple area charts.
-- Two data colors only: warm orange (#EC5F3F) for the primary/highlighted data series, and medium gray (#b0aca6 or #a8a4a0) for the secondary/comparison series.
-- Thin axis lines in light gray. Small, clean axis labels in gray (#8a8580), roughly 11-13px.
+- Chart types: bar charts (vertical or horizontal), line charts, scatter plots, simple area charts.
+- Two data colors only: warm orange (#EC5F3F) for the primary/highlighted series, and medium gray (#b0aca6) for the secondary/comparison series.
+- Thin axis lines in light gray. Small, clean axis labels in muted gray (#8a8580), 11-13px.
 - No gridlines or minimal dashed gridlines. No chart borders. No 3D effects.
 - Data points/bars should be clearly readable. Clean spacing between bars.
-- Annotate key insights directly on the chart with small text callouts in orange or dark gray.
+- Annotate key insights directly on the chart with small callouts in orange or dark gray.
 
 WHEN THERE IS NO CHART DATA:
-- If the tweet is a claim, opinion, or non-numeric insight, use a clean typographic layout instead.
-- One large bold stat or pull quote in black, with a small supporting label underneath.
+- If the tweet is a claim, opinion, or non-numeric insight, use a clean typographic layout.
+- One large bold stat or pull quote in black (Level 1), with a small supporting label underneath (Level 3).
 - Keep to 2-3 lines of text maximum. The typography IS the visual.
 
 LAYOUT:
-- 1200x675px landscape ratio. Generous margins (60-80px on all sides).
+- 1200x675px landscape. Generous margins (60-80px on all sides).
 - Headline at top-left. Chart/visualization centered below it.
-- Small footnote or source text at bottom-right in muted gray if relevant.
+- Small footnote or source at bottom-right in Level 3 text if relevant.
 - Extreme whitespace. Never crowd the canvas. Let every element breathe.
 
-WHAT TO AVOID:
+ANTI-PATTERNS (never do these):
+- Too many text sizes or weights competing for attention.
+- Bold or colored text used so frequently it loses meaning.
+- Dense layouts with insufficient spacing between hierarchy levels.
+- Labels that are the same size as headings.
 - No dark backgrounds. No black or near-black.
 - No borders around the image. No drop shadows. No 3D effects.
 - No icons, emoji, logos, or decorative elements.
 - No more than 3 colors total (off-white background, black text, orange+gray for data).
 - No complex multi-panel layouts. One chart, one concept.
-- No stock photo elements. No gradients. No patterns.
+- No stock photos. No gradients. No patterns.
 
-MOOD: Professional, editorial, confident. Like a chart from a premium tech company's blog post or research report. The kind of image that makes someone stop scrolling because the data itself is interesting.
+MOOD: Professional, editorial, confident. Like a chart from a premium tech company's blog or research report. Designed to stop someone mid-scroll because the data itself is interesting and instantly readable.
 
 PROMPT CONSTRUCTION RULES:
 - Include ALL style rules above directly in your prompt. The image model needs explicit instructions.
 - Describe the exact chart type, data values, axis labels, and headline text.
-- Specify the exact colors by hex code.
-- Specify the background color explicitly.
-- If creating a chart, provide the approximate data values and labels so the model can render them.
+- Specify the exact colors by hex code. Specify the background color explicitly.
+- If creating a chart, provide the approximate data values and labels.
 - Be extremely specific. "Bar chart showing X with values A, B, C" is good. "A visualization of the data" is bad.
+- Always specify the 3-level typography hierarchy with exact sizes and colors.
 
 Return ONLY the image generation prompt text. No explanation, no preamble, no quotes around it. Just the prompt.`;
 

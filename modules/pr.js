@@ -2261,6 +2261,36 @@ class PRAgent {
 
       if (contentType === 'tweet_thread') {
         output.tweet_format = parsed.tweet_format || 'text';
+
+        const maxChars = output.tweet_format === 'link' ? 257 : 280;
+        let tweetContent = output.content || '';
+        let retries = 0;
+        const maxRetries = 3;
+
+        while (tweetContent.length > maxChars && retries < maxRetries) {
+          retries++;
+          try {
+            const shortenRes = await fetch('/api/pr/shorten-tweet', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: tweetContent,
+                max_chars: maxChars,
+                tweet_format: output.tweet_format
+              })
+            });
+            const shortenData = await shortenRes.json();
+            if (shortenData.success && shortenData.content) {
+              tweetContent = shortenData.content;
+            } else {
+              break;
+            }
+          } catch {
+            break;
+          }
+        }
+
+        output.content = tweetContent;
       }
 
       this.currentOutput = output;
