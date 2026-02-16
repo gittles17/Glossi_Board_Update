@@ -80,11 +80,11 @@ CRITICAL RULES FOR TWEETS:
 - Default to VISUAL when the topic has data, numbers, a comparison, or a claim that could be illustrated.
 
 VISUAL PROMPT RULES (required when tweet_format is "visual" or "product"):
-- Describe the visual concisely: what data, comparison, or concept it shows
-- Style: minimal, dark background (#000 or #0a0a0a), clean sans-serif type, Glossi orange (#EC5F3F) as accent
-- No clutter. Think Linear changelog graphics or Cursor's product screenshots.
-- Include specific text/labels that should appear on the graphic
-- Prefer: comparisons, before/after, data points, architecture diagrams, feature highlights
+- Describe WHAT to show: the specific stat, comparison, or concept. Be concrete. "90% of GenAI projects fail to reach production" is good. "AI failure rates" is too vague.
+- Include the exact text/numbers that should appear on the graphic. The image generator needs literal strings to render.
+- Prefer: one bold stat with context, before/after comparisons, two-column contrasts, a single provocative claim rendered as a pull quote.
+- Keep it to ONE concept. Never ask for multiple charts or complex layouts.
+- Do NOT describe colors, fonts, or layout in the visual_prompt. The image generator already has detailed style rules baked in (Cursor-style dark minimal with Glossi orange accent). Just describe the content.
 
 Founder Quote / Soundbite: Short. Quotable. Something a journalist would actually use. Not corporate speak.
 

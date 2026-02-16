@@ -1892,7 +1892,23 @@ app.post('/api/pr/generate-infographic', async (req, res) => {
       return res.status(503).json({ success: false, error: 'GEMINI_API_KEY not configured' });
     }
 
-    const styledPrompt = `Create a clean, minimal infographic or data visual for social media (X/Twitter). Style: dark background (#0a0a0a), clean sans-serif typography, orange (#EC5F3F) as the accent color, plenty of whitespace, no clutter. The visual should be simple and bold, easy to read at small sizes. Do not include any watermarks or logos. Content: ${prompt}`;
+    const styledPrompt = `Create a social media graphic for X/Twitter in the exact style of Cursor's (@cursor_ai) posts. Follow these design rules precisely:
+
+LAYOUT: 1200x675px landscape. One single concept per image. Extreme negative space. Content is centered or left-aligned with generous margins (at least 80px on all sides). Never fill the entire canvas.
+
+BACKGROUND: Solid near-black (#0a0a0a). No gradients, no textures, no patterns. Just flat dark.
+
+TYPOGRAPHY: Clean modern sans-serif (Inter or similar). Two levels only: one large bold headline (white #e7e9ea, 36-48px equivalent) and one smaller supporting line (muted gray #71767b, 16-20px). Never more than 2-3 lines of text total. Let the type breathe.
+
+COLOR: Almost entirely monochrome (white text on black). The ONLY accent color is Glossi orange (#EC5F3F), used sparingly for one key number, one underline, one highlighted word, or one small element. Never use orange for backgrounds or large areas. Less is more.
+
+DATA/STATS: If showing numbers, make the key stat enormous (60-80px bold white) with a small label underneath. One or two stats max. If showing a comparison, use a minimal two-column layout or a simple before/after with a dividing line.
+
+WHAT TO AVOID: No borders. No drop shadows. No 3D effects. No icons or emoji. No stock photo elements. No watermarks. No logos. No heavy ornamentation. No cluttered layouts. No bullet points. No more than 3 colors total (black, white/gray, orange accent).
+
+MOOD: Confident, editorial, slightly opinionated. Like a premium tech company's changelog graphic or a sharp data card that stops someone mid-scroll.
+
+Content to visualize: ${prompt}`;
 
     const model = 'gemini-2.5-flash-image';
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
