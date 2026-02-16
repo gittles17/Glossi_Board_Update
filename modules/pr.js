@@ -9284,6 +9284,11 @@ class DistributeManager {
     output.phase = 'distribute';
     output.status = 'review';
 
+    // Strip [Source N] citation markers from tweet/hot take content
+    if (output.content_type === 'tweet_thread' || output.content_type === 'hot_take') {
+      output.content = output.content.replace(/\s*\[Source\s*\d+\]/gi, '').trim();
+    }
+
     // Extract URLs from content and move to first comment
     const extractedLink = this.extractFirstLink(output.content);
     if (extractedLink) {

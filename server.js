@@ -1894,7 +1894,7 @@ app.post('/api/pr/generate-infographic', async (req, res) => {
 
     const styledPrompt = `Create a clean, minimal infographic or data visual for social media (X/Twitter). Style: dark background (#0a0a0a), clean sans-serif typography, orange (#EC5F3F) as the accent color, plenty of whitespace, no clutter. The visual should be simple and bold, easy to read at small sizes. Do not include any watermarks or logos. Content: ${prompt}`;
 
-    const model = 'gemini-2.5-flash-preview-04-17';
+    const model = 'gemini-2.5-flash-image';
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
 
     const response = await axios.post(apiUrl, {
