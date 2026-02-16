@@ -2043,38 +2043,36 @@ BACKGROUND:
 - Warm off-white/cream background, approximately #ede8e3 or #f0edea. Flat, solid, no gradients, no textures.
 
 TYPOGRAPHY HIERARCHY (strict rules for maximum glanceability):
-People scan, they do not read. ~79% of users scan images. Every text element must have a clear, distinct role.
+People scan, they do not read. Every text element must have a clear, distinct role. Use exactly 3 text sizes.
 
-- LEVEL 1 (Headline): Bold black (#1a1a1a), top-left aligned, clean sans-serif (Inter or similar). 24-32px equivalent. 1-2 lines max. Semibold weight. This is the largest text and appears exactly once. It states the insight, not a title.
-- LEVEL 2 (Data labels / axis values): Medium weight, clearly smaller than headline. 14-16px equivalent. Dark gray (#4a4a4a). Used for chart labels, axis values, category names.
-- LEVEL 3 (Supporting / annotations): Regular weight, smallest text. 11-13px equivalent. Muted gray (#8a8580). Used for footnotes, source attributions, secondary context.
+- LEVEL 1 (Headline): The largest text. Bold black (#1a1a1a), top-left aligned, clean sans-serif. 1-2 lines max. Appears exactly once. States the insight.
+- LEVEL 2 (Data labels): Clearly smaller than headline. Medium weight, dark gray (#4a4a4a). Used for chart labels, axis values, category names.
+- LEVEL 3 (Supporting): The smallest text. Regular weight, muted gray (#8a8580). Used for footnotes, source attributions, secondary context.
 
 Hierarchy rules:
-- Each level must be visually distinct. Minimum 4px step between adjacent levels. No subtle differences.
-- No more than 3 text sizes in the entire image. Each additional size adds ambiguity.
+- Each level must be visually distinct with clear size separation.
 - Bold and accent colors used sparingly. When emphasis is everywhere, hierarchy collapses.
 - Spacing signals importance. More whitespace above headlines, tight spacing within data groups.
-- Position matters. Key text top-left where scanning patterns expect it.
-- NEVER use body-weight text at heading sizes. NEVER make labels as large as the headline.
+- Key text top-left where scanning patterns expect it.
 
 DATA VISUALIZATION (the core of the infographic):
 - Render actual data charts when the content involves numbers, comparisons, trends, or measurements.
 - Chart types: bar charts (vertical or horizontal), line charts, scatter plots, simple area charts.
 - Two data colors only: warm orange (#EC5F3F) for the primary/highlighted series, and medium gray (#b0aca6) for the secondary/comparison series.
-- Thin axis lines in light gray. Small, clean axis labels in muted gray (#8a8580), 11-13px.
+- Thin axis lines in light gray. Small, clean axis labels in muted gray (#8a8580).
 - No gridlines or minimal dashed gridlines. No chart borders. No 3D effects.
 - Data points/bars should be clearly readable. Clean spacing between bars.
 - Annotate key insights directly on the chart with small callouts in orange or dark gray.
 
 WHEN THERE IS NO CHART DATA:
 - If the tweet is a claim, opinion, or non-numeric insight, use a clean typographic layout.
-- One large bold stat or pull quote in black (Level 1), with a small supporting label underneath (Level 3).
+- One large bold stat or pull quote in black, with a small supporting label underneath.
 - Keep to 2-3 lines of text maximum. The typography IS the visual.
 
 LAYOUT:
-- 1200x675px landscape. Generous margins (60-80px on all sides).
+- 1200x675 landscape. Generous margins on all sides.
 - Headline at top-left. Chart/visualization centered below it.
-- Small footnote or source at bottom-right in Level 3 text if relevant.
+- Small footnote or source at bottom-right if relevant.
 - Extreme whitespace. Never crowd the canvas. Let every element breathe.
 
 ANTI-PATTERNS (never do these):
@@ -2091,13 +2089,16 @@ ANTI-PATTERNS (never do these):
 
 MOOD: Professional, editorial, confident. Like a chart from a premium tech company's blog or research report. Designed to stop someone mid-scroll because the data itself is interesting and instantly readable.
 
+CRITICAL RULE: Your prompt must describe the VISUAL APPEARANCE of the infographic only. Do NOT include any technical metadata, sizing annotations, pixel values, margin numbers, font-size numbers, or layout measurements in the prompt. Never write things like "70px" or "15px" or "60px margin". Describe sizes using relative terms only: "large bold headline", "medium-sized labels", "small footnote text". The image model will render any numbers it sees as visible text on the image.
+
 PROMPT CONSTRUCTION RULES:
-- Include ALL style rules above directly in your prompt. The image model needs explicit instructions.
+- Include ALL style rules above directly in your prompt using natural visual language.
 - Describe the exact chart type, data values, axis labels, and headline text.
-- Specify the exact colors by hex code. Specify the background color explicitly.
+- Specify colors by hex code (these are for the rendering engine, not visible text).
+- Specify the background color explicitly.
 - If creating a chart, provide the approximate data values and labels.
-- Be extremely specific. "Bar chart showing X with values A, B, C" is good. "A visualization of the data" is bad.
-- Always specify the 3-level typography hierarchy with exact sizes and colors.
+- Be extremely specific about WHAT to show but use relative terms for HOW BIG.
+- NEVER include pixel values, margin sizes, or font sizes as numbers. These will appear as visible artifacts.
 
 Return ONLY the image generation prompt text. No explanation, no preamble, no quotes around it. Just the prompt.`;
 
