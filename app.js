@@ -4422,7 +4422,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
         </div>
       </div>
     `;
-    this._reviewLoaderId = startLoaderStatus(document.getElementById('review-loading'), 'general');
+    this._reviewLoaderId = startLoaderStatus(document.getElementById('review-loading'), 'meeting_notes');
 
     try {
       const result = await aiProcessor.processMeetingNotes(notes, title, date);
