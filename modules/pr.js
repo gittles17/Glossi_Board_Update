@@ -10565,21 +10565,19 @@ class DistributeManager {
 
   async refineVisual(output, feedback) {
     const tweetText = output.content || '';
-    if (!tweetText.trim() || !output.visual_prompt) return;
+    if (!tweetText.trim()) return;
 
     output._visualGenerating = true;
     output.media_attachments = (output.media_attachments || []).filter(m => m.type !== 'image');
     this.renderTwitterPreview(output);
 
     try {
+      const payload = { tweet_text: tweetText, feedback: feedback };
+      if (output.visual_prompt) payload.previous_prompt = output.visual_prompt;
       const promptRes = await this.prAgent.apiCall('/api/pr/generate-visual-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tweet_text: tweetText,
-          previous_prompt: output.visual_prompt,
-          feedback: feedback
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!promptRes.success || !promptRes.prompt) {
