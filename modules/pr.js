@@ -147,7 +147,6 @@ const CONTENT_TYPES = [
   { id: 'op_ed', label: 'Op-Ed / Bylined Article' },
   { id: 'email_blast', label: 'Email Blast' },
   { id: 'investor_snippet', label: 'Investor Update Snippet' },
-  { id: 'hot_take', label: 'Hot Take' },
   { id: 'custom', label: 'Custom' }
 ];
 
@@ -2278,7 +2277,7 @@ class PRAgent {
         phase: 'edit'
       };
 
-      if (contentType === 'tweet_thread' || contentType === 'hot_take') {
+      if (contentType === 'tweet_thread') {
         output.tweet_format = parsed.tweet_format || 'text';
         if (parsed.visual_prompt) {
           output.visual_prompt = parsed.visual_prompt;
@@ -6559,7 +6558,7 @@ For each angle, provide:
 2. An ANGLE NARRATIVE (2-3 sentences) explaining how this angle approaches the source material, what story threads it pulls, and how the content will be positioned.
 3. A content plan with 4-5 content types specifically appropriate for THIS angle.
 
-Each content plan item should have: type (one of: blog_post, linkedin_post, tweet_thread, email_blast, media_pitch, op_ed, hot_take, talking_points), description (specific to the angle), priority (1-5), audience (brands/builders/press/internal).
+Each content plan item should have: type (one of: blog_post, linkedin_post, tweet_thread, email_blast, media_pitch, op_ed, talking_points), description (specific to the angle), priority (1-5), audience (brands/builders/press/internal).
 
 Return JSON: { "angles": [{ "angleTitle": "...", "angleNarrative": "...", "contentPlan": [...] }, ...] }
 ${feedbackClause}
@@ -6621,7 +6620,6 @@ ${primaryContext}${bgContext}`
       media_pitch: 'ph-envelope',
       tweet_thread: 'ph-x-logo',
       press_release: 'ph-newspaper',
-      hot_take: 'ph-fire',
       founder_quote: 'ph-quotes',
       op_ed: 'ph-pen-nib',
       talking_points: 'ph-list-bullets'
@@ -7028,8 +7026,7 @@ ${primaryContext}${bgContext}`
       const isTrend = /trend|shift|future|landscape|wave|era/.test(angleTitle);
       contentPlan = isUrgent
         ? [
-            { type: 'hot_take', description: 'Quick, opinionated reaction while the news is fresh', priority: 1, audience: 'builders' },
-            { type: 'tweet_thread', description: 'One sharp, punchy tweet (280 chars max)', priority: 2, audience: 'builders' },
+            { type: 'tweet_thread', description: 'Quick, opinionated reaction while the news is fresh', priority: 1, audience: 'builders' },
             { type: 'media_pitch', description: 'Pitch to relevant reporters with Glossi angle', priority: 3, audience: 'press' },
             { type: 'email_blast', description: 'Signal boost to subscriber list', priority: 4, audience: 'brands' }
           ]
@@ -7161,7 +7158,6 @@ ${primaryContext}${bgContext}`
       'op_ed': 'Op-Ed',
       'email_blast': 'Email Blast',
       'investor_snippet': 'Investor Snippet',
-      'hot_take': 'Hot Take',
       'custom': 'Custom'
     };
     return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -7889,7 +7885,7 @@ class AngleManager {
         urgency: 'high',
         why_now: 'World model announcements and funding rounds happening now',
         content_plan: [
-          { type: 'hot_take', description: 'Everyone is excited about world models. Here is what they are missing: the product still needs to be real.', target: 'Twitter/X', priority: 1, audience: 'builders', completed: false },
+          { type: 'tweet_thread', description: 'Everyone is excited about world models. Here is what they are missing: the product still needs to be real.', target: 'Twitter/X', priority: 1, audience: 'builders', completed: false },
           { type: 'blog_post', description: 'Deep dive: how Glossi\'s compositing-first architecture was built for the world model era', target: 'Company blog', priority: 2, audience: 'brands', completed: false },
           { type: 'media_pitch', description: 'Pitch to AI reporters: the startup that built for world models before they arrived', target: 'TechCrunch / VentureBeat', priority: 3, audience: 'press', completed: false },
           { type: 'investor_snippet', description: 'World model validation proof point for investor updates', target: 'Investor comms', priority: 4, audience: 'investors', completed: false }
@@ -8810,8 +8806,7 @@ class AngleManager {
       'talking_points': 'Talking Points',
       'op_ed': 'Op-Ed',
       'email_blast': 'Email Blast',
-      'investor_snippet': 'Investor Snippet',
-      'hot_take': 'Hot Take'
+      'investor_snippet': 'Investor Snippet'
     };
     return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
@@ -8946,7 +8941,7 @@ class AngleManager {
 // DISTRIBUTE MANAGER
 // ============================================
 
-const LINKEDIN_PUBLISHABLE_TYPES = ['linkedin_post', 'blog_post', 'hot_take', 'founder_quote'];
+const LINKEDIN_PUBLISHABLE_TYPES = ['linkedin_post', 'blog_post', 'founder_quote'];
 
 class DistributeManager {
   constructor(prAgent) {
@@ -9285,7 +9280,7 @@ class DistributeManager {
     output.status = 'review';
 
     // Strip [Source N] citation markers from tweet/hot take content
-    if (output.content_type === 'tweet_thread' || output.content_type === 'hot_take') {
+    if (output.content_type === 'tweet_thread') {
       output.content = output.content.replace(/\s*\[Source\s*\d+\]/gi, '').trim();
     }
 
@@ -9568,8 +9563,7 @@ class DistributeManager {
       'email_blast': 'email',
       'media_pitch': 'email',
       'pitch': 'email',
-      'tweet_thread': 'twitter',
-      'hot_take': 'twitter'
+      'tweet_thread': 'twitter'
     };
     return map[contentType] || 'blog';
   }
@@ -10531,7 +10525,6 @@ class DistributeManager {
         media_pitch: 'ph-envelope',
         tweet_thread: 'ph-x-logo',
         press_release: 'ph-newspaper',
-        hot_take: 'ph-fire',
         founder_quote: 'ph-quotes',
         product_announcement: 'ph-megaphone',
         op_ed: 'ph-pen-nib',
