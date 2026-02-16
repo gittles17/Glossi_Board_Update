@@ -1261,6 +1261,11 @@ class PRAgent {
       this.renderSources();
       this.updateGenerateButton();
       this.closeSourceModal();
+
+      if (folder === 'Content Sources' && this.newsMonitor && this.newsMonitor._customSourceFlow) {
+        this.newsMonitor._customSourceFlow = false;
+        this.newsMonitor.triggerAngleAnalysis(source);
+      }
     } catch (err) {
       this.showToast('Failed to fetch URL content. Please try again.', 'error');
     } finally {
@@ -9507,10 +9512,8 @@ class DistributeManager {
     output.phase = 'distribute';
     output.status = 'review';
 
-    // Strip [Source N] citation markers from tweet/hot take content
-    if (output.content_type === 'tweet') {
-      output.content = output.content.replace(/\s*\[Source\s*\d+\]/gi, '').trim();
-    }
+    // Clean citations from content before review
+    output.content = await this.cleanCitationsForReview(output);
 
     // Extract URLs from content and move to first comment
     const extractedLink = this.extractFirstLink(output.content);
@@ -9590,6 +9593,69 @@ class DistributeManager {
         this.persistOutput(output);
       }
     } catch (e) { /* silent, hashtags are optional */ }
+  }
+
+  async cleanCitationsForReview(output) {
+    if (!output.content || !/\[Source\s*\d+\]/i.test(output.content)) {
+      return output.content || '';
+    }
+
+    if (output.content_type === 'tweet') {
+      return output.content.replace(/\s*\[Source\s*\d+\]/gi, '').trim();
+    }
+
+    const sourceMatches = output.content.match(/\[Source\s*(\d+)\]/gi) || [];
+    const sourceIndices = [...new Set(sourceMatches.map(m => parseInt(m.match(/\d+/)[0])))];
+
+    const citationDetails = sourceIndices.map(idx => {
+      const citation = output.citations?.find(c => c.index === idx);
+      const source = citation?.sourceId
+        ? this.prAgent.sources.find(s => s.id === citation.sourceId)
+        : null;
+      return {
+        index: idx,
+        title: source?.title || `Source ${idx}`,
+        url: source?.url || null,
+        type: source?.type || 'unknown',
+        folder: source?.folder || 'unknown'
+      };
+    });
+
+    try {
+      const res = await this.prAgent.apiCall('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5',
+          max_tokens: 4096,
+          system: [
+            'You clean source citations from content before it gets published.',
+            'Rules:',
+            '- Remove ALL [Source N] markers that reference internal company knowledge, internal docs, or sources without credible external URLs.',
+            '- KEEP only citations that reference credible, well-known external publications (e.g. TechCrunch, Bloomberg, The Verge, WSJ, NYT, Reuters, etc.) that validate a claim in the content.',
+            '- For KEPT citations, replace [Source N] with a natural inline markdown hyperlink: [publication name](url). Weave it into the sentence naturally (e.g. "according to [TechCrunch](https://...)").',
+            '- Do NOT add new attribution where there was none. Only convert existing [Source N] markers.',
+            '- Clean up double spaces or awkward punctuation left after removing citations.',
+            '- Return ONLY the cleaned content text. No commentary, no explanation.'
+          ].join('\n'),
+          messages: [{
+            role: 'user',
+            content: `Source details:\n${JSON.stringify(citationDetails, null, 2)}\n\nContent to clean:\n${output.content}`
+          }]
+        })
+      });
+
+      const cleaned = res.content?.[0]?.text;
+      if (cleaned && cleaned.trim().length > 50) {
+        return cleaned.trim();
+      }
+    } catch (e) { /* fall through to simple strip */ }
+
+    return output.content
+      .replace(/\s*\[Source\s*\d+\]/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/\s+([.,;:!?])/g, '$1')
+      .trim();
   }
 
   selectReviewItem(outputId) {
