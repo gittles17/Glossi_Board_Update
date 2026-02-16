@@ -121,7 +121,7 @@ function glossiLoaderSVG(extraClass = '') {
 }
 
 const CONTENT_TYPES = [
-  { id: 'tweet_thread', label: 'Tweet' },
+  { id: 'tweet', label: 'Tweet' },
   { id: 'linkedin_post', label: 'LinkedIn Post' },
   { id: 'blog_post', label: 'Blog Post' },
   { id: 'email_blast', label: 'Email' },
@@ -2150,7 +2150,7 @@ class PRAgent {
       return;
     }
 
-    const contentType = this.dom.contentType?.value || 'tweet_thread';
+    const contentType = this.dom.contentType?.value || 'tweet';
     const typeLabel = CONTENT_TYPES.find(t => t.id === contentType)?.label || contentType;
     const customPrompt = contentType === 'custom' ? (this.dom.customPrompt?.value.trim() || '') : '';
 
@@ -2172,7 +2172,7 @@ class PRAgent {
       mobileWorkspaceTab.click();
     }
     
-    const loaderContext = { tweet_thread: 'tweet', linkedin_post: 'linkedin', blog_post: 'blog', email_blast: 'email', product_announcement: 'product', talking_points: 'talking_points', investor_snippet: 'investor' }[contentType] || 'general';
+    const loaderContext = { tweet: 'tweet', linkedin_post: 'linkedin', blog_post: 'blog', email_blast: 'email', product_announcement: 'product', talking_points: 'talking_points', investor_snippet: 'investor' }[contentType] || 'general';
     this.showLoading(loaderContext);
 
     const sourcesContext = selectedSources.map((s, i) => {
@@ -2259,7 +2259,7 @@ class PRAgent {
         phase: 'edit'
       };
 
-      if (contentType === 'tweet_thread') {
+      if (contentType === 'tweet') {
         output.tweet_format = parsed.tweet_format || 'text';
 
         const maxChars = output.tweet_format === 'link' ? 257 : 280;
@@ -5117,7 +5117,7 @@ class NewsMonitor {
       const standardTypes = [
         { type: 'linkedin_post', description: 'Key insight as a founder perspective post', audience: 'brands' },
         { type: 'blog_post', description: 'In-depth analysis with product angle', audience: 'brands' },
-        { type: 'tweet_thread', description: 'One sharp, punchy tweet (280 chars max)', audience: 'builders' },
+        { type: 'tweet', description: 'One sharp, punchy tweet (280 chars max)', audience: 'builders' },
         { type: 'email_blast', description: 'Signal boost to subscriber list', audience: 'brands' }
       ];
       const existingTypes = new Set(contentPlan.map(p => p.type));
@@ -6561,7 +6561,7 @@ class NewsMonitor {
     const defaultPlan = [
       { type: 'blog_post', description: 'In-depth analysis with product angle', priority: 1, audience: 'brands' },
       { type: 'linkedin_post', description: 'Key insight as a founder perspective post', priority: 2, audience: 'brands' },
-      { type: 'tweet_thread', description: 'One sharp, punchy tweet (280 chars max)', priority: 3, audience: 'builders' },
+      { type: 'tweet', description: 'One sharp, punchy tweet (280 chars max)', priority: 3, audience: 'builders' },
       { type: 'email_blast', description: 'Signal boost to subscriber list', priority: 4, audience: 'brands' }
     ];
 
@@ -6651,7 +6651,7 @@ For each angle, provide:
 2. An ANGLE NARRATIVE (2-3 sentences) explaining how this angle approaches the source material, what story threads it pulls, and how the content will be positioned.
 3. A content plan with 4-5 content types specifically appropriate for THIS angle.
 
-Each content plan item should have: type (one of: tweet_thread, linkedin_post, blog_post, email_blast, product_announcement, talking_points, investor_snippet), description (specific to the angle), priority (1-5), audience (brands/builders/press/internal).
+Each content plan item should have: type (one of: tweet, linkedin_post, blog_post, email_blast, product_announcement, talking_points, investor_snippet), description (specific to the angle), priority (1-5), audience (brands/builders/press/internal).
 
 Return JSON: { "angles": [{ "angleTitle": "...", "angleNarrative": "...", "contentPlan": [...] }, ...] }
 ${feedbackClause}
@@ -6710,7 +6710,7 @@ ${primaryContext}${bgContext}`
       linkedin_post: 'ph-linkedin-logo',
       blog_post: 'ph-article',
       email_blast: 'ph-envelope',
-      tweet_thread: 'ph-x-logo',
+      tweet: 'ph-x-logo',
       talking_points: 'ph-list-bullets',
       media_pitch: 'ph-envelope',
       press_release: 'ph-article',
@@ -7120,26 +7120,26 @@ ${primaryContext}${bgContext}`
       const isTrend = /trend|shift|future|landscape|wave|era/.test(angleTitle);
       contentPlan = isUrgent
         ? [
-            { type: 'tweet_thread', description: 'Quick, opinionated reaction while the news is fresh', priority: 1, audience: 'builders' },
+            { type: 'tweet', description: 'Quick, opinionated reaction while the news is fresh', priority: 1, audience: 'builders' },
             { type: 'email_blast', description: 'Pitch to relevant reporters with Glossi angle', priority: 2, audience: 'press' },
             { type: 'linkedin_post', description: 'Signal boost with founder perspective', priority: 3, audience: 'brands' }
           ]
         : isCompetitor
         ? [
             { type: 'blog_post', description: 'Bylined take on what competitors miss', priority: 1, audience: 'builders' },
-            { type: 'tweet_thread', description: 'One sharp, punchy tweet on the competitive move (280 chars max)', priority: 2, audience: 'builders' },
+            { type: 'tweet', description: 'One sharp, punchy tweet on the competitive move (280 chars max)', priority: 2, audience: 'builders' },
             { type: 'linkedin_post', description: 'Founder perspective on the market move', priority: 3, audience: 'brands' }
           ]
         : isTrend
         ? [
             { type: 'blog_post', description: 'Opinionated perspective on this trend', priority: 1, audience: 'builders' },
             { type: 'linkedin_post', description: 'Founder POV distilled to one key insight', priority: 2, audience: 'brands' },
-            { type: 'tweet_thread', description: 'One sharp, punchy tweet on the trend (280 chars max)', priority: 3, audience: 'builders' }
+            { type: 'tweet', description: 'One sharp, punchy tweet on the trend (280 chars max)', priority: 3, audience: 'builders' }
           ]
         : [
             { type: 'blog_post', description: 'In-depth analysis with product angle', priority: 1, audience: 'brands' },
             { type: 'linkedin_post', description: 'Key insight as a founder perspective post', priority: 2, audience: 'brands' },
-            { type: 'tweet_thread', description: 'One sharp, punchy tweet (280 chars max)', priority: 3, audience: 'builders' }
+            { type: 'tweet', description: 'One sharp, punchy tweet (280 chars max)', priority: 3, audience: 'builders' }
           ];
     }
 
@@ -7237,7 +7237,7 @@ ${primaryContext}${bgContext}`
 
   formatContentType(type) {
     const labels = {
-      'tweet_thread': 'Tweet',
+      'tweet': 'Tweet',
       'linkedin_post': 'LinkedIn Post',
       'blog_post': 'Blog Post',
       'email_blast': 'Email',
@@ -7377,7 +7377,7 @@ ${primaryContext}${bgContext}`
     }
 
     const typeLabel = CONTENT_TYPES.find(t => t.id === planItem.type)?.label || planItem.type;
-    const loaderContext = { tweet_thread: 'tweet', linkedin_post: 'linkedin', blog_post: 'blog', email_blast: 'email', product_announcement: 'product', talking_points: 'talking_points', investor_snippet: 'investor' }[planItem.type] || 'general';
+    const loaderContext = { tweet: 'tweet', linkedin_post: 'linkedin', blog_post: 'blog', email_blast: 'email', product_announcement: 'product', talking_points: 'talking_points', investor_snippet: 'investor' }[planItem.type] || 'general';
 
     // Mark tab as loading (preserve existing refining/suggestionsHTML if re-generating)
     const prevEntry = this._tabContent.get(tabId);
@@ -7779,7 +7779,7 @@ class CalendarManager {
 
     const typeIcons = {
       'linkedin_post': '💼',
-      'tweet_thread': '𝕏',
+      'tweet': '𝕏',
       'blog_post': '📝',
       'email_blast': '📧',
       'press_release': '📝',
@@ -7828,7 +7828,7 @@ class CalendarManager {
             <label for="cal-item-type">Type</label>
             <select id="cal-item-type" class="input">
               <option value="linkedin_post">LinkedIn Post</option>
-              <option value="tweet_thread">Tweet</option>
+              <option value="tweet">Tweet</option>
               <option value="blog_post">Blog Post</option>
               <option value="email_blast">Email</option>
               <option value="product_announcement">Product Announcement</option>
@@ -7966,7 +7966,7 @@ class AngleManager {
         why_now: 'Persistent problem, always relevant',
         content_plan: [
           { type: 'blog_post', description: 'Why every AI-generated product image is slowly eroding your brand (and what to do about it)', target: 'Company blog', priority: 1, audience: 'brands', completed: false },
-          { type: 'tweet_thread', description: 'One punchy tweet: the visual quality gap brands keep ignoring.', target: 'Twitter/X', priority: 2, audience: 'builders', completed: false },
+          { type: 'tweet', description: 'One punchy tweet: the visual quality gap brands keep ignoring.', target: 'Twitter/X', priority: 2, audience: 'builders', completed: false },
           { type: 'email_blast', description: 'The brand consistency problem nobody talks about, with a Glossi angle', target: 'Email list', priority: 3, audience: 'brands', completed: false }
         ],
         isDefault: true,
@@ -7980,7 +7980,7 @@ class AngleManager {
         urgency: 'high',
         why_now: 'World model announcements and funding rounds happening now',
         content_plan: [
-          { type: 'tweet_thread', description: 'Everyone is excited about world models. Here is what they are missing: the product still needs to be real.', target: 'Twitter/X', priority: 1, audience: 'builders', completed: false },
+          { type: 'tweet', description: 'Everyone is excited about world models. Here is what they are missing: the product still needs to be real.', target: 'Twitter/X', priority: 1, audience: 'builders', completed: false },
           { type: 'blog_post', description: 'Deep dive: how Glossi\'s compositing-first architecture was built for the world model era', target: 'Company blog', priority: 2, audience: 'brands', completed: false },
           { type: 'email_blast', description: 'Pitch to AI reporters: the startup that built for world models before they arrived', target: 'TechCrunch / VentureBeat', priority: 3, audience: 'press', completed: false },
           { type: 'investor_snippet', description: 'World model validation proof point for investor updates', target: 'Investor comms', priority: 4, audience: 'investors', completed: false }
@@ -7997,7 +7997,7 @@ class AngleManager {
         why_now: 'Evergreen explainer angle',
         content_plan: [
           { type: 'linkedin_post', description: 'The green screen analogy, explained in one post. Your product is the actor. AI builds the set.', target: 'LinkedIn', priority: 1, audience: 'brands', completed: false },
-          { type: 'tweet_thread', description: 'Punchy soundbite version of the green screen analogy for X', target: 'Twitter/X', priority: 2, audience: 'builders', completed: false },
+          { type: 'tweet', description: 'Punchy soundbite version of the green screen analogy for X', target: 'Twitter/X', priority: 2, audience: 'builders', completed: false },
           { type: 'talking_points', description: 'Elevator pitch script built around the green screen frame', target: 'Internal', priority: 3, audience: 'internal', completed: false }
         ],
         isDefault: true,
@@ -8393,7 +8393,7 @@ class AngleManager {
     }
 
     const typeLabel = CONTENT_TYPES.find(t => t.id === planItem.type)?.label || planItem.type;
-    const loaderContext = { tweet_thread: 'tweet', linkedin_post: 'linkedin', blog_post: 'blog', email_blast: 'email', product_announcement: 'product', talking_points: 'talking_points', investor_snippet: 'investor' }[planItem.type] || 'general';
+    const loaderContext = { tweet: 'tweet', linkedin_post: 'linkedin', blog_post: 'blog', email_blast: 'email', product_announcement: 'product', talking_points: 'talking_points', investor_snippet: 'investor' }[planItem.type] || 'general';
 
     // Mark tab as loading
     this.tabContent.set(tabId, { loading: true, output: null, loaderContext });
@@ -8894,7 +8894,7 @@ class AngleManager {
 
   formatContentType(type) {
     const typeMap = {
-      'tweet_thread': 'Tweet',
+      'tweet': 'Tweet',
       'linkedin_post': 'LinkedIn Post',
       'blog_post': 'Blog Post',
       'email_blast': 'Email',
@@ -9393,7 +9393,7 @@ class DistributeManager {
     output.status = 'review';
 
     // Strip [Source N] citation markers from tweet/hot take content
-    if (output.content_type === 'tweet_thread') {
+    if (output.content_type === 'tweet') {
       output.content = output.content.replace(/\s*\[Source\s*\d+\]/gi, '').trim();
     }
 
@@ -9674,7 +9674,7 @@ class DistributeManager {
       'linkedin_post': 'linkedin',
       'blog_post': 'blog',
       'email_blast': 'email',
-      'tweet_thread': 'twitter',
+      'tweet': 'twitter',
       'media_pitch': 'email',
       'pitch': 'email',
       'press_release': 'blog',
@@ -10746,7 +10746,7 @@ class DistributeManager {
       const isActive = this.activeReviewItem?.id === output.id;
 
       const iconMap = {
-        tweet_thread: 'ph-x-logo',
+        tweet: 'ph-x-logo',
         linkedin_post: 'ph-linkedin-logo',
         blog_post: 'ph-article',
         email_blast: 'ph-envelope',

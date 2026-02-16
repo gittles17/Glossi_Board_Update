@@ -418,17 +418,17 @@ CONTEXT: Glossi is a seed-stage startup building awareness with builders (devs, 
 
 ACTIVE CHANNELS: LinkedIn, Twitter/X, company blog, email list, press outreach. Only suggest content for these channels.
 
-VALID CONTENT TYPES: tweet_thread, linkedin_post, blog_post, email_blast, product_announcement, talking_points, investor_snippet
+VALID CONTENT TYPES: tweet, linkedin_post, blog_post, email_blast, product_announcement, talking_points, investor_snippet
 
 SELECTION HEURISTICS (pick based on article type, not a default template):
-- Breaking/time-sensitive news: tweet_thread + email_blast + linkedin_post
-- Competitor or market shift: blog_post + tweet_thread + linkedin_post
-- Thought leadership / trend piece: blog_post + linkedin_post + tweet_thread
-- Product/feature relevance: product_announcement + blog_post + tweet_thread
+- Breaking/time-sensitive news: tweet + email_blast + linkedin_post
+- Competitor or market shift: blog_post + tweet + linkedin_post
+- Thought leadership / trend piece: blog_post + linkedin_post + tweet
+- Product/feature relevance: product_announcement + blog_post + tweet
 - Funding/business signal: investor_snippet + linkedin_post + email_blast
 - Customer/industry story: blog_post + linkedin_post + email_blast
-- Technical deep-dive: blog_post + tweet_thread + talking_points
-- "Everyone gets this wrong": tweet_thread + blog_post + linkedin_post
+- Technical deep-dive: blog_post + tweet + talking_points
+- "Everyone gets this wrong": tweet + blog_post + linkedin_post
 
 DYNAMIC PLAN SIZE (based on relevance to Glossi):
 - High relevance + high urgency: 4-5 content pieces
@@ -1374,7 +1374,7 @@ Return articles in this JSON format:
       "angle_title": "Short story angle name (3-6 words, e.g. 'AI Photography Goes Enterprise')",
       "angle_narrative": "1-2 sentences explaining the story angle AND how it connects to Glossi. Weave in the Glossi tie-in naturally, not as a separate thought. Example: 'As enterprise brands scramble to adopt AI for product content, Glossi's compositing-first approach solves the brand consistency problem that pure generation tools cannot.'",
       "content_plan": [
-        {"type": "tweet_thread", "description": "Quick reaction: what this means for product teams still relying on photoshoots", "priority": 1, "audience": "builders"},
+        {"type": "tweet", "description": "Quick reaction: what this means for product teams still relying on photoshoots", "priority": 1, "audience": "builders"},
         {"type": "blog_post", "description": "Deep dive on why compositing-first matters more after this news", "priority": 2, "audience": "brands"},
         {"type": "email_blast", "description": "Signal boost to subscriber list with the key insight", "priority": 3, "audience": "brands"}
       ]
@@ -1623,7 +1623,7 @@ Return JSON:
       "angle_title": "Short story angle name (3-6 words, e.g. 'AI Photography Goes Enterprise')",
       "angle_narrative": "1-2 sentences explaining the story angle AND how it connects to Glossi. Weave in the Glossi tie-in naturally.",
       "content_plan": [
-        {"type": "tweet_thread", "description": "Quick reaction: what this means for product teams still relying on photoshoots", "priority": 1, "audience": "builders"},
+        {"type": "tweet", "description": "Quick reaction: what this means for product teams still relying on photoshoots", "priority": 1, "audience": "builders"},
         {"type": "blog_post", "description": "Deep dive on why compositing-first matters more after this news", "priority": 2, "audience": "brands"},
         {"type": "email_blast", "description": "Signal boost to subscriber list with the key insight", "priority": 3, "audience": "brands"}
       ]
@@ -1774,7 +1774,7 @@ Analyze this article and return a JSON object with:
   "angle_title": "Short story angle name for Glossi (3-6 words)",
   "angle_narrative": "1-2 sentences explaining the story angle AND how it connects to Glossi. Weave in the Glossi tie-in naturally.",
   "content_plan": [
-    {"type": "tweet_thread", "description": "Quick founder reaction: what this signals for AI product photography", "priority": 1, "audience": "builders"},
+    {"type": "tweet", "description": "Quick founder reaction: what this signals for AI product photography", "priority": 1, "audience": "builders"},
     {"type": "blog_post", "description": "Bylined take on why this validates compositing over pure generation", "priority": 2, "audience": "brands"},
     {"type": "email_blast", "description": "Key insight distilled for subscriber list", "priority": 3, "audience": "brands"}
   ],
@@ -2618,7 +2618,7 @@ Return ONLY valid JSON in this exact structure:
       "urgency": "high" | "medium" | "low",
       "why_now": "One sentence on timing",
       "content_plan": [
-        { "type": "tweet_thread", "description": "Quick reaction: what everyone misses about world models and product viz", "target": "Twitter/X", "priority": 1, "audience": "builders" },
+        { "type": "tweet", "description": "Quick reaction: what everyone misses about world models and product viz", "target": "Twitter/X", "priority": 1, "audience": "builders" },
         { "type": "blog_post", "description": "Bylined piece on why compositing-first was the right architecture bet", "target": "Company blog", "priority": 2, "audience": "brands" },
         { "type": "email_blast", "description": "Pitch to AI reporters: Glossi built for the world model era before it arrived", "target": "TechCrunch", "priority": 3, "audience": "press" }
       ]
