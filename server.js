@@ -1651,14 +1651,15 @@ AUDIENCE TAG: Each piece MUST include "audience": "builders" | "brands" | "inves
 TONE: Write descriptions like a sharp comms lead. Be specific to each article.`;
 
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-haiku-4-5',
       max_tokens: 4096,
+      system: 'You are a strategic PR content planner. Always return valid JSON.',
       messages: [{ role: 'user', content: prompt }]
     }, {
       headers: {
+        'Content-Type': 'application/json',
         'x-api-key': anthropicKey,
-        'anthropic-version': '2023-06-01',
-        'Content-Type': 'application/json'
+        'anthropic-version': '2023-06-01'
       },
       timeout: 60000
     });
@@ -1666,10 +1667,15 @@ TONE: Write descriptions like a sharp comms lead. Be specific to each article.`;
     const text = response.data?.content?.[0]?.text || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      return res.json({ success: false, error: 'Failed to parse AI response' });
+      return res.json({ success: false, error: 'AI response did not contain valid JSON' });
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      return res.json({ success: false, error: 'Failed to parse AI JSON response' });
+    }
     const plans = parsed.plans || [];
 
     if (useDatabase && plans.length > 0) {
