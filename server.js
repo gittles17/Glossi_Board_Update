@@ -2045,7 +2045,7 @@ BACKGROUND:
 TYPOGRAPHY HIERARCHY (strict rules for maximum glanceability):
 People scan, they do not read. Every text element must have a clear, distinct role. Use exactly 3 text sizes.
 
-- LEVEL 1 (Headline): The largest text. Bold black (#1a1a1a), top-left aligned, clean sans-serif. 1-2 lines max. Appears exactly once. States the insight.
+- LEVEL 1 (Headline): The largest text. Medium weight black (#1a1a1a), top-left aligned, clean sans-serif. 1-2 lines max. Appears exactly once. States the insight.
 - LEVEL 2 (Data labels): Clearly smaller than headline. Medium weight, dark gray (#4a4a4a). Used for chart labels, axis values, category names.
 - LEVEL 3 (Supporting): The smallest text. Regular weight, muted gray (#8a8580). Used for footnotes, source attributions, secondary context.
 
@@ -2066,7 +2066,7 @@ DATA VISUALIZATION (the core of the infographic):
 
 WHEN THERE IS NO CHART DATA:
 - If the tweet is a claim, opinion, or non-numeric insight, use a clean typographic layout.
-- One large bold stat or pull quote in black, with a small supporting label underneath.
+- One large medium-weight stat or pull quote in black, with a small supporting label underneath.
 - Keep to 2-3 lines of text maximum. The typography IS the visual.
 
 LAYOUT:
@@ -2089,7 +2089,7 @@ ANTI-PATTERNS (never do these):
 
 MOOD: Professional, editorial, confident. Like a chart from a premium tech company's blog or research report. Designed to stop someone mid-scroll because the data itself is interesting and instantly readable.
 
-CRITICAL RULE: Your prompt must describe the VISUAL APPEARANCE of the infographic only. Do NOT include any technical metadata, sizing annotations, pixel values, margin numbers, font-size numbers, or layout measurements in the prompt. Never write things like "70px" or "15px" or "60px margin". Describe sizes using relative terms only: "large bold headline", "medium-sized labels", "small footnote text". The image model will render any numbers it sees as visible text on the image.
+CRITICAL RULE: Your prompt must describe the VISUAL APPEARANCE of the infographic only. Do NOT include any technical metadata, sizing annotations, pixel values, margin numbers, font-size numbers, or layout measurements in the prompt. Never write things like "70px" or "15px" or "60px margin". Describe sizes using relative terms only: "large medium-weight headline", "medium-sized labels", "small footnote text". The image model will render any numbers it sees as visible text on the image.
 
 PROMPT CONSTRUCTION RULES:
 - Include ALL style rules above directly in your prompt using natural visual language.
@@ -2254,7 +2254,7 @@ app.get('/og-template', (req, res) => {
   .og-wrap { width: 1200px; height: 630px; position: relative; display: flex; flex-direction: column; }
   .og-accent { width: 100%; height: 5px; background: #EC5F3F; flex-shrink: 0; }
   .og-content { flex: 1; padding: 72px 80px 0 80px; display: flex; flex-direction: column; justify-content: center; }
-  .og-title { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 700; font-size: 54px; line-height: 1.15; letter-spacing: -0.03em; color: #171717; max-width: 960px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .og-title { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 500; font-size: 54px; line-height: 1.15; letter-spacing: -0.03em; color: #171717; max-width: 960px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .og-subtitle { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; font-size: 24px; line-height: 1.45; color: #525252; margin-top: 20px; max-width: 860px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .og-brand { position: absolute; bottom: 48px; left: 80px; display: flex; align-items: center; gap: 14px; }
   .og-logo-mark { width: 26px; height: 30px; }

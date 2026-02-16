@@ -1192,8 +1192,19 @@ class PRAgent {
   }
 
   async fetchUrlContent(url, title) {
+    const saveBtn = document.getElementById('pr-source-save');
+    const originalHTML = saveBtn?.innerHTML;
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<i class="ph-light ph-spinner"></i> Fetching...';
+    }
+
     try {
-      const response = await fetch(`/api/fetch-url?url=${encodeURIComponent(url)}`);
+      const response = await fetch('/api/fetch-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
       let content = '';
       if (response.ok) {
         const data = await response.json();
@@ -1209,13 +1220,18 @@ class PRAgent {
           scripts.forEach(el => el.remove());
           content = tempDiv.textContent?.replace(/\s+/g, ' ').trim() || '';
         } catch {
-          console.error('Could not fetch URL content');
+          this.showToast('Could not fetch content from that URL.', 'error');
           return;
         }
       }
       if (!content || content.length < 10) {
+        this.showToast('No usable content found at that URL.', 'error');
         return;
       }
+
+      const folderRadio = document.querySelector('input[name="pr-source-folder"]:checked');
+      const folderValue = folderRadio?.value || 'content';
+      const folder = folderValue === 'glossi' ? 'About Glossi' : 'Content Sources';
 
       const autoTitle = title || new URL(url).hostname;
       const source = {
@@ -1224,13 +1240,13 @@ class PRAgent {
         type: 'url',
         content: content.substring(0, 50000),
         url,
+        folder,
         createdAt: new Date().toISOString(),
         selected: true
       };
 
       this.sources.push(source);
-      
-      // Save to API
+
       try {
         await fetch('/api/pr/sources', {
           method: 'POST',
@@ -1238,15 +1254,20 @@ class PRAgent {
           body: JSON.stringify(source)
         });
       } catch (error) {
-        console.error('Error saving source:', error);
+        // silent
       }
-      
+
       this.saveSources();
       this.renderSources();
       this.updateGenerateButton();
       this.closeSourceModal();
     } catch (err) {
-      console.error('Failed to fetch URL:', err);
+      this.showToast('Failed to fetch URL content. Please try again.', 'error');
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalHTML || '<i class="ph-light ph-plus"></i> Add Source';
+      }
     }
   }
 
@@ -2274,11 +2295,14 @@ class PRAgent {
         });
       }
 
+      const extractedTitle = this.extractTitle(parsed.content, typeLabel);
+      const strippedContent = this._stripTitleFromPlainText(parsed.content, extractedTitle);
+
       const output = {
         id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
         content_type: contentType,
-        title: this.extractTitle(parsed.content, typeLabel),
-        content: parsed.content,
+        title: extractedTitle,
+        content: strippedContent,
         sources: selectedSources.map(s => s.id),
         citations: parsed.citations || [],
         strategy: parsed.strategy || null,
@@ -3036,18 +3060,21 @@ class PRAgent {
         const output = liveEntry.output;
         if (!output.drafts) this.migrateContentToDrafts(output);
 
+        const newTitle = this.extractTitle(parsed.content, typeLabel);
+        const strippedContent = this._stripTitleFromPlainText(parsed.content, newTitle);
+
         const newVersion = output.drafts.length + 1;
         output.drafts.unshift({
-          content: parsed.content,
+          content: strippedContent,
           version: newVersion,
           timestamp: Date.now(),
           prompt: `Tone change: ${newTone}`
         });
         if (output.drafts.length > 10) output.drafts = output.drafts.slice(0, 10);
 
-        output.content = parsed.content;
+        output.content = strippedContent;
         output.citations = parsed.citations || output.citations;
-        output.title = this.extractTitle(parsed.content, typeLabel);
+        output.title = newTitle;
 
         liveEntry.output = output;
 
@@ -3131,9 +3158,12 @@ class PRAgent {
   }
 
   _deduplicateTitleFromContent(contentHTML, title) {
+    if (!title || !contentHTML) return contentHTML;
     const container = document.createElement('div');
     container.innerHTML = contentHTML;
-    const titleNorm = title.trim().toLowerCase();
+
+    let titleNorm = title.trim().toLowerCase().replace(/\.{3}$/, '').trim();
+    if (titleNorm.length < 5) return contentHTML;
 
     let root = container;
     const firstChild = root.firstElementChild;
@@ -3141,22 +3171,56 @@ class PRAgent {
       root = firstChild;
     }
 
-    const candidate = root.firstElementChild;
-    if (!candidate) return contentHTML;
+    const candidates = Array.from(root.children).slice(0, 3);
 
-    const candidateText = candidate.textContent.trim().toLowerCase();
-    const tag = candidate.tagName.toLowerCase();
-    const isHeadingOrPara = ['h1','h2','h3','h4','p','strong','b'].includes(tag);
-    const isParaWithStrong = tag === 'p' && candidate.children.length === 1 && ['strong','b'].includes(candidate.children[0]?.tagName?.toLowerCase() || '');
+    for (const candidate of candidates) {
+      const tag = candidate.tagName.toLowerCase();
+      const isHeadingOrPara = ['h1','h2','h3','h4','h5','h6','p','strong','b'].includes(tag);
+      const isParaWithStrong = tag === 'p' && candidate.children.length === 1 &&
+        ['strong','b'].includes(candidate.children[0]?.tagName?.toLowerCase() || '');
 
-    if (isHeadingOrPara || isParaWithStrong) {
-      const textToCheck = isParaWithStrong ? candidate.children[0].textContent.trim().toLowerCase() : candidateText;
-      if (textToCheck === titleNorm || titleNorm.includes(textToCheck) || textToCheck.includes(titleNorm)) {
+      if (!isHeadingOrPara && !isParaWithStrong) continue;
+
+      const textToCheck = (isParaWithStrong
+        ? candidate.children[0].textContent
+        : candidate.textContent
+      ).trim().toLowerCase().replace(/\.{3}$/, '').trim();
+
+      if (textToCheck.length < 5) continue;
+
+      if (textToCheck === titleNorm ||
+          textToCheck.startsWith(titleNorm) ||
+          titleNorm.startsWith(textToCheck) ||
+          textToCheck.includes(titleNorm) ||
+          titleNorm.includes(textToCheck)) {
         candidate.remove();
+        break;
       }
     }
 
     return container.innerHTML;
+  }
+
+  _stripTitleFromPlainText(content, title) {
+    if (!title || !content) return content;
+    const titleClean = title.trim().replace(/\.{3}$/, '').trim().toLowerCase();
+    if (titleClean.length < 5) return content;
+
+    const lines = content.split('\n');
+    const firstNonEmpty = lines.findIndex(l => l.trim().length > 0);
+    if (firstNonEmpty === -1) return content;
+
+    const firstLine = lines[firstNonEmpty].replace(/^#+\s*/, '').replace(/\*+/g, '').trim().toLowerCase();
+    if (firstLine === titleClean ||
+        firstLine.startsWith(titleClean) ||
+        titleClean.startsWith(firstLine) ||
+        (firstLine.length > 10 && titleClean.includes(firstLine)) ||
+        (titleClean.length > 10 && firstLine.includes(titleClean))) {
+      lines.splice(firstNonEmpty, 1);
+      const result = lines.join('\n').replace(/^\n+/, '');
+      return result;
+    }
+    return content;
   }
 
   _buildBrandedHTML(title, typeLabel, dateStr, contentHTML, sourceInfo) {
@@ -7536,17 +7600,20 @@ ${primaryContext}${bgContext}`
         sourceIds = [activeStory.primarySourceId, ...sourceIds.filter(id => id !== activeStory.primarySourceId)];
       }
 
+      const extractedTitle = this.prAgent.extractTitle(parsed.content, typeLabel);
+      const strippedContent = this.prAgent._stripTitleFromPlainText(parsed.content, extractedTitle);
+
       const output = {
         id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
         content_type: planItem.type,
-        title: this.prAgent.extractTitle(parsed.content, typeLabel),
-        content: parsed.content,
+        title: extractedTitle,
+        content: strippedContent,
         sources: sourceIds,
         citations: parsed.citations || [],
         strategy: parsed.strategy || null,
         status: 'draft',
         phase: 'edit',
-        drafts: [{ content: parsed.content, version: 1, timestamp: Date.now(), prompt: null }],
+        drafts: [{ content: strippedContent, version: 1, timestamp: Date.now(), prompt: null }],
         story_key: this._activeStoryKey || null,
         news_headline: newsItem.headline || null,
         content_plan_index: planIndex,
@@ -8500,11 +8567,14 @@ class AngleManager {
         });
       }
 
+      const extractedTitle = this.prAgent.extractTitle(parsed.content, typeLabel);
+      const strippedContent = this.prAgent._stripTitleFromPlainText(parsed.content, extractedTitle);
+
       const output = {
         id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
         content_type: planItem.type,
-        title: this.prAgent.extractTitle(parsed.content, typeLabel),
-        content: parsed.content,
+        title: extractedTitle,
+        content: strippedContent,
         sources: selectedSources.map(s => s.id),
         citations: parsed.citations || [],
         strategy: parsed.strategy || null,
@@ -8512,7 +8582,7 @@ class AngleManager {
         phase: 'edit',
         angleId: angle.id,
         angleTitle: angle.title,
-        drafts: [{ content: parsed.content, version: 1, timestamp: Date.now(), prompt: null }]
+        drafts: [{ content: strippedContent, version: 1, timestamp: Date.now(), prompt: null }]
       };
 
       // Store in per-tab content
@@ -9602,7 +9672,8 @@ class DistributeManager {
     const name = li.name || 'Glossi';
     const headline = li.headline || 'A real-time content creation platform that brings products to life.';
     const photoUrl = li.photoUrl || 'assets/glossi-logo.svg';
-    const content = output.content || '';
+    const rawContent = output.content || '';
+    const content = this.prAgent._stripTitleFromPlainText(rawContent, output.title);
     const hashtags = output.hashtags || [];
     const media = output.media_attachments || [];
 
