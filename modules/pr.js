@@ -6394,6 +6394,14 @@ class NewsMonitor {
         }
         if (tabId) {
           this.switchContentTab(tabId);
+          // Auto-generate if tab has no content yet
+          const entry = this._tabContent.get(tabId);
+          if (!entry || (!entry.loading && !entry.output)) {
+            const planIndex = parseInt(tabId.replace('plan_', ''), 10);
+            if (this._activeContentPlan && this._activeContentPlan[planIndex] && this._activeNewsItem) {
+              this.generateTabContent(tabId, this._activeContentPlan[planIndex], this._activeNewsItem);
+            }
+          }
           this.renderFileTree();
         }
         return;
@@ -7057,12 +7065,13 @@ ${primaryContext}${bgContext}`
     };
 
     // Auto-generate all content plan tabs
-    const firstTabId = `plan_0`;
-    this.switchContentTab(firstTabId);
+    // Start generation FIRST so _tabContent has loading entries before switchContentTab reads them
     contentPlan.forEach((item, i) => {
       const tabId = `plan_${i}`;
       this.generateTabContent(tabId, item, newsItem);
     });
+    const firstTabId = `plan_0`;
+    this.switchContentTab(firstTabId);
 
     // Update strategy cards to reflect in-workspace status
     this.renderNews();
@@ -7190,10 +7199,13 @@ ${primaryContext}${bgContext}`
       // No content yet - show empty state with generate prompt
       if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
       if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
+      if (this.prAgent.dom.workspaceChat) this.prAgent.dom.workspaceChat.style.display = 'none';
       this.prAgent.hideLoading();
       this.prAgent.hideRefiningOverlay();
       const sugEl = document.getElementById('pr-suggestions');
       if (sugEl) sugEl.innerHTML = '';
+      const actionsEl = document.getElementById('pr-workspace-actions');
+      if (actionsEl) actionsEl.style.display = 'none';
     }
   }
 
@@ -7241,7 +7253,10 @@ ${primaryContext}${bgContext}`
     } else {
       selectedSources = this.prAgent.sources.filter(s => s.selected);
     }
-    if (selectedSources.length === 0 && !this.prAgent.apiKey) return;
+    if (!this.prAgent.apiKey) {
+      this.prAgent.showToast('API key not configured. Check Settings.', 'error');
+      return;
+    }
 
     const typeLabel = CONTENT_TYPES.find(t => t.id === planItem.type)?.label || planItem.type;
 
@@ -8247,7 +8262,10 @@ class AngleManager {
 
   async generatePieceContent(angle, planItem, tabId) {
     const selectedSources = this.prAgent.sources.filter(s => s.selected);
-    if (selectedSources.length === 0 && !this.prAgent.apiKey) return;
+    if (!this.prAgent.apiKey) {
+      this.prAgent.showToast('API key not configured. Check Settings.', 'error');
+      return;
+    }
 
     const typeLabel = CONTENT_TYPES.find(t => t.id === planItem.type)?.label || planItem.type;
 
