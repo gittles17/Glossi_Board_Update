@@ -9012,6 +9012,17 @@ class DistributeManager {
       this.publishNow();
     });
 
+    // Download for Blog
+    document.getElementById('pr-distribute-download-blog-btn')?.addEventListener('click', () => {
+      this.downloadBlogMarkdown();
+    });
+
+    // Blog slug input
+    document.getElementById('pr-blog-slug-input')?.addEventListener('input', (e) => {
+      const raw = e.target.value;
+      e.target.value = raw.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    });
+
     // Schedule
     document.getElementById('pr-distribute-schedule-btn')?.addEventListener('click', () => {
       this.openScheduleModal();
@@ -9313,6 +9324,10 @@ class DistributeManager {
     if (!output) return;
     this.activeReviewItem = output;
 
+    // Reset blog slug for the new item
+    const slugInput = document.getElementById('pr-blog-slug-input');
+    if (slugInput) slugInput.value = '';
+
     // Show preview, hide empty state
     const emptyState = document.getElementById('pr-distribute-empty-state');
     const previewContent = document.getElementById('pr-distribute-preview-content');
@@ -9328,15 +9343,18 @@ class DistributeManager {
     const backBtn = document.getElementById('pr-distribute-back-btn');
     const publishBtn = document.getElementById('pr-distribute-publish-btn');
     const scheduleBtn = document.getElementById('pr-distribute-schedule-btn');
+    const downloadBlogBtn = document.getElementById('pr-distribute-download-blog-btn');
 
     if (output.status === 'review') {
       if (backBtn) backBtn.style.display = '';
       if (publishBtn) publishBtn.style.display = '';
       if (scheduleBtn) scheduleBtn.style.display = '';
+      if (downloadBlogBtn) downloadBlogBtn.style.display = '';
     } else {
       if (backBtn) backBtn.style.display = output.status === 'published' ? 'none' : '';
       if (publishBtn) publishBtn.style.display = 'none';
       if (scheduleBtn) scheduleBtn.style.display = 'none';
+      if (downloadBlogBtn) downloadBlogBtn.style.display = 'none';
     }
 
     // Re-fetch OG data if output has a first_comment link but no og_data (e.g. older outputs)
@@ -9535,11 +9553,24 @@ class DistributeManager {
 
     // LinkedIn-specific controls
     const isLinkedin = channel === 'linkedin';
+    const isBlog = channel === 'blog';
     if (firstCommentWrap) firstCommentWrap.style.display = isLinkedin && this.activeReviewItem?.first_comment ? '' : 'none';
     if (hashtagsWrap) hashtagsWrap.style.display = isLinkedin && this.activeReviewItem?.hashtags?.length ? '' : 'none';
     if (charCount) charCount.style.display = isLinkedin ? '' : 'none';
     if (mediaBar) mediaBar.style.display = isLinkedin && this.activeReviewItem?.status === 'review' ? 'flex' : 'none';
     if (!isLinkedin && mediaUrlInput) mediaUrlInput.style.display = 'none';
+
+    // Toggle publish vs download button based on channel
+    const publishBtn = document.getElementById('pr-distribute-publish-btn');
+    const downloadBlogBtn = document.getElementById('pr-distribute-download-blog-btn');
+    const scheduleBtn = document.getElementById('pr-distribute-schedule-btn');
+    if (publishBtn) publishBtn.style.display = isBlog ? 'none' : '';
+    if (downloadBlogBtn) downloadBlogBtn.style.display = isBlog ? '' : 'none';
+    if (scheduleBtn) scheduleBtn.style.display = isBlog ? 'none' : '';
+
+    // Blog slug field
+    const slugField = document.getElementById('pr-blog-slug-field');
+    if (slugField) slugField.style.display = isBlog ? '' : 'none';
   }
 
   renderBlogPreview(output) {
@@ -9594,6 +9625,11 @@ class DistributeManager {
         </div>
       </div>
     `;
+
+    const slugInput = document.getElementById('pr-blog-slug-input');
+    if (slugInput && !slugInput.value) {
+      slugInput.value = this.generateSlug(title);
+    }
   }
 
   markdownToBlogHtml(text) {
@@ -10383,6 +10419,58 @@ class DistributeManager {
         </div>
       `;
     }).join('');
+  }
+
+  generateSlug(title) {
+    if (!title) return '';
+    return title
+      .toLowerCase()
+      .replace(/['']/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .substring(0, 80);
+  }
+
+  downloadBlogMarkdown() {
+    if (!this.activeReviewItem) return;
+
+    const output = this.activeReviewItem;
+    const title = output.title || output.news_headline || 'Untitled Post';
+    const content = output.content || '';
+    const createdAt = output.created_at ? new Date(output.created_at) : new Date();
+    const dateStr = createdAt.toISOString().split('T')[0];
+    const media = output.media_attachments || [];
+    const featuredImage = media.length > 0 && media[0].type === 'image' ? media[0].url : '';
+
+    const slugInput = document.getElementById('pr-blog-slug-input');
+    const slug = slugInput?.value?.trim() || this.generateSlug(title);
+
+    const subtitleMatch = content.match(/^([^\n#].{20,})/);
+    const subtitle = subtitleMatch ? subtitleMatch[1].trim() : '';
+
+    const frontmatter = [
+      '---',
+      `title: "${title.replace(/"/g, '\\"')}"`,
+      subtitle ? `subtitle: "${subtitle.replace(/"/g, '\\"')}"` : null,
+      `slug: "${slug}"`,
+      `date: "${dateStr}"`,
+      `author: "Glossi"`,
+      featuredImage ? `featured_image: "${featuredImage}"` : null,
+      `meta_description: "${(subtitle || title).replace(/"/g, '\\"').substring(0, 160)}"`,
+      '---'
+    ].filter(Boolean).join('\n');
+
+    const markdown = frontmatter + '\n\n' + content;
+
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${slug}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   escapeHtml(str) {

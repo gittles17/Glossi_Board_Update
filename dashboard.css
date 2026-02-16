@@ -19491,6 +19491,53 @@ body.pr-resizing * {
   margin-bottom: var(--space-3);
 }
 
+.pr-blog-slug-field {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.pr-blog-slug-field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.pr-blog-slug-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.pr-blog-slug-prefix,
+.pr-blog-slug-suffix {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pr-blog-slug-row .input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', 'Fira Mono', monospace;
+  padding: 4px 6px;
+  border-radius: 4px;
+  margin: 0 2px;
+}
+
+.pr-distribute-download-blog-btn {
+  background: var(--accent) !important;
+  color: var(--text-on-accent) !important;
+}
+
 .pr-blog-preview {
   background: #ffffff;
   border-radius: 10px;
