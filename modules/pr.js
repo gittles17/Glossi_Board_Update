@@ -9320,6 +9320,7 @@ class AngleManager {
 // ============================================
 
 const LINKEDIN_PUBLISHABLE_TYPES = ['linkedin_post', 'blog_post'];
+const X_PUBLISHABLE_TYPES = ['tweet'];
 
 class DistributeManager {
   constructor(prAgent) {
@@ -9333,6 +9334,8 @@ class DistributeManager {
     this._mediaUrlMode = null;
     this.linkedInConnected = false;
     this.linkedInOrgName = null;
+    this.xConnected = false;
+    this.xUsername = null;
   }
 
   async init() {
@@ -9341,6 +9344,7 @@ class DistributeManager {
     this.setupEventListeners();
     this.render();
     this.checkLinkedInStatus();
+    this.checkXStatus();
   }
 
   async loadSettings() {
@@ -10052,14 +10056,15 @@ class DistributeManager {
     Object.values(wraps).forEach(w => { if (w) w.style.display = 'none'; });
     if (wraps[channel]) wraps[channel].style.display = '';
 
-    // LinkedIn-specific controls
     const isLinkedin = channel === 'linkedin';
+    const isTwitter = channel === 'twitter';
     const isBlog = channel === 'blog';
+    const isPublishable = isLinkedin || isTwitter;
     if (firstCommentWrap) firstCommentWrap.style.display = isLinkedin && this.activeReviewItem?.first_comment ? '' : 'none';
     if (hashtagsWrap) hashtagsWrap.style.display = isLinkedin && this.activeReviewItem?.hashtags?.length ? '' : 'none';
-    if (charCount) charCount.style.display = isLinkedin ? '' : 'none';
-    if (mediaBar) mediaBar.style.display = isLinkedin && this.activeReviewItem?.status === 'review' ? 'flex' : 'none';
-    if (!isLinkedin && mediaUrlInput) mediaUrlInput.style.display = 'none';
+    if (charCount) charCount.style.display = (isLinkedin || isTwitter) ? '' : 'none';
+    if (mediaBar) mediaBar.style.display = isPublishable && this.activeReviewItem?.status === 'review' ? 'flex' : 'none';
+    if (!isPublishable && mediaUrlInput) mediaUrlInput.style.display = 'none';
 
     // Toggle publish vs download button based on channel
     const publishBtn = document.getElementById('pr-distribute-publish-btn');
@@ -10973,8 +10978,40 @@ class DistributeManager {
     if (disconnectBtn) disconnectBtn.style.display = connected ? '' : 'none';
   }
 
+  async checkXStatus() {
+    try {
+      const res = await this.prAgent.apiCall('/api/x/status');
+      this.xConnected = res.connected || false;
+      this.xUsername = res.username || null;
+      this.updateXStatusUI(this.xConnected);
+    } catch (e) {
+      this.xConnected = false;
+      this.updateXStatusUI(false);
+    }
+  }
+
+  updateXStatusUI(connected) {
+    const dot = document.querySelector('.pr-x-status-dot');
+    const text = document.querySelector('.pr-x-status-text');
+    if (dot) {
+      dot.classList.toggle('connected', connected);
+      dot.classList.toggle('disconnected', !connected);
+    }
+    if (text) {
+      text.textContent = connected
+        ? `Connected${this.xUsername ? ' as @' + this.xUsername : ''}`
+        : 'Not connected';
+    }
+  }
+
   async publishNow() {
     if (!this.activeReviewItem) return;
+
+    const channel = this.activeChannel;
+
+    if (channel === 'twitter') {
+      return this.publishToX();
+    }
 
     if (!this.linkedInConnected) {
       const connect = await this.prAgent.showConfirm(
@@ -10991,7 +11028,6 @@ class DistributeManager {
     );
     if (!confirmed) return;
 
-    // Show publishing state
     const publishBtn = document.getElementById('pr-distribute-publish-btn');
     if (publishBtn) {
       publishBtn.disabled = true;
@@ -11043,6 +11079,103 @@ class DistributeManager {
     }
   }
 
+  async publishToX() {
+    if (!this.activeReviewItem) return;
+
+    if (!this.xConnected) {
+      await this.prAgent.showConfirm(
+        'X is not connected. Add your X API credentials (X_API_KEY, X_API_KEY_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET) to your environment variables, then restart the server.',
+        'X Not Connected'
+      );
+      return;
+    }
+
+    const content = (this.activeReviewItem.content || '').trim();
+    const threadParts = this.splitIntoThread(content);
+    const isThread = threadParts.length > 1;
+
+    const confirmMsg = isThread
+      ? `This will publish a ${threadParts.length}-part thread to X.`
+      : 'This will publish this tweet to X.';
+
+    const confirmed = await this.prAgent.showConfirm(confirmMsg, 'Publish to X');
+    if (!confirmed) return;
+
+    const publishBtn = document.getElementById('pr-distribute-publish-btn');
+    if (publishBtn) {
+      publishBtn.disabled = true;
+      publishBtn.innerHTML = glossiLoaderSVG('glossi-loader-xs') + ' Publishing...';
+    }
+
+    try {
+      const media = this.activeReviewItem.media_attachments || [];
+      const imageAttachment = media.find(m => m.type === 'image');
+      const payload = {
+        content: isThread ? threadParts[0] : content,
+        thread_parts: isThread ? threadParts : null,
+        media_url: imageAttachment?.url || null
+      };
+
+      const result = await this.prAgent.apiCall('/api/x/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (result.success) {
+        this.activeReviewItem.status = 'published';
+        this.activeReviewItem.phase = 'distribute';
+        this.activeReviewItem.published_channel = 'twitter';
+        this.activeReviewItem.tweet_url = result.tweet_url || null;
+
+        try {
+          await this.prAgent.apiCall('/api/pr/outputs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.activeReviewItem)
+          });
+        } catch (e) { /* silent */ }
+
+        this.prAgent.saveOutputs();
+        this.render();
+        this.selectReviewItem(this.activeReviewItem.id);
+      } else {
+        await this.prAgent.showConfirm(
+          `Publishing failed: ${result.error || 'Unknown error'}. Please try again.`,
+          'Publish Error'
+        );
+      }
+    } catch (e) {
+      await this.prAgent.showConfirm(
+        `Publishing failed: ${e.message || 'Network error'}. Please try again.`,
+        'Publish Error'
+      );
+    } finally {
+      if (publishBtn) {
+        publishBtn.disabled = false;
+        publishBtn.innerHTML = '<i class="ph-light ph-paper-plane-tilt"></i> Publish Now';
+      }
+    }
+  }
+
+  splitIntoThread(text) {
+    const parts = text.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+    if (parts.length <= 1) return [text];
+    const merged = [];
+    let current = '';
+    for (const part of parts) {
+      const candidate = current ? current + '\n\n' + part : part;
+      if (candidate.length <= 280) {
+        current = candidate;
+      } else {
+        if (current) merged.push(current);
+        current = part;
+      }
+    }
+    if (current) merged.push(current);
+    return merged.length > 0 ? merged : [text];
+  }
+
   openScheduleModal() {
     if (!this.activeReviewItem) return;
 
@@ -11076,7 +11209,7 @@ class DistributeManager {
         body: JSON.stringify({
           id: scheduleId,
           output_id: this.activeReviewItem.id,
-          channel: 'linkedin',
+          channel: this.activeChannel || 'linkedin',
           scheduled_at: scheduledAt.toISOString()
         })
       });

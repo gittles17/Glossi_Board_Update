@@ -5,6 +5,8 @@ const pdfParse = require('pdf-parse');
 const axios = require('axios');
 const FormData = require('form-data');
 const Parser = require('rss-parser');
+const OAuth = require('oauth-1.0a');
+const crypto = require('crypto');
 
 const compression = require('compression');
 const app = express();
@@ -2555,6 +2557,177 @@ app.post('/api/linkedin/publish', async (req, res) => {
     res.json({ success: true, post_urn: postUrn });
   } catch (error) {
     const errMsg = error.response?.data?.message || error.message;
+    res.status(error.response?.status || 500).json({ success: false, error: errMsg });
+  }
+});
+
+// ============================================
+// X (TWITTER) API PUBLISHING
+// ============================================
+
+const X_API_KEY = process.env.X_API_KEY;
+const X_API_KEY_SECRET = process.env.X_API_KEY_SECRET;
+const X_ACCESS_TOKEN = process.env.X_ACCESS_TOKEN;
+const X_ACCESS_TOKEN_SECRET = process.env.X_ACCESS_TOKEN_SECRET;
+
+const xOauth = OAuth({
+  consumer: { key: X_API_KEY || '', secret: X_API_KEY_SECRET || '' },
+  signature_method: 'HMAC-SHA1',
+  hash_function(baseString, key) {
+    return crypto.createHmac('sha1', key).update(baseString).digest('base64');
+  }
+});
+
+const xToken = { key: X_ACCESS_TOKEN || '', secret: X_ACCESS_TOKEN_SECRET || '' };
+
+function xAuthHeader(request) {
+  return xOauth.toHeader(xOauth.authorize(request, xToken));
+}
+
+function isXConfigured() {
+  return !!(X_API_KEY && X_API_KEY_SECRET && X_ACCESS_TOKEN && X_ACCESS_TOKEN_SECRET);
+}
+
+app.get('/api/x/status', async (req, res) => {
+  if (!isXConfigured()) {
+    return res.json({ success: true, connected: false, reason: 'X API credentials not configured' });
+  }
+  try {
+    const request = { url: 'https://api.x.com/2/users/me', method: 'GET' };
+    const verifyRes = await axios.get(request.url, {
+      headers: { ...xAuthHeader(request) },
+      timeout: 8000
+    });
+    const user = verifyRes.data?.data;
+    res.json({
+      success: true,
+      connected: true,
+      username: user?.username || null,
+      name: user?.name || null
+    });
+  } catch (error) {
+    const status = error.response?.status;
+    if (status === 401 || status === 403) {
+      return res.json({ success: true, connected: false, reason: 'Invalid or expired credentials' });
+    }
+    res.json({ success: true, connected: false, reason: error.message });
+  }
+});
+
+app.post('/api/x/publish', async (req, res) => {
+  if (!isXConfigured()) {
+    return res.status(400).json({ success: false, error: 'X API credentials not configured. Add X_API_KEY, X_API_KEY_SECRET, X_ACCESS_TOKEN, and X_ACCESS_TOKEN_SECRET to your environment.' });
+  }
+
+  try {
+    const { content, thread_parts, media_url } = req.body;
+    if (!content && (!thread_parts || thread_parts.length === 0)) {
+      return res.status(400).json({ success: false, error: 'Post content is required' });
+    }
+
+    let mediaId = null;
+
+    if (media_url) {
+      try {
+        const imageRes = await axios.get(media_url, { responseType: 'arraybuffer', timeout: 30000 });
+        const imageBuffer = Buffer.from(imageRes.data);
+        const mimeType = imageRes.headers['content-type'] || 'image/png';
+
+        const initRequest = {
+          url: 'https://upload.twitter.com/1.1/media/upload.json',
+          method: 'POST',
+          data: {
+            command: 'INIT',
+            total_bytes: imageBuffer.length,
+            media_type: mimeType
+          }
+        };
+        const initForm = new FormData();
+        initForm.append('command', 'INIT');
+        initForm.append('total_bytes', String(imageBuffer.length));
+        initForm.append('media_type', mimeType);
+        const initRes = await axios.post(initRequest.url, initForm, {
+          headers: {
+            ...xAuthHeader(initRequest),
+            ...initForm.getHeaders()
+          }
+        });
+        mediaId = initRes.data.media_id_string;
+
+        const appendRequest = {
+          url: 'https://upload.twitter.com/1.1/media/upload.json',
+          method: 'POST',
+          data: { command: 'APPEND', media_id: mediaId, segment_index: '0' }
+        };
+        const appendForm = new FormData();
+        appendForm.append('command', 'APPEND');
+        appendForm.append('media_id', mediaId);
+        appendForm.append('segment_index', '0');
+        appendForm.append('media_data', imageBuffer.toString('base64'));
+        await axios.post(appendRequest.url, appendForm, {
+          headers: {
+            ...xAuthHeader(appendRequest),
+            ...appendForm.getHeaders()
+          }
+        });
+
+        const finalizeRequest = {
+          url: 'https://upload.twitter.com/1.1/media/upload.json',
+          method: 'POST',
+          data: { command: 'FINALIZE', media_id: mediaId }
+        };
+        const finalizeForm = new FormData();
+        finalizeForm.append('command', 'FINALIZE');
+        finalizeForm.append('media_id', mediaId);
+        await axios.post(finalizeRequest.url, finalizeForm, {
+          headers: {
+            ...xAuthHeader(finalizeRequest),
+            ...finalizeForm.getHeaders()
+          }
+        });
+      } catch (mediaErr) {
+        return res.status(400).json({ success: false, error: 'Media upload failed: ' + (mediaErr.response?.data?.errors?.[0]?.message || mediaErr.message) });
+      }
+    }
+
+    const parts = thread_parts && thread_parts.length > 0 ? thread_parts : [content];
+    const tweetIds = [];
+
+    for (let i = 0; i < parts.length; i++) {
+      const tweetPayload = { text: parts[i] };
+
+      if (i === 0 && mediaId) {
+        tweetPayload.media = { media_ids: [mediaId] };
+      }
+
+      if (i > 0 && tweetIds.length > 0) {
+        tweetPayload.reply = { in_reply_to_tweet_id: tweetIds[tweetIds.length - 1] };
+      }
+
+      const tweetRequest = {
+        url: 'https://api.x.com/2/tweets',
+        method: 'POST'
+      };
+      const tweetRes = await axios.post(tweetRequest.url, tweetPayload, {
+        headers: {
+          ...xAuthHeader(tweetRequest),
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const tweetId = tweetRes.data?.data?.id;
+      if (tweetId) tweetIds.push(tweetId);
+    }
+
+    res.json({
+      success: true,
+      tweet_id: tweetIds[0] || null,
+      tweet_ids: tweetIds,
+      tweet_url: tweetIds[0] ? `https://x.com/i/status/${tweetIds[0]}` : null
+    });
+  } catch (error) {
+    const errData = error.response?.data;
+    const errMsg = errData?.detail || errData?.errors?.[0]?.message || errData?.title || error.message;
     res.status(error.response?.status || 500).json({ success: false, error: errMsg });
   }
 });
