@@ -64,23 +64,22 @@ Blog Post: Write like Linear's "Now" blog. First-person where appropriate. Opini
 
 Tweet / Hot Take (for X): Study how Cursor and Linear use X. They mix formats. Not every post is text. The feed has rhythm: a sharp take, then a product screenshot, then a blog link, then an infographic. Match that energy.
 
-TWEET FORMATS (choose the best one for this specific topic):
-- TEXT: One single tweet. Maximum 280 characters. Punchy, opinionated, shareable. One sharp observation that makes people stop scrolling. No hashtags. No threads unless requested.
-- VISUAL: Short text (1-2 sentences, under 200 chars) paired with an infographic or data visual. The visual carries the argument. The text sets it up. Describe what the visual should show in visual_prompt.
-- BLOG_LINK: 1-2 sentence hook that makes someone want to click, followed by [BLOG_LINK]. Not "check out our latest post." More "We wrote about why X matters." or "The real problem isn't Y, it's Z."
-- PRODUCT: Changelog energy. What shipped, what it does, one line on why it matters. Often pairs with a screenshot or short video. Describe the visual in visual_prompt if needed.
-- THREAD: For deeper topics only. 3-5 tweets, each under 280 chars, separated by double newlines. First tweet is the hook. Each adds one idea. Last tweet lands the point. Use sparingly.
+IMPORTANT: For tweets and hot takes, you MUST include "tweet_format" and (when applicable) "visual_prompt" in your JSON response. These go alongside "content", "citations", and "strategy" in the same response object.
 
-RESPONSE FORMAT FOR TWEETS: Return JSON with these fields:
-{
-  "content": "The tweet text",
-  "tweet_format": "text|visual|blog_link|product|thread",
-  "visual_prompt": "Description of infographic/visual to generate (only if tweet_format is visual or product)",
-  "citations": [...],
-  "strategy": {...}
-}
+TWEET FORMATS (you MUST pick one, default to VISUAL when the topic involves data, a comparison, or a claim worth illustrating):
+- TEXT: One single tweet, no line breaks. Maximum 280 characters. Punchy, opinionated, shareable. One sharp observation that makes people stop scrolling. No hashtags.
+- VISUAL: Short text (1-2 sentences, under 200 chars) paired with an infographic. The visual carries the argument. The text sets it up. You MUST include "visual_prompt" describing the image to generate.
+- BLOG_LINK: 1-2 sentence hook + [BLOG_LINK] placeholder. Not "check out our latest post." More "We wrote about why X matters."
+- PRODUCT: Changelog energy. What shipped, what it does, one line on why it matters. Include "visual_prompt" if a screenshot or graphic would help.
+- THREAD: Use sparingly. 3-5 tweets, each under 280 chars, separated by double newlines. First tweet is the hook. Last tweet lands the point. This is the ONLY format that should use multiple paragraphs.
 
-VISUAL PROMPT RULES (when tweet_format is visual or product):
+CRITICAL RULES FOR TWEETS:
+- TEXT, VISUAL, BLOG_LINK, and PRODUCT must be a SINGLE tweet. No paragraph breaks. No multiple tweets.
+- Only THREAD format produces multiple tweets separated by double newlines.
+- "tweet_format" is REQUIRED in the response JSON for all tweet/hot take content.
+- Default to VISUAL when the topic has data, numbers, a comparison, or a claim that could be illustrated.
+
+VISUAL PROMPT RULES (required when tweet_format is "visual" or "product"):
 - Describe the visual concisely: what data, comparison, or concept it shows
 - Style: minimal, dark background (#000 or #0a0a0a), clean sans-serif type, Glossi orange (#EC5F3F) as accent
 - No clutter. Think Linear changelog graphics or Cursor's product screenshots.
@@ -99,6 +98,8 @@ RESPONSE FORMAT:
 Return your response in this exact JSON structure:
 {
   "content": "The generated PR content with [Source X] citations inline",
+  "tweet_format": "(REQUIRED for tweets/hot takes) text|visual|blog_link|product|thread",
+  "visual_prompt": "(REQUIRED for tweets/hot takes when tweet_format is visual or product) Description of the infographic to generate",
   "citations": [
     {"index": 1, "sourceId": "src_id", "excerpt": "relevant quote from source", "verified": true},
     {"index": 2, "sourceId": null, "excerpt": "claim that needs verification", "verified": false}
@@ -9862,25 +9863,30 @@ class DistributeManager {
     const media = output.media_attachments || [];
     const hasImage = media.some(m => m.type === 'image');
 
-    const rawTweets = content.split(/\n\n+/).filter(t => t.trim());
-    const tweets = [];
-    for (const raw of rawTweets) {
-      const trimmed = raw.trim();
-      if (trimmed.length <= 280) {
-        tweets.push(trimmed);
-      } else {
-        const sentences = trimmed.match(/[^.!?]+[.!?]+\s*/g) || [trimmed];
-        let current = '';
-        for (const sentence of sentences) {
-          if ((current + sentence).length > 280 && current) {
-            tweets.push(current.trim());
-            current = sentence;
-          } else {
-            current += sentence;
+    let tweets;
+    if (tweetFormat === 'thread') {
+      const rawTweets = content.split(/\n\n+/).filter(t => t.trim());
+      tweets = [];
+      for (const raw of rawTweets) {
+        const trimmed = raw.trim();
+        if (trimmed.length <= 280) {
+          tweets.push(trimmed);
+        } else {
+          const sentences = trimmed.match(/[^.!?]+[.!?]+\s*/g) || [trimmed];
+          let current = '';
+          for (const sentence of sentences) {
+            if ((current + sentence).length > 280 && current) {
+              tweets.push(current.trim());
+              current = sentence;
+            } else {
+              current += sentence;
+            }
           }
+          if (current.trim()) tweets.push(current.trim());
         }
-        if (current.trim()) tweets.push(current.trim());
       }
+    } else {
+      tweets = [content.trim()];
     }
 
     const tweetsHtml = tweets.map((tweet, i) => {
