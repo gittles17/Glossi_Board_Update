@@ -9847,11 +9847,24 @@ class DistributeManager {
     const scheduleBtn = document.getElementById('pr-distribute-schedule-btn');
     const downloadBlogBtn = document.getElementById('pr-distribute-download-blog-btn');
 
+    const isXPublished = output.status === 'published' && output.published_channel === 'twitter';
     if (output.status === 'review') {
       if (backBtn) backBtn.style.display = '';
-      if (publishBtn) publishBtn.style.display = '';
+      if (publishBtn) {
+        publishBtn.style.display = '';
+        if (output.previous_tweet_id) {
+          publishBtn.innerHTML = '<i class="ph-light ph-arrows-clockwise"></i> Republish to X';
+        } else {
+          publishBtn.innerHTML = '<i class="ph-light ph-paper-plane-tilt"></i> Publish Now';
+        }
+      }
       if (scheduleBtn) scheduleBtn.style.display = '';
       if (downloadBlogBtn) downloadBlogBtn.style.display = '';
+    } else if (isXPublished) {
+      if (backBtn) backBtn.style.display = 'none';
+      if (publishBtn) publishBtn.style.display = 'none';
+      if (scheduleBtn) scheduleBtn.style.display = 'none';
+      if (downloadBlogBtn) downloadBlogBtn.style.display = 'none';
     } else {
       if (backBtn) backBtn.style.display = output.status === 'published' ? 'none' : '';
       if (publishBtn) publishBtn.style.display = 'none';
@@ -9879,7 +9892,7 @@ class DistributeManager {
       () => this.renderLinkedInPreview(output),
       () => this.renderBlogPreview(output),
       () => this.renderEmailPreview(output),
-      () => this.renderTwitterPreview(output),
+      () => isXPublished ? this.renderTwitterPublishedState(output) : this.renderTwitterPreview(output),
       () => this.renderHashtags(output),
       () => this.renderFirstComment(output),
       () => this.renderCharCount(output)
@@ -9889,7 +9902,7 @@ class DistributeManager {
     }
 
     // Auto-select the best channel for this content type
-    const bestChannel = this.getChannelForContentType(output.content_type);
+    const bestChannel = isXPublished ? 'twitter' : this.getChannelForContentType(output.content_type);
     this.setActiveChannel(bestChannel);
   }
 
@@ -11100,11 +11113,19 @@ class DistributeManager {
     const threadParts = this.splitIntoThread(content);
     const isThread = threadParts.length > 1;
 
-    const confirmMsg = isThread
-      ? `This will publish a ${threadParts.length}-part thread to X.`
-      : 'This will publish this tweet to X.';
+    const hasPrevious = this.activeReviewItem.previous_tweet_id;
+    let confirmMsg;
+    if (hasPrevious) {
+      confirmMsg = isThread
+        ? `This will delete the previous tweet and publish a ${threadParts.length}-part thread to X.`
+        : 'This will delete the previous tweet and publish the updated version to X.';
+    } else {
+      confirmMsg = isThread
+        ? `This will publish a ${threadParts.length}-part thread to X.`
+        : 'This will publish this tweet to X.';
+    }
 
-    const confirmed = await this.prAgent.showConfirm(confirmMsg, 'Publish to X');
+    const confirmed = await this.prAgent.showConfirm(confirmMsg, hasPrevious ? 'Republish to X' : 'Publish to X');
     if (!confirmed) return;
 
     const publishBtn = document.getElementById('pr-distribute-publish-btn');
@@ -11114,6 +11135,15 @@ class DistributeManager {
     }
 
     try {
+      if (hasPrevious) {
+        const prevIds = this.activeReviewItem.previous_tweet_ids || [this.activeReviewItem.previous_tweet_id];
+        for (const oldId of prevIds) {
+          try {
+            await this.prAgent.apiCall(`/api/x/tweet/${oldId}`, { method: 'DELETE' });
+          } catch (_) { /* best effort */ }
+        }
+      }
+
       const tweetFormat = this.activeReviewItem.tweet_format || 'text';
       const media = tweetFormat === 'visual' ? (this.activeReviewItem.media_attachments || []) : [];
       const imageAttachment = media.find(m => m.type === 'image');
@@ -11134,6 +11164,15 @@ class DistributeManager {
         this.activeReviewItem.phase = 'distribute';
         this.activeReviewItem.published_channel = 'twitter';
         this.activeReviewItem.tweet_url = result.tweet_url || null;
+        this.activeReviewItem.tweet_id = result.tweet_id || null;
+        this.activeReviewItem.tweet_ids = result.tweet_ids || [];
+        this.activeReviewItem.published_at = new Date().toISOString();
+        this.activeReviewItem.published_snapshot = {
+          content: content,
+          tweet_format: tweetFormat,
+          media_url: imageAttachment?.url || null,
+          thread_parts: isThread ? threadParts : null
+        };
 
         try {
           await this.prAgent.apiCall('/api/pr/outputs', {
@@ -11181,6 +11220,81 @@ class DistributeManager {
     }
     if (current) merged.push(current);
     return merged.length > 0 ? merged : [text];
+  }
+
+  renderTwitterPublishedState(output) {
+    const container = document.getElementById('pr-twitter-preview');
+    if (!container) return;
+
+    const formatBar = document.getElementById('pr-twitter-format-bar');
+    if (formatBar) formatBar.style.display = 'none';
+
+    const snapshot = output.published_snapshot || {};
+    const content = snapshot.content || output.content || '';
+    const mediaUrl = snapshot.media_url || null;
+    const publishedAt = output.published_at ? new Date(output.published_at) : null;
+    const dateStr = publishedAt
+      ? publishedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+        ' at ' + publishedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      : '';
+    const tweetUrl = output.tweet_url || '';
+
+    let mediaHtml = '';
+    if (mediaUrl) {
+      mediaHtml = `<div class="pr-x-published-image"><img src="${this.escapeHtml(mediaUrl)}" alt=""></div>`;
+    }
+
+    container.innerHTML = `
+      <div class="pr-x-published-state">
+        <div class="pr-x-published-header">
+          <i class="ph-light ph-check-circle"></i>
+          <span>Published to X</span>
+        </div>
+        <div class="pr-x-published-meta">${this.escapeHtml(dateStr)}</div>
+        <div class="pr-x-published-content">${this.escapeHtml(content)}</div>
+        ${mediaHtml}
+        <div class="pr-x-published-actions">
+          ${tweetUrl ? `<a href="${this.escapeHtml(tweetUrl)}" target="_blank" rel="noopener" class="pr-x-published-view-btn"><i class="ph-light ph-arrow-square-out"></i> View on X</a>` : ''}
+          <button class="pr-x-published-new-version-btn" data-action="post-new-version"><i class="ph-light ph-copy"></i> Post New Version</button>
+        </div>
+      </div>
+    `;
+
+    container.querySelector('[data-action="post-new-version"]')?.addEventListener('click', () => {
+      this.postNewVersion(output);
+    });
+  }
+
+  async postNewVersion(originalOutput) {
+    const newId = 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+    const newOutput = {
+      ...JSON.parse(JSON.stringify(originalOutput)),
+      id: newId,
+      status: 'review',
+      phase: 'distribute',
+      published_channel: null,
+      tweet_url: null,
+      tweet_id: null,
+      tweet_ids: [],
+      published_at: null,
+      published_snapshot: null,
+      previous_tweet_id: originalOutput.tweet_id || null,
+      previous_tweet_ids: originalOutput.tweet_ids || []
+    };
+
+    this.prAgent.outputs.push(newOutput);
+    this.prAgent.saveOutputs();
+
+    try {
+      await this.prAgent.apiCall('/api/pr/outputs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newOutput)
+      });
+    } catch (e) { /* silent */ }
+
+    this.render();
+    this.selectReviewItem(newId);
   }
 
   openScheduleModal() {
@@ -11318,6 +11432,9 @@ class DistributeManager {
         ? `<button class="pr-distribute-queue-remove" data-remove-id="${this.escapeHtml(output.id)}" title="Remove from review"><i class="ph-light ph-x"></i></button>`
         : '';
 
+      const isXPub = output.published_channel === 'twitter' && status === 'published';
+      const publishedBadge = isXPub ? '<span class="pr-distribute-queue-item-badge">Posted to X</span>' : '';
+
       return `
         <div class="pr-distribute-queue-item ${isActive ? 'active' : ''}" data-output-id="${this.escapeHtml(output.id)}">
           <div class="pr-distribute-queue-item-icon">
@@ -11327,6 +11444,7 @@ class DistributeManager {
             <div class="pr-distribute-queue-item-title" title="${this.escapeHtml(title)}">${this.escapeHtml(title)}</div>
             <div class="pr-distribute-queue-item-meta">
               <span class="pr-distribute-queue-item-type">${this.escapeHtml(typeLabel)}</span>
+              ${publishedBadge}
               ${metaText ? `<span>${metaText}</span>` : ''}
             </div>
           </div>

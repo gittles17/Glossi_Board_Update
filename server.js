@@ -2726,6 +2726,26 @@ app.post('/api/x/publish', async (req, res) => {
   }
 });
 
+app.delete('/api/x/tweet/:id', async (req, res) => {
+  if (!isXConfigured()) {
+    return res.status(400).json({ success: false, error: 'X API credentials not configured' });
+  }
+  try {
+    const tweetId = req.params.id;
+    const deleteRequest = {
+      url: `https://api.twitter.com/2/tweets/${tweetId}`,
+      method: 'DELETE'
+    };
+    await axios.delete(deleteRequest.url, {
+      headers: { ...xAuthHeader(deleteRequest) }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    const errMsg = error.response?.data?.detail || error.response?.data?.errors?.[0]?.message || error.message;
+    res.status(error.response?.status || 500).json({ success: false, error: errMsg });
+  }
+});
+
 // ============================================
 // DISTRIBUTION ENDPOINTS
 // ============================================
