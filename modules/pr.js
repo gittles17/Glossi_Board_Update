@@ -9852,17 +9852,20 @@ class DistributeManager {
       if (backBtn) backBtn.style.display = '';
       if (publishBtn) {
         publishBtn.style.display = '';
-        if (output.previous_tweet_id) {
-          publishBtn.innerHTML = '<i class="ph-light ph-arrows-clockwise"></i> Republish to X';
-        } else {
-          publishBtn.innerHTML = '<i class="ph-light ph-paper-plane-tilt"></i> Publish Now';
-        }
+        publishBtn.disabled = false;
+        publishBtn.classList.remove('pr-publish-btn-published');
+        publishBtn.innerHTML = '<i class="ph-light ph-paper-plane-tilt"></i> Publish Now';
       }
       if (scheduleBtn) scheduleBtn.style.display = '';
       if (downloadBlogBtn) downloadBlogBtn.style.display = '';
     } else if (isXPublished) {
       if (backBtn) backBtn.style.display = 'none';
-      if (publishBtn) publishBtn.style.display = 'none';
+      if (publishBtn) {
+        publishBtn.style.display = '';
+        publishBtn.disabled = true;
+        publishBtn.classList.add('pr-publish-btn-published');
+        publishBtn.innerHTML = '<i class="ph-light ph-check-circle"></i> Published';
+      }
       if (scheduleBtn) scheduleBtn.style.display = 'none';
       if (downloadBlogBtn) downloadBlogBtn.style.display = 'none';
     } else {
@@ -11113,19 +11116,11 @@ class DistributeManager {
     const threadParts = this.splitIntoThread(content);
     const isThread = threadParts.length > 1;
 
-    const hasPrevious = this.activeReviewItem.previous_tweet_id;
-    let confirmMsg;
-    if (hasPrevious) {
-      confirmMsg = isThread
-        ? `This will delete the previous tweet and publish a ${threadParts.length}-part thread to X.`
-        : 'This will delete the previous tweet and publish the updated version to X.';
-    } else {
-      confirmMsg = isThread
-        ? `This will publish a ${threadParts.length}-part thread to X.`
-        : 'This will publish this tweet to X.';
-    }
+    const confirmMsg = isThread
+      ? `This will publish a ${threadParts.length}-part thread to X.`
+      : 'This will publish this tweet to X.';
 
-    const confirmed = await this.prAgent.showConfirm(confirmMsg, hasPrevious ? 'Republish to X' : 'Publish to X');
+    const confirmed = await this.prAgent.showConfirm(confirmMsg, 'Publish to X');
     if (!confirmed) return;
 
     const publishBtn = document.getElementById('pr-distribute-publish-btn');
@@ -11135,15 +11130,6 @@ class DistributeManager {
     }
 
     try {
-      if (hasPrevious) {
-        const prevIds = this.activeReviewItem.previous_tweet_ids || [this.activeReviewItem.previous_tweet_id];
-        for (const oldId of prevIds) {
-          try {
-            await this.prAgent.apiCall(`/api/x/tweet/${oldId}`, { method: 'DELETE' });
-          } catch (_) { /* best effort */ }
-        }
-      }
-
       const tweetFormat = this.activeReviewItem.tweet_format || 'text';
       const media = tweetFormat === 'visual' ? (this.activeReviewItem.media_attachments || []) : [];
       const imageAttachment = media.find(m => m.type === 'image');
@@ -11255,46 +11241,9 @@ class DistributeManager {
         ${mediaHtml}
         <div class="pr-x-published-actions">
           ${tweetUrl ? `<a href="${this.escapeHtml(tweetUrl)}" target="_blank" rel="noopener" class="pr-x-published-view-btn"><i class="ph-light ph-arrow-square-out"></i> View on X</a>` : ''}
-          <button class="pr-x-published-new-version-btn" data-action="post-new-version"><i class="ph-light ph-copy"></i> Post New Version</button>
         </div>
       </div>
     `;
-
-    container.querySelector('[data-action="post-new-version"]')?.addEventListener('click', () => {
-      this.postNewVersion(output);
-    });
-  }
-
-  async postNewVersion(originalOutput) {
-    const newId = 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-    const newOutput = {
-      ...JSON.parse(JSON.stringify(originalOutput)),
-      id: newId,
-      status: 'review',
-      phase: 'distribute',
-      published_channel: null,
-      tweet_url: null,
-      tweet_id: null,
-      tweet_ids: [],
-      published_at: null,
-      published_snapshot: null,
-      previous_tweet_id: originalOutput.tweet_id || null,
-      previous_tweet_ids: originalOutput.tweet_ids || []
-    };
-
-    this.prAgent.outputs.push(newOutput);
-    this.prAgent.saveOutputs();
-
-    try {
-      await this.prAgent.apiCall('/api/pr/outputs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newOutput)
-      });
-    } catch (e) { /* silent */ }
-
-    this.render();
-    this.selectReviewItem(newId);
   }
 
   openScheduleModal() {

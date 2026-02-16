@@ -19277,23 +19277,13 @@ body.pr-resizing * {
   background: var(--surface-2);
 }
 
-.pr-x-published-new-version-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #fff;
-  background: var(--accent);
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-
-.pr-x-published-new-version-btn:hover {
-  opacity: 0.85;
+.pr-publish-btn-published {
+  background: transparent;
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  cursor: default;
+  opacity: 1;
+  pointer-events: none;
 }
 
 .pr-distribute-queue-item-badge {
