@@ -411,6 +411,36 @@ app.use((req, res, next) => {
 });
 app.use(express.static(__dirname));
 
+// Shared content plan rules (single source of truth for all endpoints)
+const CONTENT_PLAN_RULES = `CONTENT PLAN RULES:
+
+CONTEXT: Glossi is a seed-stage startup building awareness with builders (devs, designers, PMs) and brand/marketing teams. The content voice is product-led, opinionated, and intentional (think Cursor, Linear, Canva). Never corporate. Never hype. Never generic startup marketing. Every piece should feel like it was worth writing.
+
+ACTIVE CHANNELS: LinkedIn, Twitter/X, company blog, email list, press outreach. Only suggest content for these channels.
+
+VALID CONTENT TYPES: tweet_thread, linkedin_post, blog_post, email_blast, product_announcement, talking_points, investor_snippet
+
+SELECTION HEURISTICS (pick based on article type, not a default template):
+- Breaking/time-sensitive news: tweet_thread + email_blast + linkedin_post
+- Competitor or market shift: blog_post + tweet_thread + linkedin_post
+- Thought leadership / trend piece: blog_post + linkedin_post + tweet_thread
+- Product/feature relevance: product_announcement + blog_post + tweet_thread
+- Funding/business signal: investor_snippet + linkedin_post + email_blast
+- Customer/industry story: blog_post + linkedin_post + email_blast
+- Technical deep-dive: blog_post + tweet_thread + talking_points
+- "Everyone gets this wrong": tweet_thread + blog_post + linkedin_post
+
+DYNAMIC PLAN SIZE (based on relevance to Glossi):
+- High relevance + high urgency: 4-5 content pieces
+- Medium relevance: 3-4 content pieces
+- Low relevance: 2 content pieces
+
+DIVERSIFICATION: Do NOT default to linkedin_post + email_blast for every article. Look at the batch as a whole. If multiple articles would get the same lead type, vary them. Prioritize the content type that best fits each specific article's angle.
+
+AUDIENCE TAG: Each content piece MUST include an "audience" field with one of: "builders", "brands", "investors", "press", "internal"
+
+TONE FOR DESCRIPTIONS: Write content plan descriptions like a sharp comms lead, not a template. Instead of "Thought leadership post tied to this news" write something like "Founder take: why compositing beats generation for brand teams, told through this news hook." Be specific to the article.`;
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', database: useDatabase });
@@ -1352,34 +1382,7 @@ Return articles in this JSON format:
   ]
 }
 
-CONTENT PLAN RULES:
-
-CONTEXT: Glossi is a seed-stage startup building awareness with builders (devs, designers, PMs) and brand/marketing teams. The content voice is product-led, opinionated, and intentional (think Cursor, Linear, Canva). Never corporate. Never hype. Never generic startup marketing. Every piece should feel like it was worth writing.
-
-ACTIVE CHANNELS: LinkedIn, Twitter/X, company blog, email list, press outreach. Only suggest content for these channels.
-
-VALID CONTENT TYPES: tweet_thread, linkedin_post, blog_post, email_blast, product_announcement, talking_points, investor_snippet
-
-SELECTION HEURISTICS (pick based on article type, not a default template):
-- Breaking/time-sensitive news: tweet_thread + email_blast + linkedin_post
-- Competitor or market shift: blog_post + tweet_thread + linkedin_post
-- Thought leadership / trend piece: blog_post + linkedin_post + tweet_thread
-- Product/feature relevance: product_announcement + blog_post + tweet_thread
-- Funding/business signal: investor_snippet + linkedin_post + email_blast
-- Customer/industry story: blog_post + linkedin_post + email_blast
-- Technical deep-dive: blog_post + tweet_thread + talking_points
-- "Everyone gets this wrong": tweet_thread + blog_post + linkedin_post
-
-DYNAMIC PLAN SIZE (based on relevance to Glossi):
-- High relevance + high urgency: 4-5 content pieces
-- Medium relevance: 3-4 content pieces
-- Low relevance: 2 content pieces
-
-DIVERSIFICATION: Do NOT default to linkedin_post + email_blast for every article. Look at the batch as a whole. If multiple articles would get the same lead type, vary them. Prioritize the content type that best fits each specific article's angle.
-
-AUDIENCE TAG: Each content piece MUST include an "audience" field with one of: "builders", "brands", "investors", "press", "internal"
-
-TONE FOR DESCRIPTIONS: Write content plan descriptions like a sharp comms lead, not a template. Instead of "Thought leadership post tied to this news" write something like "Founder take: why compositing beats generation for brand teams, told through this news hook." Be specific to the article.
+${CONTENT_PLAN_RULES}
 
 CRITICAL: Only include articles you're recommending. Do NOT include articles with "EXCLUDED" or "Not relevant" in the relevance field. If you think an article should be excluded, simply don't add it to the JSON array.
 
@@ -1610,49 +1613,29 @@ ${i + 1}. HEADLINE: ${a.headline}
 ARTICLES:
 ${articlesList}
 
-For each article, return a content_plan array with the right mix of content types.
+For each article, return a content_plan array with the right mix of content types. Most articles should have 3-5 content pieces.
 
 Return JSON:
 {
   "plans": [
     {
       "url": "the article URL",
-      "angle_title": "Short story angle name (3-6 words)",
-      "angle_narrative": "1-2 sentences explaining the story angle and Glossi connection",
+      "angle_title": "Short story angle name (3-6 words, e.g. 'AI Photography Goes Enterprise')",
+      "angle_narrative": "1-2 sentences explaining the story angle AND how it connects to Glossi. Weave in the Glossi tie-in naturally.",
       "content_plan": [
-        {"type": "tweet_thread", "description": "Specific description", "priority": 1, "audience": "builders"}
+        {"type": "tweet_thread", "description": "Quick reaction: what this means for product teams still relying on photoshoots", "priority": 1, "audience": "builders"},
+        {"type": "blog_post", "description": "Deep dive on why compositing-first matters more after this news", "priority": 2, "audience": "brands"},
+        {"type": "email_blast", "description": "Signal boost to subscriber list with the key insight", "priority": 3, "audience": "brands"}
       ]
     }
   ]
 }
 
-CONTENT PLAN RULES:
-
-CONTEXT: Glossi is a seed-stage startup building awareness with builders (devs, designers, PMs) and brand/marketing teams. The content voice is product-led, opinionated, and intentional (think Cursor, Linear, Canva). Never corporate. Never hype. Never generic startup marketing.
-
-VALID CONTENT TYPES: tweet_thread, linkedin_post, blog_post, email_blast, product_announcement, talking_points, investor_snippet
-
-SELECTION HEURISTICS (pick based on article type, not a default template):
-- Breaking/time-sensitive news: tweet_thread + email_blast + linkedin_post
-- Competitor or market shift: blog_post + tweet_thread + linkedin_post
-- Thought leadership / trend piece: blog_post + linkedin_post + tweet_thread
-- Product/feature relevance: product_announcement + blog_post + tweet_thread
-- Funding/business signal: investor_snippet + linkedin_post + email_blast
-- Customer/industry story: blog_post + linkedin_post + email_blast
-- Technical deep-dive: blog_post + tweet_thread + talking_points
-- "Everyone gets this wrong": tweet_thread + blog_post + linkedin_post
-
-DYNAMIC PLAN SIZE: High relevance: 3-4 pieces. Medium: 2-3. Low: 2.
-
-DIVERSIFICATION: Vary the lead content type across articles. Not every article should start with the same type.
-
-AUDIENCE TAG: Each piece MUST include "audience": "builders" | "brands" | "investors" | "press" | "internal"
-
-TONE: Write descriptions like a sharp comms lead. Be specific to each article.`;
+${CONTENT_PLAN_RULES}`;
 
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
       model: 'claude-haiku-4-5',
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: 'You are a strategic PR content planner. Always return valid JSON.',
       messages: [{ role: 'user', content: prompt }]
     }, {
@@ -1798,14 +1781,7 @@ Analyze this article and return a JSON object with:
   "relevance": "Topic connection explanation"
 }
 
-CONTENT PLAN RULES:
-- Glossi is seed-stage, building awareness with builders and brand teams. Voice is product-led, opinionated, intentional. Not corporate, not hype, not generic.
-- Active channels: LinkedIn, Twitter/X, blog, email, press.
-- Valid types: tweet_thread, linkedin_post, blog_post, email_blast, product_announcement, talking_points, investor_snippet
-- Include 2-4 pieces. More for high-relevance articles, fewer for tangential ones.
-- Each piece MUST have an "audience" field: "builders", "brands", "investors", "press", or "internal"
-- Do NOT default to linkedin_post + email_blast. Pick types that fit THIS specific article.
-- Write specific descriptions, not templates. Example: "Founder take: why this proves compositing beats generation" not "Thought leadership post."
+${CONTENT_PLAN_RULES}
 
 Return ONLY valid JSON.`;
 
@@ -2478,14 +2454,7 @@ Each angle should be a clear NARRATIVE, not a content type. Something a journali
 
 For each angle, include a content plan: what specific pieces to create and where to publish them, in priority order.
 
-CONTENT PLAN RULES:
-- Glossi is seed-stage, building awareness with builders (devs, designers, PMs) and brand teams. Voice is product-led, opinionated, intentional (think Cursor, Linear, Canva). Not corporate, not hype, not generic.
-- Active channels: LinkedIn, Twitter/X, company blog, email list, press outreach.
-- Valid types: tweet_thread, linkedin_post, blog_post, email_blast, product_announcement, talking_points, investor_snippet
-- High urgency angles: 4-5 content pieces. Medium: 3-4. Low: 2-3.
-- Each piece MUST have an "audience" field: "builders", "brands", "investors", "press", or "internal"
-- Do NOT default to linkedin_post + email_blast for every angle. Vary the mix across angles.
-- Write specific, sharp descriptions. Not "Founder perspective on..." but "Why world models prove compositing was the right bet, told from the builder's POV."
+${CONTENT_PLAN_RULES}
 
 Return ONLY valid JSON in this exact structure:
 {
