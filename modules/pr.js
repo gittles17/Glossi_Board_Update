@@ -9320,6 +9320,20 @@ class DistributeManager {
 
   // Send current content from Create stage to Review
   async sendCurrentToReview() {
+    // Flush any pending contenteditable edits before reading output
+    clearTimeout(this.prAgent._editSaveDebounce);
+    this.prAgent.saveCurrentEdits();
+
+    // Sync output.content from the current draft (edits go to draft.content, not output.content)
+    const currentOutput = this.prAgent.currentOutput;
+    if (currentOutput?.drafts?.length) {
+      const draftIdx = this.prAgent._viewingDraftIndex || 0;
+      const activeDraft = currentOutput.drafts[draftIdx];
+      if (activeDraft?.content) {
+        currentOutput.content = activeDraft.content;
+      }
+    }
+
     const nm = this.prAgent.newsMonitor;
     if (!nm || !nm._activeStoryKey || nm._activeTabId == null) return;
 
