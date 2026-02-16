@@ -2636,12 +2636,7 @@ app.post('/api/x/publish', async (req, res) => {
 
         const initRequest = {
           url: 'https://upload.twitter.com/1.1/media/upload.json',
-          method: 'POST',
-          data: {
-            command: 'INIT',
-            total_bytes: imageBuffer.length,
-            media_type: mimeType
-          }
+          method: 'POST'
         };
         const initForm = new FormData();
         initForm.append('command', 'INIT');
@@ -2657,8 +2652,7 @@ app.post('/api/x/publish', async (req, res) => {
 
         const appendRequest = {
           url: 'https://upload.twitter.com/1.1/media/upload.json',
-          method: 'POST',
-          data: { command: 'APPEND', media_id: mediaId, segment_index: '0' }
+          method: 'POST'
         };
         const appendForm = new FormData();
         appendForm.append('command', 'APPEND');
@@ -2674,8 +2668,7 @@ app.post('/api/x/publish', async (req, res) => {
 
         const finalizeRequest = {
           url: 'https://upload.twitter.com/1.1/media/upload.json',
-          method: 'POST',
-          data: { command: 'FINALIZE', media_id: mediaId }
+          method: 'POST'
         };
         const finalizeForm = new FormData();
         finalizeForm.append('command', 'FINALIZE');
