@@ -52,19 +52,15 @@ GLOSSI CONTEXT:
 
 CONTENT TYPE GUIDANCE:
 
-Press Release: Write like Linear's blog announcements. Open with the news. One paragraph of context. Quote from founder (short, confident, not salesy). Details. Close with about section. No "FOR IMMEDIATE RELEASE" unless user requests it.
-
-Media Pitch: Open with why this matters to the journalist's beat. Not "I hope this email finds you well." Get to the angle in the first sentence. Keep it under 150 words.
-
 Product Announcement: Changelog style. What shipped. What it does. One sentence on why it matters. Move on.
 
 LinkedIn Post: Perspective piece energy. Share a take. Back it with what you've built. No hashtag spam. One or two max.
 
-Blog Post: Write like Linear's "Now" blog. First-person where appropriate. Opinionated. Substantive. Not content marketing. Real thinking about real problems in the space.
+Blog Post: Write like Linear's "Now" blog. First-person where appropriate. Opinionated. Substantive. Not content marketing. Real thinking about real problems in the space. This covers op-eds, press releases, and bylined articles too. Adjust formality based on the description provided.
 
-Tweet / Hot Take (for X): Study how Cursor and Linear use X. They mix formats. Not every post is text. The feed has rhythm: a sharp take, then a product screenshot, then a blog link, then an infographic. Match that energy.
+Tweet (for X): Study how Cursor and Linear use X. They mix formats. Not every post is text. The feed has rhythm: a sharp take, then a product screenshot, then a blog link, then an infographic. Match that energy.
 
-IMPORTANT: For tweets and hot takes, you MUST include "tweet_format" and (when applicable) "visual_prompt" in your JSON response. These go alongside "content", "citations", and "strategy" in the same response object.
+IMPORTANT: For tweets, you MUST include "tweet_format" and (when applicable) "visual_prompt" in your JSON response. These go alongside "content", "citations", and "strategy" in the same response object.
 
 TWEET FORMATS (you MUST pick one, default to VISUAL when the topic involves data, a comparison, or a claim worth illustrating):
 - TEXT: One single tweet, no line breaks. Maximum 280 characters. Punchy, opinionated, shareable. One sharp observation that makes people stop scrolling. No hashtags.
@@ -76,7 +72,7 @@ TWEET FORMATS (you MUST pick one, default to VISUAL when the topic involves data
 CRITICAL RULES FOR TWEETS:
 - TEXT, VISUAL, BLOG_LINK, and PRODUCT must be a SINGLE tweet. No paragraph breaks. No multiple tweets.
 - Only THREAD format produces multiple tweets separated by double newlines.
-- "tweet_format" is REQUIRED in the response JSON for all tweet/hot take content.
+- "tweet_format" is REQUIRED in the response JSON for all tweet content.
 - Default to VISUAL when the topic has data, numbers, a comparison, or a claim that could be illustrated.
 
 VISUAL PROMPT RULES (required when tweet_format is "visual" or "product"):
@@ -86,11 +82,9 @@ VISUAL PROMPT RULES (required when tweet_format is "visual" or "product"):
 - Keep it to ONE concept. Never ask for multiple charts or complex layouts.
 - Do NOT describe colors, fonts, or layout in the visual_prompt. The image generator already has detailed style rules baked in (Cursor-style dark minimal with Glossi orange accent). Just describe the content.
 
-Founder Quote / Soundbite: Short. Quotable. Something a journalist would actually use. Not corporate speak.
+Email: For subscriber blasts AND journalist pitches. Adjust tone based on audience. For press: open with why this matters to their beat, get to the angle in the first sentence, keep it under 150 words. For subscribers: key insight distilled, one clear takeaway, link to deeper content.
 
-Briefing Document: Background context for a journalist meeting. Key facts, angles, what to emphasize, what to avoid.
-
-Talking Points: Bullet format. Each point is self-contained. Ordered by importance.
+Talking Points: Bullet format. Each point is self-contained. Ordered by importance. Also covers briefing docs and internal prep material.
 
 When generating content, first analyze the provided sources, then produce the requested content type with proper citations. After generating, provide distribution strategy recommendations.
 
@@ -98,8 +92,8 @@ RESPONSE FORMAT:
 Return your response in this exact JSON structure:
 {
   "content": "The generated PR content with [Source X] citations inline",
-  "tweet_format": "(REQUIRED for tweets/hot takes) text|visual|blog_link|product|thread",
-  "visual_prompt": "(REQUIRED for tweets/hot takes when tweet_format is visual or product) Description of the infographic to generate",
+  "tweet_format": "(REQUIRED for tweets) text|visual|blog_link|product|thread",
+  "visual_prompt": "(REQUIRED for tweets when tweet_format is visual or product) Description of the infographic to generate",
   "citations": [
     {"index": 1, "sourceId": "src_id", "excerpt": "relevant quote from source", "verified": true},
     {"index": 2, "sourceId": null, "excerpt": "claim that needs verification", "verified": false}
@@ -135,17 +129,12 @@ function glossiLoaderSVG(extraClass = '') {
 }
 
 const CONTENT_TYPES = [
-  { id: 'press_release', label: 'Press Release' },
-  { id: 'media_pitch', label: 'Media Pitch Email' },
-  { id: 'product_announcement', label: 'Product Announcement' },
-  { id: 'founder_quote', label: 'Founder Quote / Soundbite' },
-  { id: 'blog_post', label: 'Blog Post' },
-  { id: 'linkedin_post', label: 'LinkedIn Post' },
   { id: 'tweet_thread', label: 'Tweet' },
-  { id: 'briefing_doc', label: 'Briefing Document' },
+  { id: 'linkedin_post', label: 'LinkedIn Post' },
+  { id: 'blog_post', label: 'Blog Post' },
+  { id: 'email_blast', label: 'Email' },
+  { id: 'product_announcement', label: 'Product Announcement' },
   { id: 'talking_points', label: 'Talking Points' },
-  { id: 'op_ed', label: 'Op-Ed / Bylined Article' },
-  { id: 'email_blast', label: 'Email Blast' },
   { id: 'investor_snippet', label: 'Investor Update Snippet' },
   { id: 'custom', label: 'Custom' }
 ];
@@ -2169,7 +2158,7 @@ class PRAgent {
       return;
     }
 
-    const contentType = this.dom.contentType?.value || 'press_release';
+    const contentType = this.dom.contentType?.value || 'tweet_thread';
     const typeLabel = CONTENT_TYPES.find(t => t.id === contentType)?.label || contentType;
     const customPrompt = contentType === 'custom' ? (this.dom.customPrompt?.value.trim() || '') : '';
 
@@ -6558,7 +6547,7 @@ For each angle, provide:
 2. An ANGLE NARRATIVE (2-3 sentences) explaining how this angle approaches the source material, what story threads it pulls, and how the content will be positioned.
 3. A content plan with 4-5 content types specifically appropriate for THIS angle.
 
-Each content plan item should have: type (one of: blog_post, linkedin_post, tweet_thread, email_blast, media_pitch, op_ed, talking_points), description (specific to the angle), priority (1-5), audience (brands/builders/press/internal).
+Each content plan item should have: type (one of: tweet_thread, linkedin_post, blog_post, email_blast, product_announcement, talking_points, investor_snippet), description (specific to the angle), priority (1-5), audience (brands/builders/press/internal).
 
 Return JSON: { "angles": [{ "angleTitle": "...", "angleNarrative": "...", "contentPlan": [...] }, ...] }
 ${feedbackClause}
@@ -6617,12 +6606,13 @@ ${primaryContext}${bgContext}`
       linkedin_post: 'ph-linkedin-logo',
       blog_post: 'ph-article',
       email_blast: 'ph-envelope',
-      media_pitch: 'ph-envelope',
       tweet_thread: 'ph-x-logo',
-      press_release: 'ph-newspaper',
-      founder_quote: 'ph-quotes',
-      op_ed: 'ph-pen-nib',
-      talking_points: 'ph-list-bullets'
+      talking_points: 'ph-list-bullets',
+      media_pitch: 'ph-envelope',
+      press_release: 'ph-article',
+      founder_quote: 'ph-article',
+      op_ed: 'ph-article',
+      briefing_doc: 'ph-list-bullets'
     };
 
     this._pendingAngles = angles;
@@ -7027,28 +7017,25 @@ ${primaryContext}${bgContext}`
       contentPlan = isUrgent
         ? [
             { type: 'tweet_thread', description: 'Quick, opinionated reaction while the news is fresh', priority: 1, audience: 'builders' },
-            { type: 'media_pitch', description: 'Pitch to relevant reporters with Glossi angle', priority: 3, audience: 'press' },
-            { type: 'email_blast', description: 'Signal boost to subscriber list', priority: 4, audience: 'brands' }
+            { type: 'email_blast', description: 'Pitch to relevant reporters with Glossi angle', priority: 2, audience: 'press' },
+            { type: 'linkedin_post', description: 'Signal boost with founder perspective', priority: 3, audience: 'brands' }
           ]
         : isCompetitor
         ? [
-            { type: 'op_ed', description: 'Bylined take on what competitors miss', priority: 1, audience: 'builders' },
+            { type: 'blog_post', description: 'Bylined take on what competitors miss', priority: 1, audience: 'builders' },
             { type: 'tweet_thread', description: 'One sharp, punchy tweet on the competitive move (280 chars max)', priority: 2, audience: 'builders' },
-            { type: 'linkedin_post', description: 'Founder perspective on the market move', priority: 3, audience: 'brands' },
-            { type: 'blog_post', description: 'Deeper analysis with Glossi differentiation', priority: 4, audience: 'brands' }
+            { type: 'linkedin_post', description: 'Founder perspective on the market move', priority: 3, audience: 'brands' }
           ]
         : isTrend
         ? [
-            { type: 'op_ed', description: 'Opinionated perspective on this trend', priority: 1, audience: 'builders' },
+            { type: 'blog_post', description: 'Opinionated perspective on this trend', priority: 1, audience: 'builders' },
             { type: 'linkedin_post', description: 'Founder POV distilled to one key insight', priority: 2, audience: 'brands' },
-            { type: 'blog_post', description: 'Deeper analysis with Glossi angle', priority: 3, audience: 'brands' },
-            { type: 'tweet_thread', description: 'One sharp, punchy tweet on the trend (280 chars max)', priority: 4, audience: 'builders' }
+            { type: 'tweet_thread', description: 'One sharp, punchy tweet on the trend (280 chars max)', priority: 3, audience: 'builders' }
           ]
         : [
             { type: 'blog_post', description: 'In-depth analysis with product angle', priority: 1, audience: 'brands' },
             { type: 'linkedin_post', description: 'Key insight as a founder perspective post', priority: 2, audience: 'brands' },
-            { type: 'tweet_thread', description: 'One sharp, punchy tweet (280 chars max)', priority: 3, audience: 'builders' },
-            { type: 'talking_points', description: 'Internal prep points for team', priority: 4, audience: 'internal' }
+            { type: 'tweet_thread', description: 'One sharp, punchy tweet (280 chars max)', priority: 3, audience: 'builders' }
           ];
     }
 
@@ -7146,18 +7133,18 @@ ${primaryContext}${bgContext}`
 
   formatContentType(type) {
     const labels = {
-      'press_release': 'Press Release',
-      'media_pitch': 'Media Pitch',
-      'product_announcement': 'Product Announcement',
-      'founder_quote': 'Founder Quote',
-      'blog_post': 'Blog Post',
-      'linkedin_post': 'LinkedIn Post',
       'tweet_thread': 'Tweet',
-      'briefing_doc': 'Briefing Doc',
+      'linkedin_post': 'LinkedIn Post',
+      'blog_post': 'Blog Post',
+      'email_blast': 'Email',
+      'product_announcement': 'Product Announcement',
       'talking_points': 'Talking Points',
-      'op_ed': 'Op-Ed',
-      'email_blast': 'Email Blast',
       'investor_snippet': 'Investor Snippet',
+      'press_release': 'Blog Post',
+      'media_pitch': 'Email',
+      'founder_quote': 'Blog Post',
+      'op_ed': 'Blog Post',
+      'briefing_doc': 'Talking Points',
       'custom': 'Custom'
     };
     return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -7689,7 +7676,8 @@ class CalendarManager {
       'linkedin_post': '💼',
       'tweet_thread': '𝕏',
       'blog_post': '📝',
-      'press_release': '📰',
+      'email_blast': '📧',
+      'press_release': '📝',
       'media_pitch': '📧',
       'pitch': '📧',
       'custom': '📌'
@@ -7737,8 +7725,10 @@ class CalendarManager {
               <option value="linkedin_post">LinkedIn Post</option>
               <option value="tweet_thread">Tweet</option>
               <option value="blog_post">Blog Post</option>
-              <option value="press_release">Press Release</option>
-              <option value="media_pitch">Media Pitch</option>
+              <option value="email_blast">Email</option>
+              <option value="product_announcement">Product Announcement</option>
+              <option value="talking_points">Talking Points</option>
+              <option value="investor_snippet">Investor Snippet</option>
               <option value="custom">Custom</option>
             </select>
           </div>
@@ -7870,7 +7860,7 @@ class AngleManager {
         urgency: 'low',
         why_now: 'Persistent problem, always relevant',
         content_plan: [
-          { type: 'op_ed', description: 'Why every AI-generated product image is slowly eroding your brand (and what to do about it)', target: 'Company blog', priority: 1, audience: 'brands', completed: false },
+          { type: 'blog_post', description: 'Why every AI-generated product image is slowly eroding your brand (and what to do about it)', target: 'Company blog', priority: 1, audience: 'brands', completed: false },
           { type: 'tweet_thread', description: 'One punchy tweet: the visual quality gap brands keep ignoring.', target: 'Twitter/X', priority: 2, audience: 'builders', completed: false },
           { type: 'email_blast', description: 'The brand consistency problem nobody talks about, with a Glossi angle', target: 'Email list', priority: 3, audience: 'brands', completed: false }
         ],
@@ -7887,7 +7877,7 @@ class AngleManager {
         content_plan: [
           { type: 'tweet_thread', description: 'Everyone is excited about world models. Here is what they are missing: the product still needs to be real.', target: 'Twitter/X', priority: 1, audience: 'builders', completed: false },
           { type: 'blog_post', description: 'Deep dive: how Glossi\'s compositing-first architecture was built for the world model era', target: 'Company blog', priority: 2, audience: 'brands', completed: false },
-          { type: 'media_pitch', description: 'Pitch to AI reporters: the startup that built for world models before they arrived', target: 'TechCrunch / VentureBeat', priority: 3, audience: 'press', completed: false },
+          { type: 'email_blast', description: 'Pitch to AI reporters: the startup that built for world models before they arrived', target: 'TechCrunch / VentureBeat', priority: 3, audience: 'press', completed: false },
           { type: 'investor_snippet', description: 'World model validation proof point for investor updates', target: 'Investor comms', priority: 4, audience: 'investors', completed: false }
         ],
         isDefault: true,
@@ -7902,7 +7892,7 @@ class AngleManager {
         why_now: 'Evergreen explainer angle',
         content_plan: [
           { type: 'linkedin_post', description: 'The green screen analogy, explained in one post. Your product is the actor. AI builds the set.', target: 'LinkedIn', priority: 1, audience: 'brands', completed: false },
-          { type: 'founder_quote', description: 'Punchy soundbite version of the analogy for press and pitch conversations', target: 'General', priority: 2, audience: 'press', completed: false },
+          { type: 'tweet_thread', description: 'Punchy soundbite version of the green screen analogy for X', target: 'Twitter/X', priority: 2, audience: 'builders', completed: false },
           { type: 'talking_points', description: 'Elevator pitch script built around the green screen frame', target: 'Internal', priority: 3, audience: 'internal', completed: false }
         ],
         isDefault: true,
@@ -8795,18 +8785,18 @@ class AngleManager {
 
   formatContentType(type) {
     const typeMap = {
-      'press_release': 'Press Release',
-      'media_pitch': 'Media Pitch',
-      'product_announcement': 'Product Announcement',
-      'founder_quote': 'Founder Quote',
-      'blog_post': 'Blog Post',
-      'linkedin_post': 'LinkedIn Post',
       'tweet_thread': 'Tweet',
-      'briefing_doc': 'Briefing Doc',
+      'linkedin_post': 'LinkedIn Post',
+      'blog_post': 'Blog Post',
+      'email_blast': 'Email',
+      'product_announcement': 'Product Announcement',
       'talking_points': 'Talking Points',
-      'op_ed': 'Op-Ed',
-      'email_blast': 'Email Blast',
-      'investor_snippet': 'Investor Snippet'
+      'investor_snippet': 'Investor Snippet',
+      'press_release': 'Blog Post',
+      'media_pitch': 'Email',
+      'founder_quote': 'Blog Post',
+      'op_ed': 'Blog Post',
+      'briefing_doc': 'Talking Points'
     };
     return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
@@ -8941,7 +8931,7 @@ class AngleManager {
 // DISTRIBUTE MANAGER
 // ============================================
 
-const LINKEDIN_PUBLISHABLE_TYPES = ['linkedin_post', 'blog_post', 'founder_quote'];
+const LINKEDIN_PUBLISHABLE_TYPES = ['linkedin_post', 'blog_post'];
 
 class DistributeManager {
   constructor(prAgent) {
@@ -9561,9 +9551,12 @@ class DistributeManager {
       'linkedin_post': 'linkedin',
       'blog_post': 'blog',
       'email_blast': 'email',
+      'tweet_thread': 'twitter',
       'media_pitch': 'email',
       'pitch': 'email',
-      'tweet_thread': 'twitter'
+      'press_release': 'blog',
+      'op_ed': 'blog',
+      'founder_quote': 'linkedin'
     };
     return map[contentType] || 'blog';
   }
@@ -10519,19 +10512,19 @@ class DistributeManager {
       const isActive = this.activeReviewItem?.id === output.id;
 
       const iconMap = {
+        tweet_thread: 'ph-x-logo',
         linkedin_post: 'ph-linkedin-logo',
         blog_post: 'ph-article',
         email_blast: 'ph-envelope',
-        media_pitch: 'ph-envelope',
-        tweet_thread: 'ph-x-logo',
-        press_release: 'ph-newspaper',
-        founder_quote: 'ph-quotes',
         product_announcement: 'ph-megaphone',
-        op_ed: 'ph-pen-nib',
-        investor_snippet: 'ph-chart-line-up',
-        briefing_doc: 'ph-file-text',
         talking_points: 'ph-list-bullets',
-        custom: 'ph-file-text'
+        investor_snippet: 'ph-chart-line-up',
+        custom: 'ph-file-text',
+        media_pitch: 'ph-envelope',
+        press_release: 'ph-article',
+        founder_quote: 'ph-article',
+        op_ed: 'ph-article',
+        briefing_doc: 'ph-list-bullets'
       };
       const iconClass = iconMap[output.content_type] || 'ph-file-text';
 

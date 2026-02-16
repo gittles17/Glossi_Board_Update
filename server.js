@@ -1358,24 +1358,24 @@ CONTEXT: Glossi is a seed-stage startup building awareness with builders (devs, 
 
 ACTIVE CHANNELS: LinkedIn, Twitter/X, company blog, email list, press outreach. Only suggest content for these channels.
 
-VALID CONTENT TYPES: linkedin_post, media_pitch, blog_post, press_release, tweet_thread, founder_quote, talking_points, briefing_doc, product_announcement, op_ed, email_blast, investor_snippet
+VALID CONTENT TYPES: tweet_thread, linkedin_post, blog_post, email_blast, product_announcement, talking_points, investor_snippet
 
 SELECTION HEURISTICS (pick based on article type, not a default template):
-- Breaking/time-sensitive news: media_pitch + tweet_thread + email_blast
-- Competitor or market shift: op_ed + tweet_thread + linkedin_post
-- Thought leadership / trend piece: op_ed + linkedin_post + blog_post
-- Product/feature relevance: product_announcement + blog_post + email_blast
-- Funding/business signal: investor_snippet + press_release + linkedin_post
-- Customer/industry story: blog_post + linkedin_post + founder_quote
-- Technical deep-dive: blog_post + tweet_thread + op_ed
-- "Everyone gets this wrong": tweet_thread + op_ed + linkedin_post
+- Breaking/time-sensitive news: tweet_thread + email_blast + linkedin_post
+- Competitor or market shift: blog_post + tweet_thread + linkedin_post
+- Thought leadership / trend piece: blog_post + linkedin_post + tweet_thread
+- Product/feature relevance: product_announcement + blog_post + tweet_thread
+- Funding/business signal: investor_snippet + linkedin_post + email_blast
+- Customer/industry story: blog_post + linkedin_post + email_blast
+- Technical deep-dive: blog_post + tweet_thread + talking_points
+- "Everyone gets this wrong": tweet_thread + blog_post + linkedin_post
 
 DYNAMIC PLAN SIZE (based on relevance to Glossi):
 - High relevance + high urgency: 4-5 content pieces
 - Medium relevance: 3-4 content pieces
 - Low relevance: 2 content pieces
 
-DIVERSIFICATION: Do NOT default to linkedin_post + media_pitch for every article. Look at the batch as a whole. If multiple articles would get the same lead type, vary them. Prioritize the content type that best fits each specific article's angle.
+DIVERSIFICATION: Do NOT default to linkedin_post + email_blast for every article. Look at the batch as a whole. If multiple articles would get the same lead type, vary them. Prioritize the content type that best fits each specific article's angle.
 
 AUDIENCE TAG: Each content piece MUST include an "audience" field with one of: "builders", "brands", "investors", "press", "internal"
 
@@ -1677,7 +1677,7 @@ Analyze this article and return a JSON object with:
   "angle_narrative": "1-2 sentences explaining the story angle AND how it connects to Glossi. Weave in the Glossi tie-in naturally.",
   "content_plan": [
     {"type": "tweet_thread", "description": "Quick founder reaction: what this signals for AI product photography", "priority": 1, "audience": "builders"},
-    {"type": "op_ed", "description": "Bylined take on why this validates compositing over pure generation", "priority": 2, "audience": "brands"},
+    {"type": "blog_post", "description": "Bylined take on why this validates compositing over pure generation", "priority": 2, "audience": "brands"},
     {"type": "email_blast", "description": "Key insight distilled for subscriber list", "priority": 3, "audience": "brands"}
   ],
   "relevance": "Topic connection explanation"
@@ -1686,10 +1686,10 @@ Analyze this article and return a JSON object with:
 CONTENT PLAN RULES:
 - Glossi is seed-stage, building awareness with builders and brand teams. Voice is product-led, opinionated, intentional. Not corporate, not hype, not generic.
 - Active channels: LinkedIn, Twitter/X, blog, email, press.
-- Valid types: linkedin_post, media_pitch, blog_post, press_release, tweet_thread, founder_quote, talking_points, briefing_doc, product_announcement, op_ed, email_blast, investor_snippet
+- Valid types: tweet_thread, linkedin_post, blog_post, email_blast, product_announcement, talking_points, investor_snippet
 - Include 2-4 pieces. More for high-relevance articles, fewer for tangential ones.
 - Each piece MUST have an "audience" field: "builders", "brands", "investors", "press", or "internal"
-- Do NOT default to linkedin_post + media_pitch. Pick types that fit THIS specific article.
+- Do NOT default to linkedin_post + email_blast. Pick types that fit THIS specific article.
 - Write specific descriptions, not templates. Example: "Founder take: why this proves compositing beats generation" not "Thought leadership post."
 
 Return ONLY valid JSON.`;
@@ -2366,10 +2366,10 @@ For each angle, include a content plan: what specific pieces to create and where
 CONTENT PLAN RULES:
 - Glossi is seed-stage, building awareness with builders (devs, designers, PMs) and brand teams. Voice is product-led, opinionated, intentional (think Cursor, Linear, Canva). Not corporate, not hype, not generic.
 - Active channels: LinkedIn, Twitter/X, company blog, email list, press outreach.
-- Valid types: linkedin_post, media_pitch, blog_post, press_release, tweet_thread, founder_quote, talking_points, briefing_doc, product_announcement, op_ed, email_blast, investor_snippet
+- Valid types: tweet_thread, linkedin_post, blog_post, email_blast, product_announcement, talking_points, investor_snippet
 - High urgency angles: 4-5 content pieces. Medium: 3-4. Low: 2-3.
 - Each piece MUST have an "audience" field: "builders", "brands", "investors", "press", or "internal"
-- Do NOT default to linkedin_post + media_pitch for every angle. Vary the mix across angles.
+- Do NOT default to linkedin_post + email_blast for every angle. Vary the mix across angles.
 - Write specific, sharp descriptions. Not "Founder perspective on..." but "Why world models prove compositing was the right bet, told from the builder's POV."
 
 Return ONLY valid JSON in this exact structure:
@@ -2383,8 +2383,8 @@ Return ONLY valid JSON in this exact structure:
       "why_now": "One sentence on timing",
       "content_plan": [
         { "type": "tweet_thread", "description": "Quick reaction: what everyone misses about world models and product viz", "target": "Twitter/X", "priority": 1, "audience": "builders" },
-        { "type": "op_ed", "description": "Bylined piece on why compositing-first was the right architecture bet", "target": "Company blog", "priority": 2, "audience": "brands" },
-        { "type": "media_pitch", "description": "Pitch to AI reporters: Glossi built for the world model era before it arrived", "target": "TechCrunch", "priority": 3, "audience": "press" }
+        { "type": "blog_post", "description": "Bylined piece on why compositing-first was the right architecture bet", "target": "Company blog", "priority": 2, "audience": "brands" },
+        { "type": "email_blast", "description": "Pitch to AI reporters: Glossi built for the world model era before it arrived", "target": "TechCrunch", "priority": 3, "audience": "press" }
       ]
     }
   ]
