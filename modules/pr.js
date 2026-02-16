@@ -5159,6 +5159,10 @@ class NewsMonitor {
     this._archivedNewsIds = new Set();
     this._newsArchivedExpanded = false;
     this._customArchivedExpanded = false;
+
+    // Favorites state (persisted to PostgreSQL)
+    this._favoriteIds = new Set();
+    this._favoritesFilter = 'all';
   }
 
   async init() {
@@ -5168,6 +5172,8 @@ class NewsMonitor {
     this.setupPanelResize();
     this.loadCustomCards();
     this.loadArchivedNewsIds();
+    await this.loadFavorites();
+    this.setupFavoritesFilter();
     await this.loadCachedNews();
   }
 
@@ -5878,11 +5884,20 @@ class NewsMonitor {
     const filteredNews = this.getFilteredNews();
 
     // Separate active vs archived
-    const activeNews = filteredNews.filter(item => !this._archivedNewsIds.has(item.url || item.headline));
+    let activeNews = filteredNews.filter(item => !this._archivedNewsIds.has(item.url || item.headline));
     const archivedNews = filteredNews.filter(item => this._archivedNewsIds.has(item.url || item.headline));
 
+    // Apply favorites filter
+    if (this._favoritesFilter === 'favorites') {
+      activeNews = activeNews.filter(item => this._favoriteIds.has(item.url || item.headline));
+    }
+
     if (activeNews.length === 0 && archivedNews.length === 0) {
-      if (this.newsHooks.length === 0) {
+      if (this._favoritesFilter === 'favorites') {
+        this.dom.newsHooksList.innerHTML = `
+          <p class="pr-news-hooks-empty">No favorite articles yet. Click the heart icon on a card to add it.</p>
+        `;
+      } else if (this.newsHooks.length === 0) {
         this.dom.newsHooksList.innerHTML = `
           <p class="pr-news-hooks-empty">No news hooks yet. Click Refresh to search.</p>
         `;
@@ -5922,9 +5937,11 @@ class NewsMonitor {
       
       const newsId = item.url || item.headline;
       const inWorkspace = this._stories.has(newsId);
+      const isFavorited = this._favoriteIds.has(newsId);
       html += `
-        <div class="pr-news-item ${isStale ? 'stale' : ''} ${inWorkspace ? 'in-workspace' : ''}" data-news-id="${this.escapeHtml(newsId)}">
+        <div class="pr-news-item ${isStale ? 'stale' : ''} ${inWorkspace ? 'in-workspace' : ''} ${isFavorited ? 'favorited' : ''}" data-news-id="${this.escapeHtml(newsId)}">
           ${inWorkspace ? '<span class="pr-card-status-badge">In Progress</span>' : ''}
+          <button class="pr-news-card-favorite ${isFavorited ? 'active' : ''}" data-favorite-id="${this.escapeHtml(newsId)}" data-favorite-type="news" title="${isFavorited ? 'Remove from favorites' : 'Add to favorites'}"><i class="${isFavorited ? 'ph-fill' : 'ph-light'} ph-heart"></i></button>
           <button class="pr-news-card-archive" data-archive-news-id="${this.escapeHtml(newsId)}" title="Archive"><i class="ph-light ph-archive"></i></button>
           <a href="${item.url}" target="_blank" class="pr-news-headline">${this.escapeHtml(item.headline)}</a>
           <div class="pr-news-meta">
@@ -6030,6 +6047,14 @@ class NewsMonitor {
         this.unarchiveNewsCard(btn.dataset.unarchiveNewsId);
       });
     });
+
+    // Attach favorite toggle listeners
+    this.dom.newsHooksList.querySelectorAll('[data-favorite-id]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleFavorite(btn.dataset.favoriteId, btn.dataset.favoriteType);
+      });
+    });
     const newsArchivedHeader = this.dom.newsHooksList.querySelector('[data-toggle="news-archived"]');
     if (newsArchivedHeader) {
       newsArchivedHeader.addEventListener('click', () => {
@@ -6107,6 +6132,54 @@ class NewsMonitor {
     this._archivedNewsIds.delete(newsId);
     this.saveArchivedNewsIds();
     this.renderNews();
+  }
+
+  // =========================================
+  // FAVORITES
+  // =========================================
+
+  async loadFavorites() {
+    try {
+      const res = await fetch('/api/pr/favorites');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && Array.isArray(data.favorites)) {
+        this._favoriteIds = new Set(data.favorites.map(f => f.item_id));
+      }
+    } catch (e) { /* silent */ }
+  }
+
+  async toggleFavorite(itemId, itemType) {
+    const isFav = this._favoriteIds.has(itemId);
+    if (isFav) {
+      this._favoriteIds.delete(itemId);
+      try { await fetch(`/api/pr/favorites/${encodeURIComponent(itemId)}`, { method: 'DELETE' }); } catch (e) { /* silent */ }
+    } else {
+      this._favoriteIds.add(itemId);
+      try {
+        await fetch('/api/pr/favorites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_id: itemId, item_type: itemType || 'news' })
+        });
+      } catch (e) { /* silent */ }
+    }
+    this.renderNews();
+    this.renderCustomCards();
+  }
+
+  setupFavoritesFilter() {
+    const filterWrap = document.getElementById('pr-favorites-filter');
+    if (!filterWrap) return;
+    filterWrap.querySelectorAll('.pr-favorites-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        filterWrap.querySelectorAll('.pr-favorites-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        this._favoritesFilter = pill.dataset.favoritesFilter;
+        this.renderNews();
+        this.renderCustomCards();
+      });
+    });
   }
 
   // =========================================
@@ -6991,15 +7064,31 @@ ${primaryContext}${bgContext}`
       return;
     }
 
+    let cardsToRender = activeCards;
+    if (this._favoritesFilter === 'favorites') {
+      cardsToRender = activeCards.filter(c => this._favoriteIds.has(c.id));
+    }
+
+    if (cardsToRender.length === 0 && archivedCards.length === 0) {
+      if (this._favoritesFilter === 'favorites') {
+        container.innerHTML = '<p class="pr-news-hooks-empty">No favorite custom sources yet. Click the heart icon on a card to add it.</p>';
+      } else {
+        container.innerHTML = '<p class="pr-news-hooks-empty">No custom sources yet. Click + to add one.</p>';
+      }
+      return;
+    }
+
     let html = '<div class="pr-news-items">';
-    activeCards.forEach((card) => {
+    cardsToRender.forEach((card) => {
       const i = this._customCards.indexOf(card);
       const showAngleRow = card.angleTitle || card.angleNarrative;
 
       const inWorkspace = this._stories.has(card.id);
+      const isFavorited = this._favoriteIds.has(card.id);
       html += `
-        <div class="pr-news-item ${inWorkspace ? 'in-workspace' : ''}" data-custom-index="${i}">
+        <div class="pr-news-item ${inWorkspace ? 'in-workspace' : ''} ${isFavorited ? 'favorited' : ''}" data-custom-index="${i}">
           ${inWorkspace ? '<span class="pr-card-status-badge">In Progress</span>' : ''}
+          <button class="pr-news-card-favorite ${isFavorited ? 'active' : ''}" data-favorite-id="${this.escapeHtml(card.id)}" data-favorite-type="custom" title="${isFavorited ? 'Remove from favorites' : 'Add to favorites'}"><i class="${isFavorited ? 'ph-fill' : 'ph-light'} ph-heart"></i></button>
           <button class="pr-news-card-archive" data-archive-custom-index="${i}" title="Archive"><i class="ph-light ph-archive"></i></button>
           <span class="pr-news-headline">${this.escapeHtml(card.angleTitle || card.sourceTitle)}</span>
           <div class="pr-news-meta">
@@ -7086,6 +7175,15 @@ ${primaryContext}${bgContext}`
         this.unarchiveCustomCard(parseInt(btn.dataset.unarchiveCustomIndex));
       });
     });
+
+    // Attach favorite toggle listeners for custom cards
+    container.querySelectorAll('[data-favorite-id]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleFavorite(btn.dataset.favoriteId, btn.dataset.favoriteType);
+      });
+    });
+
     const customArchivedHeader = container.querySelector('[data-toggle="custom-archived"]');
     if (customArchivedHeader) {
       customArchivedHeader.addEventListener('click', () => {

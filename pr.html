@@ -14,6 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/light/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/fill/style.css">
   <link rel="stylesheet" href="dashboard.css">
 </head>
 <body class="pr-page">
@@ -124,6 +125,12 @@
               <div class="pr-workflow-header pr-news-hooks-toolbar">
                 <h2 class="pr-workflow-title">What's Happening Now</h2>
                 <div class="pr-news-hooks-controls">
+                  <div class="pr-favorites-filter" id="pr-favorites-filter">
+                    <button class="pr-favorites-pill active" data-favorites-filter="all">All</button>
+                    <button class="pr-favorites-pill" data-favorites-filter="favorites">
+                      <i class="ph-light ph-heart"></i> Favorites
+                    </button>
+                  </div>
                   <div class="pr-search-expandable-wrap">
                     <button class="pr-toolbar-btn" id="pr-search-toggle" title="Search articles" aria-label="Search articles">
                       <i class="ph-light ph-magnifying-glass"></i>

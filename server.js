@@ -386,6 +386,15 @@ async function initDatabase() {
             created_at TIMESTAMP DEFAULT NOW()
           )
         `);
+
+        // Favorites (news + custom cards)
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS pr_favorites (
+            item_id TEXT PRIMARY KEY,
+            item_type VARCHAR(20) NOT NULL DEFAULT 'news',
+            created_at TIMESTAMP DEFAULT NOW()
+          )
+        `);
       })(),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Database init timed out after 8s')), 8000)
@@ -2629,6 +2638,56 @@ app.delete('/api/pr/schedule/:id', async (req, res) => {
       return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     await pool.query('DELETE FROM pr_scheduled_posts WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// PR FAVORITES ENDPOINTS
+// ============================================
+
+app.get('/api/pr/favorites', async (req, res) => {
+  try {
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    const result = await pool.query('SELECT item_id, item_type FROM pr_favorites ORDER BY created_at DESC');
+    res.json({ success: true, favorites: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/pr/favorites', async (req, res) => {
+  try {
+    const { item_id, item_type } = req.body;
+    if (!item_id) {
+      return res.status(400).json({ success: false, error: 'item_id is required' });
+    }
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    await pool.query(
+      `INSERT INTO pr_favorites (item_id, item_type, created_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (item_id) DO NOTHING`,
+      [item_id, item_type || 'news']
+    );
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/pr/favorites/:itemId', async (req, res) => {
+  try {
+    const itemId = decodeURIComponent(req.params.itemId);
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    await pool.query('DELETE FROM pr_favorites WHERE item_id = $1', [itemId]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
