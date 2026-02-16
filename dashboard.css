@@ -171,8 +171,8 @@ i[class*="ph-"] {
 }
 
 .glossi-loader-sm {
-  width: 52px;
-  height: 52px;
+  width: 36px;
+  height: 36px;
 }
 
 .glossi-loader-xs {
@@ -199,7 +199,6 @@ i[class*="ph-"] {
 .glossi-loader-status {
   font-size: 12px;
   color: var(--text-muted);
-  font-style: italic;
   text-align: center;
   margin: 10px 0 0;
   padding: 0;
@@ -20063,26 +20062,112 @@ body.pr-resizing * {
   border-top-right-radius: 0;
 }
 
-/* Editable visual prompt */
-textarea.pr-twitter-generate-visual-prompt {
-  display: block;
-  width: 100%;
+/* Visual loading state */
+.pr-twitter-visual-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 40px 14px;
+  border: 1px dashed #2f3336;
+  border-radius: 16px;
+  background: #16181c;
+  color: #71767b;
+  font-size: 13px;
+}
+
+/* Visual feedback input */
+.pr-twitter-visual-feedback {
+  margin-top: 8px;
+}
+
+.pr-twitter-visual-feedback-row {
+  display: flex;
+  gap: 6px;
+}
+
+.pr-twitter-visual-feedback-input {
+  flex: 1;
+  background: #16181c;
+  border: 1px solid #2f3336;
+  border-radius: 100px;
+  padding: 7px 14px;
   font-size: 12px;
   color: #e7e9ea;
-  line-height: 1.5;
-  margin-bottom: 10px;
-  font-style: italic;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.pr-twitter-visual-feedback-input::placeholder {
+  color: #536471;
+}
+
+.pr-twitter-visual-feedback-input:focus {
+  border-color: #EC5F3F;
+}
+
+.pr-twitter-visual-feedback-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e7e9ea;
+  background: #EC5F3F;
+  border: none;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: background 150ms ease;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+}
+
+.pr-twitter-visual-feedback-btn:hover {
+  background: #d9533a;
+}
+
+/* Link URL input */
+.pr-twitter-link-input-wrap {
+  margin-top: 10px;
+  margin-bottom: 8px;
+}
+
+.pr-twitter-link-input-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #71767b;
+  margin-bottom: 6px;
+}
+
+.pr-twitter-link-input-label i {
+  font-size: 14px;
+  color: #EC5F3F;
+}
+
+.pr-twitter-link-url-input {
+  display: block;
+  width: 100%;
   background: #000000;
   border: 1px solid #2f3336;
   border-radius: 8px;
   padding: 8px 10px;
-  resize: vertical;
-  min-height: 48px;
+  font-size: 13px;
+  color: #e7e9ea;
   font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
 }
 
-textarea.pr-twitter-generate-visual-prompt:focus {
-  outline: none;
+.pr-twitter-link-url-input::placeholder {
+  color: #536471;
+}
+
+.pr-twitter-link-url-input:focus {
   border-color: #EC5F3F;
 }
 
@@ -20310,14 +20395,6 @@ textarea.pr-twitter-generate-visual-prompt:focus {
 .pr-twitter-generate-visual-hint i {
   font-size: 16px;
   color: #EC5F3F;
-}
-
-.pr-twitter-generate-visual-prompt {
-  font-size: 12px;
-  color: #536471;
-  line-height: 1.5;
-  margin-bottom: 10px;
-  font-style: italic;
 }
 
 .pr-twitter-generate-visual-btn {

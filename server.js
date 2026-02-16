@@ -1970,6 +1970,95 @@ app.post('/api/pr/upload-media', upload.single('file'), (req, res) => {
   }
 });
 
+// Generate visual prompt via Claude (analyzes tweet text, produces optimal Gemini image prompt)
+app.post('/api/pr/generate-visual-prompt', async (req, res) => {
+  try {
+    const { tweet_text, previous_prompt, feedback } = req.body;
+    if (!tweet_text) {
+      return res.status(400).json({ success: false, error: 'tweet_text is required' });
+    }
+
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicKey) {
+      return res.status(503).json({ success: false, error: 'ANTHROPIC_API_KEY not configured' });
+    }
+
+    const systemPrompt = `You are a visual design director who creates image generation prompts for social media infographics. Your prompts will be sent to Gemini's image generation model.
+
+You analyze tweet text and produce the single best image prompt that will create a scroll-stopping infographic for X/Twitter.
+
+STYLE REFERENCE (blend these two aesthetics):
+
+1. CURSOR'S X FEED STYLE:
+- Solid near-black background (#0a0a0a). No gradients, no textures, no patterns.
+- Clean modern sans-serif typography (Inter or similar).
+- Two hierarchy levels only: one large bold headline (white #e7e9ea, 36-48px) and one smaller supporting line (muted gray #71767b, 16-20px).
+- Extreme negative space. Content centered or left-aligned with generous margins (80px+ on all sides).
+- Almost entirely monochrome. One accent color used sparingly.
+- If showing numbers, the key stat is enormous (60-80px bold white) with a small label underneath.
+- No borders, no shadows, no 3D effects, no icons, no stock photos, no watermarks, no logos, no bullet points.
+- Confident, editorial mood. Like a premium tech company's changelog graphic.
+
+2. GLOSSI BLOG STYLE ACCENTS:
+- The ONLY accent color is Glossi orange (#EC5F3F), used sparingly for one key number, one underline, or one highlighted word.
+- Typography follows strict hierarchy: clear size steps, restrained emphasis, spacing signals importance.
+- Clean, modern, editorial design. Professional and minimal. Content-first.
+- Generous whitespace. Consistent spacing scale. Subtle color palette with strategic brand orange.
+
+LAYOUT RULES:
+- 1200x675px landscape. One single concept per image.
+- Never fill the entire canvas. Let the type breathe.
+- Never more than 2-3 lines of text total.
+- One or two stats max. One concept max.
+- No more than 3 colors total (black, white/gray, orange accent).
+
+PROMPT RULES:
+- Describe WHAT to show: the specific stat, comparison, or concept. Be concrete.
+- Include the exact text/numbers that should appear on the graphic.
+- Prefer: one bold stat with context, before/after comparisons, two-column contrasts, a single provocative claim as a pull quote.
+- Keep it to ONE concept. Never ask for multiple charts or complex layouts.
+- Include all style rules directly in the prompt so the image model knows exactly what to produce.
+
+Return ONLY the image generation prompt text. No explanation, no preamble, no quotes around it. Just the prompt.`;
+
+    let userMessage = `Tweet text: "${tweet_text}"`;
+    if (previous_prompt && feedback) {
+      userMessage = `Tweet text: "${tweet_text}"
+
+The previous image prompt was:
+"${previous_prompt}"
+
+The user wants this adjustment: "${feedback}"
+
+Generate an updated image prompt incorporating their feedback while maintaining all style rules.`;
+    }
+
+    const response = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: 'claude-opus-4-6',
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMessage }]
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01'
+      },
+      timeout: 60000
+    });
+
+    const prompt = response.data?.content?.[0]?.text?.trim();
+    if (!prompt) {
+      return res.json({ success: false, error: 'No prompt generated' });
+    }
+
+    res.json({ success: true, prompt });
+  } catch (error) {
+    const msg = error.response?.data?.error?.message || error.message;
+    res.status(500).json({ success: false, error: msg });
+  }
+});
+
 // Generate infographic via Gemini image generation
 app.post('/api/pr/generate-infographic', async (req, res) => {
   try {
@@ -1983,35 +2072,17 @@ app.post('/api/pr/generate-infographic', async (req, res) => {
       return res.status(503).json({ success: false, error: 'GEMINI_API_KEY not configured' });
     }
 
-    const styledPrompt = `Create a social media graphic for X/Twitter in the exact style of Cursor's (@cursor_ai) posts. Follow these design rules precisely:
-
-LAYOUT: 1200x675px landscape. One single concept per image. Extreme negative space. Content is centered or left-aligned with generous margins (at least 80px on all sides). Never fill the entire canvas.
-
-BACKGROUND: Solid near-black (#0a0a0a). No gradients, no textures, no patterns. Just flat dark.
-
-TYPOGRAPHY: Clean modern sans-serif (Inter or similar). Two levels only: one large bold headline (white #e7e9ea, 36-48px equivalent) and one smaller supporting line (muted gray #71767b, 16-20px). Never more than 2-3 lines of text total. Let the type breathe.
-
-COLOR: Almost entirely monochrome (white text on black). The ONLY accent color is Glossi orange (#EC5F3F), used sparingly for one key number, one underline, one highlighted word, or one small element. Never use orange for backgrounds or large areas. Less is more.
-
-DATA/STATS: If showing numbers, make the key stat enormous (60-80px bold white) with a small label underneath. One or two stats max. If showing a comparison, use a minimal two-column layout or a simple before/after with a dividing line.
-
-WHAT TO AVOID: No borders. No drop shadows. No 3D effects. No icons or emoji. No stock photo elements. No watermarks. No logos. No heavy ornamentation. No cluttered layouts. No bullet points. No more than 3 colors total (black, white/gray, orange accent).
-
-MOOD: Confident, editorial, slightly opinionated. Like a premium tech company's changelog graphic or a sharp data card that stops someone mid-scroll.
-
-Content to visualize: ${prompt}`;
-
-    const model = 'gemini-2.5-flash-image';
+    const model = 'gemini-3-pro-image-preview';
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
 
     const response = await axios.post(apiUrl, {
-      contents: [{ role: 'user', parts: [{ text: styledPrompt }] }],
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         responseModalities: ['TEXT', 'IMAGE']
       }
     }, {
       headers: { 'Content-Type': 'application/json' },
-      timeout: 60000
+      timeout: 90000
     });
 
     const parts = response.data?.candidates?.[0]?.content?.parts || [];
