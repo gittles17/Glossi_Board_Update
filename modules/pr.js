@@ -62,7 +62,30 @@ LinkedIn Post: Perspective piece energy. Share a take. Back it with what you've 
 
 Blog Post: Write like Linear's "Now" blog. First-person where appropriate. Opinionated. Substantive. Not content marketing. Real thinking about real problems in the space.
 
-Tweet: One single tweet. The best possible tweet for this topic. Maximum 280 characters. Punchy, opinionated, shareable. No threads. Think Cursor or Linear on X: one sharp observation that makes people stop scrolling.
+Tweet / Hot Take (for X): Study how Cursor and Linear use X. They mix formats. Not every post is text. The feed has rhythm: a sharp take, then a product screenshot, then a blog link, then an infographic. Match that energy.
+
+TWEET FORMATS (choose the best one for this specific topic):
+- TEXT: One single tweet. Maximum 280 characters. Punchy, opinionated, shareable. One sharp observation that makes people stop scrolling. No hashtags. No threads unless requested.
+- VISUAL: Short text (1-2 sentences, under 200 chars) paired with an infographic or data visual. The visual carries the argument. The text sets it up. Describe what the visual should show in visual_prompt.
+- BLOG_LINK: 1-2 sentence hook that makes someone want to click, followed by [BLOG_LINK]. Not "check out our latest post." More "We wrote about why X matters." or "The real problem isn't Y, it's Z."
+- PRODUCT: Changelog energy. What shipped, what it does, one line on why it matters. Often pairs with a screenshot or short video. Describe the visual in visual_prompt if needed.
+- THREAD: For deeper topics only. 3-5 tweets, each under 280 chars, separated by double newlines. First tweet is the hook. Each adds one idea. Last tweet lands the point. Use sparingly.
+
+RESPONSE FORMAT FOR TWEETS: Return JSON with these fields:
+{
+  "content": "The tweet text",
+  "tweet_format": "text|visual|blog_link|product|thread",
+  "visual_prompt": "Description of infographic/visual to generate (only if tweet_format is visual or product)",
+  "citations": [...],
+  "strategy": {...}
+}
+
+VISUAL PROMPT RULES (when tweet_format is visual or product):
+- Describe the visual concisely: what data, comparison, or concept it shows
+- Style: minimal, dark background (#000 or #0a0a0a), clean sans-serif type, Glossi orange (#EC5F3F) as accent
+- No clutter. Think Linear changelog graphics or Cursor's product screenshots.
+- Include specific text/labels that should appear on the graphic
+- Prefer: comparisons, before/after, data points, architecture diagrams, feature highlights
 
 Founder Quote / Soundbite: Short. Quotable. Something a journalist would actually use. Not corporate speak.
 
@@ -2253,6 +2276,13 @@ class PRAgent {
         status: 'draft',
         phase: 'edit'
       };
+
+      if (contentType === 'tweet_thread' || contentType === 'hot_take') {
+        output.tweet_format = parsed.tweet_format || 'text';
+        if (parsed.visual_prompt) {
+          output.visual_prompt = parsed.visual_prompt;
+        }
+      }
 
       this.currentOutput = output;
       this.outputs.push(output);
@@ -9828,8 +9858,10 @@ class DistributeManager {
     const content = output.content || '';
     const createdAt = output.created_at ? new Date(output.created_at) : new Date();
     const timeStr = createdAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const tweetFormat = output.tweet_format || 'text';
+    const media = output.media_attachments || [];
+    const hasImage = media.some(m => m.type === 'image');
 
-    // Split content into tweets (by double newline, or by 280-char chunks)
     const rawTweets = content.split(/\n\n+/).filter(t => t.trim());
     const tweets = [];
     for (const raw of rawTweets) {
@@ -9837,7 +9869,6 @@ class DistributeManager {
       if (trimmed.length <= 280) {
         tweets.push(trimmed);
       } else {
-        // Split long blocks into 280-char tweets at sentence boundaries
         const sentences = trimmed.match(/[^.!?]+[.!?]+\s*/g) || [trimmed];
         let current = '';
         for (const sentence of sentences) {
@@ -9857,6 +9888,39 @@ class DistributeManager {
       const charCount = tweet.length;
       const isOver = charCount > 280;
 
+      let mediaHtml = '';
+      if (i === 0) {
+        if (hasImage) {
+          const img = media.find(m => m.type === 'image');
+          mediaHtml = `
+            <div class="pr-twitter-image-card">
+              <img src="${this.escapeHtml(img.url)}" alt="">
+              <button class="pr-twitter-image-remove" data-action="remove-twitter-image" title="Remove image">
+                <i class="ph-light ph-x"></i>
+              </button>
+            </div>`;
+        } else if (output.visual_prompt && (tweetFormat === 'visual' || tweetFormat === 'product')) {
+          mediaHtml = `
+            <div class="pr-twitter-generate-visual">
+              <div class="pr-twitter-generate-visual-hint">
+                <i class="ph-light ph-image"></i>
+                <span>AI recommends a visual for this post</span>
+              </div>
+              <div class="pr-twitter-generate-visual-prompt">${this.escapeHtml(output.visual_prompt)}</div>
+              <button class="pr-twitter-generate-visual-btn" data-action="generate-visual">
+                <i class="ph-light ph-magic-wand"></i> Generate Infographic
+              </button>
+            </div>`;
+        } else if (tweetFormat === 'blog_link' && tweet.includes('[BLOG_LINK]')) {
+          mediaHtml = `
+            <div class="pr-twitter-link-card">
+              <div class="pr-twitter-link-card-domain">glossi.io</div>
+              <div class="pr-twitter-link-card-title">Glossi Blog</div>
+              <div class="pr-twitter-link-card-desc">Read the full post on the Glossi blog</div>
+            </div>`;
+        }
+      }
+
       return `
         <div class="pr-twitter-tweet">
           <div class="pr-twitter-tweet-left">
@@ -9872,6 +9936,7 @@ class DistributeManager {
               <span class="pr-twitter-time">${timeStr}</span>
             </div>
             <div class="pr-twitter-text">${this.escapeHtml(tweet)}</div>
+            ${mediaHtml}
             <div class="pr-twitter-char-count ${isOver ? 'over' : ''}">${charCount}/280</div>
             <div class="pr-twitter-engagement">
               <span class="pr-twitter-action"><i class="ph-light ph-chat-circle"></i> </span>
@@ -9886,6 +9951,56 @@ class DistributeManager {
     }).join('');
 
     container.innerHTML = tweetsHtml || '<div style="padding: 24px; color: #71767b; text-align: center;">No content to preview</div>';
+
+    container.querySelectorAll('[data-action="generate-visual"]').forEach(btn => {
+      btn.addEventListener('click', () => this.generateTwitterVisual(output));
+    });
+    container.querySelectorAll('[data-action="remove-twitter-image"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        output.media_attachments = (output.media_attachments || []).filter(m => m.type !== 'image');
+        this.persistOutput(output);
+        this.renderTwitterPreview(output);
+      });
+    });
+  }
+
+  async generateTwitterVisual(output) {
+    if (!output.visual_prompt) return;
+
+    const btn = document.querySelector('[data-action="generate-visual"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = glossiLoaderSVG('glossi-loader-xs') + ' Generating...';
+    }
+
+    try {
+      const res = await this.prAgent.apiCall('/api/pr/generate-infographic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: output.visual_prompt })
+      });
+
+      if (res.success && res.image) {
+        if (!output.media_attachments) output.media_attachments = [];
+        output.media_attachments = output.media_attachments.filter(m => m.type !== 'image');
+        output.media_attachments.unshift({ type: 'image', url: res.image });
+        this.persistOutput(output);
+        this.renderTwitterPreview(output);
+      } else {
+        const errorMsg = res.error || 'Generation failed';
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="ph-light ph-magic-wand"></i> Generate Infographic';
+        }
+        await this.prAgent.showConfirm(errorMsg, 'Visual Generation Error');
+      }
+    } catch (e) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ph-light ph-magic-wand"></i> Generate Infographic';
+      }
+      await this.prAgent.showConfirm(e.message || 'Network error', 'Visual Generation Error');
+    }
   }
 
   // Media handling

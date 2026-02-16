@@ -1879,6 +1879,54 @@ app.post('/api/pr/upload-media', upload.single('file'), (req, res) => {
   }
 });
 
+// Generate infographic via Gemini image generation
+app.post('/api/pr/generate-infographic', async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ success: false, error: 'prompt is required' });
+    }
+
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) {
+      return res.status(503).json({ success: false, error: 'GEMINI_API_KEY not configured' });
+    }
+
+    const styledPrompt = `Create a clean, minimal infographic or data visual for social media (X/Twitter). Style: dark background (#0a0a0a), clean sans-serif typography, orange (#EC5F3F) as the accent color, plenty of whitespace, no clutter. The visual should be simple and bold, easy to read at small sizes. Do not include any watermarks or logos. Content: ${prompt}`;
+
+    const model = 'gemini-2.5-flash-preview-04-17';
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+
+    const response = await axios.post(apiUrl, {
+      contents: [{ role: 'user', parts: [{ text: styledPrompt }] }],
+      generationConfig: {
+        responseModalities: ['TEXT', 'IMAGE']
+      }
+    }, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 60000
+    });
+
+    const parts = response.data?.candidates?.[0]?.content?.parts || [];
+    const imagePart = parts.find(p => p.inlineData);
+
+    if (!imagePart) {
+      return res.json({ success: false, error: 'No image generated. Try a different prompt.' });
+    }
+
+    const mimeType = imagePart.inlineData.mimeType || 'image/png';
+    const dataUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+
+    const textPart = parts.find(p => p.text);
+    const description = textPart?.text || '';
+
+    res.json({ success: true, image: dataUrl, description });
+  } catch (error) {
+    const msg = error.response?.data?.error?.message || error.message;
+    res.status(500).json({ success: false, error: msg });
+  }
+});
+
 // Fetch Open Graph metadata from a URL
 app.post('/api/pr/og-metadata', async (req, res) => {
   try {
