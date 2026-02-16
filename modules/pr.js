@@ -9054,6 +9054,20 @@ class DistributeManager {
       e.target.value = raw.toLowerCase().replace(/[^a-z0-9-]/g, '');
     });
 
+    // Tweet format picker
+    document.getElementById('pr-twitter-format-bar')?.addEventListener('click', (e) => {
+      const pill = e.target.closest('.pr-twitter-format-pill');
+      if (!pill || !this.activeReviewItem) return;
+      const newFormat = pill.dataset.format;
+      if (newFormat === this.activeReviewItem.tweet_format) return;
+      this.activeReviewItem.tweet_format = newFormat;
+      if ((newFormat === 'visual' || newFormat === 'product') && !this.activeReviewItem.visual_prompt) {
+        this.activeReviewItem.visual_prompt = 'Describe the visual for this post';
+      }
+      this.persistOutput(this.activeReviewItem);
+      this.renderTwitterPreview(this.activeReviewItem);
+    });
+
     // Schedule
     document.getElementById('pr-distribute-schedule-btn')?.addEventListener('click', () => {
       this.openScheduleModal();
@@ -9863,6 +9877,13 @@ class DistributeManager {
     const media = output.media_attachments || [];
     const hasImage = media.some(m => m.type === 'image');
 
+    const formatBar = document.getElementById('pr-twitter-format-bar');
+    if (formatBar) {
+      formatBar.querySelectorAll('.pr-twitter-format-pill').forEach(pill => {
+        pill.classList.toggle('active', pill.dataset.format === tweetFormat);
+      });
+    }
+
     let tweets;
     if (tweetFormat === 'thread') {
       const rawTweets = content.split(/\n\n+/).filter(t => t.trim());
@@ -9912,7 +9933,7 @@ class DistributeManager {
                 <i class="ph-light ph-image"></i>
                 <span>AI recommends a visual for this post</span>
               </div>
-              <div class="pr-twitter-generate-visual-prompt">${this.escapeHtml(output.visual_prompt)}</div>
+              <textarea class="pr-twitter-generate-visual-prompt" data-action="edit-visual-prompt" rows="2">${this.escapeHtml(output.visual_prompt)}</textarea>
               <button class="pr-twitter-generate-visual-btn" data-action="generate-visual">
                 <i class="ph-light ph-magic-wand"></i> Generate Infographic
               </button>
@@ -9966,6 +9987,15 @@ class DistributeManager {
         output.media_attachments = (output.media_attachments || []).filter(m => m.type !== 'image');
         this.persistOutput(output);
         this.renderTwitterPreview(output);
+      });
+    });
+    container.querySelectorAll('[data-action="edit-visual-prompt"]').forEach(el => {
+      el.addEventListener('blur', () => {
+        const val = el.value.trim();
+        if (val && val !== output.visual_prompt) {
+          output.visual_prompt = val;
+          this.persistOutput(output);
+        }
       });
     });
   }
