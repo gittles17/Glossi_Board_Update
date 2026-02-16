@@ -11747,24 +11747,7 @@ a.dropdown-item {
   padding: var(--space-5) var(--space-6);
 }
 
-.pr-custom-cards-list .pr-news-items {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-5);
-  align-items: start;
-}
-
-@media (max-width: 1200px) {
-  .pr-custom-cards-list .pr-news-items {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .pr-custom-cards-list .pr-news-items {
-    grid-template-columns: 1fr;
-  }
-}
+/* Custom cards inherit masonry layout from .pr-news-items */
 
 /* ============================================
    ANGLE SELECTION MODAL CARDS
@@ -15901,25 +15884,23 @@ svg.spinning,
 }
 
 /* ============================================
-   NEWS CARD GRID
+   NEWS CARD GRID (masonry via CSS columns)
    ============================================ */
 .pr-news-items {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-5);
+  column-count: 3;
+  column-gap: var(--space-5);
   padding: var(--space-5) var(--space-6);
-  align-items: start;
 }
 
 @media (max-width: 1200px) {
   .pr-news-items {
-    grid-template-columns: repeat(2, 1fr);
+    column-count: 2;
   }
 }
 
 @media (max-width: 768px) {
   .pr-news-items {
-    grid-template-columns: 1fr;
+    column-count: 1;
     padding: var(--space-3);
   }
 }
@@ -15935,11 +15916,12 @@ svg.spinning,
   display: flex;
   flex-direction: column;
   gap: 0;
-  height: fit-content;
   min-width: 0;
   overflow-wrap: break-word;
   transition: border-color 0.15s ease;
   position: relative;
+  break-inside: avoid;
+  margin-bottom: var(--space-5);
 }
 
 .pr-news-item.in-workspace {
@@ -16001,7 +15983,13 @@ svg.spinning,
 }
 
 .pr-news-archived-section {
-  grid-column: 1 / -1;
+  column-span: all;
+}
+
+.pr-news-show-more {
+  column-span: all;
+  text-align: center;
+  padding: var(--space-3) 0;
 }
 
 .pr-news-archived-header {
