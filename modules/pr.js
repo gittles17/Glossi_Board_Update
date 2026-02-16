@@ -131,6 +131,11 @@ const CONTENT_TYPES = [
   { id: 'custom', label: 'Custom' }
 ];
 
+function normalizeContentType(type) {
+  if (type === 'tweet_thread' || type === 'twitter_thread') return 'tweet';
+  return type;
+}
+
 class PRAgent {
   constructor() {
     this.sources = [];
@@ -528,7 +533,10 @@ class PRAgent {
       const response = await fetch('/api/pr/outputs');
       const data = await response.json();
       if (data.success) {
-        this.outputs = data.outputs;
+        this.outputs = data.outputs.map(o => {
+          if (o.content_type) o.content_type = normalizeContentType(o.content_type);
+          return o;
+        });
       } else {
         this.outputs = [];
       }
@@ -853,10 +861,27 @@ class PRAgent {
     if (this.dom.generatedContent) {
       this.dom.generatedContent.addEventListener('input', () => {
         clearTimeout(this._editSaveDebounce);
-        this._editSaveDebounce = setTimeout(() => {
+        this._editSaveDebounce = setTimeout(async () => {
           this.saveCurrentEdits();
+
+          if (this.currentOutput?.content_type === 'tweet' && !this._isShorteningTweet) {
+            const draft = this.currentOutput.drafts?.[this._viewingDraftIndex || 0];
+            if (draft?.content) {
+              const maxChars = this.currentOutput.tweet_format === 'link' ? 257 : 280;
+              if (draft.content.length > maxChars) {
+                this._isShorteningTweet = true;
+                const shortened = await this.enforceTweetLimit(draft.content, this.currentOutput.tweet_format);
+                draft.content = shortened;
+                this.currentOutput.content = shortened;
+                const el = this.dom.generatedContent.querySelector('.pr-draft-content');
+                if (el) el.innerText = shortened;
+                this._isShorteningTweet = false;
+              }
+            }
+          }
+
           this.saveOutputs();
-        }, 1500);
+        }, 2000);
       });
     }
 
@@ -2193,6 +2218,8 @@ class PRAgent {
     }
     userMessage += `SOURCES:\n${sourcesContext}`;
 
+    const isTweet = contentType === 'tweet';
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -2201,9 +2228,9 @@ class PRAgent {
         },
         body: JSON.stringify({
           model: 'claude-opus-4-6',
-          max_tokens: 8192,
+          max_tokens: isTweet ? 1024 : 8192,
           system: PR_SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: userMessage }]
+          messages: [{ role: 'user', content: isTweet ? userMessage + '\n\nREMINDER: The tweet MUST be under 280 characters. Count carefully. This is a hard platform limit.' : userMessage }]
         })
       });
 
@@ -2262,41 +2289,7 @@ class PRAgent {
       if (contentType === 'tweet') {
         output.tweet_format = parsed.tweet_format || 'text';
 
-        const maxChars = output.tweet_format === 'link' ? 257 : 280;
-        let tweetContent = output.content || '';
-        let retries = 0;
-        const maxRetries = 10;
-        let lastLength = tweetContent.length;
-
-        while (tweetContent.length > maxChars && retries < maxRetries) {
-          retries++;
-          try {
-            const shortenRes = await fetch('/api/pr/shorten-tweet', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                content: tweetContent,
-                max_chars: maxChars,
-                tweet_format: output.tweet_format
-              })
-            });
-            const shortenData = await shortenRes.json();
-            if (shortenData.success && shortenData.content && shortenData.content.length < lastLength) {
-              lastLength = shortenData.content.length;
-              tweetContent = shortenData.content;
-            } else {
-              break;
-            }
-          } catch {
-            break;
-          }
-        }
-
-        if (tweetContent.length > maxChars) {
-          tweetContent = tweetContent.substring(0, maxChars);
-        }
-
-        output.content = tweetContent;
+        output.content = await this.enforceTweetLimit(output.content, output.tweet_format);
       }
 
       this.currentOutput = output;
@@ -2440,6 +2433,39 @@ class PRAgent {
     if (this.newsMonitor && this.newsMonitor.renderVersionHistory) {
       this.newsMonitor.renderVersionHistory(this.currentOutput);
     }
+  }
+
+  async enforceTweetLimit(content, tweetFormat) {
+    const maxChars = tweetFormat === 'link' ? 257 : 280;
+    let text = (content || '').trim();
+    if (text.length <= maxChars) return text;
+
+    for (let i = 0; i < 10; i++) {
+      if (text.length <= maxChars) break;
+      try {
+        const res = await fetch('/api/pr/shorten-tweet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: text, max_chars: maxChars, tweet_format: tweetFormat || 'text' })
+        });
+        const data = await res.json();
+        if (data.success && data.content && data.content.length < text.length) {
+          text = data.content.trim();
+        } else {
+          break;
+        }
+      } catch {
+        break;
+      }
+    }
+
+    if (text.length > maxChars) {
+      const truncated = text.substring(0, maxChars - 1);
+      const lastSpace = truncated.lastIndexOf(' ');
+      text = lastSpace > maxChars * 0.6 ? truncated.substring(0, lastSpace) + '.' : truncated + '.';
+    }
+
+    return text;
   }
 
   renderVersionPill() {
@@ -2872,7 +2898,8 @@ class PRAgent {
           const planIndex = parseInt(tabId.replace('plan_', ''), 10);
           const planItem = nm._activeContentPlan[planIndex];
           if (planItem) {
-            const label = CONTENT_TYPES.find(t => t.id === planItem.type)?.label || planItem.type;
+            const normalizedType = normalizeContentType(planItem.type);
+            const label = CONTENT_TYPES.find(t => t.id === normalizedType)?.label || normalizedType;
             tabs.push({ tabId, entry, planItem, planIndex, label, newsItem: nm._activeNewsItem });
           }
         }
@@ -5132,6 +5159,7 @@ class NewsMonitor {
       const usedOutputIds = new Set();
 
       contentPlan.forEach((planItem, index) => {
+        planItem.type = normalizeContentType(planItem.type);
         const tabId = `plan_${index}`;
         const match = storyOutputs.find(o => o.content_type === planItem.type && !usedOutputIds.has(o.id));
         if (match) {
@@ -5626,6 +5654,7 @@ class NewsMonitor {
         });
         
         this.newsHooks = filteredNews;
+        this.normalizeNewsContentTypes();
         this.renderNews();
         
         // Auto-refresh if no recent news (all cached news is >7 days old or empty)
@@ -5669,6 +5698,7 @@ class NewsMonitor {
       }
 
       this.newsHooks = data.news || [];
+      this.normalizeNewsContentTypes();
       this.renderNews();
     } catch (error) {
       console.error('Error refreshing news:', error);
@@ -5681,6 +5711,16 @@ class NewsMonitor {
       if (this.dom.fetchNewsBtn) {
         this.dom.fetchNewsBtn.disabled = false;
         this.dom.fetchNewsBtn.classList.remove('spinning');
+      }
+    }
+  }
+
+  normalizeNewsContentTypes() {
+    for (const hook of this.newsHooks) {
+      if (Array.isArray(hook.content_plan)) {
+        for (const item of hook.content_plan) {
+          if (item.type) item.type = normalizeContentType(item.type);
+        }
       }
     }
   }
@@ -5736,6 +5776,7 @@ class NewsMonitor {
         }
       }
 
+      this.normalizeNewsContentTypes();
       this.renderNews();
     } catch (error) {
       console.error('Error regenerating content plans:', error);
@@ -5827,7 +5868,7 @@ class NewsMonitor {
                 if (typeof cp === 'string') { try { cp = JSON.parse(cp); } catch (e) { cp = null; } }
                 if (!cp || !Array.isArray(cp) || cp.length === 0) return '';
                 return `<div class="pr-news-plan-list">${cp.map((p, pi) => {
-                  const label = CONTENT_TYPES.find(t => t.id === p.type)?.label || p.type;
+                  const label = CONTENT_TYPES.find(t => t.id === normalizeContentType(p.type))?.label || normalizeContentType(p.type);
                   const audienceBadge = p.audience ? `<span class="pr-audience-badge pr-audience-${p.audience}">${p.audience}</span>` : '';
                   return `
                     <div class="pr-news-plan-item" data-plan-index="${pi}">
@@ -6898,7 +6939,7 @@ ${primaryContext}${bgContext}`
                 const cp = card.contentPlan;
                 if (!cp || !Array.isArray(cp) || cp.length === 0) return '';
                 return '<div class="pr-news-plan-list">' + cp.map((p, pi) => {
-                  const label = CONTENT_TYPES.find(t => t.id === p.type)?.label || p.type;
+                  const label = CONTENT_TYPES.find(t => t.id === normalizeContentType(p.type))?.label || normalizeContentType(p.type);
                   const audienceBadge = p.audience ? '<span class="pr-audience-badge pr-audience-' + p.audience + '">' + p.audience + '</span>' : '';
                   return '<div class="pr-news-plan-item" data-plan-index="' + pi + '">' +
                     '<div class="pr-news-plan-header">' +
@@ -7236,6 +7277,7 @@ ${primaryContext}${bgContext}`
   }
 
   formatContentType(type) {
+    const normalized = type === 'tweet_thread' ? 'tweet' : type;
     const labels = {
       'tweet': 'Tweet',
       'linkedin_post': 'LinkedIn Post',
@@ -7251,7 +7293,7 @@ ${primaryContext}${bgContext}`
       'briefing_doc': 'Talking Points',
       'custom': 'Custom'
     };
-    return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return labels[normalized] || normalized.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
   switchContentTab(tabId) {
@@ -7376,6 +7418,7 @@ ${primaryContext}${bgContext}`
       return;
     }
 
+    planItem.type = normalizeContentType(planItem.type);
     const typeLabel = CONTENT_TYPES.find(t => t.id === planItem.type)?.label || planItem.type;
     const loaderContext = { tweet: 'tweet', linkedin_post: 'linkedin', blog_post: 'blog', email_blast: 'email', product_announcement: 'product', talking_points: 'talking_points', investor_snippet: 'investor' }[planItem.type] || 'general';
 
@@ -8386,6 +8429,7 @@ class AngleManager {
   }
 
   async generatePieceContent(angle, planItem, tabId) {
+    planItem.type = normalizeContentType(planItem.type);
     const selectedSources = this.prAgent.sources.filter(s => s.selected);
     if (!this.prAgent.apiKey) {
       this.prAgent.showToast('API key not configured. Check Settings.', 'error');
@@ -8893,6 +8937,7 @@ class AngleManager {
   }
 
   formatContentType(type) {
+    const normalized = type === 'tweet_thread' ? 'tweet' : type;
     const typeMap = {
       'tweet': 'Tweet',
       'linkedin_post': 'LinkedIn Post',
@@ -8907,7 +8952,7 @@ class AngleManager {
       'op_ed': 'Blog Post',
       'briefing_doc': 'Talking Points'
     };
-    return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return typeMap[normalized] || normalized.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
   resetWorkspace() {
