@@ -10006,12 +10006,21 @@ class DistributeManager {
     const el = document.getElementById('pr-distribute-char-count');
     if (!el || !output) return;
     const content = output.content || '';
-    const hashtags = output.hashtags || [];
-    const hashtagText = hashtags.length > 0 ? '\n\n' + hashtags.map(h => '#' + h).join(' ') : '';
-    const len = (content + hashtagText).length;
-    const limit = 3000;
-    el.textContent = `${len.toLocaleString()} / ${limit.toLocaleString()} characters`;
-    el.classList.toggle('over-limit', len > limit);
+    const isTwitter = this.activeChannel === 'twitter';
+    const limit = isTwitter ? 280 : 3000;
+    if (isTwitter) {
+      const tcoLength = 23;
+      const urlPattern = /https?:\/\/[^\s]+/g;
+      const len = content.replace(urlPattern, 'x'.repeat(tcoLength)).length;
+      el.textContent = `${len.toLocaleString()} / ${limit.toLocaleString()} characters`;
+      el.classList.toggle('over-limit', len > limit);
+    } else {
+      const hashtags = output.hashtags || [];
+      const hashtagText = hashtags.length > 0 ? '\n\n' + hashtags.map(h => '#' + h).join(' ') : '';
+      const len = (content + hashtagText).length;
+      el.textContent = `${len.toLocaleString()} / ${limit.toLocaleString()} characters`;
+      el.classList.toggle('over-limit', len > limit);
+    }
   }
 
   getChannelForContentType(contentType) {
@@ -10061,7 +10070,7 @@ class DistributeManager {
     const isBlog = channel === 'blog';
     const isPublishable = isLinkedin || isTwitter;
     if (firstCommentWrap) firstCommentWrap.style.display = isLinkedin && this.activeReviewItem?.first_comment ? '' : 'none';
-    if (hashtagsWrap) hashtagsWrap.style.display = isLinkedin && this.activeReviewItem?.hashtags?.length ? '' : 'none';
+    if (hashtagsWrap) hashtagsWrap.style.display = (isLinkedin || isTwitter) && this.activeReviewItem?.hashtags?.length ? '' : 'none';
     if (charCount) charCount.style.display = (isLinkedin || isTwitter) ? '' : 'none';
     if (mediaBar) mediaBar.style.display = isPublishable && this.activeReviewItem?.status === 'review' ? 'flex' : 'none';
     if (!isPublishable && mediaUrlInput) mediaUrlInput.style.display = 'none';
@@ -10783,7 +10792,11 @@ class DistributeManager {
           this.activeReviewItem.hashtags.splice(idx, 1);
           this.persistOutput(this.activeReviewItem);
           this.renderHashtags(this.activeReviewItem);
-          this.renderLinkedInPreview(this.activeReviewItem);
+          if (this.activeChannel === 'twitter') {
+            this.renderTwitterPreview(this.activeReviewItem);
+          } else {
+            this.renderLinkedInPreview(this.activeReviewItem);
+          }
           this.renderCharCount(this.activeReviewItem);
         }
       });
@@ -10800,7 +10813,11 @@ class DistributeManager {
     this.activeReviewItem.hashtags.push(cleaned);
     this.persistOutput(this.activeReviewItem);
     this.renderHashtags(this.activeReviewItem);
-    this.renderLinkedInPreview(this.activeReviewItem);
+    if (this.activeChannel === 'twitter') {
+      this.renderTwitterPreview(this.activeReviewItem);
+    } else {
+      this.renderLinkedInPreview(this.activeReviewItem);
+    }
     this.renderCharCount(this.activeReviewItem);
   }
 
