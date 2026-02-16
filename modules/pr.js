@@ -2300,8 +2300,14 @@ class PRAgent {
         });
       }
 
-      const extractedTitle = this.extractTitle(parsed.content, typeLabel);
-      const strippedContent = this._stripTitleFromPlainText(parsed.content, extractedTitle);
+      let extractedTitle, strippedContent;
+      if (contentType === 'tweet') {
+        extractedTitle = typeLabel;
+        strippedContent = (parsed.content || '').trim();
+      } else {
+        extractedTitle = this.extractTitle(parsed.content, typeLabel);
+        strippedContent = this._stripTitleFromPlainText(parsed.content, extractedTitle);
+      }
 
       const output = {
         id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
@@ -2317,7 +2323,6 @@ class PRAgent {
 
       if (contentType === 'tweet') {
         output.tweet_format = parsed.tweet_format || 'text';
-
         output.content = await this.enforceTweetLimit(output.content, output.tweet_format);
       }
 
@@ -3065,8 +3070,15 @@ class PRAgent {
         const output = liveEntry.output;
         if (!output.drafts) this.migrateContentToDrafts(output);
 
-        const newTitle = this.extractTitle(parsed.content, typeLabel);
-        const strippedContent = this._stripTitleFromPlainText(parsed.content, newTitle);
+        const isTweetContent = output.content_type === 'tweet';
+        let newTitle, strippedContent;
+        if (isTweetContent) {
+          newTitle = typeLabel;
+          strippedContent = (parsed.content || '').trim();
+        } else {
+          newTitle = this.extractTitle(parsed.content, typeLabel);
+          strippedContent = this._stripTitleFromPlainText(parsed.content, newTitle);
+        }
 
         const newVersion = output.drafts.length + 1;
         output.drafts.unshift({
@@ -7407,11 +7419,21 @@ ${primaryContext}${bgContext}`
       } else if (entry.output) {
         this.prAgent.currentOutput = entry.output;
         this.prAgent.renderGeneratedContent(entry.output);
-        // Skip suggestion generation since we restore per-tab suggestions below
         const hasSavedSuggestions = !!(entry.suggestionsHTML);
         this.prAgent.showWorkspace(hasSavedSuggestions);
         this.prAgent.hideLoading();
         this.renderVersionHistory(entry.output);
+      } else {
+        if (this.prAgent.dom.workspaceEmpty) this.prAgent.dom.workspaceEmpty.style.display = 'flex';
+        if (this.prAgent.dom.workspaceGenerated) this.prAgent.dom.workspaceGenerated.style.display = 'none';
+        if (this.prAgent.dom.workspaceChat) this.prAgent.dom.workspaceChat.style.display = 'none';
+        this.prAgent.hideLoading();
+        this.prAgent.hideRefiningOverlay();
+        const actionsEl = document.getElementById('pr-workspace-actions');
+        if (actionsEl) actionsEl.style.display = 'none';
+        if (entry.error) {
+          this.prAgent.showToast(entry.error, 'error');
+        }
       }
 
       // Restore per-tab suggestions
@@ -7559,13 +7581,18 @@ ${primaryContext}${bgContext}`
       userMessage += `SOURCES:\n${sourcesContext}`;
     }
 
+    const isTweetType = planItem.type === 'tweet';
+    if (isTweetType) {
+      userMessage += '\n\nREMINDER: The tweet MUST be under 280 characters. Count carefully. This is a hard platform limit.';
+    }
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'claude-opus-4-6',
-          max_tokens: 8192,
+          max_tokens: isTweetType ? 1024 : 8192,
           system: PR_SYSTEM_PROMPT,
           messages: [{ role: 'user', content: userMessage }]
         })
@@ -7599,14 +7626,20 @@ ${primaryContext}${bgContext}`
 
       const planIndex = parseInt(tabId.replace('plan_', ''), 10);
 
-      // For custom stories, put the primary source ID first in the sources array
       let sourceIds = selectedSources.map(s => s.id);
       if (isCustom && activeStory.primarySourceId) {
         sourceIds = [activeStory.primarySourceId, ...sourceIds.filter(id => id !== activeStory.primarySourceId)];
       }
 
-      const extractedTitle = this.prAgent.extractTitle(parsed.content, typeLabel);
-      const strippedContent = this.prAgent._stripTitleFromPlainText(parsed.content, extractedTitle);
+      const isTweet = isTweetType;
+      let extractedTitle, strippedContent;
+      if (isTweet) {
+        extractedTitle = typeLabel;
+        strippedContent = (parsed.content || '').trim();
+      } else {
+        extractedTitle = this.prAgent.extractTitle(parsed.content, typeLabel);
+        strippedContent = this.prAgent._stripTitleFromPlainText(parsed.content, extractedTitle);
+      }
 
       const output = {
         id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
@@ -7626,6 +7659,12 @@ ${primaryContext}${bgContext}`
         angle_title: isCustom ? (activeStory.angleTitle || null) : null,
         angle_narrative: isCustom ? (activeStory.angleNarrative || null) : null
       };
+
+      if (isTweet) {
+        output.tweet_format = parsed.tweet_format || 'text';
+        output.content = await this.prAgent.enforceTweetLimit(output.content, output.tweet_format);
+        output.drafts[0].content = output.content;
+      }
 
       const prevEntryDone = this._tabContent.get(tabId);
       this._tabContent.set(tabId, { loading: false, output, refining: prevEntryDone?.refining || false, suggestionsHTML: prevEntryDone?.suggestionsHTML || '' });
@@ -8572,8 +8611,15 @@ class AngleManager {
         });
       }
 
-      const extractedTitle = this.prAgent.extractTitle(parsed.content, typeLabel);
-      const strippedContent = this.prAgent._stripTitleFromPlainText(parsed.content, extractedTitle);
+      const isTweetADK = planItem.type === 'tweet';
+      let extractedTitle, strippedContent;
+      if (isTweetADK) {
+        extractedTitle = typeLabel;
+        strippedContent = (parsed.content || '').trim();
+      } else {
+        extractedTitle = this.prAgent.extractTitle(parsed.content, typeLabel);
+        strippedContent = this.prAgent._stripTitleFromPlainText(parsed.content, extractedTitle);
+      }
 
       const output = {
         id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
@@ -8589,6 +8635,12 @@ class AngleManager {
         angleTitle: angle.title,
         drafts: [{ content: strippedContent, version: 1, timestamp: Date.now(), prompt: null }]
       };
+
+      if (isTweetADK) {
+        output.tweet_format = parsed.tweet_format || 'text';
+        output.content = await this.prAgent.enforceTweetLimit(output.content, output.tweet_format);
+        output.drafts[0].content = output.content;
+      }
 
       // Store in per-tab content
       this.tabContent.set(tabId, { loading: false, output });
