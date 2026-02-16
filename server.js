@@ -2236,6 +2236,84 @@ app.post('/api/pr/og-metadata', async (req, res) => {
   }
 });
 
+// OG Image HTML template (rendered by Puppeteer for screenshot)
+app.get('/og-template', (req, res) => {
+  const title = decodeURIComponent(req.query.title || 'Untitled');
+  const subtitle = decodeURIComponent(req.query.subtitle || '');
+
+  const escapeHtml = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; background: #ffffff; }
+  .og-wrap { width: 1200px; height: 630px; position: relative; display: flex; flex-direction: column; }
+  .og-accent { width: 100%; height: 5px; background: #EC5F3F; flex-shrink: 0; }
+  .og-content { flex: 1; padding: 72px 80px 0 80px; display: flex; flex-direction: column; justify-content: center; }
+  .og-title { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 700; font-size: 54px; line-height: 1.15; letter-spacing: -0.03em; color: #171717; max-width: 960px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .og-subtitle { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; font-size: 24px; line-height: 1.45; color: #525252; margin-top: 20px; max-width: 860px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .og-brand { position: absolute; bottom: 48px; left: 80px; display: flex; align-items: center; gap: 14px; }
+  .og-logo-mark { width: 26px; height: 30px; }
+  .og-wordmark { height: 18px; width: auto; }
+  .og-domain { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; font-size: 15px; color: #a3a3a3; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div class="og-wrap">
+  <div class="og-accent"></div>
+  <div class="og-content">
+    <div class="og-title">${escapeHtml(title)}</div>
+    ${subtitle ? `<div class="og-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+  </div>
+  <div class="og-brand">
+    <svg class="og-logo-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 306.8 352.69"><path d="m306.8,166.33v73.65c0,8.39-6.83,15.11-15.22,15.11h-80.59c-7.05,0-13.43,1.23-17.91,3.81-4.25,2.35-6.49,5.6-6.49,10.52v68.28c0,8.28-6.72,15-15,15H14.66c-8.06,0-14.66-6.72-14.66-14.77V54.17c0-8.39,6.72-15.22,15.11-15.22h35.59c7.05,0,13.43-1.12,17.91-3.58,4.14-2.24,6.49-5.37,6.49-10.3v-9.96c0-8.39,6.83-15.11,15.11-15.11h126.26c8.39,0,15.11,6.72,15.11,15.11v15.11c0,8.39-6.72,15.11-15.11,15.11h-124.58c-5.37.11-10.75.56-14.66,2.46-1.79.89-3.13,2.13-4.14,3.69-1.01,1.68-1.79,4.03-1.79,7.72v185.58c0,2.24,1.79,3.92,3.92,3.92h95.7c5.26,0,10.3-.56,13.88-2.35,1.68-.9,2.91-2.01,3.81-3.58,1.01-1.57,1.68-3.81,1.68-7.28v-69.17c0-8.39,6.83-15.11,15.22-15.11h86.07c8.39,0,15.22,6.72,15.22,15.11Z" fill="#EC5F3F"/></svg>
+    <svg class="og-wordmark" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="190.6" height="56.1" viewBox="58.11 148.29 190.58 56.11"><defs><clipPath id="clip_1"><path transform="matrix(1,0,0,-1,0,352.69)" d="M0 352.69H306.8V0H0Z"/></clipPath></defs><g fill="#171717"><g clip-path="url(#clip_1)"><path transform="matrix(1,0,0,-1,60.1131,177.542)" d="M0 0C0 14.242 8.697 24.58 23.281 24.58 35.47 24.58 43.892 17.186 45.878 5.409H39.921C38.141 14.173 32.046 19.309 23.281 19.309 12.668 19.309 6.026 11.981 6.026 0 6.026-12.121 12.806-19.584 22.665-19.584 31.635-19.584 37.318-13.49 37.318-4.795H21.159V.135H38.003C43.002 .135 45.672-2.398 45.672-7.053V-24.104H40.537V-7.738H40.399C39.509-18.283 33.278-24.857 22.665-24.857 9.45-24.857 0-15.133 0 0"/><path transform="matrix(1,0,0,-1,0,352.69)" d="M115.161 202.399H120.844V151.044H115.161Z"/><path transform="matrix(1,0,0,-1,158.2982,183.159)" d="M0 0C0 8.148-4.725 13.697-11.983 13.697-19.242 13.697-23.966 8.148-23.966 0-23.966-9.312-18.557-14.311-11.983-14.311-4.246-14.311 0-7.874 0 0M-29.786 0C-29.786 12.121-21.843 18.626-11.983 18.626-.411 18.626 5.82 10.272 5.82 0 5.82-12.531-1.78-19.24-11.983-19.24-23.624-19.24-29.786-10.955-29.786 0"/><path transform="matrix(1,0,0,-1,169.6596,190.2101)" d="M0 0H5.547C5.957-4.726 10.271-7.328 15.749-7.328 20.885-7.328 23.35-5.342 23.35-1.713 23.35 1.711 20.679 2.465 16.913 3.766L11.641 5.546C6.3 7.326 .959 8.969 .959 15.543 .959 21.705 5.752 25.678 13.694 25.678 21.706 25.678 27.253 21.364 28.143 13.284H22.596C21.98 18.349 18.419 20.814 13.489 20.814 9.038 20.814 6.437 18.83 6.437 15.681 6.437 11.914 10.408 11.161 13.421 10.134L18.352 8.49C24.993 6.3 28.965 4.039 28.965-1.986 28.965-8.355 24.309-12.189 15.475-12.189 6.847-12.189 .48-7.67 0 0"/><path transform="matrix(1,0,0,-1,203.6884,190.2101)" d="M0 0H5.547C5.957-4.726 10.271-7.328 15.749-7.328 20.885-7.328 23.35-5.342 23.35-1.713 23.35 1.711 20.679 2.465 16.913 3.766L11.641 5.546C6.3 7.326 .959 8.969 .959 15.543 .959 21.705 5.752 25.678 13.696 25.678 21.706 25.678 27.253 21.364 28.143 13.284H22.596C21.98 18.349 18.419 20.814 13.489 20.814 9.038 20.814 6.437 18.83 6.437 15.681 6.437 11.914 10.408 11.161 13.421 10.134L18.352 8.49C24.993 6.3 28.965 4.039 28.965-1.986 28.965-8.355 24.309-12.189 15.475-12.189 6.847-12.189 .48-7.67 0 0"/><path transform="matrix(1,0,0,-1,0,352.69)" d="M239.634 187.335H245.317V151.044H239.634ZM238.265 197.676C238.265 200.072 240.113 201.852 242.51 201.852 244.906 201.852 246.687 200.072 246.687 197.676 246.687 195.277 244.906 193.429 242.51 193.429 240.113 193.429 238.265 195.277 238.265 197.676"/></g></g></svg>
+    <span class="og-domain">glossi.io/blog</span>
+  </div>
+</div>
+</body>
+</html>`;
+
+  res.type('html').send(html);
+});
+
+// Generate OG link preview image via Puppeteer screenshot
+app.post('/api/pr/generate-og-image', async (req, res) => {
+  let browser;
+  try {
+    const { title, subtitle } = req.body;
+    if (!title) {
+      return res.status(400).json({ success: false, error: 'title is required' });
+    }
+
+    const puppeteer = require('puppeteer');
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    });
+
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 2 });
+
+    const templateUrl = `http://127.0.0.1:${PORT}/og-template?title=${encodeURIComponent(title)}&subtitle=${encodeURIComponent(subtitle || '')}`;
+    await page.goto(templateUrl, { waitUntil: 'networkidle0', timeout: 15000 });
+
+    const screenshot = await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: 1200, height: 630 } });
+    const base64 = screenshot.toString('base64');
+    const dataUrl = `data:image/png;base64,${base64}`;
+
+    res.json({ success: true, image: dataUrl });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+});
+
 // ============================================
 // LINKEDIN OAUTH & PUBLISHING
 // ============================================

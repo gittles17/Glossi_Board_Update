@@ -20351,8 +20351,97 @@ body.pr-resizing * {
   margin-top: 10px;
   border: 1px solid #2f3336;
   border-radius: 16px;
-  padding: 12px 14px;
+  overflow: hidden;
   background: #16181c;
+}
+
+.pr-twitter-link-card-image {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.91 / 1;
+  overflow: hidden;
+  border-bottom: 1px solid #2f3336;
+}
+
+.pr-twitter-link-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pr-twitter-link-card-image-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.pr-twitter-link-card-image:hover .pr-twitter-link-card-image-remove {
+  opacity: 1;
+}
+
+.pr-twitter-link-card-image-loading {
+  width: 100%;
+  aspect-ratio: 1.91 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #71767b;
+  font-size: 13px;
+  border-bottom: 1px solid #2f3336;
+}
+
+.pr-twitter-link-card-image-loading .glossi-loader-sm {
+  width: 20px;
+  height: 20px;
+  animation: spin 1.2s linear infinite;
+}
+
+.pr-twitter-link-card-generate {
+  width: 100%;
+  aspect-ratio: 1.91 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #2f3336;
+}
+
+.pr-twitter-link-card-generate button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 100px;
+  border: 1px solid #2f3336;
+  background: transparent;
+  color: #e7e9ea;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.pr-twitter-link-card-generate button:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #536471;
+}
+
+.pr-twitter-link-card-body {
+  padding: 12px 14px;
 }
 
 .pr-twitter-link-card-domain {

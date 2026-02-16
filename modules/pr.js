@@ -10044,6 +10044,18 @@ class DistributeManager {
     } else if (tweetFormat === 'link') {
       const linkUrl = output.link_url || '';
       const domain = linkUrl ? (() => { try { return new URL(linkUrl).hostname.replace('www.', ''); } catch { return ''; } })() : '';
+      const ogImage = output.og_image || '';
+      const ogGenerating = output._ogGenerating || false;
+
+      let ogImageHtml = '';
+      if (ogImage) {
+        ogImageHtml = `<div class="pr-twitter-link-card-image"><img src="${this.escapeHtml(ogImage)}" alt=""><button class="pr-twitter-link-card-image-remove" data-action="remove-og-image" title="Remove"><i class="ph-light ph-x"></i></button></div>`;
+      } else if (ogGenerating) {
+        ogImageHtml = `<div class="pr-twitter-link-card-image-loading"><svg class="glossi-loader-sm" viewBox="0 0 306.8 352.69"><path d="m306.8,166.33v73.65c0,8.39-6.83,15.11-15.22,15.11h-80.59c-7.05,0-13.43,1.23-17.91,3.81-4.25,2.35-6.49,5.6-6.49,10.52v68.28c0,8.28-6.72,15-15,15H14.66c-8.06,0-14.66-6.72-14.66-14.77V54.17c0-8.39,6.72-15.22,15.11-15.22h35.59c7.05,0,13.43-1.12,17.91-3.58,4.14-2.24,6.49-5.37,6.49-10.3v-9.96c0-8.39,6.83-15.11,15.11-15.11h126.26c8.39,0,15.11,6.72,15.11,15.11v15.11c0,8.39-6.72,15.11-15.11,15.11h-124.58c-5.37.11-10.75.56-14.66,2.46-1.79.89-3.13,2.13-4.14,3.69-1.01,1.68-1.79,4.03-1.79,7.72v185.58c0,2.24,1.79,3.92,3.92,3.92h95.7c5.26,0,10.3-.56,13.88-2.35,1.68-.9,2.91-2.01,3.81-3.58,1.01-1.57,1.68-3.81,1.68-7.28v-69.17c0-8.39,6.83-15.11,15.22-15.11h86.07c8.39,0,15.22,6.72,15.22,15.11Z" fill="#EC5F3F"/></svg><span>Generating preview...</span></div>`;
+      } else {
+        ogImageHtml = `<div class="pr-twitter-link-card-generate"><button data-action="generate-og-image"><i class="ph-light ph-image"></i> Generate Link Preview</button></div>`;
+      }
+
       mediaHtml = `
         <div class="pr-twitter-link-input-wrap">
           <div class="pr-twitter-link-input-label">
@@ -10052,12 +10064,14 @@ class DistributeManager {
           </div>
           <input type="url" class="pr-twitter-link-url-input" data-action="edit-link-url" placeholder="https://glossi.io/blog/..." value="${this.escapeHtml(linkUrl)}">
         </div>
-        ${linkUrl ? `
         <div class="pr-twitter-link-card">
-          <div class="pr-twitter-link-card-domain">${this.escapeHtml(domain || 'glossi.io')}</div>
-          <div class="pr-twitter-link-card-title">${this.escapeHtml(output.link_title || domain || 'Link Preview')}</div>
-          <div class="pr-twitter-link-card-desc">${this.escapeHtml(output.link_desc || 'Preview will update when URL is added')}</div>
-        </div>` : ''}`;
+          ${ogImageHtml}
+          <div class="pr-twitter-link-card-body">
+            <div class="pr-twitter-link-card-domain">${this.escapeHtml(domain || 'glossi.io')}</div>
+            <div class="pr-twitter-link-card-title">${this.escapeHtml(output.link_title || domain || 'Link Preview')}</div>
+            <div class="pr-twitter-link-card-desc">${this.escapeHtml(output.link_desc || 'Preview will update when URL is added')}</div>
+          </div>
+        </div>`;
     } else if (hasImage) {
       const img = media.find(m => m.type === 'image');
       mediaHtml = `
@@ -10141,6 +10155,16 @@ class DistributeManager {
             this.fetchLinkMetadata(output);
           }
         }, 500);
+      });
+    });
+    container.querySelectorAll('[data-action="generate-og-image"]').forEach(btn => {
+      btn.addEventListener('click', () => this.generateOgImage(output));
+    });
+    container.querySelectorAll('[data-action="remove-og-image"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        output.og_image = '';
+        this.persistOutput(output);
+        this.renderTwitterPreview(output);
       });
     });
   }
@@ -10243,6 +10267,40 @@ class DistributeManager {
       output._visualGenerating = false;
       this.renderTwitterPreview(output);
       await this.prAgent.showConfirm(e.message || 'Network error', 'Visual Refinement Error');
+    }
+  }
+
+  async generateOgImage(output) {
+    const title = output.title || '';
+    if (!title.trim()) return;
+
+    output._ogGenerating = true;
+    this.renderTwitterPreview(output);
+
+    try {
+      const subtitleMatch = (output.content || '').match(/^([^\n#].{20,})/);
+      const subtitle = subtitleMatch ? subtitleMatch[1].substring(0, 120) : '';
+
+      const res = await this.prAgent.apiCall('/api/pr/generate-og-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, subtitle })
+      });
+
+      output._ogGenerating = false;
+
+      if (res.success && res.image) {
+        output.og_image = res.image;
+        this.persistOutput(output);
+        this.renderTwitterPreview(output);
+      } else {
+        this.renderTwitterPreview(output);
+        await this.prAgent.showConfirm(res.error || 'OG image generation failed', 'Link Preview Error');
+      }
+    } catch (e) {
+      output._ogGenerating = false;
+      this.renderTwitterPreview(output);
+      await this.prAgent.showConfirm(e.message || 'Network error', 'Link Preview Error');
     }
   }
 
@@ -10824,6 +10882,8 @@ class DistributeManager {
     const subtitleMatch = content.match(/^([^\n#].{20,})/);
     const subtitle = subtitleMatch ? subtitleMatch[1].trim() : '';
 
+    const ogImage = output.og_image || '';
+
     const frontmatter = [
       '---',
       `title: "${title.replace(/"/g, '\\"')}"`,
@@ -10832,6 +10892,7 @@ class DistributeManager {
       `date: "${dateStr}"`,
       `author: "Glossi"`,
       featuredImage ? `featured_image: "${featuredImage}"` : null,
+      ogImage ? `og_image: "${ogImage.startsWith('data:') ? 'og-' + slug + '.png' : ogImage}"` : null,
       `meta_description: "${(subtitle || title).replace(/"/g, '\\"').substring(0, 160)}"`,
       '---'
     ].filter(Boolean).join('\n');
