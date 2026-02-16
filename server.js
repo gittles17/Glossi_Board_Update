@@ -1989,8 +1989,16 @@ app.post('/api/pr/shorten-tweet', async (req, res) => {
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
       model: 'claude-haiku-4-5',
       max_tokens: 512,
-      system: `You rewrite tweets to fit within a strict character limit. Preserve the core message, tone, and key insight. Cut filler words, simplify phrasing, remove parentheticals and secondary details. The tweet must read as a complete, punchy thought. Return ONLY the rewritten tweet text. No quotes, no explanation, no preamble.`,
-      messages: [{ role: 'user', content: `This tweet is ${currentLength} characters. Rewrite it to fit within ${limit} characters. Format: ${tweet_format || 'text'}.\n\nTweet: "${content}"` }]
+      system: `You rewrite tweets to fit within a strict character limit. This is a HARD constraint. Your output MUST be ${limit} characters or fewer. Count carefully.
+
+Rules:
+- Preserve the single most important insight or claim.
+- Cut everything else: parentheticals, secondary examples, filler words, qualifiers.
+- Use shorter words. Compress phrasing aggressively.
+- The result must be a complete, punchy thought that stands alone.
+- Aim for well under the limit (target ~250 chars) to leave margin.
+- Return ONLY the rewritten tweet text. No quotes, no explanation, no preamble, no character count.`,
+      messages: [{ role: 'user', content: `This tweet is ${currentLength} characters but must be ${limit} or fewer. That means you need to cut at least ${currentLength - limit} characters. Rewrite it shorter.\n\nTweet: "${content}"` }]
     }, {
       headers: {
         'Content-Type': 'application/json',

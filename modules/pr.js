@@ -2265,7 +2265,8 @@ class PRAgent {
         const maxChars = output.tweet_format === 'link' ? 257 : 280;
         let tweetContent = output.content || '';
         let retries = 0;
-        const maxRetries = 3;
+        const maxRetries = 10;
+        let lastLength = tweetContent.length;
 
         while (tweetContent.length > maxChars && retries < maxRetries) {
           retries++;
@@ -2280,7 +2281,8 @@ class PRAgent {
               })
             });
             const shortenData = await shortenRes.json();
-            if (shortenData.success && shortenData.content) {
+            if (shortenData.success && shortenData.content && shortenData.content.length < lastLength) {
+              lastLength = shortenData.content.length;
               tweetContent = shortenData.content;
             } else {
               break;
@@ -2288,6 +2290,10 @@ class PRAgent {
           } catch {
             break;
           }
+        }
+
+        if (tweetContent.length > maxChars) {
+          tweetContent = tweetContent.substring(0, maxChars);
         }
 
         output.content = tweetContent;
