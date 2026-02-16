@@ -16002,8 +16002,8 @@ svg.spinning,
 /* Favorite heart button */
 .pr-news-card-favorite {
   position: absolute;
-  top: 8px;
-  right: 36px;
+  top: 40px;
+  right: 8px;
   display: none;
   align-items: center;
   justify-content: center;
