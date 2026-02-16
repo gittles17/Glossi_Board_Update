@@ -10418,15 +10418,6 @@ class DistributeManager {
             <div class="pr-twitter-link-card-desc">${this.escapeHtml(output.link_desc || 'Preview will update when URL is added')}</div>
           </div>
         </div>`;
-    } else if (hasImage) {
-      const img = media.find(m => m.type === 'image');
-      mediaHtml = `
-        <div class="pr-twitter-image-card">
-          <img src="${this.escapeHtml(img.url)}" alt="">
-          <button class="pr-twitter-image-remove" data-action="remove-twitter-image" title="Remove image">
-            <i class="ph-light ph-x"></i>
-          </button>
-        </div>`;
     }
 
     const tweetHtml = `
