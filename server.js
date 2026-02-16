@@ -2593,7 +2593,7 @@ app.get('/api/x/status', async (req, res) => {
     return res.json({ success: true, connected: false, reason: 'X API credentials not configured' });
   }
   try {
-    const request = { url: 'https://api.x.com/2/users/me', method: 'GET' };
+    const request = { url: 'https://api.twitter.com/2/users/me', method: 'GET' };
     const verifyRes = await axios.get(request.url, {
       headers: { ...xAuthHeader(request) },
       timeout: 8000
@@ -2607,10 +2607,11 @@ app.get('/api/x/status', async (req, res) => {
     });
   } catch (error) {
     const status = error.response?.status;
+    const detail = error.response?.data?.detail || error.response?.data?.errors?.[0]?.message || error.message;
     if (status === 401 || status === 403) {
-      return res.json({ success: true, connected: false, reason: 'Invalid or expired credentials' });
+      return res.json({ success: true, connected: false, reason: detail });
     }
-    res.json({ success: true, connected: false, reason: error.message });
+    res.json({ success: true, connected: false, reason: detail });
   }
 });
 
@@ -2705,7 +2706,7 @@ app.post('/api/x/publish', async (req, res) => {
       }
 
       const tweetRequest = {
-        url: 'https://api.x.com/2/tweets',
+        url: 'https://api.twitter.com/2/tweets',
         method: 'POST'
       };
       const tweetRes = await axios.post(tweetRequest.url, tweetPayload, {
