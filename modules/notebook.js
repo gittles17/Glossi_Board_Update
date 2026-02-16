@@ -1,3 +1,5 @@
+import { startLoaderStatus, stopLoaderStatus } from './loader-status.js';
+
 /**
  * Notebook Module
  * Handles source management, AI chat, and report generation
@@ -2077,6 +2079,8 @@ ${milestonesData}
     
     if (step1) step1.style.display = 'block';
     if (step2) step2.style.display = 'none';
+    stopLoaderStatus(this._reportLoaderId);
+    this._reportLoaderId = null;
     if (loading) loading.style.display = 'none';
     
     // Reset buttons
@@ -2147,6 +2151,7 @@ ${milestonesData}
     
     if (step1) step1.style.display = 'none';
     if (loading) loading.style.display = 'block';
+    this._reportLoaderId = startLoaderStatus(document.getElementById('kb-report-loading-content'), 'report');
     if (continueBtn) continueBtn.style.display = 'none';
     
     try {
@@ -2203,6 +2208,8 @@ Rules: Max 2 questions. Prefer "choice" type. If in doubt, respond {"ready": tru
       const loadingEl = document.getElementById('kb-report-loading');
       const continueEl = document.getElementById('kb-report-continue');
       if (step1El) step1El.style.display = 'block';
+      stopLoaderStatus(this._reportLoaderId);
+      this._reportLoaderId = null;
       if (loadingEl) loadingEl.style.display = 'none';
       if (continueEl) continueEl.style.display = 'inline-flex';
     }
@@ -2219,6 +2226,8 @@ Rules: Max 2 questions. Prefer "choice" type. If in doubt, respond {"ready": tru
     const backBtn = document.getElementById('kb-report-back');
     const continueBtn = document.getElementById('kb-report-continue');
     
+    stopLoaderStatus(this._reportLoaderId);
+    this._reportLoaderId = null;
     if (loading) loading.style.display = 'none';
     if (step2) step2.style.display = 'block';
     if (backBtn) backBtn.style.display = 'inline-flex';
@@ -2353,6 +2362,7 @@ Rules: Max 2 questions. Prefer "choice" type. If in doubt, respond {"ready": tru
     if (step1) step1.style.display = 'none';
     if (step2) step2.style.display = 'none';
     if (loading) loading.style.display = 'block';
+    this._reportLoaderId = startLoaderStatus(document.getElementById('kb-report-loading-content'), 'report');
     if (continueBtn) continueBtn.style.display = 'none';
     if (backBtn) backBtn.style.display = 'none';
     
@@ -3844,6 +3854,7 @@ ${context.substring(0, 4000)}`;
    * Show toast notification
    */
   showToast(message, type = 'info') {
+    if (type !== 'error') return;
     const container = document.getElementById('toast-container');
     if (!container) return;
     

@@ -1,3 +1,5 @@
+import { startLoaderStatus, stopLoaderStatus } from './loader-status.js';
+
 /**
  * PR Agent Module
  * Handles PR content generation, source management, and strategy recommendations
@@ -2323,15 +2325,14 @@ class PRAgent {
     if (this.dom.workspaceEmpty) this.dom.workspaceEmpty.style.display = 'none';
     if (this.dom.workspaceGenerated) this.dom.workspaceGenerated.style.display = 'none';
     if (this.dom.loadingState) this.dom.loadingState.style.display = 'flex';
-    
-    // Animate progress bar
+    this._contentLoaderId = startLoaderStatus(this.dom.loadingState, 'content');
     this.startProgressBar();
   }
 
   hideLoading() {
     if (this.dom.loadingState) this.dom.loadingState.style.display = 'none';
-    
-    // Clear progress bar
+    stopLoaderStatus(this._contentLoaderId);
+    this._contentLoaderId = null;
     this.stopProgressBar();
   }
   
@@ -3554,7 +3555,7 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
   }
 
   showToast(message, type = 'success') {
-    if (!this.dom.toastContainer) return;
+    if (type !== 'error' || !this.dom.toastContainer) return;
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
@@ -5619,6 +5620,7 @@ class NewsMonitor {
     if (this.dom.newsHooksList) {
       this.dom.newsHooksList.innerHTML = '<p class="pr-news-hooks-empty">Searching for relevant news...</p>';
     }
+    this._newsLoaderId = startLoaderStatus(this.dom.newsHooksList, 'news');
 
     try {
       const response = await fetch('/api/pr/news-hooks', {
@@ -5640,6 +5642,8 @@ class NewsMonitor {
         this.dom.newsHooksList.innerHTML = '<p class="pr-news-hooks-empty">Failed to load news. Try again.</p>';
       }
     } finally {
+      stopLoaderStatus(this._newsLoaderId);
+      this._newsLoaderId = null;
       if (this.dom.fetchNewsBtn) {
         this.dom.fetchNewsBtn.disabled = false;
         this.dom.fetchNewsBtn.classList.remove('spinning');
@@ -5652,19 +5656,13 @@ class NewsMonitor {
       this.dom.regeneratePlansBtn.disabled = true;
       this.dom.regeneratePlansBtn.classList.add('spinning');
     }
+    this._plansLoaderId = startLoaderStatus(this.dom.newsHooksList, 'plans');
 
     try {
       const allArticles = this.newsHooks || [];
       const articles = allArticles.filter(item => !this._archivedNewsIds.has(item.url || item.headline));
 
       if (articles.length === 0) {
-        if (this.dom.newsHooksList) {
-          const banner = document.createElement('div');
-          banner.className = 'pr-news-hooks-empty';
-          banner.textContent = allArticles.length === 0 ? 'No articles loaded. Refresh first.' : 'All articles are archived.';
-          this.dom.newsHooksList.prepend(banner);
-          setTimeout(() => banner.remove(), 4000);
-        }
         return;
       }
 
@@ -5705,24 +5703,11 @@ class NewsMonitor {
       }
 
       this.renderNews();
-
-      if (this.dom.newsHooksList && updated > 0) {
-        const banner = document.createElement('div');
-        banner.className = 'pr-news-hooks-empty';
-        banner.style.color = '#4ade80';
-        banner.textContent = `Regenerated content plans for ${updated} article${updated !== 1 ? 's' : ''}.`;
-        this.dom.newsHooksList.prepend(banner);
-        setTimeout(() => banner.remove(), 3000);
-      }
     } catch (error) {
-      if (this.dom.newsHooksList) {
-        const banner = document.createElement('div');
-        banner.className = 'pr-news-hooks-empty';
-        banner.textContent = `Failed to regenerate plans: ${error.message || 'Unknown error'}`;
-        this.dom.newsHooksList.prepend(banner);
-        setTimeout(() => banner.remove(), 5000);
-      }
+      console.error('Error regenerating content plans:', error);
     } finally {
+      stopLoaderStatus(this._plansLoaderId);
+      this._plansLoaderId = null;
       if (this.dom.regeneratePlansBtn) {
         this.dom.regeneratePlansBtn.disabled = false;
         this.dom.regeneratePlansBtn.classList.remove('spinning');
@@ -8088,6 +8073,7 @@ class AngleManager {
 
     this.dom.generateAnglesBtn.disabled = true;
     this.dom.generateAnglesBtn.classList.add('spinning');
+    this._anglesLoaderId = startLoaderStatus(this.dom.anglesList, 'plans');
     
     if (this.dom.anglesList) {
       const hookText = triggeredByNewsHook ? ` based on "${triggeredByNewsHook.headline}"` : '';
@@ -8145,6 +8131,8 @@ class AngleManager {
       }
       this.prAgent.showToast(error.message || 'Failed to generate angles', 'error');
     } finally {
+      stopLoaderStatus(this._anglesLoaderId);
+      this._anglesLoaderId = null;
       if (this.dom.generateAnglesBtn) {
         this.dom.generateAnglesBtn.disabled = false;
         this.dom.generateAnglesBtn.classList.remove('spinning');

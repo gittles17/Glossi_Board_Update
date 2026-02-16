@@ -1,3 +1,5 @@
+import { startLoaderStatus, stopLoaderStatus } from './modules/loader-status.js';
+
 /**
  * Glossi Board Dashboard - Main Application
  * Ties together all modules and handles UI interactions
@@ -4420,6 +4422,7 @@ Format this into a clean, professional weekly update email. Return as JSON with 
         </div>
       </div>
     `;
+    this._reviewLoaderId = startLoaderStatus(document.getElementById('review-loading'), 'general');
 
     try {
       const result = await aiProcessor.processMeetingNotes(notes, title, date);
@@ -4434,8 +4437,12 @@ Format this into a clean, professional weekly update email. Return as JSON with 
       };
 
       // Show review content
+      stopLoaderStatus(this._reviewLoaderId);
+      this._reviewLoaderId = null;
       this.renderMeetingReview(result);
     } catch (error) {
+      stopLoaderStatus(this._reviewLoaderId);
+      this._reviewLoaderId = null;
       this.hideModal('review-modal');
       this.showToast('Failed to process notes: ' + error.message, 'error');
     }
@@ -8500,9 +8507,13 @@ Respond with just the category name (core, traction, market, or testimonials) an
   /**
    * Show toast notification with premium animation
    */
-  showToast(message, type = 'info') {
-    // Disabled for cleaner, optimistic UI
-    return;
+  showToast(message, type = 'success') {
+    if (type !== 'error' || !this.dom.toastContainer) return;
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    this.dom.toastContainer.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
   }
 
   /**
