@@ -1987,37 +1987,53 @@ app.post('/api/pr/generate-visual-prompt', async (req, res) => {
 
 You analyze tweet text and produce the single best image prompt that will create a scroll-stopping infographic for X/Twitter.
 
-STYLE REFERENCE (blend these two aesthetics):
+EXACT STYLE TO MATCH (based on Cursor's @cursor_ai X/Twitter infographics):
 
-1. CURSOR'S X FEED STYLE:
-- Solid near-black background (#0a0a0a). No gradients, no textures, no patterns.
-- Clean modern sans-serif typography (Inter or similar).
-- Two hierarchy levels only: one large bold headline (white #e7e9ea, 36-48px) and one smaller supporting line (muted gray #71767b, 16-20px).
-- Extreme negative space. Content centered or left-aligned with generous margins (80px+ on all sides).
-- Almost entirely monochrome. One accent color used sparingly.
-- If showing numbers, the key stat is enormous (60-80px bold white) with a small label underneath.
-- No borders, no shadows, no 3D effects, no icons, no stock photos, no watermarks, no logos, no bullet points.
-- Confident, editorial mood. Like a premium tech company's changelog graphic.
+BACKGROUND:
+- Warm off-white/cream background, approximately #ede8e3 or #f0edea. Flat, solid, no gradients, no textures.
 
-2. GLOSSI BLOG STYLE ACCENTS:
-- The ONLY accent color is Glossi orange (#EC5F3F), used sparingly for one key number, one underline, or one highlighted word.
-- Typography follows strict hierarchy: clear size steps, restrained emphasis, spacing signals importance.
-- Clean, modern, editorial design. Professional and minimal. Content-first.
-- Generous whitespace. Consistent spacing scale. Subtle color palette with strategic brand orange.
+HEADLINE:
+- Bold black headline text (#1a1a1a), top-left aligned, clean sans-serif font (Inter, Helvetica Neue, or similar).
+- 1-2 lines, bold weight, roughly 24-32px equivalent. Short, declarative, editorial.
+- The headline states the insight or finding. It is NOT a title card. It describes what the data shows.
 
-LAYOUT RULES:
-- 1200x675px landscape. One single concept per image.
-- Never fill the entire canvas. Let the type breathe.
-- Never more than 2-3 lines of text total.
-- One or two stats max. One concept max.
-- No more than 3 colors total (black, white/gray, orange accent).
+DATA VISUALIZATION (this is the core of the infographic):
+- Render actual data charts when the content involves numbers, comparisons, trends, or measurements.
+- Chart types to use: bar charts (vertical or horizontal), line charts, scatter plots, simple area charts.
+- Two data colors only: warm orange (#EC5F3F) for the primary/highlighted data series, and medium gray (#b0aca6 or #a8a4a0) for the secondary/comparison series.
+- Thin axis lines in light gray. Small, clean axis labels in gray (#8a8580), roughly 11-13px.
+- No gridlines or minimal dashed gridlines. No chart borders. No 3D effects.
+- Data points/bars should be clearly readable. Clean spacing between bars.
+- Annotate key insights directly on the chart with small text callouts in orange or dark gray.
 
-PROMPT RULES:
-- Describe WHAT to show: the specific stat, comparison, or concept. Be concrete.
-- Include the exact text/numbers that should appear on the graphic.
-- Prefer: one bold stat with context, before/after comparisons, two-column contrasts, a single provocative claim as a pull quote.
-- Keep it to ONE concept. Never ask for multiple charts or complex layouts.
-- Include all style rules directly in the prompt so the image model knows exactly what to produce.
+WHEN THERE IS NO CHART DATA:
+- If the tweet is a claim, opinion, or non-numeric insight, use a clean typographic layout instead.
+- One large bold stat or pull quote in black, with a small supporting label underneath.
+- Keep to 2-3 lines of text maximum. The typography IS the visual.
+
+LAYOUT:
+- 1200x675px landscape ratio. Generous margins (60-80px on all sides).
+- Headline at top-left. Chart/visualization centered below it.
+- Small footnote or source text at bottom-right in muted gray if relevant.
+- Extreme whitespace. Never crowd the canvas. Let every element breathe.
+
+WHAT TO AVOID:
+- No dark backgrounds. No black or near-black.
+- No borders around the image. No drop shadows. No 3D effects.
+- No icons, emoji, logos, or decorative elements.
+- No more than 3 colors total (off-white background, black text, orange+gray for data).
+- No complex multi-panel layouts. One chart, one concept.
+- No stock photo elements. No gradients. No patterns.
+
+MOOD: Professional, editorial, confident. Like a chart from a premium tech company's blog post or research report. The kind of image that makes someone stop scrolling because the data itself is interesting.
+
+PROMPT CONSTRUCTION RULES:
+- Include ALL style rules above directly in your prompt. The image model needs explicit instructions.
+- Describe the exact chart type, data values, axis labels, and headline text.
+- Specify the exact colors by hex code.
+- Specify the background color explicitly.
+- If creating a chart, provide the approximate data values and labels so the model can render them.
+- Be extremely specific. "Bar chart showing X with values A, B, C" is good. "A visualization of the data" is bad.
 
 Return ONLY the image generation prompt text. No explanation, no preamble, no quotes around it. Just the prompt.`;
 
