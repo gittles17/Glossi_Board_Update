@@ -5203,6 +5203,7 @@ class NewsMonitor {
   setupDOM() {
     this.dom = {
       fetchNewsBtn: document.getElementById('pr-fetch-news-btn'),
+      regeneratePlansBtn: document.getElementById('pr-regenerate-plans-btn'),
       newsHooksList: document.getElementById('pr-news-hooks-list'),
       sourcesDrawer: document.getElementById('pr-sources-drawer'),
       sourcesBackdrop: document.getElementById('pr-sources-backdrop'),
@@ -5233,6 +5234,7 @@ class NewsMonitor {
 
   setupEventListeners() {
     this.dom.fetchNewsBtn?.addEventListener('click', () => this.refreshNews());
+    this.dom.regeneratePlansBtn?.addEventListener('click', () => this.regenerateContentPlans());
 
     // Strategy sub-tab switching
     const addSourceBtn = this.dom.customAddSourceBtn;
@@ -5641,6 +5643,64 @@ class NewsMonitor {
       if (this.dom.fetchNewsBtn) {
         this.dom.fetchNewsBtn.disabled = false;
         this.dom.fetchNewsBtn.classList.remove('spinning');
+      }
+    }
+  }
+
+  async regenerateContentPlans() {
+    const articles = (this.newsHooks || []).filter(item => !this._archivedNewsIds.has(item.url || item.headline));
+    if (articles.length === 0) return;
+
+    if (this.dom.regeneratePlansBtn) {
+      this.dom.regeneratePlansBtn.disabled = true;
+      this.dom.regeneratePlansBtn.classList.add('spinning');
+    }
+
+    try {
+      const payload = articles.map(a => ({
+        headline: a.headline,
+        outlet: a.outlet,
+        date: a.date,
+        summary: a.summary,
+        url: a.url
+      }));
+
+      const response = await fetch('/api/pr/regenerate-plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articles: payload })
+      });
+
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Failed to regenerate plans');
+
+      const plansByUrl = new Map();
+      for (const plan of (data.plans || [])) {
+        if (plan.url) plansByUrl.set(plan.url, plan);
+      }
+
+      for (const item of this.newsHooks) {
+        const updated = plansByUrl.get(item.url);
+        if (updated) {
+          item.content_plan = updated.content_plan;
+          if (updated.angle_title) item.angle_title = updated.angle_title;
+          if (updated.angle_narrative) item.angle_narrative = updated.angle_narrative;
+        }
+      }
+
+      this.renderNews();
+    } catch (error) {
+      if (this.dom.newsHooksList) {
+        const banner = document.createElement('div');
+        banner.className = 'pr-news-hooks-empty';
+        banner.textContent = 'Failed to regenerate plans. Try again.';
+        this.dom.newsHooksList.prepend(banner);
+        setTimeout(() => banner.remove(), 4000);
+      }
+    } finally {
+      if (this.dom.regeneratePlansBtn) {
+        this.dom.regeneratePlansBtn.disabled = false;
+        this.dom.regeneratePlansBtn.classList.remove('spinning');
       }
     }
   }

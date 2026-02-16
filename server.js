@@ -1584,6 +1584,115 @@ app.get('/api/pr/news-hooks', async (req, res) => {
   }
 });
 
+// Regenerate content plans for existing articles
+app.post('/api/pr/regenerate-plans', async (req, res) => {
+  try {
+    const { articles } = req.body;
+    if (!articles || !Array.isArray(articles) || articles.length === 0) {
+      return res.status(400).json({ success: false, error: 'articles array is required' });
+    }
+
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicKey) {
+      return res.status(500).json({ success: false, error: 'Anthropic API key not configured' });
+    }
+
+    const articlesList = articles.map((a, i) => `
+${i + 1}. HEADLINE: ${a.headline}
+   OUTLET: ${a.outlet}
+   DATE: ${a.date || 'Recent'}
+   SUMMARY: ${a.summary || ''}
+   URL: ${a.url || ''}
+`).join('\n');
+
+    const prompt = `You are a PR strategist for Glossi, a seed-stage startup building AI-powered product photography tools. Given these news articles, generate a fresh content plan for EACH article.
+
+ARTICLES:
+${articlesList}
+
+For each article, return a content_plan array with the right mix of content types.
+
+Return JSON:
+{
+  "plans": [
+    {
+      "url": "the article URL",
+      "angle_title": "Short story angle name (3-6 words)",
+      "angle_narrative": "1-2 sentences explaining the story angle and Glossi connection",
+      "content_plan": [
+        {"type": "tweet_thread", "description": "Specific description", "priority": 1, "audience": "builders"}
+      ]
+    }
+  ]
+}
+
+CONTENT PLAN RULES:
+
+CONTEXT: Glossi is a seed-stage startup building awareness with builders (devs, designers, PMs) and brand/marketing teams. The content voice is product-led, opinionated, and intentional (think Cursor, Linear, Canva). Never corporate. Never hype. Never generic startup marketing.
+
+VALID CONTENT TYPES: tweet_thread, linkedin_post, blog_post, email_blast, product_announcement, talking_points, investor_snippet
+
+SELECTION HEURISTICS (pick based on article type, not a default template):
+- Breaking/time-sensitive news: tweet_thread + email_blast + linkedin_post
+- Competitor or market shift: blog_post + tweet_thread + linkedin_post
+- Thought leadership / trend piece: blog_post + linkedin_post + tweet_thread
+- Product/feature relevance: product_announcement + blog_post + tweet_thread
+- Funding/business signal: investor_snippet + linkedin_post + email_blast
+- Customer/industry story: blog_post + linkedin_post + email_blast
+- Technical deep-dive: blog_post + tweet_thread + talking_points
+- "Everyone gets this wrong": tweet_thread + blog_post + linkedin_post
+
+DYNAMIC PLAN SIZE: High relevance: 3-4 pieces. Medium: 2-3. Low: 2.
+
+DIVERSIFICATION: Vary the lead content type across articles. Not every article should start with the same type.
+
+AUDIENCE TAG: Each piece MUST include "audience": "builders" | "brands" | "investors" | "press" | "internal"
+
+TONE: Write descriptions like a sharp comms lead. Be specific to each article.`;
+
+    const response = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }]
+    }, {
+      headers: {
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json'
+      },
+      timeout: 60000
+    });
+
+    const text = response.data?.content?.[0]?.text || '';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return res.json({ success: false, error: 'Failed to parse AI response' });
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    const plans = parsed.plans || [];
+
+    if (useDatabase && plans.length > 0) {
+      for (const plan of plans) {
+        if (!plan.url) continue;
+        try {
+          await pool.query(
+            `UPDATE pr_news_hooks SET content_plan = $1, angle_title = $2, angle_narrative = $3 WHERE url = $4`,
+            [JSON.stringify(plan.content_plan), plan.angle_title || null, plan.angle_narrative || null, plan.url]
+          );
+        } catch (dbErr) {
+          // Continue even if individual update fails
+        }
+      }
+    }
+
+    res.json({ success: true, plans });
+  } catch (error) {
+    const msg = error.response?.data?.error?.message || error.message;
+    res.status(500).json({ success: false, error: msg });
+  }
+});
+
 // Delete old news hooks (cleanup endpoint)
 app.delete('/api/pr/news-hooks/old', async (req, res) => {
   try {
