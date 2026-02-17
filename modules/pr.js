@@ -6049,7 +6049,10 @@ class NewsMonitor {
           ${inWorkspace ? '<span class="pr-card-status-badge">In Progress</span>' : ''}
           <button class="pr-news-card-favorite ${isFavorited ? 'active' : ''}" data-favorite-id="${this.escapeHtml(newsId)}" data-favorite-type="news" title="${isFavorited ? 'Remove from favorites' : 'Add to favorites'}"><i class="${isFavorited ? 'ph-fill' : 'ph-light'} ph-heart"></i></button>
           <button class="pr-news-card-archive" data-archive-news-id="${this.escapeHtml(newsId)}" title="Archive"><i class="ph-light ph-archive"></i></button>
-          <a href="${item.url}" target="_blank" class="pr-news-headline">${this.escapeHtml(item.headline)}</a>
+          <div class="pr-news-headline-row">
+            <a href="${item.url}" target="_blank" class="pr-news-headline">${this.escapeHtml(item.headline)}</a>
+            <button class="pr-news-search-fallback" data-search-query="${this.escapeHtml(item.headline + ' ' + item.outlet)}" title="Search for this article"><i class="ph-light ph-magnifying-glass"></i></button>
+          </div>
           <div class="pr-news-meta">
             <span class="pr-news-outlet">${this.escapeHtml(item.outlet)}</span>
             <span class="pr-news-date">${daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`}</span>
@@ -6172,6 +6175,15 @@ class NewsMonitor {
   }
 
   attachNewsEventListenersToContainer(container) {
+    // Search fallback for broken article links
+    container.querySelectorAll('.pr-news-search-fallback').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const query = btn.dataset.searchQuery;
+        if (query) window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+      });
+    });
+
     // Angle row expand/collapse toggle
     container.querySelectorAll('.pr-news-angle-row').forEach(row => {
       row.addEventListener('click', (e) => {
@@ -9936,9 +9948,6 @@ class DistributeManager {
       } catch (e) { /* silent */ }
     }
 
-    // AI-suggest hashtags
-    this.generateHashtags(output);
-
     // Persist
     try {
       await this.prAgent.apiCall('/api/pr/outputs', {
@@ -10162,11 +10171,7 @@ class DistributeManager {
       ? `<img src="${this.escapeHtml(photoUrl)}" alt="">`
       : `<span class="pr-li-avatar-placeholder">${initials}</span>`;
 
-    // Build post body with hashtags appended
     let fullText = content;
-    if (hashtags.length > 0) {
-      fullText += '\n\n' + hashtags.map(h => '#' + h).join(' ');
-    }
 
     // Determine if truncation is needed (LinkedIn: 3-line preview on desktop)
     const lines = fullText.split('\n');
@@ -10320,7 +10325,7 @@ class DistributeManager {
     const isBlog = channel === 'blog';
     const isPublishable = isLinkedin || isTwitter;
     if (firstCommentWrap) firstCommentWrap.style.display = isLinkedin && this.activeReviewItem?.first_comment ? '' : 'none';
-    if (hashtagsWrap) hashtagsWrap.style.display = (isLinkedin || isTwitter) && this.activeReviewItem?.hashtags?.length ? '' : 'none';
+    if (hashtagsWrap) hashtagsWrap.style.display = 'none';
     if (charCount) charCount.style.display = (isLinkedin || isTwitter) ? '' : 'none';
     if (mediaBar) mediaBar.style.display = isPublishable && this.activeReviewItem?.status === 'review' ? 'flex' : 'none';
     if (!isPublishable && mediaUrlInput) mediaUrlInput.style.display = 'none';
