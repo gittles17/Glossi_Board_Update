@@ -2660,7 +2660,7 @@ app.get('/api/linkedin/connect', (req, res) => {
     return res.status(500).send('LINKEDIN_CLIENT_ID not configured');
   }
   const state = Math.random().toString(36).substring(2, 15);
-  const scopes = 'w_organization_social r_organization_social';
+  const scopes = 'w_organization_social r_organization_social w_organization_social_feed r_organization_social_feed';
   const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(LINKEDIN_REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&state=${state}`;
   res.redirect(authUrl);
 });
