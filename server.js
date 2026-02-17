@@ -2429,11 +2429,17 @@ STYLE:
 - Use flowing curves, geometric shapes, line art, or data-inspired abstract patterns.
 - Primary color: warm orange/coral (#EC5F3F). Secondary: muted grays, soft tans.
 - Background must be warm off-white/cream (#ECE8E2 or similar).
-- The visual should occupy the center-right and bottom portions of the image, leaving the top-left area clean (the title goes there).
 - No text, no words, no letters, no numbers, no labels, no UI elements.
 - No realistic objects or people. Purely abstract.
 - Clean, airy composition with generous whitespace. Not busy or cluttered.
 - The visual should evoke the theme/mood of the tweet content without being literal.
+
+TITLE SAFE ZONE (critical):
+- A large blog title will be overlaid in the top-left corner of the image, spanning roughly the left 60% and top 40%.
+- This zone MUST remain clear of any prominent shapes, strong colors, or high-contrast elements. Keep it plain cream/off-white background only.
+- Subtle, very faint textures or thin lines at low opacity are acceptable, but nothing that would reduce text readability.
+- All main visual elements (shapes, patterns, color) should be concentrated in the bottom half and right third of the composition.
+- Think of it as a split layout: clean empty top-left for text, visual art in the bottom and right.
 
 OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.`;
 
@@ -2873,9 +2879,19 @@ app.post('/api/x/publish', async (req, res) => {
 
     if (media_url) {
       try {
-        const imageRes = await axios.get(media_url, { responseType: 'arraybuffer', timeout: 30000 });
-        const imageBuffer = Buffer.from(imageRes.data);
-        const mimeType = imageRes.headers['content-type'] || 'image/png';
+        let imageBuffer;
+        let mimeType;
+
+        if (media_url.startsWith('data:')) {
+          const matches = media_url.match(/^data:([^;]+);base64,(.+)$/);
+          if (!matches) throw new Error('Invalid data URL format');
+          mimeType = matches[1];
+          imageBuffer = Buffer.from(matches[2], 'base64');
+        } else {
+          const imageRes = await axios.get(media_url, { responseType: 'arraybuffer', timeout: 30000 });
+          imageBuffer = Buffer.from(imageRes.data);
+          mimeType = imageRes.headers['content-type'] || 'image/png';
+        }
 
         const initRequest = {
           url: 'https://upload.twitter.com/1.1/media/upload.json',

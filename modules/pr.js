@@ -11385,12 +11385,34 @@ class DistributeManager {
 
     try {
       const tweetFormat = this.activeReviewItem.tweet_format || 'text';
-      const media = tweetFormat === 'visual' ? (this.activeReviewItem.media_attachments || []) : [];
-      const imageAttachment = media.find(m => m.type === 'image');
+      let mediaUrl = null;
+
+      if (tweetFormat === 'visual') {
+        const media = this.activeReviewItem.media_attachments || [];
+        const imageAttachment = media.find(m => m.type === 'image');
+        mediaUrl = imageAttachment?.url || null;
+      } else if (tweetFormat === 'link') {
+        mediaUrl = this.activeReviewItem.og_image || null;
+      }
+
+      let publishContent = isThread ? threadParts[0] : content;
+
+      if (tweetFormat === 'link' && this.activeReviewItem.link_url) {
+        const linkUrl = this.activeReviewItem.link_url;
+        const textToCheck = isThread ? threadParts[threadParts.length - 1] : content;
+        if (!textToCheck.includes(linkUrl)) {
+          if (isThread) {
+            threadParts[threadParts.length - 1] = threadParts[threadParts.length - 1].trimEnd() + '\n\n' + linkUrl;
+          } else {
+            publishContent = publishContent.trimEnd() + '\n\n' + linkUrl;
+          }
+        }
+      }
+
       const payload = {
-        content: isThread ? threadParts[0] : content,
+        content: publishContent,
         thread_parts: isThread ? threadParts : null,
-        media_url: imageAttachment?.url || null
+        media_url: mediaUrl
       };
 
       const result = await this.prAgent.apiCall('/api/x/publish', {
@@ -11410,9 +11432,9 @@ class DistributeManager {
         this.activeReviewItem.tweet_ids = result.tweet_ids || [];
         this.activeReviewItem.published_at = new Date().toISOString();
         this.activeReviewItem.published_snapshot = {
-          content: content,
+          content: publishContent,
           tweet_format: tweetFormat,
-          media_url: imageAttachment?.url || null,
+          media_url: mediaUrl,
           thread_parts: isThread ? threadParts : null
         };
 
