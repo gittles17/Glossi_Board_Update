@@ -2619,7 +2619,7 @@ const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
 const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET;
 const APP_URL = process.env.APP_URL || `http://127.0.0.1:${PORT}`;
 const LINKEDIN_REDIRECT_URI = `${APP_URL}/api/linkedin/callback`;
-const LINKEDIN_API_VERSION = '202502';
+const LINKEDIN_API_VERSION = '202602';
 
 // Helper: get valid LinkedIn tokens (with auto-refresh)
 async function getLinkedInTokens() {
