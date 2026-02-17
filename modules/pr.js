@@ -10635,6 +10635,13 @@ class DistributeManager {
           </div>
           <input type="url" class="pr-twitter-link-url-input" data-action="edit-link-url" placeholder="https://glossi.io/blog/..." value="${this.escapeHtml(linkUrl)}">
         </div>
+        <div class="pr-twitter-link-input-wrap">
+          <div class="pr-twitter-link-input-label">
+            <i class="ph-light ph-text-aa"></i>
+            <span>Link Title</span>
+          </div>
+          <input type="text" class="pr-twitter-link-url-input" data-action="edit-link-title" placeholder="Blog post title for the preview card" value="${this.escapeHtml(output.link_title || '')}">
+        </div>
         <div class="pr-twitter-link-card">
           ${ogImageHtml}
           <div class="pr-twitter-link-card-body">
@@ -10717,6 +10724,12 @@ class DistributeManager {
             this.fetchLinkMetadata(output);
           }
         }, 500);
+      });
+    });
+    container.querySelectorAll('[data-action="edit-link-title"]').forEach(el => {
+      el.addEventListener('input', () => {
+        output.link_title = el.value.trim();
+        this.persistOutput(output);
       });
     });
     container.querySelectorAll('[data-action="generate-og-image"]').forEach(btn => {
@@ -10831,7 +10844,7 @@ class DistributeManager {
   }
 
   async generateOgImage(output) {
-    const title = output.title || '';
+    const title = output.link_title || output.title || '';
     if (!title.trim()) return;
 
     output._ogGenerating = true;
