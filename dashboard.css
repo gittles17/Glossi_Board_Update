@@ -12302,6 +12302,89 @@ a.dropdown-item {
   font-size: 10px;
 }
 
+.pr-add-piece {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  margin: 2px 0;
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.pr-add-piece:hover {
+  color: var(--accent-green-bright);
+  background: var(--bg-hover);
+}
+
+.pr-add-piece i {
+  font-size: 12px;
+}
+
+.pr-add-piece-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pr-add-piece-option {
+  background: none;
+  border: none;
+  padding: 5px 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.pr-add-piece-option:hover {
+  background: var(--bg-hover);
+  color: var(--accent-green-bright);
+}
+
+.pr-add-piece-type-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent-green-bright);
+  white-space: nowrap;
+}
+
+.pr-add-piece-brief-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-input, rgba(255,255,255,0.06));
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.1));
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 11px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.pr-add-piece-brief-input:focus {
+  border-color: var(--accent-green);
+}
+
+.pr-add-piece-confirm {
+  background: none;
+  border: none;
+  color: var(--accent-green-bright);
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 13px;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.pr-add-piece-confirm:hover {
+  opacity: 1;
+}
+
 /* Panel label row (Articles + select toggle) */
 .pr-panel-label-row {
   display: flex;

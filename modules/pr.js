@@ -6441,6 +6441,78 @@ class NewsMonitor {
     this.renderFileTree();
   }
 
+  showAddPieceDropdown(storyKey, container) {
+    const story = this._stories.get(storyKey);
+    if (!story) return;
+
+    const existingTypes = new Set(story.contentPlan.map(p => p.type));
+    const available = CONTENT_TYPES.filter(t => t.id !== 'custom' && !existingTypes.has(t.id));
+
+    if (available.length === 0) {
+      this.prAgent.showToast('All content types already in plan', 'info');
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="pr-add-piece-dropdown">
+        ${available.map(t => `<button class="pr-add-piece-option" data-add-type="${t.id}">${this.escapeHtml(t.label)}</button>`).join('')}
+      </div>`;
+    container.dataset.storyKey = storyKey;
+
+    const dismiss = (e) => {
+      if (!container.contains(e.target)) {
+        this.renderFileTree();
+        document.removeEventListener('click', dismiss, true);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', dismiss, true), 0);
+  }
+
+  showAddPieceBrief(type, container) {
+    const typeLabel = CONTENT_TYPES.find(t => t.id === type)?.label || type;
+    container.dataset.addType = type;
+    container.innerHTML = `
+      <span class="pr-add-piece-type-label">${this.escapeHtml(typeLabel)}</span>
+      <input class="pr-add-piece-brief-input" type="text" placeholder="Brief (optional)" autofocus />
+      <button class="pr-add-piece-confirm" title="Add"><i class="ph-light ph-check"></i></button>`;
+
+    const input = container.querySelector('.pr-add-piece-brief-input');
+    if (input) {
+      input.focus();
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.confirmAddPiece(input.value.trim(), type);
+        } else if (e.key === 'Escape') {
+          this.renderFileTree();
+        }
+      });
+    }
+  }
+
+  confirmAddPiece(brief, type) {
+    const story = this._stories.get(this._activeStoryKey);
+    if (!story) return;
+
+    const newItem = {
+      type,
+      description: brief || '',
+      priority: story.contentPlan.length + 1,
+      audience: 'brands'
+    };
+
+    story.contentPlan.push(newItem);
+    this._activeContentPlan = story.contentPlan;
+
+    const newTabId = `plan_${story.contentPlan.length - 1}`;
+    this._tabContent.set(newTabId, { loading: false, output: null, refining: false, suggestionsHTML: '' });
+    story.tabContent = this._tabContent;
+
+    this.renderContentPlanTabs(story.contentPlan);
+    this.renderFileTree();
+    this.switchContentTab(newTabId);
+  }
+
   async archiveStory(key) {
     const story = this._stories.get(key);
     if (!story) return;
@@ -6665,6 +6737,11 @@ class NewsMonitor {
       `;
     }).join('');
 
+    const addPieceHTML = isActiveStory ? `
+      <div class="pr-add-piece" data-story-key="${this.escapeHtml(key)}">
+        <i class="ph-light ph-plus"></i><span>Add channel</span>
+      </div>` : '';
+
     // Inline angle block (skip for custom stories)
     const angleTitle = story.custom ? '' : (story.newsItem?.angle_title || '');
     const angleNarrative = story.custom ? '' : (story.newsItem?.angle_narrative || story.newsItem?.relevance || '');
@@ -6705,7 +6782,7 @@ class NewsMonitor {
             <i class="ph-light ph-x"></i>
           </button>
         </div>
-        <div class="pr-file-tree-children">${childrenHTML}${angleHTML}</div>
+        <div class="pr-file-tree-children">${childrenHTML}${addPieceHTML}${angleHTML}</div>
       </div>
     `;
   }
@@ -6781,6 +6858,29 @@ class NewsMonitor {
       if (angleToggle) {
         const angle = angleToggle.closest('.pr-tree-angle');
         if (angle) angle.classList.toggle('expanded');
+        return;
+      }
+
+      const addPieceBtn = e.target.closest('.pr-add-piece');
+      if (addPieceBtn) {
+        e.stopPropagation();
+        this.showAddPieceDropdown(addPieceBtn.dataset.storyKey, addPieceBtn);
+        return;
+      }
+
+      const addPieceType = e.target.closest('[data-add-type]');
+      if (addPieceType) {
+        e.stopPropagation();
+        this.showAddPieceBrief(addPieceType.dataset.addType, addPieceType.closest('.pr-add-piece'));
+        return;
+      }
+
+      const addPieceConfirm = e.target.closest('.pr-add-piece-confirm');
+      if (addPieceConfirm) {
+        e.stopPropagation();
+        const container = addPieceConfirm.closest('.pr-add-piece');
+        const input = container?.querySelector('.pr-add-piece-brief-input');
+        if (input) this.confirmAddPiece(input.value.trim(), container.dataset.addType);
         return;
       }
 
