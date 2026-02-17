@@ -7785,6 +7785,7 @@ ${primaryContext}${bgContext}`
 
     const selectedModel = MODEL_FOR_TYPE[planItem.type] || 'claude-opus-4-6';
     let streamStarted = false;
+    let shouldStream = this._activeTabId === tabId;
 
     try {
       const rawText = await this.prAgent.streamContent({
@@ -7793,7 +7794,10 @@ ${primaryContext}${bgContext}`
         system: PR_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userMessage }],
         onChunk: (_chunk, accumulated) => {
-          if (this._activeTabId !== tabId) return;
+          if (!shouldStream || this._activeTabId !== tabId) {
+            shouldStream = false;
+            return;
+          }
           if (!streamStarted) {
             streamStarted = true;
             this.prAgent.showStreamingWorkspace();
@@ -7802,7 +7806,7 @@ ${primaryContext}${bgContext}`
         }
       });
 
-      if (this._activeTabId === tabId) {
+      if (streamStarted && this._activeTabId === tabId) {
         this.prAgent.finishStreamingWorkspace();
       }
 
@@ -8774,6 +8778,7 @@ class AngleManager {
     const isTweetADK = planItem.type === 'tweet';
     const selectedModel = MODEL_FOR_TYPE[planItem.type] || 'claude-opus-4-6';
     let streamStarted = false;
+    let shouldStream = this.activeTabId === tabId;
 
     try {
       const rawText = await this.prAgent.streamContent({
@@ -8782,7 +8787,10 @@ class AngleManager {
         system: PR_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userMessage }],
         onChunk: (_chunk, accumulated) => {
-          if (this.activeTabId !== tabId) return;
+          if (!shouldStream || this.activeTabId !== tabId) {
+            shouldStream = false;
+            return;
+          }
           if (!streamStarted) {
             streamStarted = true;
             this.prAgent.showStreamingWorkspace();
@@ -8791,7 +8799,7 @@ class AngleManager {
         }
       });
 
-      if (this.activeTabId === tabId) {
+      if (streamStarted && this.activeTabId === tabId) {
         this.prAgent.finishStreamingWorkspace();
       }
 
