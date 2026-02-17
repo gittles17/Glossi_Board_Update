@@ -2812,10 +2812,8 @@ app.post('/api/linkedin/publish', async (req, res) => {
       // Small delay to let LinkedIn index the post
       await new Promise(r => setTimeout(r, 2000));
       try {
-        const activityUrn = postUrn.replace('urn:li:share:', 'urn:li:activity:').replace('urn:li:ugcPost:', 'urn:li:activity:');
-        await axios.post('https://api.linkedin.com/rest/socialActions/' + encodeURIComponent(activityUrn) + '/comments', {
+        await axios.post('https://api.linkedin.com/rest/socialActions/' + encodeURIComponent(postUrn) + '/comments', {
           actor: `urn:li:organization:${orgId}`,
-          object: activityUrn,
           message: { text: first_comment }
         }, {
           headers: {
