@@ -16302,31 +16302,6 @@ svg.spinning,
   color: var(--accent-green);
 }
 
-.pr-news-search-fallback {
-  flex-shrink: 0;
-  background: none;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 4px 6px;
-  font-size: 13px;
-  line-height: 1;
-  transition: color 0.15s ease, border-color 0.15s ease;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.pr-news-item:hover .pr-news-search-fallback {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.pr-news-search-fallback:hover {
-  color: var(--accent-green);
-  border-color: var(--accent-green);
-}
-
 /* Source + Date meta */
 .pr-news-meta {
   display: flex;

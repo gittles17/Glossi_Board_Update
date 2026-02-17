@@ -6057,7 +6057,6 @@ class NewsMonitor {
           <button class="pr-news-card-archive" data-archive-news-id="${this.escapeHtml(newsId)}" title="Archive"><i class="ph-light ph-archive"></i></button>
           <div class="pr-news-headline-row">
             <a href="${item.url}" target="_blank" class="pr-news-headline">${this.escapeHtml(item.headline)}</a>
-            <button class="pr-news-search-fallback" data-search-query="${this.escapeHtml(item.headline + ' ' + item.outlet)}" title="Search for this article"><i class="ph-light ph-magnifying-glass"></i></button>
           </div>
           <div class="pr-news-meta">
             <span class="pr-news-outlet">${this.escapeHtml(item.outlet)}</span>
@@ -6181,15 +6180,6 @@ class NewsMonitor {
   }
 
   attachNewsEventListenersToContainer(container) {
-    // Search fallback for broken article links
-    container.querySelectorAll('.pr-news-search-fallback').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const query = btn.dataset.searchQuery;
-        if (query) window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
-      });
-    });
-
     // Angle row expand/collapse toggle
     container.querySelectorAll('.pr-news-angle-row').forEach(row => {
       row.addEventListener('click', (e) => {
