@@ -1668,10 +1668,11 @@ EXCLUDE (specific examples):
       
       console.log(`Inserted ${insertedCount} new, skipped ${skippedCount} duplicates out of ${normalizedNews.length} analyzed`);
       
-      // Return ALL articles from DB (accumulated, not just new ones)
+      // Return ALL articles from DB (accumulated, not just new ones), excluding irrelevant
       const allNews = await pool.query(`
         SELECT * FROM pr_news_hooks 
         WHERE date > NOW() - INTERVAL '30 days'
+          AND (relevance IS NULL OR (relevance NOT ILIKE '%EXCLUDED%' AND relevance NOT ILIKE '%Not relevant%'))
         ORDER BY date DESC, fetched_at DESC
       `);
       
@@ -1711,10 +1712,11 @@ app.get('/api/pr/news-hooks', async (req, res) => {
       return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
-    // Only return news from the last 30 days (by article date, not fetch date)
+    // Only return news from the last 30 days, excluding irrelevant articles
     const result = await pool.query(`
       SELECT * FROM pr_news_hooks 
       WHERE date > NOW() - INTERVAL '30 days'
+        AND (relevance IS NULL OR (relevance NOT ILIKE '%EXCLUDED%' AND relevance NOT ILIKE '%Not relevant%'))
       ORDER BY date DESC, fetched_at DESC
     `);
     
@@ -1727,6 +1729,24 @@ app.get('/api/pr/news-hooks', async (req, res) => {
     res.json({ success: true, news: normalizedNews });
   } catch (error) {
     console.error('Error loading news hooks:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete excluded/irrelevant articles from the database
+app.delete('/api/pr/news-hooks/excluded', async (req, res) => {
+  try {
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    
+    const result = await pool.query(`
+      DELETE FROM pr_news_hooks 
+      WHERE relevance ILIKE '%EXCLUDED%' OR relevance ILIKE '%Not relevant%'
+    `);
+    
+    res.json({ success: true, deleted: result.rowCount });
+  } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });

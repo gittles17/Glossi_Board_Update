@@ -5789,6 +5789,12 @@ class NewsMonitor {
   getFilteredNews() {
     let filtered = [...this.newsHooks];
     
+    // Remove excluded/irrelevant articles
+    filtered = filtered.filter(item => {
+      const relevance = (item.relevance || '').toLowerCase();
+      return !relevance.includes('excluded') && !relevance.includes('not relevant');
+    });
+    
     // Apply search filter
     if (this.searchQuery) {
       const q = this.searchQuery;

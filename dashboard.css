@@ -13955,7 +13955,8 @@ svg.spinning,
   flex-direction: column;
 }
 
-.pr-news-hooks-list:has(.pr-news-hooks-empty) {
+.pr-news-hooks-list:has(.pr-news-hooks-empty),
+.pr-news-hooks-list:has(.glossi-loader-status) {
   justify-content: center;
   align-items: center;
 }
