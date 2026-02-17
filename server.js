@@ -2398,13 +2398,13 @@ app.get('/og-template', (req, res) => {
 <html>
 <head>
 <meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
+  @font-face { font-family: 'PP Mori'; src: url('/fonts/PPMori-Regular.otf') format('opentype'); font-weight: 400; font-style: normal; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 1200px; height: 630px; overflow: hidden; }
   .og-wrap { width: 1200px; height: 630px; position: relative; ${bgStyle} }
   .og-accent { width: 100%; height: 5px; background: #EC5F3F; position: absolute; top: 0; left: 0; z-index: 2; }
-  .og-title { position: absolute; top: 48px; left: 68px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 300; font-size: 90px; line-height: 1.05; letter-spacing: -0.035em; color: #1a1a1a; max-width: 780px; z-index: 2; }
+  .og-title { position: absolute; top: 48px; left: 68px; font-family: 'PP Mori', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; font-size: 90px; line-height: 1.05; letter-spacing: -0.035em; color: #1a1a1a; max-width: 780px; z-index: 2; }
   .og-logo { position: absolute; bottom: 40px; right: 56px; width: 44px; height: 51px; z-index: 2; }
 </style>
 </head>
