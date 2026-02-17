@@ -5858,7 +5858,7 @@ class NewsMonitor {
     }
     
     if (this.dom.newsHooksList) {
-      this.dom.newsHooksList.innerHTML = '<p class="pr-news-hooks-empty">Searching for relevant news...</p>';
+      this.dom.newsHooksList.innerHTML = '';
     }
     this._newsLoaderId = startLoaderStatus(this.dom.newsHooksList, 'news');
 
