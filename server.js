@@ -2381,86 +2381,25 @@ app.post('/api/pr/og-metadata', async (req, res) => {
 // OG Image HTML template (rendered by Puppeteer for screenshot)
 app.get('/og-template', (req, res) => {
   const title = decodeURIComponent(req.query.title || 'Untitled');
+  const bgImage = decodeURIComponent(req.query.bg || '');
 
   const escapeHtml = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-  // Seeded PRNG from title string
-  let seed = 0;
-  for (let i = 0; i < title.length; i++) seed = ((seed << 5) - seed + title.charCodeAt(i)) | 0;
-  seed = Math.abs(seed);
-  const rand = () => { seed = (seed * 16807 + 0) % 2147483647; return (seed - 1) / 2147483646; };
-
-  // Generate abstract line chart data
-  const chartX0 = 140, chartX1 = 1140, chartY0 = 280, chartY1 = 560;
-  const gridCount = 3;
-  const gridLines = [];
-  for (let i = 0; i < gridCount; i++) {
-    const y = chartY0 + ((chartY1 - chartY0) / (gridCount + 1)) * (i + 1);
-    const label = (0.80 - i * 0.05).toFixed(2);
-    gridLines.push({ y: Math.round(y), label });
-  }
-
-  // Generate 2 lines with data points
-  const pointCount1 = 5 + Math.floor(rand() * 3);
-  const pointCount2 = 4 + Math.floor(rand() * 3);
-
-  function generateLine(count, yBase, yRange) {
-    const points = [];
-    for (let i = 0; i < count; i++) {
-      const x = chartX0 + ((chartX1 - chartX0) / (count - 1)) * i;
-      const y = yBase + (rand() - 0.5) * yRange;
-      points.push({ x: Math.round(x), y: Math.round(y), label: Math.floor(rand() * 20) });
-    }
-    return points;
-  }
-
-  const line1 = generateLine(pointCount1, chartY0 + 80, 140);
-  const line2 = generateLine(pointCount2, chartY0 + 130, 120);
-
-  function smoothPath(points) {
-    if (points.length < 2) return '';
-    let d = `M${points[0].x},${points[0].y}`;
-    for (let i = 1; i < points.length; i++) {
-      const prev = points[i - 1];
-      const curr = points[i];
-      const cpx1 = prev.x + (curr.x - prev.x) * 0.4;
-      const cpx2 = prev.x + (curr.x - prev.x) * 0.6;
-      d += ` C${cpx1},${prev.y} ${cpx2},${curr.y} ${curr.x},${curr.y}`;
-    }
-    return d;
-  }
-
-  const path1 = smoothPath(line1);
-  const path2 = smoothPath(line2);
-
-  let chartSvg = '';
-  gridLines.forEach(g => {
-    chartSvg += `<line x1="${chartX0}" y1="${g.y}" x2="${chartX1}" y2="${g.y}" stroke="#d4d4d4" stroke-width="1" stroke-dasharray="4,6"/>`;
-    chartSvg += `<text x="${chartX0 - 16}" y="${g.y + 4}" font-family="Inter, sans-serif" font-size="14" fill="#b0b0b0" text-anchor="end">${g.label}</text>`;
-  });
-  chartSvg += `<path d="${path2}" fill="none" stroke="#EC5F3F" stroke-width="2.5" stroke-linecap="round" opacity="0.35"/>`;
-  chartSvg += `<path d="${path1}" fill="none" stroke="#EC5F3F" stroke-width="3" stroke-linecap="round"/>`;
-  line2.forEach(p => {
-    chartSvg += `<circle cx="${p.x}" cy="${p.y}" r="6" fill="#EC5F3F" opacity="0.35"/>`;
-    chartSvg += `<text x="${p.x}" y="${p.y + 4}" font-family="Inter, sans-serif" font-size="9" fill="#fff" text-anchor="middle" opacity="0.6">${p.label}</text>`;
-  });
-  line1.forEach(p => {
-    chartSvg += `<circle cx="${p.x}" cy="${p.y}" r="8" fill="#EC5F3F"/>`;
-    chartSvg += `<text x="${p.x}" y="${p.y + 4}" font-family="Inter, sans-serif" font-size="10" fill="#fff" text-anchor="middle" font-weight="500">${p.label}</text>`;
-  });
+  const bgStyle = bgImage
+    ? `background-image: url(${bgImage}); background-size: cover; background-position: center;`
+    : 'background: #F0EFED;';
 
   const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 1200px; height: 630px; overflow: hidden; background: #F0EFED; }
-  .og-wrap { width: 1200px; height: 630px; position: relative; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  .og-wrap { width: 1200px; height: 630px; position: relative; ${bgStyle} }
   .og-accent { width: 100%; height: 5px; background: #EC5F3F; position: absolute; top: 0; left: 0; z-index: 2; }
-  .og-title { position: absolute; top: 48px; left: 68px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 700; font-size: 72px; line-height: 1.05; letter-spacing: -0.035em; color: #1a1a1a; max-width: 680px; z-index: 2; }
-  .og-chart { position: absolute; top: 0; left: 0; width: 1200px; height: 630px; z-index: 1; }
+  .og-title { position: absolute; top: 48px; left: 68px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 500; font-size: 72px; line-height: 1.05; letter-spacing: -0.035em; color: #1a1a1a; max-width: 680px; z-index: 2; }
   .og-logo { position: absolute; bottom: 40px; right: 56px; width: 44px; height: 51px; z-index: 2; }
 </style>
 </head>
@@ -2468,7 +2407,6 @@ app.get('/og-template', (req, res) => {
 <div class="og-wrap">
   <div class="og-accent"></div>
   <div class="og-title">${escapeHtml(title)}</div>
-  <svg class="og-chart" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">${chartSvg}</svg>
   <svg class="og-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 306.8 352.69"><path d="m306.8,166.33v73.65c0,8.39-6.83,15.11-15.22,15.11h-80.59c-7.05,0-13.43,1.23-17.91,3.81-4.25,2.35-6.49,5.6-6.49,10.52v68.28c0,8.28-6.72,15-15,15H14.66c-8.06,0-14.66-6.72-14.66-14.77V54.17c0-8.39,6.72-15.22,15.11-15.22h35.59c7.05,0,13.43-1.12,17.91-3.58,4.14-2.24,6.49-5.37,6.49-10.3v-9.96c0-8.39,6.83-15.11,15.11-15.11h126.26c8.39,0,15.11,6.72,15.11,15.11v15.11c0,8.39-6.72,15.11-15.11,15.11h-124.58c-5.37.11-10.75.56-14.66,2.46-1.79.89-3.13,2.13-4.14,3.69-1.01,1.68-1.79,4.03-1.79,7.72v185.58c0,2.24,1.79,3.92,3.92,3.92h95.7c5.26,0,10.3-.56,13.88-2.35,1.68-.9,2.91-2.01,3.81-3.58,1.01-1.57,1.68-3.81,1.68-7.28v-69.17c0-8.39,6.83-15.11,15.22-15.11h86.07c8.39,0,15.22,6.72,15.22,15.11Z" fill="#EC5F3F"/></svg>
 </div>
 </body>
@@ -2477,15 +2415,75 @@ app.get('/og-template', (req, res) => {
   res.type('html').send(html);
 });
 
-// Generate OG link preview image via Puppeteer screenshot
+// Generate OG link preview image: AI abstract visual + Puppeteer composite
 app.post('/api/pr/generate-og-image', async (req, res) => {
   let browser;
   try {
-    const { title } = req.body;
+    const { title, tweet_text } = req.body;
     if (!title) {
       return res.status(400).json({ success: false, error: 'title is required' });
     }
 
+    let bgDataUrl = '';
+
+    // Step 1: Generate abstract visual from tweet text via Claude + Gemini
+    if (tweet_text && process.env.ANTHROPIC_API_KEY && process.env.GEMINI_API_KEY) {
+      try {
+        const promptRes = await axios.post('https://api.anthropic.com/v1/messages', {
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 512,
+          system: `You create image generation prompts for abstract OG card background visuals. The visual will appear behind a blog title on a 1200x630 card.
+
+STYLE:
+- Abstract, sophisticated, minimal. Think editorial illustration for a premium tech blog.
+- Use flowing curves, geometric shapes, line art, or data-inspired abstract patterns.
+- Primary color: warm orange/coral (#EC5F3F). Secondary: muted grays, soft tans.
+- Background must be warm off-white/cream (#F0EFED or similar).
+- The visual should occupy the center-right and bottom portions of the image, leaving the top-left area clean (the title goes there).
+- No text, no words, no letters, no numbers, no labels, no UI elements.
+- No realistic objects or people. Purely abstract.
+- Clean, airy composition with generous whitespace. Not busy or cluttered.
+- The visual should evoke the theme/mood of the tweet content without being literal.
+
+OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.`,
+          messages: [{ role: 'user', content: `Generate an abstract visual prompt for an OG card. The tweet this supports:\n\n"${tweet_text}"` }]
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01'
+          },
+          timeout: 15000
+        });
+
+        const imagePrompt = promptRes.data?.content?.[0]?.text?.trim();
+
+        if (imagePrompt) {
+          const geminiKey = process.env.GEMINI_API_KEY;
+          const model = 'gemini-3-pro-image-preview';
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+
+          const imageRes = await axios.post(apiUrl, {
+            contents: [{ role: 'user', parts: [{ text: imagePrompt }] }],
+            generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
+          }, {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 90000
+          });
+
+          const parts = imageRes.data?.candidates?.[0]?.content?.parts || [];
+          const imagePart = parts.find(p => p.inlineData);
+          if (imagePart) {
+            const mimeType = imagePart.inlineData.mimeType || 'image/png';
+            bgDataUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+          }
+        }
+      } catch (aiErr) {
+        // AI generation failed, continue with plain background
+      }
+    }
+
+    // Step 2: Composite title + branding over the visual via Puppeteer
     const puppeteer = require('puppeteer');
     browser = await puppeteer.launch({
       headless: true,
@@ -2495,8 +2493,8 @@ app.post('/api/pr/generate-og-image', async (req, res) => {
     const page = await browser.newPage();
     await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 2 });
 
-    const templateUrl = `http://127.0.0.1:${PORT}/og-template?title=${encodeURIComponent(title)}`;
-    await page.goto(templateUrl, { waitUntil: 'networkidle0', timeout: 15000 });
+    const templateUrl = `http://127.0.0.1:${PORT}/og-template?title=${encodeURIComponent(title)}&bg=${encodeURIComponent(bgDataUrl)}`;
+    await page.goto(templateUrl, { waitUntil: 'networkidle0', timeout: 30000 });
 
     const screenshot = await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: 1200, height: 630 } });
     const base64 = screenshot.toString('base64');

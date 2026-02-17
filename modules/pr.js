@@ -10854,7 +10854,7 @@ class DistributeManager {
       const res = await this.prAgent.apiCall('/api/pr/generate-og-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title })
+        body: JSON.stringify({ title, tweet_text: output.content || '' })
       });
 
       output._ogGenerating = false;
