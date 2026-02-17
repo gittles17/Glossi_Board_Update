@@ -479,6 +479,8 @@ app.get('/api/settings', (req, res) => {
   res.json({
     hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
     hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+    hasGeminiKey: !!process.env.GEMINI_API_KEY,
+    hasMidjourneyKey: !!process.env.MIDJOURNEY_API_KEY,
     isProduction: useDatabase && process.env.NODE_ENV === 'production'
   });
 });
@@ -2381,7 +2383,8 @@ app.post('/api/pr/og-metadata', async (req, res) => {
 // OG Image HTML template (rendered by Puppeteer for screenshot)
 app.get('/og-template', (req, res) => {
   const title = decodeURIComponent(req.query.title || 'Untitled');
-  const bgImage = decodeURIComponent(req.query.bg || '');
+  const bgId = req.query.bgId || '';
+  const bgImage = bgId ? (ogBgStore.get(bgId) || '') : '';
 
   const escapeHtml = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -2415,24 +2418,11 @@ app.get('/og-template', (req, res) => {
   res.type('html').send(html);
 });
 
-// Generate OG link preview image: AI abstract visual + Puppeteer composite
-app.post('/api/pr/generate-og-image', async (req, res) => {
-  let browser;
-  try {
-    const { title, tweet_text } = req.body;
-    if (!title) {
-      return res.status(400).json({ success: false, error: 'title is required' });
-    }
+// Temporary in-memory store for OG background images (avoids passing base64 in URL)
+const ogBgStore = new Map();
 
-    let bgDataUrl = '';
-
-    // Step 1: Generate abstract visual from tweet text via Claude + Gemini
-    if (tweet_text && process.env.ANTHROPIC_API_KEY && process.env.GEMINI_API_KEY) {
-      try {
-        const promptRes = await axios.post('https://api.anthropic.com/v1/messages', {
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 512,
-          system: `You create image generation prompts for abstract OG card background visuals. The visual will appear behind a blog title on a 1200x630 card.
+// OG card visual prompt system (shared by both providers)
+const OG_VISUAL_SYSTEM_PROMPT = `You create image generation prompts for abstract OG card background visuals. The visual will appear behind a blog title on a 1200x630 card.
 
 STYLE:
 - Abstract, sophisticated, minimal. Think editorial illustration for a premium tech blog.
@@ -2445,37 +2435,112 @@ STYLE:
 - Clean, airy composition with generous whitespace. Not busy or cluttered.
 - The visual should evoke the theme/mood of the tweet content without being literal.
 
-OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.`,
-          messages: [{ role: 'user', content: `Generate an abstract visual prompt for an OG card. The tweet this supports:\n\n"${tweet_text}"` }]
-        }, {
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': process.env.ANTHROPIC_API_KEY,
-            'anthropic-version': '2023-06-01'
-          },
-          timeout: 15000
-        });
+OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.`;
 
-        const imagePrompt = promptRes.data?.content?.[0]?.text?.trim();
+// Helper: generate image prompt via Claude
+async function generateOgVisualPrompt(tweetText) {
+  const promptRes = await axios.post('https://api.anthropic.com/v1/messages', {
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 512,
+    system: OG_VISUAL_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: `Generate an abstract visual prompt for an OG card. The tweet this supports:\n\n"${tweetText}"` }]
+  }, {
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    timeout: 15000
+  });
+  return promptRes.data?.content?.[0]?.text?.trim() || '';
+}
+
+// Helper: generate image via Gemini
+async function generateImageGemini(prompt) {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const model = 'gemini-3-pro-image-preview';
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+
+  const imageRes = await axios.post(apiUrl, {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
+  }, {
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 90000
+  });
+
+  const parts = imageRes.data?.candidates?.[0]?.content?.parts || [];
+  const imagePart = parts.find(p => p.inlineData);
+  if (imagePart) {
+    const mimeType = imagePart.inlineData.mimeType || 'image/png';
+    return `data:${mimeType};base64,${imagePart.inlineData.data}`;
+  }
+  return '';
+}
+
+// Helper: generate image via Midjourney (legnext.ai)
+async function generateImageMidjourney(prompt) {
+  const mjKey = process.env.MIDJOURNEY_API_KEY;
+  const mjPrompt = `${prompt} --v 7 --ar 40:21 --style raw`;
+
+  const createRes = await axios.post('https://api.legnext.ai/api/v1/diffusion', {
+    text: mjPrompt
+  }, {
+    headers: { 'x-api-key': mjKey, 'Content-Type': 'application/json' },
+    timeout: 15000
+  });
+
+  const jobId = createRes.data?.job_id;
+  if (!jobId) throw new Error('Midjourney job creation failed');
+
+  const maxAttempts = 40;
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(r => setTimeout(r, 3000));
+
+    const statusRes = await axios.get(`https://api.legnext.ai/api/v1/job/${jobId}`, {
+      headers: { 'x-api-key': mjKey },
+      timeout: 10000
+    });
+
+    const status = statusRes.data?.status;
+    if (status === 'completed') {
+      const imageUrl = statusRes.data?.output?.image_urls?.[0] || statusRes.data?.output?.image_url;
+      if (!imageUrl) throw new Error('Midjourney completed but no image URL');
+
+      const imgRes = await axios.get(imageUrl, { responseType: 'arraybuffer', timeout: 30000 });
+      const base64 = Buffer.from(imgRes.data).toString('base64');
+      const contentType = imgRes.headers['content-type'] || 'image/png';
+      return `data:${contentType};base64,${base64}`;
+    }
+    if (status === 'failed') {
+      const errMsg = statusRes.data?.error?.message || 'Midjourney generation failed';
+      throw new Error(errMsg);
+    }
+  }
+  throw new Error('Midjourney generation timed out');
+}
+
+// Generate OG link preview image: AI abstract visual + Puppeteer composite
+app.post('/api/pr/generate-og-image', async (req, res) => {
+  let browser;
+  try {
+    const { title, tweet_text, provider } = req.body;
+    if (!title) {
+      return res.status(400).json({ success: false, error: 'title is required' });
+    }
+
+    let bgDataUrl = '';
+    const useProvider = provider || 'gemini';
+
+    if (tweet_text && process.env.ANTHROPIC_API_KEY) {
+      try {
+        const imagePrompt = await generateOgVisualPrompt(tweet_text);
 
         if (imagePrompt) {
-          const geminiKey = process.env.GEMINI_API_KEY;
-          const model = 'gemini-3-pro-image-preview';
-          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
-
-          const imageRes = await axios.post(apiUrl, {
-            contents: [{ role: 'user', parts: [{ text: imagePrompt }] }],
-            generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
-          }, {
-            headers: { 'Content-Type': 'application/json' },
-            timeout: 90000
-          });
-
-          const parts = imageRes.data?.candidates?.[0]?.content?.parts || [];
-          const imagePart = parts.find(p => p.inlineData);
-          if (imagePart) {
-            const mimeType = imagePart.inlineData.mimeType || 'image/png';
-            bgDataUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+          if (useProvider === 'midjourney' && process.env.MIDJOURNEY_API_KEY) {
+            bgDataUrl = await generateImageMidjourney(imagePrompt);
+          } else if (process.env.GEMINI_API_KEY) {
+            bgDataUrl = await generateImageGemini(imagePrompt);
           }
         }
       } catch (aiErr) {
@@ -2483,7 +2548,6 @@ OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.
       }
     }
 
-    // Step 2: Composite title + branding over the visual via Puppeteer
     const puppeteer = require('puppeteer');
     browser = await puppeteer.launch({
       headless: true,
@@ -2493,7 +2557,14 @@ OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.
     const page = await browser.newPage();
     await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 2 });
 
-    const templateUrl = `http://127.0.0.1:${PORT}/og-template?title=${encodeURIComponent(title)}&bg=${encodeURIComponent(bgDataUrl)}`;
+    let bgId = '';
+    if (bgDataUrl) {
+      bgId = crypto.randomUUID();
+      ogBgStore.set(bgId, bgDataUrl);
+      setTimeout(() => ogBgStore.delete(bgId), 60000);
+    }
+
+    const templateUrl = `http://127.0.0.1:${PORT}/og-template?title=${encodeURIComponent(title)}&bgId=${bgId}`;
     await page.goto(templateUrl, { waitUntil: 'networkidle0', timeout: 30000 });
 
     const screenshot = await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: 1200, height: 630 } });
