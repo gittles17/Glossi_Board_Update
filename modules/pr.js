@@ -10091,13 +10091,16 @@ class DistributeManager {
     if (mediaBar) mediaBar.style.display = isPublishable && this.activeReviewItem?.status === 'review' ? 'flex' : 'none';
     if (!isPublishable && mediaUrlInput) mediaUrlInput.style.display = 'none';
 
-    // Toggle publish vs download button based on channel
+    // Toggle publish vs download button based on channel (skip for published items)
+    const isPublishedItem = this.activeReviewItem?.status === 'published';
     const publishBtn = document.getElementById('pr-distribute-publish-btn');
     const downloadBlogBtn = document.getElementById('pr-distribute-download-blog-btn');
     const scheduleBtn = document.getElementById('pr-distribute-schedule-btn');
-    if (publishBtn) publishBtn.style.display = isBlog ? 'none' : '';
-    if (downloadBlogBtn) downloadBlogBtn.style.display = isBlog ? '' : 'none';
-    if (scheduleBtn) scheduleBtn.style.display = isBlog ? 'none' : '';
+    if (!isPublishedItem) {
+      if (publishBtn) publishBtn.style.display = isBlog ? 'none' : '';
+      if (downloadBlogBtn) downloadBlogBtn.style.display = isBlog ? '' : 'none';
+      if (scheduleBtn) scheduleBtn.style.display = isBlog ? 'none' : '';
+    }
 
     // Blog slug field
     const slugField = document.getElementById('pr-blog-slug-field');
