@@ -9857,8 +9857,25 @@ class DistributeManager {
 
     if (!output || !output.content) return;
 
-    // Ensure output is in the outputs array (might not be if found via currentOutput)
-    if (!this.prAgent.outputs.includes(output)) {
+    // Sync latest draft content to this output (edits may have gone to currentOutput or drafts)
+    const latestOutput = this.prAgent.currentOutput;
+    if (latestOutput && latestOutput.id === output.id && latestOutput !== output) {
+      output.content = latestOutput.content;
+      if (latestOutput.drafts) output.drafts = latestOutput.drafts;
+    }
+    if (output.drafts?.length) {
+      const draftIdx = this.prAgent._viewingDraftIndex || 0;
+      const activeDraft = output.drafts[draftIdx];
+      if (activeDraft?.content) {
+        output.content = activeDraft.content;
+      }
+    }
+
+    // Ensure output is in the outputs array (replace any stale duplicate by ID)
+    const existingIdx = this.prAgent.outputs.findIndex(o => o.id === output.id);
+    if (existingIdx >= 0) {
+      this.prAgent.outputs[existingIdx] = output;
+    } else {
       this.prAgent.outputs.push(output);
     }
 
@@ -11187,22 +11204,26 @@ class DistributeManager {
   }
 
   async removeFromReview(outputId) {
-    const output = this.prAgent.outputs.find(o => o.id === outputId);
-    if (!output) return;
-    if (output.status === 'published') return;
+    // Update ALL outputs with this ID (handles duplicates)
+    let targetOutput = null;
+    this.prAgent.outputs.forEach(o => {
+      if (o.id === outputId) {
+        if (o.status === 'published') return;
+        o.phase = 'edit';
+        o.status = 'draft';
+        targetOutput = o;
+      }
+    });
 
-    output.phase = 'edit';
-    output.status = 'draft';
+    if (!targetOutput) return;
 
-    // Immediately remove the queue item from the DOM
-    const itemEl = document.querySelector(`.pr-distribute-queue-item[data-output-id="${outputId}"]`);
-    if (itemEl) itemEl.remove();
-
-    // Show empty state if no review items remain in DOM
-    const reviewList = document.getElementById('pr-distribute-review-list');
-    if (reviewList && !reviewList.querySelector('.pr-distribute-queue-item')) {
-      reviewList.innerHTML = '<div class="pr-distribute-queue-empty">No items in review</div>';
-    }
+    // Deduplicate: keep only one entry per ID
+    const seen = new Set();
+    this.prAgent.outputs = this.prAgent.outputs.filter(o => {
+      if (seen.has(o.id)) return false;
+      seen.add(o.id);
+      return true;
+    });
 
     if (this.activeReviewItem?.id === outputId) {
       this.activeReviewItem = null;
@@ -11218,7 +11239,7 @@ class DistributeManager {
       await this.prAgent.apiCall('/api/pr/outputs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(output)
+        body: JSON.stringify(targetOutput)
       });
     } catch (e) { /* silent */ }
   }
