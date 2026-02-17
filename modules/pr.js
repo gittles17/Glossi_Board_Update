@@ -10936,6 +10936,7 @@ class DistributeManager {
   async removeFromReview(outputId) {
     const output = this.prAgent.outputs.find(o => o.id === outputId);
     if (!output) return;
+    if (output.status === 'published') return;
 
     output.phase = 'edit';
     output.status = 'draft';
@@ -11146,6 +11147,8 @@ class DistributeManager {
       });
 
       if (result.success) {
+        const publishedId = this.activeReviewItem.id;
+
         this.activeReviewItem.status = 'published';
         this.activeReviewItem.phase = 'distribute';
         this.activeReviewItem.published_channel = 'twitter';
@@ -11160,17 +11163,21 @@ class DistributeManager {
           thread_parts: isThread ? threadParts : null
         };
 
+        const kept = this.activeReviewItem;
+        this.prAgent.outputs = this.prAgent.outputs.filter(o => o.id !== publishedId);
+        this.prAgent.outputs.push(kept);
+
         try {
           await this.prAgent.apiCall('/api/pr/outputs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(this.activeReviewItem)
+            body: JSON.stringify(kept)
           });
         } catch (e) { /* silent */ }
 
         this.prAgent.saveOutputs();
         this.render();
-        this.selectReviewItem(this.activeReviewItem.id);
+        this.selectReviewItem(publishedId);
       } else {
         await this.prAgent.showConfirm(
           `Publishing failed: ${result.error || 'Unknown error'}. Please try again.`,
