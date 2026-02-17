@@ -20389,11 +20389,6 @@ body.pr-resizing * {
   margin-top: 8px;
 }
 
-.pr-twitter-visual-feedback--card {
-  margin-top: 0;
-  padding: 0 14px 10px;
-}
-
 .pr-twitter-visual-feedback-row {
   display: flex;
   gap: 6px;
@@ -20798,8 +20793,8 @@ body.pr-resizing * {
 }
 
 .pr-twitter-link-card-title {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 19px;
+  font-weight: 400;
   color: #e7e9ea;
   margin-bottom: 2px;
 }

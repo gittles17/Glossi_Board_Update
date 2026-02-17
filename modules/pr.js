@@ -10626,7 +10626,7 @@ class DistributeManager {
       let ogImageHtml = '';
       const savedProvider = localStorage.getItem('glossi_og_provider') || 'gemini';
       const savedRefinement = output._ogRefinement || '';
-      const ogRefineRow = `<div class="pr-twitter-visual-feedback pr-twitter-visual-feedback--card">
+      const ogRefineRow = `<div class="pr-twitter-visual-feedback">
           <div class="pr-twitter-visual-feedback-row">
             <select class="pr-og-provider-select" data-action="og-provider-select">
               <option value="gemini"${savedProvider === 'gemini' ? ' selected' : ''}>Gemini</option>
@@ -10640,11 +10640,11 @@ class DistributeManager {
       if (ogGenerating) {
         ogImageHtml = `<div class="pr-twitter-link-card-image-loading">${glossiLoaderSVG('glossi-loader-sm')}<span>Generating preview...</span></div>`;
       } else if (ogImage) {
-        ogImageHtml = `<div class="pr-twitter-link-card-image"><img src="${this.escapeHtml(ogImage)}" alt=""><button class="pr-twitter-link-card-image-remove" data-action="remove-og-image" title="Remove"><i class="ph-light ph-x"></i></button></div>${ogRefineRow}`;
+        ogImageHtml = `<div class="pr-twitter-link-card-image"><img src="${this.escapeHtml(ogImage)}" alt=""><button class="pr-twitter-link-card-image-remove" data-action="remove-og-image" title="Remove"><i class="ph-light ph-x"></i></button></div>`;
       } else {
         ogImageHtml = `<div class="pr-twitter-link-card-generate">
           <button data-action="generate-og-image"><i class="ph-light ph-image"></i> Generate Link Preview</button>
-        </div>${ogRefineRow}`;
+        </div>`;
       }
 
       mediaHtml = `
@@ -10669,7 +10669,8 @@ class DistributeManager {
             <div class="pr-twitter-link-card-title">${this.escapeHtml(output.link_title || domain || 'Link Preview')}</div>
             <div class="pr-twitter-link-card-desc">${this.escapeHtml(output.link_desc || 'Preview will update when URL is added')}</div>
           </div>
-        </div>`;
+        </div>
+        ${ogRefineRow}`;
     }
 
     const tweetHtml = `
