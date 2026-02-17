@@ -420,7 +420,12 @@ async function initDatabase() {
 }
 
 // Middleware
-app.use(compression());
+app.use(compression({
+  filter: (req, res) => {
+    if (res.getHeader('Content-Type') === 'text/event-stream') return false;
+    return compression.filter(req, res);
+  }
+}));
 app.use(express.json({ limit: '10mb' }));
 
 // Block sensitive paths from static serving
@@ -526,6 +531,104 @@ app.post('/api/chat', async (req, res) => {
         success: false,
         error: error.response?.data?.error?.message || error.message
       });
+    }
+  }
+});
+
+// Streaming proxy for Anthropic API (SSE)
+app.post('/api/chat/stream', async (req, res) => {
+  const { messages, system, model, max_tokens } = req.body;
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ success: false, error: 'Anthropic API key not configured in environment variables' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const maxRetries = 3;
+  const retryableStatuses = [429, 502, 503, 529];
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await axios.post('https://api.anthropic.com/v1/messages', {
+        model: model || 'claude-opus-4-6',
+        max_tokens: max_tokens || 4096,
+        system: system || '',
+        messages,
+        stream: true
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        timeout: 180000,
+        responseType: 'stream'
+      });
+
+      let buffer = '';
+
+      response.data.on('data', (chunk) => {
+        buffer += chunk.toString();
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr) continue;
+            try {
+              const event = JSON.parse(jsonStr);
+              if (event.type === 'content_block_delta' && event.delta?.text) {
+                res.write(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`);
+              } else if (event.type === 'message_stop') {
+                res.write('data: [DONE]\n\n');
+              }
+            } catch (e) { /* skip unparseable lines */ }
+          }
+        }
+      });
+
+      response.data.on('end', () => {
+        if (!res.writableEnded) {
+          res.write('data: [DONE]\n\n');
+          res.end();
+        }
+      });
+
+      response.data.on('error', (err) => {
+        if (!res.writableEnded) {
+          res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+          res.end();
+        }
+      });
+
+      req.on('close', () => {
+        response.data.destroy();
+      });
+
+      return;
+    } catch (error) {
+      const status = error.response?.status;
+      const isRetryable = retryableStatuses.includes(status) || (!status && error.code === 'ECONNRESET');
+
+      if (isRetryable && attempt < maxRetries) {
+        const retryAfter = error.response?.headers?.['retry-after'];
+        const delay = retryAfter ? parseInt(retryAfter, 10) * 1000 : Math.min(1000 * Math.pow(2, attempt), 8000);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+
+      if (!res.writableEnded) {
+        res.write(`data: ${JSON.stringify({ error: error.response?.data?.error?.message || error.message })}\n\n`);
+        res.end();
+      }
+      return;
     }
   }
 });

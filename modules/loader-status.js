@@ -255,6 +255,13 @@ function getMessages(context) {
 export function startLoaderStatus(parentElement, context = 'general') {
   if (!parentElement) return null;
 
+  for (const [existingId, loader] of _activeLoaders) {
+    if (loader.el.parentElement === parentElement || loader.el.closest('.pr-loading-modal-content') === parentElement) {
+      clearInterval(loader.interval);
+      _activeLoaders.delete(existingId);
+    }
+  }
+
   const id = ++_loaderId;
   const messages = getMessages(context);
 

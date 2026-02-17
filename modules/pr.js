@@ -7,6 +7,17 @@ import { startLoaderStatus, stopLoaderStatus } from './loader-status.js';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
+const MODEL_FOR_TYPE = {
+  tweet: 'claude-sonnet-4-20250514',
+  linkedin_post: 'claude-opus-4-6',
+  blog_post: 'claude-opus-4-6',
+  email_blast: 'claude-opus-4-6',
+  product_announcement: 'claude-opus-4-6',
+  talking_points: 'claude-opus-4-6',
+  investor_snippet: 'claude-opus-4-6',
+  custom: 'claude-opus-4-6'
+};
+
 const PR_SYSTEM_PROMPT = `You are Glossi's communications strategist. You write like the teams at Linear and Cursor communicate. Study how they work:
 
 ⚠️ CRITICAL: The company name is "Glossi" (with an "i"). NEVER spell it as "Glossy". This is a common error - always use "Glossi".
@@ -181,6 +192,60 @@ class PRAgent {
         }
       }
     }
+  }
+
+  async streamContent({ model, max_tokens, system, messages, onChunk, onDone, onError }) {
+    const response = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, max_tokens, system, messages })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || `Stream request failed (${response.status})`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let accumulated = '';
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+
+        if (payload === '[DONE]') {
+          if (onDone) onDone(accumulated);
+          return accumulated;
+        }
+
+        try {
+          const parsed = JSON.parse(payload);
+          if (parsed.error) {
+            if (onError) onError(new Error(parsed.error));
+            throw new Error(parsed.error);
+          }
+          if (parsed.text) {
+            accumulated += parsed.text;
+            if (onChunk) onChunk(parsed.text, accumulated);
+          }
+        } catch (e) {
+          if (e.message && !e.message.includes('JSON')) throw e;
+        }
+      }
+    }
+
+    if (onDone) onDone(accumulated);
+    return accumulated;
   }
 
   async init() {
@@ -2245,28 +2310,25 @@ class PRAgent {
     userMessage += `SOURCES:\n${sourcesContext}`;
 
     const isTweet = contentType === 'tweet';
+    const selectedModel = MODEL_FOR_TYPE[contentType] || 'claude-opus-4-6';
+    let streamStarted = false;
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'claude-opus-4-6',
-          max_tokens: isTweet ? 1024 : 8192,
-          system: PR_SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: isTweet ? userMessage + '\n\nREMINDER: The tweet MUST be under 280 characters. Count carefully. This is a hard platform limit.' : userMessage }]
-        })
+      const rawText = await this.streamContent({
+        model: selectedModel,
+        max_tokens: isTweet ? 1024 : 8192,
+        system: PR_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: isTweet ? userMessage + '\n\nREMINDER: The tweet MUST be under 280 characters. Count carefully. This is a hard platform limit.' : userMessage }],
+        onChunk: (_chunk, accumulated) => {
+          if (!streamStarted) {
+            streamStarted = true;
+            this.showStreamingWorkspace();
+          }
+          this.updateStreamingText(accumulated);
+        }
       });
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `API request failed (${response.status})`);
-      }
-
-      const data = await response.json();
-      const rawText = data.content?.[0]?.text || '';
+      this.finishStreamingWorkspace();
 
       let parsed;
       try {
@@ -2286,7 +2348,6 @@ class PRAgent {
         };
       }
 
-      // Map citation sourceIds to actual source IDs
       if (parsed.citations) {
         parsed.citations = parsed.citations.map((c, i) => {
           const srcIndex = c.index || (i + 1);
@@ -2329,16 +2390,13 @@ class PRAgent {
       this.currentOutput = output;
       this.outputs.push(output);
       
-      // Save to API
       try {
         await fetch('/api/pr/outputs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(output)
         });
-      } catch (error) {
-        console.error('Error saving output:', error);
-      }
+      } catch (error) { /* silent */ }
       
       this.saveOutputs();
 
@@ -2347,16 +2405,13 @@ class PRAgent {
       if (this.angleManager) this.angleManager.renderContentSection();
       this.showWorkspace();
       
-      // Track angle progress if active
       if (this.angleManager && this.angleContext) {
         this.angleManager.trackContentCreation(contentType);
       }
       
-      // Show save confirmation
       this.showSaveConfirmation();
 
     } catch (err) {
-      console.error('Generation failed:', err);
       this.hideLoading();
     } finally {
       this.isGenerating = false;
@@ -2417,6 +2472,41 @@ class PRAgent {
     // Generate suggestions for the content area (skip when switching tabs with stored suggestions)
     if (!skipSuggestions) {
       this.generateSuggestions();
+    }
+  }
+
+  showStreamingWorkspace() {
+    this.hideLoading();
+    if (this.dom.workspaceEmpty) this.dom.workspaceEmpty.style.display = 'none';
+    if (this.dom.workspaceGenerated) this.dom.workspaceGenerated.style.display = 'block';
+    if (this.dom.generatedContent) {
+      this.dom.generatedContent.innerHTML = '<div class="pr-draft-content pr-streaming-content"></div>';
+      this.dom.generatedContent.contentEditable = 'false';
+    }
+    const actionsEl = document.getElementById('pr-workspace-actions');
+    if (actionsEl) actionsEl.style.display = 'none';
+    if (this.dom.regenerateBtn) this.dom.regenerateBtn.style.display = 'none';
+    if (this.dom.workspaceChat) this.dom.workspaceChat.style.display = 'none';
+  }
+
+  updateStreamingText(accumulated) {
+    const el = this.dom.generatedContent?.querySelector('.pr-streaming-content');
+    if (!el) return;
+    const contentMatch = accumulated.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)(?:"|$)/);
+    if (contentMatch) {
+      let text = contentMatch[1];
+      try { text = JSON.parse('"' + text + '"'); } catch { /* use raw */ }
+      el.textContent = text;
+    } else {
+      el.textContent = accumulated;
+    }
+  }
+
+  finishStreamingWorkspace() {
+    if (this.dom.generatedContent) {
+      this.dom.generatedContent.contentEditable = 'true';
+      const streamEl = this.dom.generatedContent.querySelector('.pr-streaming-content');
+      if (streamEl) streamEl.classList.remove('pr-streaming-content');
     }
   }
 
@@ -7693,25 +7783,28 @@ ${primaryContext}${bgContext}`
       userMessage += '\n\nREMINDER: The tweet MUST be under 280 characters. Count carefully. This is a hard platform limit.';
     }
 
+    const selectedModel = MODEL_FOR_TYPE[planItem.type] || 'claude-opus-4-6';
+    let streamStarted = false;
+
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-opus-4-6',
-          max_tokens: isTweetType ? 1024 : 8192,
-          system: PR_SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: userMessage }]
-        })
+      const rawText = await this.prAgent.streamContent({
+        model: selectedModel,
+        max_tokens: isTweetType ? 1024 : 8192,
+        system: PR_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userMessage }],
+        onChunk: (_chunk, accumulated) => {
+          if (this._activeTabId !== tabId) return;
+          if (!streamStarted) {
+            streamStarted = true;
+            this.prAgent.showStreamingWorkspace();
+          }
+          this.prAgent.updateStreamingText(accumulated);
+        }
       });
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `API request failed (${response.status})`);
+      if (this._activeTabId === tabId) {
+        this.prAgent.finishStreamingWorkspace();
       }
-
-      const data = await response.json();
-      const rawText = data.content?.[0]?.text || '';
 
       let parsed;
       try {
@@ -7776,14 +7869,12 @@ ${primaryContext}${bgContext}`
       const prevEntryDone = this._tabContent.get(tabId);
       this._tabContent.set(tabId, { loading: false, output, refining: prevEntryDone?.refining || false, suggestionsHTML: prevEntryDone?.suggestionsHTML || '' });
 
-      // Save to PRAgent outputs
       this.prAgent.outputs.push(output);
       this.prAgent.saveOutputs();
       try {
         await fetch('/api/pr/outputs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(output) });
       } catch (e) { /* silent */ }
 
-      // If this tab is active, render
       if (this._activeTabId === tabId) {
         this.prAgent.currentOutput = output;
         this.prAgent.renderGeneratedContent(output);
@@ -8680,25 +8771,29 @@ class AngleManager {
     }
     userMessage += `SOURCES:\n${sourcesContext}`;
 
+    const isTweetADK = planItem.type === 'tweet';
+    const selectedModel = MODEL_FOR_TYPE[planItem.type] || 'claude-opus-4-6';
+    let streamStarted = false;
+
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-opus-4-6',
-          max_tokens: 8192,
-          system: PR_SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: userMessage }]
-        })
+      const rawText = await this.prAgent.streamContent({
+        model: selectedModel,
+        max_tokens: isTweetADK ? 1024 : 8192,
+        system: PR_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userMessage }],
+        onChunk: (_chunk, accumulated) => {
+          if (this.activeTabId !== tabId) return;
+          if (!streamStarted) {
+            streamStarted = true;
+            this.prAgent.showStreamingWorkspace();
+          }
+          this.prAgent.updateStreamingText(accumulated);
+        }
       });
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `API request failed (${response.status})`);
+      if (this.activeTabId === tabId) {
+        this.prAgent.finishStreamingWorkspace();
       }
-
-      const data = await response.json();
-      const rawText = data.content?.[0]?.text || '';
 
       let parsed;
       try {
@@ -8718,7 +8813,6 @@ class AngleManager {
         });
       }
 
-      const isTweetADK = planItem.type === 'tweet';
       let extractedTitle, strippedContent;
       if (isTweetADK) {
         extractedTitle = typeLabel;
@@ -8749,17 +8843,14 @@ class AngleManager {
         output.drafts[0].content = output.content;
       }
 
-      // Store in per-tab content
       this.tabContent.set(tabId, { loading: false, output });
 
-      // Save to PRAgent outputs
       this.prAgent.outputs.push(output);
       this.prAgent.saveOutputs();
       try {
         await fetch('/api/pr/outputs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(output) });
       } catch (e) { /* silent */ }
 
-      // If this tab is currently active, render it
       if (this.activeTabId === tabId) {
         this.prAgent.currentOutput = output;
         this.prAgent.renderGeneratedContent(output);
@@ -8768,11 +8859,9 @@ class AngleManager {
         this.prAgent.hideLoading();
       }
 
-      // Track angle progress
       this.trackContentCreation(planItem.type);
       this.renderContentSection();
 
-      // Auto-expand Content section after generation
       this.collapseSection('pr-content-body', false);
 
     } catch (err) {
