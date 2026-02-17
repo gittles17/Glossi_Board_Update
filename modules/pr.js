@@ -10579,6 +10579,7 @@ class DistributeManager {
     let mediaHtml = '';
 
     if (tweetFormat === 'visual') {
+      const savedVisualProvider = localStorage.getItem('glossi_visual_provider') || 'gemini';
       if (hasImage) {
         const img = media.find(m => m.type === 'image');
         mediaHtml = `
@@ -10590,6 +10591,10 @@ class DistributeManager {
           </div>
           <div class="pr-twitter-visual-feedback">
             <div class="pr-twitter-visual-feedback-row">
+              <select class="pr-og-provider-select" data-action="visual-provider-select">
+                <option value="gemini"${savedVisualProvider === 'gemini' ? ' selected' : ''}>Gemini</option>
+                <option value="midjourney"${savedVisualProvider === 'midjourney' ? ' selected' : ''}>Midjourney</option>
+              </select>
               <input type="text" class="pr-twitter-visual-feedback-input" data-action="visual-feedback" placeholder="Describe adjustments (e.g. make the stat larger, change layout)">
               <button class="pr-twitter-visual-feedback-btn" data-action="submit-feedback">Refine</button>
             </div>
@@ -10621,19 +10626,19 @@ class DistributeManager {
       let ogImageHtml = '';
       const savedProvider = localStorage.getItem('glossi_og_provider') || 'gemini';
       const savedRefinement = output._ogRefinement || '';
-      const ogRefineRow = `<div class="pr-twitter-visual-feedback" style="padding: 0 14px 10px;">
+      const ogRefineRow = `<div class="pr-twitter-visual-feedback pr-twitter-visual-feedback--card">
           <div class="pr-twitter-visual-feedback-row">
             <select class="pr-og-provider-select" data-action="og-provider-select">
               <option value="gemini"${savedProvider === 'gemini' ? ' selected' : ''}>Gemini</option>
               <option value="midjourney"${savedProvider === 'midjourney' ? ' selected' : ''}>Midjourney</option>
             </select>
             <input type="text" class="pr-twitter-visual-feedback-input" data-action="og-refinement" placeholder="Describe adjustments (e.g. more minimal, cooler tones)" value="${this.escapeHtml(savedRefinement)}">
-            <button class="pr-twitter-visual-feedback-btn" data-action="generate-og-image">${ogImage ? 'Regenerate' : 'Generate'}</button>
+            <button class="pr-twitter-visual-feedback-btn" data-action="generate-og-image">${ogImage ? 'Refine' : 'Generate'}</button>
           </div>
         </div>`;
 
       if (ogGenerating) {
-        ogImageHtml = `<div class="pr-twitter-link-card-image-loading"><svg class="glossi-loader-sm" viewBox="0 0 306.8 352.69"><path d="m306.8,166.33v73.65c0,8.39-6.83,15.11-15.22,15.11h-80.59c-7.05,0-13.43,1.23-17.91,3.81-4.25,2.35-6.49,5.6-6.49,10.52v68.28c0,8.28-6.72,15-15,15H14.66c-8.06,0-14.66-6.72-14.66-14.77V54.17c0-8.39,6.72-15.22,15.11-15.22h35.59c7.05,0,13.43-1.12,17.91-3.58,4.14-2.24,6.49-5.37,6.49-10.3v-9.96c0-8.39,6.83-15.11,15.11-15.11h126.26c8.39,0,15.11,6.72,15.11,15.11v15.11c0,8.39-6.72,15.11-15.11,15.11h-124.58c-5.37.11-10.75.56-14.66,2.46-1.79.89-3.13,2.13-4.14,3.69-1.01,1.68-1.79,4.03-1.79,7.72v185.58c0,2.24,1.79,3.92,3.92,3.92h95.7c5.26,0,10.3-.56,13.88-2.35,1.68-.9,2.91-2.01,3.81-3.58,1.01-1.57,1.68-3.81,1.68-7.28v-69.17c0-8.39,6.83-15.11,15.22-15.11h86.07c8.39,0,15.22,6.72,15.22,15.11Z" fill="#EC5F3F"/></svg><span>Generating preview...</span></div>`;
+        ogImageHtml = `<div class="pr-twitter-link-card-image-loading">${glossiLoaderSVG('glossi-loader-sm')}<span>Generating preview...</span></div>`;
       } else if (ogImage) {
         ogImageHtml = `<div class="pr-twitter-link-card-image"><img src="${this.escapeHtml(ogImage)}" alt=""><button class="pr-twitter-link-card-image-remove" data-action="remove-og-image" title="Remove"><i class="ph-light ph-x"></i></button></div>${ogRefineRow}`;
       } else {
@@ -10727,6 +10732,11 @@ class DistributeManager {
         }
       });
     });
+    container.querySelectorAll('[data-action="visual-provider-select"]').forEach(sel => {
+      sel.addEventListener('change', () => {
+        localStorage.setItem('glossi_visual_provider', sel.value);
+      });
+    });
     container.querySelectorAll('[data-action="edit-link-url"]').forEach(el => {
       let debounceTimer;
       el.addEventListener('input', () => {
@@ -10792,10 +10802,11 @@ class DistributeManager {
 
       output.visual_prompt = promptRes.prompt;
 
+      const visualProvider = localStorage.getItem('glossi_visual_provider') || 'gemini';
       const imageRes = await this.prAgent.apiCall('/api/pr/generate-infographic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: promptRes.prompt })
+        body: JSON.stringify({ prompt: promptRes.prompt, provider: visualProvider })
       });
 
       output._visualGenerating = false;
@@ -10843,10 +10854,11 @@ class DistributeManager {
 
       output.visual_prompt = promptRes.prompt;
 
+      const refineProvider = localStorage.getItem('glossi_visual_provider') || 'gemini';
       const imageRes = await this.prAgent.apiCall('/api/pr/generate-infographic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: promptRes.prompt })
+        body: JSON.stringify({ prompt: promptRes.prompt, provider: refineProvider })
       });
 
       output._visualGenerating = false;
