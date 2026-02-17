@@ -20720,9 +20720,10 @@ body.pr-resizing * {
 
 .pr-twitter-link-card-generate {
   width: 100%;
+  aspect-ratio: 1.91 / 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
   border-bottom: 1px solid #2f3336;
 }
 
@@ -20731,7 +20732,6 @@ body.pr-resizing * {
   align-items: center;
   gap: 8px;
   padding: 8px 18px;
-  margin: 40px 0 12px;
   border-radius: 100px;
   border: 1px solid #2f3336;
   background: transparent;
@@ -20743,62 +20743,6 @@ body.pr-resizing * {
 }
 
 .pr-twitter-link-card-generate > button:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: #536471;
-}
-
-.pr-og-controls {
-  width: 100%;
-  padding: 10px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border-top: 1px solid #2f3336;
-}
-
-.pr-og-controls-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pr-og-refinement-input {
-  width: 100%;
-  background: transparent;
-  border: 1px solid #2f3336;
-  border-radius: 8px;
-  color: #e7e9ea;
-  font-size: 12px;
-  padding: 7px 12px;
-  outline: none;
-  transition: border-color 150ms ease;
-}
-
-.pr-og-refinement-input::placeholder {
-  color: #536471;
-}
-
-.pr-og-refinement-input:focus {
-  border-color: #536471;
-}
-
-.pr-og-generate-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 14px;
-  border-radius: 100px;
-  border: 1px solid #2f3336;
-  background: transparent;
-  color: #e7e9ea;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 150ms ease, border-color 150ms ease;
-}
-
-.pr-og-generate-btn:hover {
   background: rgba(255, 255, 255, 0.06);
   border-color: #536471;
 }
