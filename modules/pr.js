@@ -10619,20 +10619,27 @@ class DistributeManager {
       const ogGenerating = output._ogGenerating || false;
 
       let ogImageHtml = '';
-      if (ogImage) {
-        ogImageHtml = `<div class="pr-twitter-link-card-image"><img src="${this.escapeHtml(ogImage)}" alt=""><button class="pr-twitter-link-card-image-remove" data-action="remove-og-image" title="Remove"><i class="ph-light ph-x"></i></button></div>`;
-      } else if (ogGenerating) {
-        ogImageHtml = `<div class="pr-twitter-link-card-image-loading"><svg class="glossi-loader-sm" viewBox="0 0 306.8 352.69"><path d="m306.8,166.33v73.65c0,8.39-6.83,15.11-15.22,15.11h-80.59c-7.05,0-13.43,1.23-17.91,3.81-4.25,2.35-6.49,5.6-6.49,10.52v68.28c0,8.28-6.72,15-15,15H14.66c-8.06,0-14.66-6.72-14.66-14.77V54.17c0-8.39,6.72-15.22,15.11-15.22h35.59c7.05,0,13.43-1.12,17.91-3.58,4.14-2.24,6.49-5.37,6.49-10.3v-9.96c0-8.39,6.83-15.11,15.11-15.11h126.26c8.39,0,15.11,6.72,15.11,15.11v15.11c0,8.39-6.72,15.11-15.11,15.11h-124.58c-5.37.11-10.75.56-14.66,2.46-1.79.89-3.13,2.13-4.14,3.69-1.01,1.68-1.79,4.03-1.79,7.72v185.58c0,2.24,1.79,3.92,3.92,3.92h95.7c5.26,0,10.3-.56,13.88-2.35,1.68-.9,2.91-2.01,3.81-3.58,1.01-1.57,1.68-3.81,1.68-7.28v-69.17c0-8.39,6.83-15.11,15.22-15.11h86.07c8.39,0,15.22,6.72,15.22,15.11Z" fill="#EC5F3F"/></svg><span>Generating preview...</span></div>`;
-      } else {
-        const savedProvider = localStorage.getItem('glossi_og_provider') || 'gemini';
-        ogImageHtml = `<div class="pr-twitter-link-card-generate">
-          <button data-action="generate-og-image"><i class="ph-light ph-image"></i> Generate Link Preview</button>
-          <div class="pr-og-provider-select-wrap">
+      const savedProvider = localStorage.getItem('glossi_og_provider') || 'gemini';
+      const savedRefinement = output._ogRefinement || '';
+      const ogControls = `<div class="pr-og-controls">
+          <input type="text" class="pr-og-refinement-input" data-action="og-refinement" placeholder="Style direction, e.g. 'more minimal' or 'cooler tones'" value="${this.escapeHtml(savedRefinement)}">
+          <div class="pr-og-controls-row">
             <select class="pr-og-provider-select" data-action="og-provider-select">
               <option value="gemini"${savedProvider === 'gemini' ? ' selected' : ''}>Gemini</option>
               <option value="midjourney"${savedProvider === 'midjourney' ? ' selected' : ''}>Midjourney</option>
             </select>
+            <button data-action="generate-og-image" class="pr-og-generate-btn"><i class="ph-light ph-arrows-clockwise"></i> ${ogImage ? 'Regenerate' : 'Generate'}</button>
           </div>
+        </div>`;
+
+      if (ogImage) {
+        ogImageHtml = `<div class="pr-twitter-link-card-image"><img src="${this.escapeHtml(ogImage)}" alt=""><button class="pr-twitter-link-card-image-remove" data-action="remove-og-image" title="Remove"><i class="ph-light ph-x"></i></button></div>${ogControls}`;
+      } else if (ogGenerating) {
+        ogImageHtml = `<div class="pr-twitter-link-card-image-loading"><svg class="glossi-loader-sm" viewBox="0 0 306.8 352.69"><path d="m306.8,166.33v73.65c0,8.39-6.83,15.11-15.22,15.11h-80.59c-7.05,0-13.43,1.23-17.91,3.81-4.25,2.35-6.49,5.6-6.49,10.52v68.28c0,8.28-6.72,15-15,15H14.66c-8.06,0-14.66-6.72-14.66-14.77V54.17c0-8.39,6.72-15.22,15.11-15.22h35.59c7.05,0,13.43-1.12,17.91-3.58,4.14-2.24,6.49-5.37,6.49-10.3v-9.96c0-8.39,6.83-15.11,15.11-15.11h126.26c8.39,0,15.11,6.72,15.11,15.11v15.11c0,8.39-6.72,15.11-15.11,15.11h-124.58c-5.37.11-10.75.56-14.66,2.46-1.79.89-3.13,2.13-4.14,3.69-1.01,1.68-1.79,4.03-1.79,7.72v185.58c0,2.24,1.79,3.92,3.92,3.92h95.7c5.26,0,10.3-.56,13.88-2.35,1.68-.9,2.91-2.01,3.81-3.58,1.01-1.57,1.68-3.81,1.68-7.28v-69.17c0-8.39,6.83-15.11,15.22-15.11h86.07c8.39,0,15.22,6.72,15.22,15.11Z" fill="#EC5F3F"/></svg><span>Generating preview...</span></div>`;
+      } else {
+        ogImageHtml = `<div class="pr-twitter-link-card-generate">
+          <button data-action="generate-og-image"><i class="ph-light ph-image"></i> Generate Link Preview</button>
+          ${ogControls}
         </div>`;
       }
 
@@ -10739,6 +10746,11 @@ class DistributeManager {
       el.addEventListener('input', () => {
         output.link_title = el.value.trim();
         this.persistOutput(output);
+      });
+    });
+    container.querySelectorAll('[data-action="og-refinement"]').forEach(el => {
+      el.addEventListener('input', () => {
+        output._ogRefinement = el.value;
       });
     });
     container.querySelectorAll('[data-action="og-provider-select"]').forEach(sel => {
@@ -10868,7 +10880,12 @@ class DistributeManager {
       const res = await this.prAgent.apiCall('/api/pr/generate-og-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, tweet_text: output.content || '', provider: localStorage.getItem('glossi_og_provider') || 'gemini' })
+        body: JSON.stringify({
+          title,
+          tweet_text: output.content || '',
+          provider: localStorage.getItem('glossi_og_provider') || 'gemini',
+          refinement: output._ogRefinement || ''
+        })
       });
 
       output._ogGenerating = false;

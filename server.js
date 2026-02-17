@@ -2390,7 +2390,7 @@ app.get('/og-template', (req, res) => {
 
   const bgStyle = bgImage
     ? `background-image: url(${bgImage}); background-size: cover; background-position: center;`
-    : 'background: #F0EFED;';
+    : 'background: #ECE8E2;';
 
   const html = `<!DOCTYPE html>
 <html>
@@ -2428,7 +2428,7 @@ STYLE:
 - Abstract, sophisticated, minimal. Think editorial illustration for a premium tech blog.
 - Use flowing curves, geometric shapes, line art, or data-inspired abstract patterns.
 - Primary color: warm orange/coral (#EC5F3F). Secondary: muted grays, soft tans.
-- Background must be warm off-white/cream (#F0EFED or similar).
+- Background must be warm off-white/cream (#ECE8E2 or similar).
 - The visual should occupy the center-right and bottom portions of the image, leaving the top-left area clean (the title goes there).
 - No text, no words, no letters, no numbers, no labels, no UI elements.
 - No realistic objects or people. Purely abstract.
@@ -2438,12 +2438,16 @@ STYLE:
 OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.`;
 
 // Helper: generate image prompt via Claude
-async function generateOgVisualPrompt(tweetText) {
+async function generateOgVisualPrompt(tweetText, refinement) {
+  let userMessage = `Generate an abstract visual prompt for an OG card. The tweet this supports:\n\n"${tweetText}"`;
+  if (refinement) {
+    userMessage += `\n\nAdditional style direction from the user: ${refinement}`;
+  }
   const promptRes = await axios.post('https://api.anthropic.com/v1/messages', {
     model: 'claude-sonnet-4-20250514',
     max_tokens: 512,
     system: OG_VISUAL_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: `Generate an abstract visual prompt for an OG card. The tweet this supports:\n\n"${tweetText}"` }]
+    messages: [{ role: 'user', content: userMessage }]
   }, {
     headers: {
       'Content-Type': 'application/json',
@@ -2524,7 +2528,7 @@ async function generateImageMidjourney(prompt) {
 app.post('/api/pr/generate-og-image', async (req, res) => {
   let browser;
   try {
-    const { title, tweet_text, provider } = req.body;
+    const { title, tweet_text, provider, refinement } = req.body;
     if (!title) {
       return res.status(400).json({ success: false, error: 'title is required' });
     }
@@ -2534,7 +2538,7 @@ app.post('/api/pr/generate-og-image', async (req, res) => {
 
     if (tweet_text && process.env.ANTHROPIC_API_KEY) {
       try {
-        const imagePrompt = await generateOgVisualPrompt(tweet_text);
+        const imagePrompt = await generateOgVisualPrompt(tweet_text, refinement);
 
         if (imagePrompt) {
           if (useProvider === 'midjourney' && process.env.MIDJOURNEY_API_KEY) {
@@ -2544,7 +2548,7 @@ app.post('/api/pr/generate-og-image', async (req, res) => {
           }
         }
       } catch (aiErr) {
-        // AI generation failed, continue with plain background
+        return res.json({ success: false, error: aiErr.message || 'Image generation failed. Try again.' });
       }
     }
 
