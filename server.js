@@ -2807,10 +2807,15 @@ app.post('/api/linkedin/publish', async (req, res) => {
     const postUrn = postRes.headers['x-restli-id'] || null;
 
     // Post first comment if provided
+    let commentError = null;
     if (first_comment && postUrn) {
+      // Small delay to let LinkedIn index the post
+      await new Promise(r => setTimeout(r, 2000));
       try {
-        await axios.post('https://api.linkedin.com/rest/socialActions/' + encodeURIComponent(postUrn) + '/comments', {
+        const activityUrn = postUrn.replace('urn:li:share:', 'urn:li:activity:').replace('urn:li:ugcPost:', 'urn:li:activity:');
+        await axios.post('https://api.linkedin.com/rest/socialActions/' + encodeURIComponent(activityUrn) + '/comments', {
           actor: `urn:li:organization:${orgId}`,
+          object: activityUrn,
           message: { text: first_comment }
         }, {
           headers: {
@@ -2821,11 +2826,11 @@ app.post('/api/linkedin/publish', async (req, res) => {
           }
         });
       } catch (commentErr) {
-        // Post succeeded but comment failed, still report success
+        commentError = commentErr.response?.data?.message || commentErr.message;
       }
     }
 
-    res.json({ success: true, post_urn: postUrn });
+    res.json({ success: true, post_urn: postUrn, comment_error: commentError });
   } catch (error) {
     const errMsg = error.response?.data?.message || error.message;
     res.status(error.response?.status || 500).json({ success: false, error: errMsg });

@@ -11379,6 +11379,13 @@ class DistributeManager {
         this.prAgent.saveOutputs();
         this.render();
         this.selectReviewItem(this.activeReviewItem.id);
+
+        if (result.comment_error) {
+          await this.prAgent.showConfirm(
+            `Post published successfully, but the first comment failed: ${result.comment_error}`,
+            'Comment Warning'
+          );
+        }
       } else {
         await this.prAgent.showConfirm(
           `Publishing failed: ${result.error || 'Unknown error'}. Please try again.`,
