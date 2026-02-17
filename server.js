@@ -2814,6 +2814,7 @@ app.post('/api/linkedin/publish', async (req, res) => {
       try {
         await axios.post('https://api.linkedin.com/rest/socialActions/' + encodeURIComponent(postUrn) + '/comments', {
           actor: `urn:li:organization:${orgId}`,
+          object: postUrn,
           message: { text: first_comment }
         }, {
           headers: {
