@@ -2141,6 +2141,7 @@ Rules:
 - Use shorter words. Compress phrasing aggressively.
 - The result must be a complete, punchy thought that stands alone.
 - Aim for well under the limit (target ~250 chars) to leave margin.
+- NEVER use em dashes (\u2014), en dashes (\u2013), or double hyphens (--). Use commas, periods, or semicolons instead.
 - Return ONLY the rewritten tweet text. No quotes, no explanation, no preamble, no character count.`,
       messages: [{ role: 'user', content: `This tweet is ${currentLength} characters but must be ${limit} or fewer. That means you need to cut at least ${currentLength - limit} characters. Rewrite it shorter.\n\nTweet: "${content}"` }]
     }, {
@@ -2152,10 +2153,11 @@ Rules:
       timeout: 30000
     });
 
-    const shortened = response.data?.content?.[0]?.text?.trim();
+    let shortened = response.data?.content?.[0]?.text?.trim();
     if (!shortened) {
       return res.json({ success: false, error: 'No shortened text generated' });
     }
+    shortened = shortened.replace(/\u2014/g, ', ').replace(/\u2013/g, ' to ').replace(/--/g, ', ').replace(/, ,/g, ',').replace(/\s{2,}/g, ' ');
 
     res.json({ success: true, content: shortened, length: shortened.length });
   } catch (error) {

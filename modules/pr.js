@@ -7,6 +7,16 @@ import { startLoaderStatus, stopLoaderStatus } from './loader-status.js';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
+function sanitizeDashes(text) {
+  if (typeof text !== 'string') return text;
+  return text
+    .replace(/\u2014/g, ', ')
+    .replace(/\u2013/g, ' to ')
+    .replace(/--/g, ', ')
+    .replace(/, ,/g, ',')
+    .replace(/\s{2,}/g, ' ');
+}
+
 const MODEL_FOR_TYPE = {
   tweet: 'claude-sonnet-4-20250514',
   linkedin_post: 'claude-opus-4-6',
@@ -37,6 +47,7 @@ VOICE RULES:
 - Never explain why Glossi is great. Describe what it does. Let the reader conclude.
 - When writing pitches: no "Dear [name]" openings. Open with the story or the fact.
 - The confidence comes from specificity, not volume. Be precise. Be brief. Be done.
+- NEVER use em dashes (\u2014) or en dashes (\u2013) or double hyphens (--) as punctuation. Use commas, periods, semicolons, or parentheses instead. For example, write "the new enterprise moat, not just technically impressive" instead of "the new enterprise moat\u2014not just technically impressive". Regular hyphens in compound words (like "brand-ready") are fine.
 
 LEADERSHIP STANCE:
 - Glossi is the leader. The first. Write from that position.
@@ -2361,6 +2372,8 @@ class PRAgent {
         });
       }
 
+      parsed.content = sanitizeDashes(parsed.content);
+
       let extractedTitle, strippedContent;
       if (contentType === 'tweet') {
         extractedTitle = typeLabel;
@@ -2496,7 +2509,7 @@ class PRAgent {
     if (contentMatch) {
       let text = contentMatch[1];
       try { text = JSON.parse('"' + text + '"'); } catch { /* use raw */ }
-      el.textContent = text;
+      el.textContent = sanitizeDashes(text);
     } else {
       el.textContent = accumulated;
     }
@@ -3159,6 +3172,8 @@ class PRAgent {
 
         const output = liveEntry.output;
         if (!output.drafts) this.migrateContentToDrafts(output);
+
+        parsed.content = sanitizeDashes(parsed.content);
 
         const isTweetContent = output.content_type === 'tweet';
         let newTitle, strippedContent;
@@ -3832,6 +3847,7 @@ VOICE RULES (from PR system prompt):
 - Never use: "excited to announce", "thrilled", "groundbreaking", "game-changing"
 - No exclamation marks.
 - The confidence comes from specificity, not volume.
+- NEVER use em dashes (\u2014), en dashes (\u2013), or double hyphens (--). Use commas, periods, semicolons, or parentheses instead.
 
 CURRENT CONTEXT:
 ${context}
@@ -3854,7 +3870,7 @@ Apply the requested refinement and return ONLY the complete refined content (no 
         })
       });
 
-      const refinedContent = response.content[0].text.trim();
+      const refinedContent = sanitizeDashes(response.content[0].text.trim());
 
       // Migrate to drafts if needed (operate on targetOutput, not this.currentOutput)
       if (!targetOutput.drafts) {
@@ -7928,6 +7944,8 @@ ${primaryContext}${bgContext}`
         });
       }
 
+      parsed.content = sanitizeDashes(parsed.content);
+
       const planIndex = parseInt(tabId.replace('plan_', ''), 10);
 
       let sourceIds = selectedSources.map(s => s.id);
@@ -8920,6 +8938,8 @@ class AngleManager {
           return { ...c, index: srcIndex, sourceId: matchedSource?.id || null, verified: c.sourceId !== null && c.verified !== false };
         });
       }
+
+      parsed.content = sanitizeDashes(parsed.content);
 
       let extractedTitle, strippedContent;
       if (isTweetADK) {
@@ -10582,6 +10602,7 @@ class DistributeManager {
 
     const formatBar = document.getElementById('pr-twitter-format-bar');
     if (formatBar) {
+      formatBar.style.display = '';
       formatBar.querySelectorAll('.pr-twitter-format-pill').forEach(pill => {
         pill.classList.toggle('active', pill.dataset.format === tweetFormat);
       });
