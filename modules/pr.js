@@ -10851,13 +10851,10 @@ class DistributeManager {
     this.renderTwitterPreview(output);
 
     try {
-      const subtitleMatch = (output.content || '').match(/^([^\n#].{20,})/);
-      const subtitle = subtitleMatch ? subtitleMatch[1].substring(0, 120) : '';
-
       const res = await this.prAgent.apiCall('/api/pr/generate-og-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, subtitle })
+        body: JSON.stringify({ title })
       });
 
       output._ogGenerating = false;
