@@ -89,15 +89,25 @@ Product Announcement: Changelog style. What shipped. What it does. One sentence 
 
 LinkedIn Post: TARGET: 150-250 words. Flowing prose only, no markdown headers. 3-5 short paragraphs max. Write like Linear communicates: humble, builder-first, letting the work speak. Share a genuine observation about the space, then back it with what you've built. The confidence comes from having built something real, not from making claims about it. No hashtag spam (one or two max). The post should feel like a founder sharing what they've learned, not a marketing team promoting a product.
 
-Blog Post: TARGET: 500-800 words. STRUCTURE IS MANDATORY:
-- Start with a ## heading for the title (this becomes the article headline).
-- Break the body into 3-4 sections, each with its own ## heading.
-- Section 1: Hook the reader with the news or trend. What happened and why it matters.
-- Section 2-3: Build the argument. Each section adds one new insight. Connect to Glossi's approach where it naturally supports the point.
-- Final section: Forward-looking. Where this is going, and why Glossi's architecture is positioned for it.
-- Write like Linear's "Now" blog. First-person where appropriate. Opinionated. Substantive. Not content marketing.
-- Every section must earn its place; if a section doesn't add a new insight, cut it.
-- This covers op-eds, press releases, and bylined articles too. Adjust formality based on the description provided.
+Blog Post: TARGET: 600-1000 words. This is a Glossi blog post, published at glossi.io/blog. It must read like a real editorial, not a content marketing piece. Study the voice and structure of glossi.io/blog/brand-decay-silent-killer.html as a reference.
+
+STRUCTURE IS MANDATORY:
+- Start with a ## heading for the title (this becomes the article headline). The title must be on its own line.
+- Open with 2-3 paragraphs that set the scene. Name the trend, the shift, or the tension in the market. Ground it in something concrete and current, not abstract platitudes. The reader should feel "this is about something real happening right now."
+- Break the body into 3-5 sections, each with its own ## heading on a separate line. Every heading must be preceded and followed by a blank line.
+- Each section must introduce one distinct insight. Build the argument progressively. Connect to Glossi's approach only where it naturally supports the point; do not force product mentions into every section.
+- Use blockquotes (> ) for one or two key pullout statements that crystallize the argument.
+- Final section: Forward-looking. Where is this going, and why does the architecture matter.
+- End with a short, punchy closing line or CTA heading (### level).
+
+VOICE AND STYLE:
+- Write in the voice of Glossi's team: opinionated, substantive, technically grounded. The confidence comes from having built something, not from marketing claims.
+- Use short, declarative sentences mixed with longer explanatory ones. Vary paragraph length. Some paragraphs should be just one or two sentences for emphasis.
+- First person ("we") is acceptable when discussing what Glossi has built. Third person for industry observations.
+- NEVER include social media hashtags (#AI, #branding, etc.) in blog posts. This is a blog, not social media.
+- NEVER use em dashes. Use commas, semicolons, or parentheses instead.
+- Every section must earn its place. If a section doesn't add a new insight, cut it.
+- This also covers op-eds, press releases, and bylined articles. Adjust formality based on the description provided.
 
 Tweet (for X): Study how Cursor and Linear use X. They mix formats. Not every post is text. The feed has rhythm: a sharp take, then a product screenshot, then a blog link, then an infographic. Match that energy.
 
@@ -125,12 +135,17 @@ When generating content, first analyze the provided sources, then produce the re
 RESPONSE FORMAT:
 
 CRITICAL FORMATTING RULE FOR THE "content" FIELD:
-The "content" value is a string that will be parsed as markdown. You MUST include literal newline characters (\\n) in the string for formatting:
-- Use \\n\\n (double newline) between every paragraph. This is how paragraphs are detected. Without \\n\\n, everything renders as a wall of text.
-- Use \\n\\n## Section Title\\n\\n for section headers (blog posts, long-form content).
+The "content" value is a string that will be parsed as markdown. You MUST include literal newline characters (\\n) in the string for formatting. THIS IS THE MOST IMPORTANT RULE. Failure to follow it produces unreadable walls of text.
+
+MANDATORY formatting rules:
+- Use \\n\\n (double newline) between EVERY paragraph. Without \\n\\n, paragraphs merge into a single unreadable block.
+- EVERY ## heading MUST be on its own line: \\n\\n## Section Title\\n\\n. Headings that appear inline with paragraph text will not render as headings.
 - Use \\n\\n- item\\n- item for bullet lists.
-- Never write the content as one continuous string. Structure it with \\n\\n separators.
-Example content value: "First paragraph here.\\n\\n## Section Header\\n\\nSecond paragraph here.\\n\\nThird paragraph here."
+- Use \\n\\n> quote text\\n\\n for blockquotes.
+- NEVER write the content as one continuous string. Structure it with \\n\\n between every block.
+- NEVER put a ## heading in the middle of a paragraph. Always put a blank line before and after headings.
+
+Example content value: "First paragraph here.\\n\\n## Section Header\\n\\nSecond paragraph here.\\n\\n> A key insight as a blockquote.\\n\\nThird paragraph here.\\n\\n## Another Section\\n\\nFourth paragraph."
 
 Return your response in this exact JSON structure:
 {
@@ -2694,6 +2709,8 @@ class PRAgent {
   formatContent(content, citations) {
     if (!content) return '<p class="pr-empty-content">No content generated</p>';
 
+    content = content.replace(/([^\n])\s*(#{1,3}\s+\S)/g, '$1\n\n$2');
+
     const lines = content.split('\n');
     const blocks = [];
     let paragraph = [];
@@ -2729,6 +2746,14 @@ class PRAgent {
         flushParagraph();
         const level = Math.min(headingMatch[1].length, 3);
         blocks.push(`<h${level}>${this.escapeHtml(headingMatch[2])}</h${level}>`);
+        continue;
+      }
+
+      if (/^>\s/.test(trimmed)) {
+        flushList();
+        flushParagraph();
+        const quoteText = trimmed.replace(/^>\s?/, '');
+        blocks.push(`<blockquote><p>${this.escapeHtml(quoteText)}</p></blockquote>`);
         continue;
       }
 
@@ -3413,11 +3438,16 @@ class PRAgent {
 
     if (!isMatch) return content;
 
-    if (titleClean.startsWith(firstLine) || firstLine === titleClean) {
+    if (/^#{1,3}\s/.test(rawFirstLine.trim())) {
+      lines.splice(firstNonEmpty, 1);
+    } else if (titleClean.startsWith(firstLine) || firstLine === titleClean) {
       lines.splice(firstNonEmpty, 1);
     } else if (firstLine.startsWith(titleClean) && firstLine.length > titleClean.length + 5) {
       const originalLine = rawFirstLine.replace(/^#+\s*/, '').replace(/\*+/g, '').trim();
-      const remainder = originalLine.substring(titleClean.length).replace(/^[\s,.;:]+/, '').trim();
+      const cutPos = titleClean.length;
+      const wordBoundary = originalLine.indexOf(' ', cutPos);
+      const safePos = wordBoundary > cutPos ? wordBoundary : cutPos;
+      const remainder = originalLine.substring(safePos).replace(/^[\s,.;:]+/, '').trim();
       if (remainder) {
         lines[firstNonEmpty] = remainder;
       } else {
@@ -10489,6 +10519,8 @@ class DistributeManager {
 
   markdownToBlogHtml(text) {
     if (!text) return '<p></p>';
+
+    text = text.replace(/([^\n])\s*(#{1,3}\s+\S)/g, '$1\n\n$2');
 
     const escaped = this.escapeHtml(text);
     const lines = escaped.split('\n');
