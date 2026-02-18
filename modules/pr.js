@@ -2333,7 +2333,6 @@ class PRAgent {
 
     const isTweet = contentType === 'tweet';
     const selectedModel = MODEL_FOR_TYPE[contentType] || 'claude-opus-4-6';
-    let streamStarted = false;
 
     try {
       const rawText = await this.streamContent({
@@ -2341,16 +2340,7 @@ class PRAgent {
         max_tokens: isTweet ? 1024 : 8192,
         system: PR_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: isTweet ? userMessage + '\n\nREMINDER: The tweet MUST be under 280 characters. Count carefully. This is a hard platform limit.' : userMessage }],
-        onChunk: (_chunk, accumulated) => {
-          if (!streamStarted) {
-            streamStarted = true;
-            this.showStreamingWorkspace();
-          }
-          this.updateStreamingText(accumulated);
-        }
       });
-
-      this.finishStreamingWorkspace();
 
       let parsed;
       try {
@@ -2530,47 +2520,6 @@ class PRAgent {
     // Generate suggestions for the content area (skip when switching tabs with stored suggestions)
     if (!skipSuggestions) {
       this.generateSuggestions();
-    }
-  }
-
-  showStreamingWorkspace() {
-    this.hideLoading();
-    if (this.dom.workspaceEmpty) this.dom.workspaceEmpty.style.display = 'none';
-    if (this.dom.workspaceGenerated) this.dom.workspaceGenerated.style.display = 'block';
-    if (this.dom.generatedContent) {
-      this.dom.generatedContent.innerHTML = '<div class="pr-draft-content pr-streaming-content"></div>';
-      this.dom.generatedContent.contentEditable = 'false';
-    }
-    const actionsEl = document.getElementById('pr-workspace-actions');
-    if (actionsEl) actionsEl.style.display = 'none';
-    if (this.dom.regenerateBtn) this.dom.regenerateBtn.style.display = 'none';
-    if (this.dom.workspaceChat) {
-      this.dom.workspaceChat.style.display = 'flex';
-      const chatInput = document.getElementById('pr-chat-input');
-      const sendBtn = document.getElementById('pr-send-btn');
-      if (chatInput) { chatInput.disabled = true; chatInput.placeholder = 'Generating...'; }
-      if (sendBtn) sendBtn.disabled = true;
-    }
-  }
-
-  updateStreamingText(accumulated) {
-    const el = this.dom.generatedContent?.querySelector('.pr-streaming-content');
-    if (!el) return;
-    const contentMatch = accumulated.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)(?:"|$)/);
-    if (contentMatch) {
-      let text = contentMatch[1];
-      try { text = JSON.parse('"' + text + '"'); } catch { /* use raw */ }
-      el.textContent = sanitizeDashes(text);
-    } else {
-      el.textContent = accumulated;
-    }
-  }
-
-  finishStreamingWorkspace() {
-    if (this.dom.generatedContent) {
-      this.dom.generatedContent.contentEditable = 'true';
-      const streamEl = this.dom.generatedContent.querySelector('.pr-streaming-content');
-      if (streamEl) streamEl.classList.remove('pr-streaming-content');
     }
   }
 
@@ -7977,8 +7926,6 @@ ${primaryContext}${bgContext}`
     }
 
     const selectedModel = MODEL_FOR_TYPE[planItem.type] || 'claude-opus-4-6';
-    let streamStarted = false;
-    let shouldStream = this._activeTabId === tabId;
 
     try {
       const rawText = await this.prAgent.streamContent({
@@ -7986,22 +7933,7 @@ ${primaryContext}${bgContext}`
         max_tokens: isTweetType ? 1024 : 8192,
         system: PR_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userMessage }],
-        onChunk: (_chunk, accumulated) => {
-          if (!shouldStream || this._activeTabId !== tabId) {
-            shouldStream = false;
-            return;
-          }
-          if (!streamStarted) {
-            streamStarted = true;
-            this.prAgent.showStreamingWorkspace();
-          }
-          this.prAgent.updateStreamingText(accumulated);
-        }
       });
-
-      if (streamStarted && this._activeTabId === tabId) {
-        this.prAgent.finishStreamingWorkspace();
-      }
 
       let parsed;
       try {
@@ -8985,8 +8917,6 @@ class AngleManager {
 
     const isTweetADK = planItem.type === 'tweet';
     const selectedModel = MODEL_FOR_TYPE[planItem.type] || 'claude-opus-4-6';
-    let streamStarted = false;
-    let shouldStream = this.activeTabId === tabId;
 
     try {
       const rawText = await this.prAgent.streamContent({
@@ -8994,22 +8924,7 @@ class AngleManager {
         max_tokens: isTweetADK ? 1024 : 8192,
         system: PR_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userMessage }],
-        onChunk: (_chunk, accumulated) => {
-          if (!shouldStream || this.activeTabId !== tabId) {
-            shouldStream = false;
-            return;
-          }
-          if (!streamStarted) {
-            streamStarted = true;
-            this.prAgent.showStreamingWorkspace();
-          }
-          this.prAgent.updateStreamingText(accumulated);
-        }
       });
-
-      if (streamStarted && this.activeTabId === tabId) {
-        this.prAgent.finishStreamingWorkspace();
-      }
 
       let parsed;
       try {

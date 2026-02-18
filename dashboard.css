@@ -213,26 +213,6 @@ i[class*="ph-"] {
   opacity: 1;
 }
 
-.pr-streaming-content {
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.pr-streaming-content::after {
-  content: '';
-  display: inline-block;
-  width: 2px;
-  height: 1em;
-  background: var(--accent-green, #4ade80);
-  margin-left: 2px;
-  vertical-align: text-bottom;
-  animation: pr-stream-cursor 0.8s steps(2) infinite;
-}
-
-@keyframes pr-stream-cursor {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
 
 .gl-tick { opacity: 0; }
 .gl-tick-0  { animation: gl-tick 1.2s ease-in-out infinite 0s; }
