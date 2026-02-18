@@ -2459,7 +2459,8 @@ app.get('/og-template', (req, res) => {
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 1200px; height: 630px; overflow: hidden; }
   .og-wrap { width: 1200px; height: 630px; position: relative; ${bgStyle} }
-  .og-accent { width: 100%; height: 5px; background: #EC5F3F; position: absolute; top: 0; left: 0; z-index: 2; }
+  .og-accent { width: 100%; height: 5px; background: #EC5F3F; position: absolute; top: 0; left: 0; z-index: 3; }
+  .og-title-safe { position: absolute; top: 0; left: 0; width: 65%; height: 55%; background: linear-gradient(135deg, #ECE8E2 60%, rgba(236,232,226,0.85) 80%, transparent 100%); z-index: 1; }
   .og-title { position: absolute; top: 48px; left: 68px; font-family: 'PP Mori', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; font-size: 90px; line-height: 1.05; letter-spacing: -0.035em; color: #1a1a1a; max-width: 780px; z-index: 2; }
   .og-logo { position: absolute; bottom: 40px; right: 56px; width: 44px; height: 51px; z-index: 2; }
 </style>
@@ -2467,6 +2468,7 @@ app.get('/og-template', (req, res) => {
 <body>
 <div class="og-wrap">
   <div class="og-accent"></div>
+  <div class="og-title-safe"></div>
   <div class="og-title">${escapeHtml(title)}</div>
   <svg class="og-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 306.8 352.69"><path d="m306.8,166.33v73.65c0,8.39-6.83,15.11-15.22,15.11h-80.59c-7.05,0-13.43,1.23-17.91,3.81-4.25,2.35-6.49,5.6-6.49,10.52v68.28c0,8.28-6.72,15-15,15H14.66c-8.06,0-14.66-6.72-14.66-14.77V54.17c0-8.39,6.72-15.22,15.11-15.22h35.59c7.05,0,13.43-1.12,17.91-3.58,4.14-2.24,6.49-5.37,6.49-10.3v-9.96c0-8.39,6.83-15.11,15.11-15.11h126.26c8.39,0,15.11,6.72,15.11,15.11v15.11c0,8.39-6.72,15.11-15.11,15.11h-124.58c-5.37.11-10.75.56-14.66,2.46-1.79.89-3.13,2.13-4.14,3.69-1.01,1.68-1.79,4.03-1.79,7.72v185.58c0,2.24,1.79,3.92,3.92,3.92h95.7c5.26,0,10.3-.56,13.88-2.35,1.68-.9,2.91-2.01,3.81-3.58,1.01-1.57,1.68-3.81,1.68-7.28v-69.17c0-8.39,6.83-15.11,15.22-15.11h86.07c8.39,0,15.22,6.72,15.22,15.11Z" fill="#EC5F3F"/></svg>
 </div>
@@ -2492,12 +2494,13 @@ STYLE:
 - Clean, airy composition with generous whitespace. Not busy or cluttered.
 - The visual should evoke the theme/mood of the tweet content without being literal.
 
-TITLE SAFE ZONE (critical):
-- A large blog title will be overlaid in the top-left corner of the image, spanning roughly the left 60% and top 40%.
-- This zone MUST remain clear of any prominent shapes, strong colors, or high-contrast elements. Keep it plain cream/off-white background only.
-- Subtle, very faint textures or thin lines at low opacity are acceptable, but nothing that would reduce text readability.
-- All main visual elements (shapes, patterns, color) should be concentrated in the bottom half and right third of the composition.
-- Think of it as a split layout: clean empty top-left for text, visual art in the bottom and right.
+TITLE SAFE ZONE (STRICT, NON-NEGOTIABLE):
+- A large blog title in dark text will be overlaid in the top-left corner of the image, spanning roughly the left 65% and top 50%.
+- This zone MUST be completely clear. No shapes, no color, no gradients, no textures, no lines, no patterns. Pure plain cream/off-white (#ECE8E2) background only.
+- "Subtle" or "faint" elements are NOT acceptable in this zone. The title area must be entirely empty.
+- ALL visual elements (every shape, pattern, brushstroke, and color) must be placed ONLY in the bottom-right quadrant and along the right edge. Nothing in the top half or left half.
+- Composition must read as: empty top-left two-thirds for text, art confined to the bottom and far right.
+- If in doubt, pull the art further away from the title zone. Text legibility is the highest priority. Art must never compete with or reduce the readability of text.
 
 OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.`;
 
@@ -2505,7 +2508,7 @@ OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.
 async function generateOgVisualPrompt(tweetText, refinement, referenceImage) {
   let systemPrompt = OG_VISUAL_SYSTEM_PROMPT;
   if (referenceImage) {
-    systemPrompt += `\n\nREFERENCE IMAGE: A reference image has been provided. Analyze its visual style (colors, composition, texture, mood, aesthetic) and ensure your prompt reproduces that exact art style. The reference defines the look; override the default style rules with what you observe in the reference.`;
+    systemPrompt += `\n\nREFERENCE IMAGE: A reference image has been provided. Analyze its visual style (colors, composition, texture, mood, aesthetic) and ensure your prompt reproduces that exact art style. The reference defines the look; you may override the default color and style rules with what you observe in the reference. HOWEVER, the TITLE SAFE ZONE rules above are NON-NEGOTIABLE and must NEVER be overridden. Regardless of what the reference image shows, the top-left 65% x 50% of the canvas must remain completely clear of any art, shapes, or visual elements.`;
   }
 
   let userText = `Generate an abstract visual prompt for an OG card. The tweet this supports:\n\n"${tweetText}"`;
