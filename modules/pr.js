@@ -9891,11 +9891,9 @@ class DistributeManager {
 
   // Send current content from Create stage to Review
   async sendCurrentToReview() {
-    // Flush any pending contenteditable edits before reading output
     clearTimeout(this.prAgent._editSaveDebounce);
     this.prAgent.saveCurrentEdits();
 
-    // Sync output.content from the current draft (edits go to draft.content, not output.content)
     const currentOutput = this.prAgent.currentOutput;
     if (currentOutput?.drafts?.length) {
       const draftIdx = this.prAgent._viewingDraftIndex || 0;
@@ -9906,47 +9904,58 @@ class DistributeManager {
     }
 
     const nm = this.prAgent.newsMonitor;
-    if (!nm || !nm._activeStoryKey || nm._activeTabId == null) return;
+    let output = null;
+    let planItem = null;
+    let planIndex = null;
 
-    const story = nm._stories.get(nm._activeStoryKey);
-    if (!story) return;
+    if (nm && nm._activeStoryKey && nm._activeTabId != null) {
+      const story = nm._stories.get(nm._activeStoryKey);
+      if (story) {
+        const tabId = nm._activeTabId;
+        planIndex = parseInt(String(tabId).replace('plan_', ''), 10);
+        planItem = story.contentPlan?.[planIndex];
 
-    const tabId = nm._activeTabId;
-    const planIndex = parseInt(String(tabId).replace('plan_', ''), 10);
-    const planItem = story.contentPlan?.[planIndex];
-    if (!planItem) return;
+        if (planItem) {
+          const tabEntry = nm._tabContent?.get(tabId);
+          output = tabEntry?.output;
 
-    // Find the matching output using multiple strategies
-    const tabEntry = nm._tabContent?.get(tabId);
-    let output = tabEntry?.output;
+          if (!output && currentOutput?.story_key === nm._activeStoryKey) {
+            output = currentOutput;
+          }
 
-    // Fallback: use the currently displayed output if it belongs to this story
-    if (!output && this.prAgent.currentOutput?.story_key === nm._activeStoryKey) {
-      output = this.prAgent.currentOutput;
+          if (!output) {
+            output = this.prAgent.outputs.find(o =>
+              o.story_key === nm._activeStoryKey && o.content_plan_index === planIndex
+            );
+          }
+
+          if (!output) {
+            output = this.prAgent.outputs.find(o =>
+              o.story_key === nm._activeStoryKey && String(o.content_plan_index) === String(planIndex)
+            );
+          }
+
+          if (!output) {
+            output = this.prAgent.outputs.find(o =>
+              o.story_key === nm._activeStoryKey && o.content_type === planItem.type && o.phase !== 'distribute'
+            );
+          }
+        }
+      }
     }
 
-    // Fallback: search outputs by story_key + content_plan_index (strict)
-    if (!output) {
-      output = this.prAgent.outputs.find(o =>
-        o.story_key === nm._activeStoryKey && o.content_plan_index === planIndex
-      );
+    if (!output && currentOutput?.content) {
+      output = currentOutput;
     }
 
-    // Fallback: search outputs by story_key + content_plan_index (string coercion)
-    if (!output) {
-      output = this.prAgent.outputs.find(o =>
-        o.story_key === nm._activeStoryKey && String(o.content_plan_index) === String(planIndex)
-      );
+    if (!output || !output.content) {
+      this.prAgent.showToast('No content to send. Generate content first.', 'error');
+      return;
     }
 
-    // Fallback: search by story_key + content_type matching the plan item
-    if (!output) {
-      output = this.prAgent.outputs.find(o =>
-        o.story_key === nm._activeStoryKey && o.content_type === planItem.type && o.phase !== 'distribute'
-      );
+    if (!planItem && output.content_type) {
+      planItem = { type: output.content_type };
     }
-
-    if (!output || !output.content) return;
 
     // Sync latest draft content to this output (edits may have gone to currentOutput or drafts)
     const latestOutput = this.prAgent.currentOutput;
@@ -9970,11 +9979,12 @@ class DistributeManager {
       this.prAgent.outputs.push(output);
     }
 
-    // Sync content_type and content_plan_index with the plan item
-    if (planItem.type && output.content_type !== planItem.type) {
+    if (planItem?.type && output.content_type !== planItem.type) {
       output.content_type = planItem.type;
     }
-    output.content_plan_index = planIndex;
+    if (planIndex != null) {
+      output.content_plan_index = planIndex;
+    }
 
     // Update phase and status
     output.phase = 'distribute';
