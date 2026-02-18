@@ -14,7 +14,7 @@ function sanitizeDashes(text) {
     .replace(/\u2013/g, ' to ')
     .replace(/--/g, ', ')
     .replace(/, ,/g, ',')
-    .replace(/\s{2,}/g, ' ');
+    .replace(/ {2,}/g, ' ');
 }
 
 const MODEL_FOR_TYPE = {
