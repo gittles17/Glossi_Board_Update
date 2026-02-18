@@ -1007,9 +1007,13 @@ class PRAgent {
                 this._isShorteningTweet = true;
                 const shortened = await this.enforceTweetLimit(draft.content, this.currentOutput.tweet_format);
                 draft.content = shortened;
-                draft.renderedHtml = null;
+                draft.renderedHtml = this.formatContent(shortened, this.currentOutput.citations);
                 this.currentOutput.content = shortened;
-                this.renderDrafts();
+                const editorFocused = this.dom.generatedContent.contains(document.activeElement)
+                  || document.activeElement === this.dom.generatedContent;
+                if (!editorFocused) {
+                  this.renderDrafts();
+                }
                 this._isShorteningTweet = false;
               }
             }
@@ -1018,6 +1022,78 @@ class PRAgent {
           this.saveOutputs();
         }, 2000);
       });
+
+      this.dom.generatedContent.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = e.clipboardData?.getData('text/plain') || '';
+        if (text) {
+          document.execCommand('insertText', false, text);
+        }
+      });
+
+      this.dom.generatedContent.addEventListener('keydown', (e) => {
+        if (e.key !== 'Backspace' && e.key !== 'Delete') return;
+        const sel = window.getSelection();
+        const draftEl = this.dom.generatedContent.querySelector('.pr-draft-content');
+        if (!sel || sel.rangeCount === 0) return;
+
+        const range = sel.getRangeAt(0);
+        const selectedText = range.toString();
+        const fullText = (draftEl || this.dom.generatedContent).textContent || '';
+
+        if (selectedText.trim().length >= fullText.trim().length && fullText.trim().length > 0) {
+          e.preventDefault();
+          if (draftEl) {
+            draftEl.innerHTML = '<p><br></p>';
+          } else {
+            this.dom.generatedContent.innerHTML = '<div class="pr-draft-content"><p><br></p></div>';
+          }
+          const p = this.dom.generatedContent.querySelector('p');
+          if (p) {
+            const newRange = document.createRange();
+            newRange.setStart(p, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+          }
+          return;
+        }
+
+        if (!range.collapsed && e.key === 'Backspace') return;
+
+        const textContent = (draftEl || this.dom.generatedContent).textContent || '';
+        if (textContent.trim().length <= 1) {
+          e.preventDefault();
+          if (draftEl) {
+            draftEl.innerHTML = '<p><br></p>';
+          } else {
+            this.dom.generatedContent.innerHTML = '<div class="pr-draft-content"><p><br></p></div>';
+          }
+          const p = this.dom.generatedContent.querySelector('p');
+          if (p) {
+            const newRange = document.createRange();
+            newRange.setStart(p, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+          }
+        }
+      });
+
+      const editorObserver = new MutationObserver(() => {
+        if (!this.dom.generatedContent.querySelector('.pr-draft-content')) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'pr-draft-content';
+          while (this.dom.generatedContent.firstChild) {
+            wrapper.appendChild(this.dom.generatedContent.firstChild);
+          }
+          if (!wrapper.children.length) {
+            wrapper.innerHTML = '<p><br></p>';
+          }
+          this.dom.generatedContent.appendChild(wrapper);
+        }
+      });
+      editorObserver.observe(this.dom.generatedContent, { childList: true });
     }
 
     // Confirm/Prompt modal handlers
@@ -2625,12 +2701,10 @@ class PRAgent {
     if (!this.currentOutput?.drafts || this._viewingDraftIndex == null) return;
     const draft = this.currentOutput.drafts[this._viewingDraftIndex];
     if (!draft || !this.dom.generatedContent) return;
-    const el = this.dom.generatedContent.querySelector('.pr-draft-content');
-    if (el) {
-      draft.renderedHtml = el.innerHTML;
-      const md = this.htmlToMarkdown(el);
-      if (md) draft.content = md;
-    }
+    const el = this.dom.generatedContent.querySelector('.pr-draft-content') || this.dom.generatedContent;
+    draft.renderedHtml = el.innerHTML;
+    const md = this.htmlToMarkdown(el);
+    if (md) draft.content = md;
   }
 
   renderDrafts() {
@@ -2796,6 +2870,9 @@ class PRAgent {
     let html = el.innerHTML;
     html = html.replace(/<sup class="pr-citation"[^>]*>(\d+)<\/sup>/gi, '[Source $1]');
     html = html.replace(/<span class="pr-needs-source">[^<]*<\/span>/gi, '');
+    html = html.replace(/ style="[^"]*"/gi, '');
+    html = html.replace(/<font[^>]*>/gi, '').replace(/<\/font>/gi, '');
+    html = html.replace(/<span(?:\s+[^>]*)?>|<\/span>/gi, '');
     html = html.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '# $1\n\n');
     html = html.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '## $1\n\n');
     html = html.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '### $1\n\n');
