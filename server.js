@@ -2189,7 +2189,7 @@ Rules:
 // Generate visual prompt via Claude (analyzes tweet text, produces optimal Gemini image prompt)
 app.post('/api/pr/generate-visual-prompt', async (req, res) => {
   try {
-    const { tweet_text, previous_prompt, feedback } = req.body;
+    const { tweet_text, previous_prompt, feedback, reference_image } = req.body;
     if (!tweet_text) {
       return res.status(400).json({ success: false, error: 'tweet_text is required' });
     }
@@ -2199,9 +2199,17 @@ app.post('/api/pr/generate-visual-prompt', async (req, res) => {
       return res.status(503).json({ success: false, error: 'ANTHROPIC_API_KEY not configured' });
     }
 
-    const systemPrompt = `You are a visual design director who creates image generation prompts for social media infographics. Your prompts will be sent to Gemini's image generation model.
+    let systemPrompt = `You are a visual design director who creates image generation prompts for social media infographics. Your prompts will be sent to Gemini's image generation model.
 
-You analyze tweet text and produce the single best image prompt that will create a scroll-stopping infographic for X/Twitter.
+You analyze tweet text and produce the single best image prompt that will create a scroll-stopping infographic for X/Twitter.`;
+
+    if (reference_image) {
+      systemPrompt += `
+
+REFERENCE IMAGE: A reference image has been provided. Analyze its visual style carefully: color palette, composition, texture, typography treatment, mood, and overall aesthetic. Your prompt MUST reproduce this exact art style. Override the default style rules below with whatever you observe in the reference image. The reference defines the look; the tweet text defines the content.`;
+    }
+
+    systemPrompt += `
 
 EXACT STYLE TO MATCH (based on Cursor's @cursor_ai X/Twitter infographics):
 
@@ -2268,9 +2276,9 @@ PROMPT CONSTRUCTION RULES:
 
 Return ONLY the image generation prompt text. No explanation, no preamble, no quotes around it. Just the prompt.`;
 
-    let userMessage = `Tweet text: "${tweet_text}"`;
+    let userText = `Tweet text: "${tweet_text}"`;
     if (previous_prompt && feedback) {
-      userMessage = `Tweet text: "${tweet_text}"
+      userText = `Tweet text: "${tweet_text}"
 
 The previous image prompt was:
 "${previous_prompt}"
@@ -2280,11 +2288,26 @@ The user wants this adjustment: "${feedback}"
 Generate an updated image prompt incorporating their feedback while maintaining all style rules.`;
     }
 
+    let userContent;
+    if (reference_image) {
+      const refMatch = reference_image.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (refMatch) {
+        userContent = [
+          { type: 'image', source: { type: 'base64', media_type: refMatch[1], data: refMatch[2] } },
+          { type: 'text', text: userText }
+        ];
+      } else {
+        userContent = userText;
+      }
+    } else {
+      userContent = userText;
+    }
+
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
       model: 'claude-opus-4-6',
       max_tokens: 1024,
       system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }]
+      messages: [{ role: 'user', content: userContent }]
     }, {
       headers: {
         'Content-Type': 'application/json',
@@ -2309,7 +2332,7 @@ Generate an updated image prompt incorporating their feedback while maintaining 
 // Generate infographic via Gemini image generation
 app.post('/api/pr/generate-infographic', async (req, res) => {
   try {
-    const { prompt } = req.body;
+    const { prompt, reference_image } = req.body;
     if (!prompt) {
       return res.status(400).json({ success: false, error: 'prompt is required' });
     }
@@ -2322,8 +2345,21 @@ app.post('/api/pr/generate-infographic', async (req, res) => {
     const model = 'gemini-3-pro-image-preview';
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
 
+    const parts = [];
+    if (reference_image) {
+      const refMatch = reference_image.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (refMatch) {
+        parts.push({ inlineData: { mimeType: refMatch[1], data: refMatch[2] } });
+        parts.push({ text: `Use the attached image as an art style reference. Match its visual style, color palette, composition, and aesthetic exactly. Here is what the infographic should contain:\n\n${prompt}` });
+      } else {
+        parts.push({ text: prompt });
+      }
+    } else {
+      parts.push({ text: prompt });
+    }
+
     const response = await axios.post(apiUrl, {
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      contents: [{ role: 'user', parts }],
       generationConfig: {
         responseModalities: ['TEXT', 'IMAGE']
       }
@@ -2332,8 +2368,8 @@ app.post('/api/pr/generate-infographic', async (req, res) => {
       timeout: 90000
     });
 
-    const parts = response.data?.candidates?.[0]?.content?.parts || [];
-    const imagePart = parts.find(p => p.inlineData);
+    const resParts = response.data?.candidates?.[0]?.content?.parts || [];
+    const imagePart = resParts.find(p => p.inlineData);
 
     if (!imagePart) {
       return res.json({ success: false, error: 'No image generated. Try a different prompt.' });
@@ -2342,7 +2378,7 @@ app.post('/api/pr/generate-infographic', async (req, res) => {
     const mimeType = imagePart.inlineData.mimeType || 'image/png';
     const dataUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
 
-    const textPart = parts.find(p => p.text);
+    const textPart = resParts.find(p => p.text);
     const description = textPart?.text || '';
 
     res.json({ success: true, image: dataUrl, description });
@@ -2466,16 +2502,37 @@ TITLE SAFE ZONE (critical):
 OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.`;
 
 // Helper: generate image prompt via Claude
-async function generateOgVisualPrompt(tweetText, refinement) {
-  let userMessage = `Generate an abstract visual prompt for an OG card. The tweet this supports:\n\n"${tweetText}"`;
-  if (refinement) {
-    userMessage += `\n\nAdditional style direction from the user: ${refinement}`;
+async function generateOgVisualPrompt(tweetText, refinement, referenceImage) {
+  let systemPrompt = OG_VISUAL_SYSTEM_PROMPT;
+  if (referenceImage) {
+    systemPrompt += `\n\nREFERENCE IMAGE: A reference image has been provided. Analyze its visual style (colors, composition, texture, mood, aesthetic) and ensure your prompt reproduces that exact art style. The reference defines the look; override the default style rules with what you observe in the reference.`;
   }
+
+  let userText = `Generate an abstract visual prompt for an OG card. The tweet this supports:\n\n"${tweetText}"`;
+  if (refinement) {
+    userText += `\n\nAdditional style direction from the user: ${refinement}`;
+  }
+
+  let userContent;
+  if (referenceImage) {
+    const refMatch = referenceImage.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (refMatch) {
+      userContent = [
+        { type: 'image', source: { type: 'base64', media_type: refMatch[1], data: refMatch[2] } },
+        { type: 'text', text: userText }
+      ];
+    } else {
+      userContent = userText;
+    }
+  } else {
+    userContent = userText;
+  }
+
   const promptRes = await axios.post('https://api.anthropic.com/v1/messages', {
     model: 'claude-sonnet-4-20250514',
     max_tokens: 512,
-    system: OG_VISUAL_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: userMessage }]
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userContent }]
   }, {
     headers: {
       'Content-Type': 'application/json',
@@ -2488,21 +2545,34 @@ async function generateOgVisualPrompt(tweetText, refinement) {
 }
 
 // Helper: generate image via Gemini
-async function generateImageGemini(prompt) {
+async function generateImageGemini(prompt, referenceImage) {
   const geminiKey = process.env.GEMINI_API_KEY;
   const model = 'gemini-3-pro-image-preview';
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
 
+  const parts = [];
+  if (referenceImage) {
+    const refMatch = referenceImage.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (refMatch) {
+      parts.push({ inlineData: { mimeType: refMatch[1], data: refMatch[2] } });
+      parts.push({ text: `Use the attached image as an art style reference. Match its visual style, color palette, composition, and aesthetic exactly. Here is what to generate:\n\n${prompt}` });
+    } else {
+      parts.push({ text: prompt });
+    }
+  } else {
+    parts.push({ text: prompt });
+  }
+
   const imageRes = await axios.post(apiUrl, {
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    contents: [{ role: 'user', parts }],
     generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
   }, {
     headers: { 'Content-Type': 'application/json' },
     timeout: 90000
   });
 
-  const parts = imageRes.data?.candidates?.[0]?.content?.parts || [];
-  const imagePart = parts.find(p => p.inlineData);
+  const resParts = imageRes.data?.candidates?.[0]?.content?.parts || [];
+  const imagePart = resParts.find(p => p.inlineData);
   if (imagePart) {
     const mimeType = imagePart.inlineData.mimeType || 'image/png';
     return `data:${mimeType};base64,${imagePart.inlineData.data}`;
@@ -2556,7 +2626,7 @@ async function generateImageMidjourney(prompt) {
 app.post('/api/pr/generate-og-image', async (req, res) => {
   let browser;
   try {
-    const { title, tweet_text, provider, refinement } = req.body;
+    const { title, tweet_text, provider, refinement, reference_image } = req.body;
     if (!title) {
       return res.status(400).json({ success: false, error: 'title is required' });
     }
@@ -2566,13 +2636,13 @@ app.post('/api/pr/generate-og-image', async (req, res) => {
 
     if (tweet_text && process.env.ANTHROPIC_API_KEY) {
       try {
-        const imagePrompt = await generateOgVisualPrompt(tweet_text, refinement);
+        const imagePrompt = await generateOgVisualPrompt(tweet_text, refinement, reference_image);
 
         if (imagePrompt) {
           if (useProvider === 'midjourney' && process.env.MIDJOURNEY_API_KEY) {
             bgDataUrl = await generateImageMidjourney(imagePrompt);
           } else if (process.env.GEMINI_API_KEY) {
-            bgDataUrl = await generateImageGemini(imagePrompt);
+            bgDataUrl = await generateImageGemini(imagePrompt, reference_image);
           }
         }
       } catch (aiErr) {
