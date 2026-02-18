@@ -2687,37 +2687,32 @@ class PRAgent {
   }
 
   normalizeContentFormatting(text) {
-    if (!text || text.includes('\n\n')) return text;
-
+    if (!text) return text;
     let result = text;
 
     result = result.replace(/([.!?])\s+(#{1,3}\s)/g, '$1\n\n$2');
 
-    result = result.replace(
-      /([.!?])\s+([A-Z][A-Za-z\s]{5,60}?)\s+([A-Z][a-z])/g,
-      (match, punct, possibleHeader, nextStart) => {
-        const wordCount = possibleHeader.trim().split(/\s+/).length;
-        if (wordCount >= 3 && wordCount <= 12) {
-          return `${punct}\n\n## ${possibleHeader.trim()}\n\n${nextStart}`;
-        }
-        return match;
-      }
-    );
+    result = result.replace(/^(#{1,3})\s*\n+([A-Z])/gm, '$1 $2');
 
-    if (!result.includes('\n\n') && result.length > 300) {
-      result = result.replace(/([.!?])\s{2,}(?=[A-Z])/g, '$1\n\n');
-    }
+    result = result.replace(/^(#{1,3})\s*$/gm, '');
 
-    if (!result.includes('\n\n') && result.length > 300) {
-      const sentences = result.split(/(?<=[.!?])\s+(?=[A-Z])/);
-      if (sentences.length >= 6) {
-        const chunkSize = Math.ceil(sentences.length / Math.ceil(sentences.length / 4));
-        const chunks = [];
-        for (let i = 0; i < sentences.length; i += chunkSize) {
-          chunks.push(sentences.slice(i, i + chunkSize).join(' '));
-        }
-        result = chunks.join('\n\n');
+    const paragraphCount = (result.match(/\n\n/g) || []).length;
+    const expectedParagraphs = Math.max(3, Math.floor(result.length / 400));
+    if (paragraphCount >= expectedParagraphs) return result;
+
+    result = result.replace(/([.!?])\s{2,}(?=[A-Z])/g, '$1\n\n');
+
+    const updatedCount = (result.match(/\n\n/g) || []).length;
+    if (updatedCount >= expectedParagraphs) return result;
+
+    const sentences = result.split(/(?<=[.!?])\s+(?=[A-Z])/);
+    if (sentences.length >= 6) {
+      const chunkSize = Math.ceil(sentences.length / Math.ceil(sentences.length / 4));
+      const chunks = [];
+      for (let i = 0; i < sentences.length; i += chunkSize) {
+        chunks.push(sentences.slice(i, i + chunkSize).join(' '));
       }
+      result = chunks.join('\n\n');
     }
 
     return result;
@@ -2730,7 +2725,6 @@ class PRAgent {
 
     let processed = this.escapeHtml(normalized);
 
-    // Replace [Source X] with citation badges
     processed = processed.replace(/\[Source (\d+)\]/g, (match, num) => {
       const citation = citations?.find(c => c.index === parseInt(num));
       const sourceId = citation?.sourceId || '';
@@ -2738,21 +2732,20 @@ class PRAgent {
       return `<sup class="pr-citation" data-source-index="${num}" data-source-id="${sourceId}" data-verified="${verified}">${num}</sup>`;
     });
 
-    // Replace [NEEDS SOURCE] with badges
-    processed = processed.replace(/\[NEEDS SOURCE\]/g, '<span class="pr-needs-source">NEEDS SOURCE</span>');
+    processed = processed.replace(/\[NEEDS?\s*SOURCE\]/gi, '<span class="pr-needs-source">NEEDS SOURCE</span>');
 
-    // Normalize headers: ensure # markers are always at start of a line
     processed = processed.replace(/([^\n])(#{1,3}\s)/g, '$1\n\n$2');
 
-    // Convert markdown-style headers
+    processed = processed.replace(/^(#{1,3})\s*\n+(\S)/gm, '$1 $2');
+
+    processed = processed.replace(/^(#{1,3})\s*$/gm, '');
+
     processed = processed.replace(/^### (.+)$/gm, '<h3>$1</h3>');
     processed = processed.replace(/^## (.+)$/gm, '<h2>$1</h2>');
     processed = processed.replace(/^# (.+)$/gm, '<h1>$1</h1>');
 
-    // Convert bold
     processed = processed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 
-    // Convert line breaks to paragraphs
     const paragraphs = processed.split(/\n\n+/);
     return paragraphs.map(p => {
       const trimmed = p.trim();
