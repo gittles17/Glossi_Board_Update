@@ -781,6 +781,7 @@ class PRAgent {
       workspaceEmpty: document.getElementById('pr-workspace-empty'),
       workspaceGenerated: document.getElementById('pr-workspace-generated'),
       generatedContent: document.getElementById('pr-generated-content'),
+      blogTitleInput: document.getElementById('pr-blog-title-input'),
       loadingState: document.getElementById('pr-loading-state'),
       workspaceChat: document.getElementById('pr-workspace-chat'),
       toneBtn: document.getElementById('pr-tone-btn'),
@@ -892,6 +893,13 @@ class PRAgent {
 
     // Tone button
     this.dom.toneBtn?.addEventListener('click', () => this.openToneModal());
+
+    this.dom.blogTitleInput?.addEventListener('input', () => {
+      if (this.currentOutput) {
+        this.currentOutput.title = this.dom.blogTitleInput.value.trim();
+        this.persistOutput(this.currentOutput);
+      }
+    });
 
     // Copy button
     this.dom.copyBtn?.addEventListener('click', () => this.copyContent());
@@ -2534,7 +2542,11 @@ class PRAgent {
     if (parsed.blog_title) parts.push(`## ${parsed.blog_title}`);
     for (const s of (parsed.blog_sections || [])) {
       if (s.heading) parts.push(`## ${s.heading}`);
-      if (s.body) parts.push(s.body);
+      if (s.body) {
+        let body = s.body;
+        body = body.replace(/(?:^|\n)\s*>\s*(.+)/g, (m, quote) => `\n\n> ${quote.trim()}\n\n`);
+        parts.push(body.trim());
+      }
       if (s.blockquote) parts.push(`> ${s.blockquote}`);
     }
     if (parsed.blog_closing) parts.push(`### ${parsed.blog_closing}`);
@@ -2627,7 +2639,14 @@ class PRAgent {
     const container = this.dom.generatedContent;
     const drafts = this.currentOutput.drafts;
     
-    // Always show latest draft and reset viewing index
+    const isBlog = this.currentOutput.content_type === 'blog_post';
+    if (this.dom.blogTitleInput) {
+      this.dom.blogTitleInput.style.display = isBlog ? '' : 'none';
+      if (isBlog) {
+        this.dom.blogTitleInput.value = this.currentOutput.title || '';
+      }
+    }
+
     this._viewingDraftIndex = 0;
     const latest = drafts[0];
     if (latest) {
@@ -2740,7 +2759,11 @@ class PRAgent {
   formatContent(content, citations) {
     if (!content) return '<p class="pr-empty-content">No content generated</p>';
 
-    content = content.replace(/\*\*([^*]{50,}?)\*\*/g, '$1');
+    if (this.currentOutput?.content_type === 'blog_post') {
+      content = content.replace(/\*\*/g, '');
+    } else {
+      content = content.replace(/\*\*([^*]{50,}?)\*\*/g, '$1');
+    }
 
     content = content.replace(/([^\n])\s*(#{1,3}\s+\S)/g, '$1\n\n$2');
 
@@ -9832,6 +9855,33 @@ class DistributeManager {
       this.confirmSchedule();
     });
 
+    // Global reference image upload
+    document.getElementById('pr-ref-image-upload-btn')?.addEventListener('click', () => {
+      document.getElementById('pr-ref-image-input')?.click();
+    });
+    document.getElementById('pr-ref-image-input')?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      e.target.value = '';
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await this.prAgent.apiCall('/api/pr/upload-media', { method: 'POST', body: formData });
+        if (res.success && res.url) {
+          this.settings.visualRefImage = res.url;
+          this.saveSettings();
+          this.showRefImagePreview(res.url);
+        }
+      } catch (err) {
+        this.prAgent.showToast('Failed to upload reference image', 'error');
+      }
+    });
+    document.getElementById('pr-ref-image-remove')?.addEventListener('click', () => {
+      this.settings.visualRefImage = '';
+      this.saveSettings();
+      this.showRefImagePreview('');
+    });
+
     // Send to Review button (in Create stage)
     document.getElementById('pr-send-to-review-btn')?.addEventListener('click', () => {
       this.sendCurrentToReview();
@@ -9935,6 +9985,7 @@ class DistributeManager {
     if (headlineInput) headlineInput.value = li.headline || '';
     if (photoInput) photoInput.value = li.photoUrl || '';
     this.updatePhotoPreview(li.photoUrl || '');
+    this.showRefImagePreview(this.settings.visualRefImage || '');
   }
 
   saveSettingsFromForm() {
@@ -9947,6 +9998,25 @@ class DistributeManager {
     if (this.activeReviewItem) {
       this.renderLinkedInPreview(this.activeReviewItem);
     }
+  }
+
+  showRefImagePreview(url) {
+    const preview = document.getElementById('pr-ref-image-preview');
+    const thumb = document.getElementById('pr-ref-image-thumb');
+    const uploadBtn = document.getElementById('pr-ref-image-upload-btn');
+    if (url) {
+      if (thumb) thumb.src = url;
+      if (preview) preview.style.display = 'flex';
+      if (uploadBtn) uploadBtn.textContent = 'Change Reference';
+    } else {
+      if (preview) preview.style.display = 'none';
+      if (thumb) thumb.src = '';
+      if (uploadBtn) { uploadBtn.innerHTML = '<i class="ph-light ph-upload-simple"></i> Upload Reference'; }
+    }
+  }
+
+  getResolvedRefImage(output) {
+    return output?.visual_ref_image || this.settings.visualRefImage || null;
   }
 
   updatePhotoPreview(url) {
@@ -10552,7 +10622,7 @@ class DistributeManager {
   markdownToBlogHtml(text) {
     if (!text) return '<p></p>';
 
-    text = text.replace(/\*\*([^*]{50,}?)\*\*/g, '$1');
+    text = text.replace(/\*\*/g, '');
 
     text = text.replace(/([^\n])\s*(#{1,3}\s+\S)/g, '$1\n\n$2');
 
@@ -10668,6 +10738,18 @@ class DistributeManager {
 
     let mediaHtml = '';
 
+    const refImage = output.visual_ref_image || '';
+    const globalRefImage = this.settings.visualRefImage || '';
+    const activeRef = refImage || globalRefImage;
+    const refPillHtml = `<div class="pr-ref-image-pill-row">
+            <div class="pr-ref-image-pill ${activeRef ? 'has-image' : ''}" data-action="ref-image-upload" title="${activeRef ? 'Change style reference' : 'Add style reference image'}">
+              ${activeRef ? `<img src="${this.escapeHtml(activeRef)}" alt="Ref" class="pr-ref-image-pill-thumb">` : '<i class="ph-light ph-palette"></i>'}
+              <span>${activeRef ? 'Style Ref' : 'Style Ref'}</span>
+            </div>
+            ${refImage ? `<button class="pr-ref-image-pill-remove" data-action="ref-image-remove" title="Remove per-post reference (will fall back to global)"><i class="ph-light ph-x"></i></button>` : ''}
+            <input type="file" class="pr-ref-image-pill-input" data-action="ref-image-file" accept="image/jpeg,image/png,image/webp" style="display:none">
+          </div>`;
+
     if (tweetFormat === 'visual') {
       const savedVisualProvider = localStorage.getItem('glossi_visual_provider') || 'gemini';
       if (hasImage) {
@@ -10688,6 +10770,7 @@ class DistributeManager {
               <input type="text" class="pr-twitter-visual-feedback-input" data-action="visual-feedback" placeholder="Describe adjustments (e.g. make the stat larger, change layout)">
               <button class="pr-twitter-visual-feedback-btn" data-action="submit-feedback">Refine</button>
             </div>
+            ${refPillHtml}
           </div>`;
       } else if (output._visualGenerating) {
         mediaHtml = `
@@ -10702,6 +10785,7 @@ class DistributeManager {
               <i class="ph-light ph-image"></i>
               <span>Click to generate an AI infographic</span>
             </div>
+            ${refPillHtml}
             <button class="pr-twitter-generate-visual-btn" data-action="generate-visual">
               <i class="ph-light ph-magic-wand"></i> Generate Infographic
             </button>
@@ -10725,6 +10809,7 @@ class DistributeManager {
             <input type="text" class="pr-twitter-visual-feedback-input" data-action="og-refinement" placeholder="Describe adjustments (e.g. more minimal, cooler tones)" value="${this.escapeHtml(savedRefinement)}">
             <button class="pr-twitter-visual-feedback-btn" data-action="generate-og-image">${ogImage ? 'Refine' : 'Generate'}</button>
           </div>
+          ${refPillHtml}
         </div>`;
 
       if (ogGenerating) {
@@ -10868,6 +10953,38 @@ class DistributeManager {
         this.renderTwitterPreview(output);
       });
     });
+    container.querySelectorAll('[data-action="ref-image-upload"]').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const fileInput = pill.closest('.pr-ref-image-pill-row')?.querySelector('[data-action="ref-image-file"]');
+        fileInput?.click();
+      });
+    });
+    container.querySelectorAll('[data-action="ref-image-file"]').forEach(input => {
+      input.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        e.target.value = '';
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          const res = await this.prAgent.apiCall('/api/pr/upload-media', { method: 'POST', body: formData });
+          if (res.success && res.url) {
+            output.visual_ref_image = res.url;
+            this.persistOutput(output);
+            this.renderTwitterPreview(output);
+          }
+        } catch (err) {
+          this.prAgent.showToast('Failed to upload reference image', 'error');
+        }
+      });
+    });
+    container.querySelectorAll('[data-action="ref-image-remove"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        output.visual_ref_image = '';
+        this.persistOutput(output);
+        this.renderTwitterPreview(output);
+      });
+    });
   }
 
   async autoGenerateVisual(output) {
@@ -10877,11 +10994,16 @@ class DistributeManager {
     output._visualGenerating = true;
     this.renderTwitterPreview(output);
 
+    const refImage = this.getResolvedRefImage(output);
+
     try {
+      const promptPayload = { tweet_text: tweetText };
+      if (refImage) promptPayload.reference_image = refImage;
+
       const promptRes = await this.prAgent.apiCall('/api/pr/generate-visual-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tweet_text: tweetText })
+        body: JSON.stringify(promptPayload)
       });
 
       if (!promptRes.success || !promptRes.prompt) {
@@ -10894,10 +11016,13 @@ class DistributeManager {
       output.visual_prompt = promptRes.prompt;
 
       const visualProvider = localStorage.getItem('glossi_visual_provider') || 'gemini';
+      const infographicPayload = { prompt: promptRes.prompt, provider: visualProvider };
+      if (refImage) infographicPayload.reference_image = refImage;
+
       const imageRes = await this.prAgent.apiCall('/api/pr/generate-infographic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: promptRes.prompt, provider: visualProvider })
+        body: JSON.stringify(infographicPayload)
       });
 
       output._visualGenerating = false;
@@ -10927,9 +11052,13 @@ class DistributeManager {
     output.media_attachments = (output.media_attachments || []).filter(m => m.type !== 'image');
     this.renderTwitterPreview(output);
 
+    const refImage = this.getResolvedRefImage(output);
+
     try {
       const payload = { tweet_text: tweetText, feedback: feedback };
       if (output.visual_prompt) payload.previous_prompt = output.visual_prompt;
+      if (refImage) payload.reference_image = refImage;
+
       const promptRes = await this.prAgent.apiCall('/api/pr/generate-visual-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -10946,10 +11075,13 @@ class DistributeManager {
       output.visual_prompt = promptRes.prompt;
 
       const refineProvider = localStorage.getItem('glossi_visual_provider') || 'gemini';
+      const refinePayload = { prompt: promptRes.prompt, provider: refineProvider };
+      if (refImage) refinePayload.reference_image = refImage;
+
       const imageRes = await this.prAgent.apiCall('/api/pr/generate-infographic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: promptRes.prompt, provider: refineProvider })
+        body: JSON.stringify(refinePayload)
       });
 
       output._visualGenerating = false;
@@ -10978,16 +11110,21 @@ class DistributeManager {
     output._ogGenerating = true;
     this.renderTwitterPreview(output);
 
+    const refImage = this.getResolvedRefImage(output);
+
     try {
+      const ogPayload = {
+        title,
+        tweet_text: output.content || '',
+        provider: localStorage.getItem('glossi_og_provider') || 'gemini',
+        refinement: output._ogRefinement || ''
+      };
+      if (refImage) ogPayload.reference_image = refImage;
+
       const res = await this.prAgent.apiCall('/api/pr/generate-og-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          tweet_text: output.content || '',
-          provider: localStorage.getItem('glossi_og_provider') || 'gemini',
-          refinement: output._ogRefinement || ''
-        })
+        body: JSON.stringify(ogPayload)
       });
 
       output._ogGenerating = false;

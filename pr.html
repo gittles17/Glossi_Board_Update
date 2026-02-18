@@ -381,6 +381,7 @@
 
               <!-- Generated content (inline editable) -->
               <div class="pr-workspace-generated" id="pr-workspace-generated" style="display:none">
+                <input type="text" class="pr-blog-title-input" id="pr-blog-title-input" placeholder="Blog post title..." style="display:none" />
                 <div class="pr-generated-content" id="pr-generated-content" contenteditable="true" spellcheck="true"></div>
                 <div class="pr-suggestions" id="pr-suggestions"></div>
               </div>
@@ -628,6 +629,23 @@
                 <div class="pr-x-connection-status">
                   <span class="pr-x-status-dot disconnected"></span>
                   <span class="pr-x-status-text">Checking...</span>
+                </div>
+              </div>
+              <div class="pr-distribute-settings-section" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <h4>Visual Style Reference</h4>
+                <p class="pr-distribute-settings-hint">Upload a reference image to guide the art style of generated visuals and link previews. Can be overridden per post.</p>
+                <div class="pr-ref-image-setting" id="pr-ref-image-setting">
+                  <div class="pr-ref-image-preview" id="pr-ref-image-preview" style="display:none">
+                    <img id="pr-ref-image-thumb" src="" alt="Reference">
+                    <button class="pr-ref-image-remove" id="pr-ref-image-remove" title="Remove reference image">
+                      <i class="ph-light ph-x"></i>
+                    </button>
+                  </div>
+                  <button class="btn btn-secondary pr-ref-image-upload-btn" id="pr-ref-image-upload-btn">
+                    <i class="ph-light ph-upload-simple"></i>
+                    Upload Reference
+                  </button>
+                  <input type="file" id="pr-ref-image-input" accept="image/jpeg,image/png,image/webp" style="display:none">
                 </div>
               </div>
             </div>

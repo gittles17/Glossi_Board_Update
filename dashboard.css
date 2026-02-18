@@ -14706,6 +14706,27 @@ svg.spinning,
   white-space: nowrap;
 }
 
+.pr-blog-title-input {
+  display: block;
+  width: 100%;
+  font: 600 20px/1.3 var(--font-sans);
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-3) 0;
+  margin-bottom: var(--space-4);
+  outline: none;
+}
+
+.pr-blog-title-input::placeholder {
+  color: var(--text-dim);
+}
+
+.pr-blog-title-input:focus {
+  border-bottom-color: var(--accent-blue, #4A9EFF);
+}
+
 .pr-draft-content {
   font: 400 14px/1.7 var(--font-sans);
   color: var(--text-secondary);
@@ -20971,6 +20992,131 @@ body.pr-resizing * {
 .pr-twitter-generate-visual-btn .glossi-loader {
   width: 14px;
   height: 14px;
+}
+
+/* Reference image pill (inline per-output) */
+.pr-ref-image-pill-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.pr-ref-image-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pr-ref-image-pill:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.pr-ref-image-pill.has-image {
+  border-style: solid;
+  border-color: rgba(236, 95, 63, 0.3);
+  background: rgba(236, 95, 63, 0.06);
+  color: #EC5F3F;
+}
+
+.pr-ref-image-pill.has-image:hover {
+  border-color: rgba(236, 95, 63, 0.5);
+  background: rgba(236, 95, 63, 0.1);
+}
+
+.pr-ref-image-pill i {
+  font-size: 13px;
+}
+
+.pr-ref-image-pill-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.pr-ref-image-pill-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+}
+
+.pr-ref-image-pill-remove:hover {
+  background: rgba(255, 80, 80, 0.15);
+  color: #ff5050;
+}
+
+/* Reference image in settings panel */
+.pr-ref-image-setting {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.pr-ref-image-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.pr-ref-image-preview img {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+}
+
+.pr-ref-image-remove {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all 0.15s;
+}
+
+.pr-ref-image-remove:hover {
+  background: rgba(255, 80, 80, 0.15);
+  color: #ff5050;
+  border-color: rgba(255, 80, 80, 0.3);
+}
+
+.pr-ref-image-upload-btn {
+  font-size: 12px;
+  padding: 6px 12px;
 }
 
 /* Distribute tab responsive */
