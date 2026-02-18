@@ -2691,88 +2691,75 @@ class PRAgent {
     return output;
   }
 
-  normalizeContentFormatting(text) {
-    if (!text) return text;
-    let result = text;
-
-    result = result.replace(/([.!?])\s+(#{1,3}\s)/g, '$1\n\n$2');
-
-    result = result.replace(/^(#{1,3})\s*\n+([A-Z])/gm, '$1 $2');
-
-    result = result.replace(/^(#{1,3})\s*$/gm, '');
-
-    const paragraphCount = (result.match(/\n\n/g) || []).length;
-    const expectedParagraphs = Math.max(3, Math.floor(result.length / 400));
-    if (paragraphCount >= expectedParagraphs) return result;
-
-    result = result.replace(/([.!?])\s{2,}(?=[A-Z])/g, '$1\n\n');
-
-    const updatedCount = (result.match(/\n\n/g) || []).length;
-    if (updatedCount >= expectedParagraphs) return result;
-
-    const sentences = result.split(/(?<=[.!?])\s+(?=[A-Z])/);
-    if (sentences.length >= 6) {
-      const chunkSize = Math.ceil(sentences.length / Math.ceil(sentences.length / 4));
-      const chunks = [];
-      for (let i = 0; i < sentences.length; i += chunkSize) {
-        chunks.push(sentences.slice(i, i + chunkSize).join(' '));
-      }
-      result = chunks.join('\n\n');
-    }
-
-    return result;
-  }
-
   formatContent(content, citations) {
     if (!content) return '<p class="pr-empty-content">No content generated</p>';
 
-    const normalized = this.normalizeContentFormatting(content);
+    const lines = content.split('\n');
+    const blocks = [];
+    let paragraph = [];
+    let listItems = [];
 
-    let processed = this.escapeHtml(normalized);
+    const flushParagraph = () => {
+      if (!paragraph.length) return;
+      const escaped = paragraph.map(l => this.escapeHtml(l));
+      blocks.push(`<p class="pr-paragraph">${escaped.join('<br>')}</p>`);
+      paragraph = [];
+    };
 
-    processed = processed.replace(/\[Source (\d+)\]/g, (match, num) => {
+    const flushList = () => {
+      if (!listItems.length) return;
+      blocks.push(`<ul>${listItems.map(li => `<li>${this.escapeHtml(li)}</li>`).join('')}</ul>`);
+      listItems = [];
+    };
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+
+      if (trimmed === '') {
+        flushList();
+        flushParagraph();
+        continue;
+      }
+
+      if (/^#{1,3}$/.test(trimmed)) continue;
+
+      const headingMatch = trimmed.match(/^(#{1,3})\s+(.+)$/);
+      if (headingMatch) {
+        flushList();
+        flushParagraph();
+        const level = Math.min(headingMatch[1].length, 3);
+        blocks.push(`<h${level}>${this.escapeHtml(headingMatch[2])}</h${level}>`);
+        continue;
+      }
+
+      if (/^\s*[-*]\s/.test(line)) {
+        flushParagraph();
+        listItems.push(trimmed.replace(/^[-*]\s+/, ''));
+        continue;
+      }
+
+      if (listItems.length) flushList();
+      paragraph.push(trimmed);
+    }
+
+    flushList();
+    flushParagraph();
+
+    let html = blocks.join('\n');
+
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+
+    html = html.replace(/\[Source (\d+)\]/g, (match, num) => {
       const citation = citations?.find(c => c.index === parseInt(num));
       const sourceId = citation?.sourceId || '';
       const verified = citation?.verified !== false;
       return `<sup class="pr-citation" data-source-index="${num}" data-source-id="${sourceId}" data-verified="${verified}">${num}</sup>`;
     });
 
-    processed = processed.replace(/\[NEEDS?\s*SOURCE\]/gi, '<span class="pr-needs-source">NEEDS SOURCE</span>');
+    html = html.replace(/\[NEEDS?\s*SOURCE\]/gi, '<span class="pr-needs-source">NEEDS SOURCE</span>');
 
-    processed = processed.replace(/([^\n])(#{1,3}\s)/g, '$1\n\n$2');
-
-    processed = processed.replace(/^(#{1,3})\s*\n+(\S)/gm, '$1 $2');
-
-    processed = processed.replace(/^(#{1,3})\s*$/gm, '');
-
-    processed = processed.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-    processed = processed.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-    processed = processed.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-
-    processed = processed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-
-    const paragraphs = processed.split(/\n\n+/);
-    return paragraphs.map(p => {
-      const trimmed = p.trim();
-      if (!trimmed) return '';
-      if (trimmed.startsWith('<h1>') || trimmed.startsWith('<h2>') || trimmed.startsWith('<h3>')) {
-        return trimmed;
-      }
-      // Handle list items
-      if (trimmed.includes('\n- ') || trimmed.startsWith('- ')) {
-        const items = trimmed.split('\n').map(line => {
-          const l = line.trim();
-          if (l.startsWith('- ')) {
-            return `<li>${l.substring(2)}</li>`;
-          }
-          return l ? `<p class="pr-paragraph">${l}</p>` : '';
-        });
-        const listItems = items.filter(i => i.startsWith('<li>'));
-        const nonList = items.filter(i => !i.startsWith('<li>'));
-        return nonList.join('') + (listItems.length ? `<ul>${listItems.join('')}</ul>` : '');
-      }
-      return `<p class="pr-paragraph">${trimmed.replace(/\n/g, '<br>')}</p>`;
-    }).filter(Boolean).join('\n');
+    return html;
   }
 
   htmlToMarkdown(el) {
