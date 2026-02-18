@@ -2359,6 +2359,15 @@ class PRAgent {
         };
       }
 
+      if (typeof parsed.content !== 'string' || !parsed.content.trim()) {
+        const contentMatch = rawText.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (contentMatch) {
+          try { parsed.content = JSON.parse('"' + contentMatch[1] + '"'); } catch { parsed.content = contentMatch[1]; }
+        } else if (rawText.trim()) {
+          parsed.content = rawText.replace(/^\s*```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+        }
+      }
+
       if (parsed.citations) {
         parsed.citations = parsed.citations.map((c, i) => {
           const srcIndex = c.index || (i + 1);
@@ -2381,6 +2390,10 @@ class PRAgent {
       } else {
         extractedTitle = this.extractTitle(parsed.content, typeLabel);
         strippedContent = this._stripTitleFromPlainText(parsed.content, extractedTitle);
+      }
+
+      if (!strippedContent || !strippedContent.trim()) {
+        strippedContent = (parsed.content || rawText || '').trim();
       }
 
       const output = {
@@ -2469,7 +2482,13 @@ class PRAgent {
     if (this.dom.workspaceEmpty) this.dom.workspaceEmpty.style.display = 'none';
     if (this.dom.workspaceGenerated) this.dom.workspaceGenerated.style.display = 'block';
     if (this.dom.regenerateBtn) this.dom.regenerateBtn.style.display = 'inline-flex';
-    if (this.dom.workspaceChat) this.dom.workspaceChat.style.display = 'flex';
+    if (this.dom.workspaceChat) {
+      this.dom.workspaceChat.style.display = 'flex';
+      const chatInput = document.getElementById('pr-chat-input');
+      const sendBtn = document.getElementById('pr-send-btn');
+      if (chatInput) { chatInput.disabled = false; chatInput.placeholder = 'Refine further...'; }
+      if (sendBtn) sendBtn.disabled = false;
+    }
     
     // Show workspace actions (version pill, copy, export)
     const actionsEl = document.getElementById('pr-workspace-actions');
@@ -2499,7 +2518,13 @@ class PRAgent {
     const actionsEl = document.getElementById('pr-workspace-actions');
     if (actionsEl) actionsEl.style.display = 'none';
     if (this.dom.regenerateBtn) this.dom.regenerateBtn.style.display = 'none';
-    if (this.dom.workspaceChat) this.dom.workspaceChat.style.display = 'none';
+    if (this.dom.workspaceChat) {
+      this.dom.workspaceChat.style.display = 'flex';
+      const chatInput = document.getElementById('pr-chat-input');
+      const sendBtn = document.getElementById('pr-send-btn');
+      if (chatInput) { chatInput.disabled = true; chatInput.placeholder = 'Generating...'; }
+      if (sendBtn) sendBtn.disabled = true;
+    }
   }
 
   updateStreamingText(accumulated) {
@@ -7944,6 +7969,15 @@ ${primaryContext}${bgContext}`
         parsed = { content: rawText, citations: [], strategy: null };
       }
 
+      if (typeof parsed.content !== 'string' || !parsed.content.trim()) {
+        const contentMatch = rawText.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (contentMatch) {
+          try { parsed.content = JSON.parse('"' + contentMatch[1] + '"'); } catch { parsed.content = contentMatch[1]; }
+        } else if (rawText.trim()) {
+          parsed.content = rawText.replace(/^\s*```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+        }
+      }
+
       if (parsed.citations) {
         parsed.citations = parsed.citations.map((c, i) => {
           const srcIndex = c.index || (i + 1);
@@ -7969,6 +8003,10 @@ ${primaryContext}${bgContext}`
       } else {
         extractedTitle = this.prAgent.extractTitle(parsed.content, typeLabel);
         strippedContent = this.prAgent._stripTitleFromPlainText(parsed.content, extractedTitle);
+      }
+
+      if (!strippedContent || !strippedContent.trim()) {
+        strippedContent = (parsed.content || rawText || '').trim();
       }
 
       const output = {
@@ -8939,6 +8977,15 @@ class AngleManager {
         parsed = { content: rawText, citations: [], strategy: null };
       }
 
+      if (typeof parsed.content !== 'string' || !parsed.content.trim()) {
+        const contentMatch = rawText.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (contentMatch) {
+          try { parsed.content = JSON.parse('"' + contentMatch[1] + '"'); } catch { parsed.content = contentMatch[1]; }
+        } else if (rawText.trim()) {
+          parsed.content = rawText.replace(/^\s*```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+        }
+      }
+
       if (parsed.citations) {
         parsed.citations = parsed.citations.map((c, i) => {
           const srcIndex = c.index || (i + 1);
@@ -8956,6 +9003,10 @@ class AngleManager {
       } else {
         extractedTitle = this.prAgent.extractTitle(parsed.content, typeLabel);
         strippedContent = this.prAgent._stripTitleFromPlainText(parsed.content, extractedTitle);
+      }
+
+      if (!strippedContent || !strippedContent.trim()) {
+        strippedContent = (parsed.content || rawText || '').trim();
       }
 
       const output = {
@@ -10722,7 +10773,7 @@ class DistributeManager {
         <div class="pr-twitter-tweet-body">
           <div class="pr-twitter-tweet-header">
             <span class="pr-twitter-name">Glossi</span>
-            <span class="pr-twitter-handle">@glossimade</span>
+            <span class="pr-twitter-handle">@glossi_io</span>
             <span class="pr-twitter-time">${timeStr}</span>
           </div>
           <div class="pr-twitter-text">${this.escapeHtml(tweet)}</div>
