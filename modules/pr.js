@@ -92,9 +92,10 @@ LinkedIn Post: TARGET: 150-250 words. Flowing prose only, no markdown headers. 3
 Blog Post: TARGET: 600-1000 words. This is a Glossi blog post, published at glossi.io/blog. It must read like a real editorial, not a content marketing piece. Study the voice and structure of glossi.io/blog/brand-decay-silent-killer.html as a reference.
 
 STRUCTURE IS MANDATORY:
-- Start with a ## heading for the title (this becomes the article headline). The title must be on its own line.
+- Start with a ## heading for the title (this becomes the article headline). The title MUST be SHORT: under 70 characters, max 10 words. Think newspaper headline, not a sentence. It must be on its own line followed by a blank line.
+- NEVER use ** (bold) for section titles or headings. Use ## for all headings. Bold markers are for inline emphasis within paragraphs only.
 - Open with 2-3 paragraphs that set the scene. Name the trend, the shift, or the tension in the market. Ground it in something concrete and current, not abstract platitudes. The reader should feel "this is about something real happening right now."
-- Break the body into 3-5 sections, each with its own ## heading on a separate line. Every heading must be preceded and followed by a blank line.
+- Break the body into 3-5 sections, each with its own ## heading on a separate line. Section headings should also be short (under 60 characters). Every heading must be preceded and followed by a blank line.
 - Each section must introduce one distinct insight. Build the argument progressively. Connect to Glossi's approach only where it naturally supports the point; do not force product mentions into every section.
 - Use blockquotes (> ) for one or two key pullout statements that crystallize the argument.
 - Final section: Forward-looking. Where is this going, and why does the architecture matter.
@@ -106,6 +107,7 @@ VOICE AND STYLE:
 - First person ("we") is acceptable when discussing what Glossi has built. Third person for industry observations.
 - NEVER include social media hashtags (#AI, #branding, etc.) in blog posts. This is a blog, not social media.
 - NEVER use em dashes. Use commas, semicolons, or parentheses instead.
+- NEVER wrap entire paragraphs or sentences in ** (bold). Bold is for short inline emphasis only (a few words max).
 - Every section must earn its place. If a section doesn't add a new insight, cut it.
 - This also covers op-eds, press releases, and bylined articles. Adjust formality based on the description provided.
 
@@ -2491,8 +2493,19 @@ class PRAgent {
 
     const headingLine = lines.find(l => /^#{1,3}\s+\S/.test(l.trim()));
     if (headingLine) {
-      const clean = headingLine.trim().replace(/^#+\s*/, '').replace(/\*+/g, '').trim();
-      if (clean.length >= 5) return clean.length > 100 ? clean.substring(0, 100) + '...' : clean;
+      let clean = headingLine.trim().replace(/^#+\s*/, '').replace(/\*+/g, '').trim();
+      if (clean.length >= 5) {
+        if (clean.length > 80) {
+          const sentenceEnd = clean.search(/[.!?]\s/);
+          if (sentenceEnd > 10 && sentenceEnd <= 80) {
+            clean = clean.substring(0, sentenceEnd + 1);
+          } else {
+            const lastSpace = clean.lastIndexOf(' ', 80);
+            clean = clean.substring(0, lastSpace > 20 ? lastSpace : 80);
+          }
+        }
+        return clean;
+      }
     }
 
     const boldMatch = content.match(/^\*\*(.+?)\*\*/);
