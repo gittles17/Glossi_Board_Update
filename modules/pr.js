@@ -10214,7 +10214,7 @@ class DistributeManager {
   async cleanCitationsForReview(output) {
     if (!output.content) return '';
 
-    output.content = output.content.replace(/\s*\[NEEDS?\s*SOURCE\]/gi, '').replace(/\s{2,}/g, ' ').trim();
+    output.content = output.content.replace(/\s*\[NEEDS?\s*SOURCE\]/gi, '').replace(/ {2,}/g, ' ').trim();
 
     if (!/\[Source\s*\d+\]/i.test(output.content)) {
       return output.content;
@@ -10568,7 +10568,7 @@ class DistributeManager {
     if (!container) return;
 
     const title = output.title || output.news_headline || 'Untitled Post';
-    const rawContent = output.content || '';
+    const rawContent = output.drafts?.[0]?.content || output.content || '';
     const content = this.prAgent._stripTitleFromPlainText(rawContent, title);
     const media = output.media_attachments || [];
     const createdAt = output.created_at ? new Date(output.created_at) : new Date();
