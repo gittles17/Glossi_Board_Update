@@ -91,15 +91,13 @@ LinkedIn Post: TARGET: 150-250 words. Flowing prose only, no markdown headers. 3
 
 Blog Post: TARGET: 600-1000 words. This is a Glossi blog post, published at glossi.io/blog. It must read like a real editorial, not a content marketing piece. Study the voice and structure of glossi.io/blog/brand-decay-silent-killer.html as a reference.
 
-STRUCTURE IS MANDATORY:
-- Start with a ## heading for the title (this becomes the article headline). The title MUST be SHORT: under 70 characters, max 10 words. Think newspaper headline, not a sentence. It must be on its own line followed by a blank line.
-- NEVER use ** (bold) for section titles or headings. Use ## for all headings. Bold markers are for inline emphasis within paragraphs only.
-- Open with 2-3 paragraphs that set the scene. Name the trend, the shift, or the tension in the market. Ground it in something concrete and current, not abstract platitudes. The reader should feel "this is about something real happening right now."
-- Break the body into 3-5 sections, each with its own ## heading on a separate line. Section headings should also be short (under 60 characters). Every heading must be preceded and followed by a blank line.
-- Each section must introduce one distinct insight. Build the argument progressively. Connect to Glossi's approach only where it naturally supports the point; do not force product mentions into every section.
-- Use blockquotes (> ) for one or two key pullout statements that crystallize the argument.
+FOR BLOG POSTS, you MUST return structured sections in your JSON response instead of putting text in "content". Use the "blog_title", "blog_sections", and "blog_closing" fields. See the RESPONSE FORMAT section for the schema.
+
+SECTION STRUCTURE:
+- Opening section (heading is null): 2-3 paragraphs setting the scene. Name the trend, the shift, or the tension in the market. Ground it in something concrete and current, not abstract platitudes.
+- 3-5 body sections: Each with a distinct short heading (under 60 characters) and paragraphs developing one insight. Build the argument progressively. Connect to Glossi only where it naturally supports the point.
+- Include a "blockquote" value in 1-2 sections: a key pullout statement that crystallizes the argument. Set to null for sections without one.
 - Final section: Forward-looking. Where is this going, and why does the architecture matter.
-- End with a short, punchy closing line or CTA heading (### level).
 
 VOICE AND STYLE:
 - Write in the voice of Glossi's team: opinionated, substantive, technically grounded. The confidence comes from having built something, not from marketing claims.
@@ -107,7 +105,7 @@ VOICE AND STYLE:
 - First person ("we") is acceptable when discussing what Glossi has built. Third person for industry observations.
 - NEVER include social media hashtags (#AI, #branding, etc.) in blog posts. This is a blog, not social media.
 - NEVER use em dashes. Use commas, semicolons, or parentheses instead.
-- NEVER wrap entire paragraphs or sentences in ** (bold). Bold is for short inline emphasis only (a few words max).
+- Do NOT use ** (bold) or ## or any markdown syntax in blog section text. Write plain prose. The app handles all formatting from the structured sections.
 - Every section must earn its place. If a section doesn't add a new insight, cut it.
 - This also covers op-eds, press releases, and bylined articles. Adjust formality based on the description provided.
 
@@ -136,22 +134,28 @@ When generating content, first analyze the provided sources, then produce the re
 
 RESPONSE FORMAT:
 
-CRITICAL FORMATTING RULE FOR THE "content" FIELD:
+CRITICAL FORMATTING RULE FOR THE "content" FIELD (non-blog types only):
 The "content" value is a string that will be parsed as markdown. You MUST include literal newline characters (\\n) in the string for formatting. THIS IS THE MOST IMPORTANT RULE. Failure to follow it produces unreadable walls of text.
 
-MANDATORY formatting rules:
+MANDATORY formatting rules for "content" (does NOT apply to blog_post, which uses structured sections):
 - Use \\n\\n (double newline) between EVERY paragraph. Without \\n\\n, paragraphs merge into a single unreadable block.
-- EVERY ## heading MUST be on its own line: \\n\\n## Section Title\\n\\n. Headings that appear inline with paragraph text will not render as headings.
+- EVERY ## heading MUST be on its own line: \\n\\n## Section Title\\n\\n.
 - Use \\n\\n- item\\n- item for bullet lists.
 - Use \\n\\n> quote text\\n\\n for blockquotes.
 - NEVER write the content as one continuous string. Structure it with \\n\\n between every block.
-- NEVER put a ## heading in the middle of a paragraph. Always put a blank line before and after headings.
 
-Example content value: "First paragraph here.\\n\\n## Section Header\\n\\nSecond paragraph here.\\n\\n> A key insight as a blockquote.\\n\\nThird paragraph here.\\n\\n## Another Section\\n\\nFourth paragraph."
+Example content value: "First paragraph here.\\n\\n## Section Header\\n\\nSecond paragraph here.\\n\\n> A key insight as a blockquote.\\n\\nThird paragraph here."
 
 Return your response in this exact JSON structure:
 {
-  "content": "The generated PR content with [Source X] citations inline, using \\n\\n between paragraphs",
+  "content": "For non-blog types: the generated content with [Source X] citations inline, using \\n\\n between paragraphs. For blog_post: omit or leave empty.",
+  "blog_title": "(REQUIRED for blog_post ONLY) Short headline, under 70 characters, max 10 words",
+  "blog_sections": [
+    {"heading": null, "body": "Opening paragraphs with [Source 1] citations. Separate paragraphs with \\n\\n.", "blockquote": null},
+    {"heading": "Section Title Under 60 Chars", "body": "Section text with [Source 2] citations.", "blockquote": "A key pullout statement or null"},
+    {"heading": "Final Section", "body": "Closing section text.", "blockquote": null}
+  ],
+  "blog_closing": "(REQUIRED for blog_post ONLY) Short punchy closing line",
   "subject": "(REQUIRED for emails) A compelling email subject line, 5-10 words",
   "tweet_format": "(REQUIRED for tweets) text|visual|link",
   "citations": [
@@ -2396,6 +2400,10 @@ class PRAgent {
         };
       }
 
+      if (contentType === 'blog_post' && parsed.blog_sections && Array.isArray(parsed.blog_sections)) {
+        parsed.content = this.buildBlogMarkdown(parsed);
+      }
+
       if (typeof parsed.content !== 'string' || !parsed.content.trim()) {
         const contentMatch = rawText.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         if (contentMatch) {
@@ -2421,7 +2429,10 @@ class PRAgent {
       parsed.content = sanitizeDashes(parsed.content);
 
       let extractedTitle, strippedContent;
-      if (contentType === 'tweet') {
+      if (contentType === 'blog_post' && parsed.blog_title) {
+        extractedTitle = parsed.blog_title;
+        strippedContent = this._stripTitleFromPlainText(parsed.content, extractedTitle);
+      } else if (contentType === 'tweet') {
         extractedTitle = typeLabel;
         strippedContent = (parsed.content || '').trim();
       } else if (parsed.subject && (contentType === 'email_blast' || contentType === 'email')) {
@@ -2516,6 +2527,18 @@ class PRAgent {
     if (firstLine.length <= 60) return firstLine || fallbackType;
 
     return fallbackType;
+  }
+
+  buildBlogMarkdown(parsed) {
+    const parts = [];
+    if (parsed.blog_title) parts.push(`## ${parsed.blog_title}`);
+    for (const s of (parsed.blog_sections || [])) {
+      if (s.heading) parts.push(`## ${s.heading}`);
+      if (s.body) parts.push(s.body);
+      if (s.blockquote) parts.push(`> ${s.blockquote}`);
+    }
+    if (parsed.blog_closing) parts.push(`### ${parsed.blog_closing}`);
+    return parts.join('\n\n');
   }
 
   showLoading(context = 'general') {
@@ -3221,6 +3244,12 @@ class PRAgent {
         } catch { parsed = null; }
         if (!parsed) parsed = { content: rawText, citations: [], strategy: null };
 
+        const output = liveEntry.output;
+
+        if (output.content_type === 'blog_post' && parsed.blog_sections && Array.isArray(parsed.blog_sections)) {
+          parsed.content = this.buildBlogMarkdown(parsed);
+        }
+
         if (parsed.citations) {
           parsed.citations = parsed.citations.map((c, i) => {
             const srcIndex = c.index || (i + 1);
@@ -3228,15 +3257,16 @@ class PRAgent {
             return { ...c, index: srcIndex, sourceId: matchedSource?.id || null, verified: c.sourceId !== null && c.verified !== false };
           });
         }
-
-        const output = liveEntry.output;
         if (!output.drafts) this.migrateContentToDrafts(output);
 
         parsed.content = sanitizeDashes(parsed.content);
 
         const isTweetContent = output.content_type === 'tweet';
         let newTitle, strippedContent;
-        if (isTweetContent) {
+        if (output.content_type === 'blog_post' && parsed.blog_title) {
+          newTitle = parsed.blog_title;
+          strippedContent = this._stripTitleFromPlainText(parsed.content, newTitle);
+        } else if (isTweetContent) {
           newTitle = typeLabel;
           strippedContent = (parsed.content || '').trim();
         } else {
@@ -8020,6 +8050,10 @@ ${primaryContext}${bgContext}`
         parsed = { content: rawText, citations: [], strategy: null };
       }
 
+      if (planItem.type === 'blog_post' && parsed.blog_sections && Array.isArray(parsed.blog_sections)) {
+        parsed.content = this.prAgent.buildBlogMarkdown(parsed);
+      }
+
       if (typeof parsed.content !== 'string' || !parsed.content.trim()) {
         const contentMatch = rawText.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         if (contentMatch) {
@@ -8048,7 +8082,10 @@ ${primaryContext}${bgContext}`
 
       const isTweet = isTweetType;
       let extractedTitle, strippedContent;
-      if (isTweet) {
+      if (planItem.type === 'blog_post' && parsed.blog_title) {
+        extractedTitle = parsed.blog_title;
+        strippedContent = this.prAgent._stripTitleFromPlainText(parsed.content, extractedTitle);
+      } else if (isTweet) {
         extractedTitle = typeLabel;
         strippedContent = (parsed.content || '').trim();
       } else if (parsed.subject && (planItem.type === 'email_blast' || planItem.type === 'email')) {
@@ -9014,6 +9051,10 @@ class AngleManager {
         parsed = { content: rawText, citations: [], strategy: null };
       }
 
+      if (planItem.type === 'blog_post' && parsed.blog_sections && Array.isArray(parsed.blog_sections)) {
+        parsed.content = this.prAgent.buildBlogMarkdown(parsed);
+      }
+
       if (typeof parsed.content !== 'string' || !parsed.content.trim()) {
         const contentMatch = rawText.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         if (contentMatch) {
@@ -9034,7 +9075,10 @@ class AngleManager {
       parsed.content = sanitizeDashes(parsed.content);
 
       let extractedTitle, strippedContent;
-      if (isTweetADK) {
+      if (planItem.type === 'blog_post' && parsed.blog_title) {
+        extractedTitle = parsed.blog_title;
+        strippedContent = this.prAgent._stripTitleFromPlainText(parsed.content, extractedTitle);
+      } else if (isTweetADK) {
         extractedTitle = typeLabel;
         strippedContent = (parsed.content || '').trim();
       } else if (parsed.subject && (planItem.type === 'email_blast' || planItem.type === 'email')) {
