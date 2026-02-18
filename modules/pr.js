@@ -89,7 +89,15 @@ Product Announcement: Changelog style. What shipped. What it does. One sentence 
 
 LinkedIn Post: TARGET: 150-250 words. Flowing prose only, no markdown headers. 3-5 short paragraphs max. Write like Linear communicates: humble, builder-first, letting the work speak. Share a genuine observation about the space, then back it with what you've built. The confidence comes from having built something real, not from making claims about it. No hashtag spam (one or two max). The post should feel like a founder sharing what they've learned, not a marketing team promoting a product.
 
-Blog Post: TARGET: 500-800 words. Use ## headers to break content into 3-4 sections. Write like Linear's "Now" blog. First-person where appropriate. Opinionated. Substantive. Not content marketing. Real thinking about real problems in the space. Every section must earn its place; if a section doesn't add a new insight, cut it. This covers op-eds, press releases, and bylined articles too. Adjust formality based on the description provided.
+Blog Post: TARGET: 500-800 words. STRUCTURE IS MANDATORY:
+- Start with a ## heading for the title (this becomes the article headline).
+- Break the body into 3-4 sections, each with its own ## heading.
+- Section 1: Hook the reader with the news or trend. What happened and why it matters.
+- Section 2-3: Build the argument. Each section adds one new insight. Connect to Glossi's approach where it naturally supports the point.
+- Final section: Forward-looking. Where this is going, and why Glossi's architecture is positioned for it.
+- Write like Linear's "Now" blog. First-person where appropriate. Opinionated. Substantive. Not content marketing.
+- Every section must earn its place; if a section doesn't add a new insight, cut it.
+- This covers op-eds, press releases, and bylined articles too. Adjust formality based on the description provided.
 
 Tweet (for X): Study how Cursor and Linear use X. They mix formats. Not every post is text. The feed has rhythm: a sharp take, then a product screenshot, then a blog link, then an infographic. Match that energy.
 
@@ -106,18 +114,28 @@ CRITICAL RULES FOR TWEETS:
 - "tweet_format" is REQUIRED in the response JSON for all tweet content.
 - Default to VISUAL when the topic has data, numbers, a comparison, or a claim that could be illustrated.
 
-Email (press pitch): TARGET: 80-120 words. No headers. Open with why this matters to their beat. Get to the Glossi angle in the first sentence. Every sentence must either advance the story or give the journalist a reason to respond.
+Email (press pitch): TARGET: 80-120 words. You MUST include "subject" in the JSON response (a short, compelling subject line for the email, 5-10 words). No headers in the body. Open with why this matters to their beat. Get to the Glossi angle in the first sentence. Every sentence must either advance the story or give the journalist a reason to respond. Do NOT include [NEEDS SOURCE] markers in emails; omit claims you cannot source rather than flagging them.
 
-Email (subscriber blast): TARGET: 150-250 words. One key insight distilled. One clear takeaway. Link to deeper content. The reader should get value from the email itself, not just from clicking through.
+Email (subscriber blast): TARGET: 150-250 words. You MUST include "subject" in the JSON response (a short, compelling subject line for the email, 5-10 words). One key insight distilled. One clear takeaway. Link to deeper content. The reader should get value from the email itself, not just from clicking through. Do NOT include [NEEDS SOURCE] markers in emails; omit claims you cannot source rather than flagging them.
 
 Talking Points: Bullet format. Each point is self-contained. Ordered by importance. Also covers briefing docs and internal prep material. TARGET: 5-8 bullets, each 1-2 sentences.
 
 When generating content, first analyze the provided sources, then produce the requested content type with proper citations. After generating, provide distribution strategy recommendations.
 
 RESPONSE FORMAT:
+
+CRITICAL FORMATTING RULE FOR THE "content" FIELD:
+The "content" value is a string that will be parsed as markdown. You MUST include literal newline characters (\\n) in the string for formatting:
+- Use \\n\\n (double newline) between every paragraph. This is how paragraphs are detected. Without \\n\\n, everything renders as a wall of text.
+- Use \\n\\n## Section Title\\n\\n for section headers (blog posts, long-form content).
+- Use \\n\\n- item\\n- item for bullet lists.
+- Never write the content as one continuous string. Structure it with \\n\\n separators.
+Example content value: "First paragraph here.\\n\\n## Section Header\\n\\nSecond paragraph here.\\n\\nThird paragraph here."
+
 Return your response in this exact JSON structure:
 {
-  "content": "The generated PR content with [Source X] citations inline",
+  "content": "The generated PR content with [Source X] citations inline, using \\n\\n between paragraphs",
+  "subject": "(REQUIRED for emails) A compelling email subject line, 5-10 words",
   "tweet_format": "(REQUIRED for tweets) text|visual|link",
   "citations": [
     {"index": 1, "sourceId": "src_id", "excerpt": "relevant quote from source", "verified": true},
@@ -2388,6 +2406,9 @@ class PRAgent {
       if (contentType === 'tweet') {
         extractedTitle = typeLabel;
         strippedContent = (parsed.content || '').trim();
+      } else if (parsed.subject && (contentType === 'email_blast' || contentType === 'email')) {
+        extractedTitle = parsed.subject;
+        strippedContent = (parsed.content || '').trim();
       } else {
         extractedTitle = this.extractTitle(parsed.content, typeLabel);
         strippedContent = this._stripTitleFromPlainText(parsed.content, extractedTitle);
@@ -2665,11 +2686,49 @@ class PRAgent {
     return output;
   }
 
+  normalizeContentFormatting(text) {
+    if (!text || text.includes('\n\n')) return text;
+
+    let result = text;
+
+    result = result.replace(/([.!?])\s+(#{1,3}\s)/g, '$1\n\n$2');
+
+    result = result.replace(
+      /([.!?])\s+([A-Z][A-Za-z\s]{5,60}?)\s+([A-Z][a-z])/g,
+      (match, punct, possibleHeader, nextStart) => {
+        const wordCount = possibleHeader.trim().split(/\s+/).length;
+        if (wordCount >= 3 && wordCount <= 12) {
+          return `${punct}\n\n## ${possibleHeader.trim()}\n\n${nextStart}`;
+        }
+        return match;
+      }
+    );
+
+    if (!result.includes('\n\n') && result.length > 300) {
+      result = result.replace(/([.!?])\s{2,}(?=[A-Z])/g, '$1\n\n');
+    }
+
+    if (!result.includes('\n\n') && result.length > 300) {
+      const sentences = result.split(/(?<=[.!?])\s+(?=[A-Z])/);
+      if (sentences.length >= 6) {
+        const chunkSize = Math.ceil(sentences.length / Math.ceil(sentences.length / 4));
+        const chunks = [];
+        for (let i = 0; i < sentences.length; i += chunkSize) {
+          chunks.push(sentences.slice(i, i + chunkSize).join(' '));
+        }
+        result = chunks.join('\n\n');
+      }
+    }
+
+    return result;
+  }
+
   formatContent(content, citations) {
     if (!content) return '<p class="pr-empty-content">No content generated</p>';
 
-    // Process [Source X] citations
-    let processed = this.escapeHtml(content);
+    const normalized = this.normalizeContentFormatting(content);
+
+    let processed = this.escapeHtml(normalized);
 
     // Replace [Source X] with citation badges
     processed = processed.replace(/\[Source (\d+)\]/g, (match, num) => {
@@ -7976,6 +8035,9 @@ ${primaryContext}${bgContext}`
       if (isTweet) {
         extractedTitle = typeLabel;
         strippedContent = (parsed.content || '').trim();
+      } else if (parsed.subject && (planItem.type === 'email_blast' || planItem.type === 'email')) {
+        extractedTitle = parsed.subject;
+        strippedContent = (parsed.content || '').trim();
       } else {
         extractedTitle = this.prAgent.extractTitle(parsed.content, typeLabel);
         strippedContent = this.prAgent._stripTitleFromPlainText(parsed.content, extractedTitle);
@@ -8958,6 +9020,9 @@ class AngleManager {
       let extractedTitle, strippedContent;
       if (isTweetADK) {
         extractedTitle = typeLabel;
+        strippedContent = (parsed.content || '').trim();
+      } else if (parsed.subject && (planItem.type === 'email_blast' || planItem.type === 'email')) {
+        extractedTitle = parsed.subject;
         strippedContent = (parsed.content || '').trim();
       } else {
         extractedTitle = this.prAgent.extractTitle(parsed.content, typeLabel);
@@ -10008,8 +10073,12 @@ class DistributeManager {
   }
 
   async cleanCitationsForReview(output) {
-    if (!output.content || !/\[Source\s*\d+\]/i.test(output.content)) {
-      return output.content || '';
+    if (!output.content) return '';
+
+    output.content = output.content.replace(/\s*\[NEEDS?\s*SOURCE\]/gi, '').replace(/\s{2,}/g, ' ').trim();
+
+    if (!/\[Source\s*\d+\]/i.test(output.content)) {
+      return output.content;
     }
 
     if (output.content_type === 'tweet') {
@@ -10254,11 +10323,9 @@ class DistributeManager {
   }
 
   formatLinkedInBody(text) {
-    // Escape HTML first, then apply formatting
     let html = this.escapeHtml(text);
-    // Hashtags: #word -> blue
+    html = html.replace(/\n/g, '<br>');
     html = html.replace(/#(\w+)/g, '<span class="pr-li-hashtag">#$1</span>');
-    // URLs: make blue
     html = html.replace(/(https?:\/\/[^\s<]+)/g, '<span class="pr-li-link">$1</span>');
     return html;
   }
