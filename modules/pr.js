@@ -55,6 +55,13 @@ LEADERSHIP STANCE:
 - When referencing the market or trends (like world models), the framing is: "We built for this. Now it's arriving."
 - Features ship constantly. This is a company that builds. Communicate that through cadence, not claims.
 
+GLOSSI TIE-BACK (varies by channel):
+- If a piece could be published by any company in the space without changing a word, it's not specific enough. Every piece needs a clear Glossi perspective.
+- LinkedIn: Every post must connect the topic to what Glossi is building. The news is the hook; Glossi's approach is the substance. Frame it as: here's what's happening, here's why it validates the direction we chose.
+- Blog Post: Glossi is the perspective the reader comes away with. Write from the position of someone building in this space. Reference Glossi where it naturally supports the argument. It doesn't need to be in every paragraph.
+- Email: Lead with the angle, connect to Glossi within the first two sentences. For press pitches, the Glossi relevance IS the pitch.
+- General: Never bolt Glossi onto the end as an afterthought. The Glossi connection should be structural, not cosmetic.
+
 SOURCING RULES (CRITICAL):
 - You may ONLY make claims that are directly supported by the provided sources.
 - Every factual claim must include a citation reference [Source X].
@@ -76,11 +83,13 @@ GLOSSI CONTEXT:
 
 CONTENT TYPE GUIDANCE:
 
-Product Announcement: Changelog style. What shipped. What it does. One sentence on why it matters. Move on.
+LENGTH LIMITS ARE STRICT. If your output exceeds the target word count, it is not done. Edit it shorter before returning. Concise writing is better writing. Count your words.
 
-LinkedIn Post: Perspective piece energy. Share a take. Back it with what you've built. No hashtag spam. One or two max.
+Product Announcement: Changelog style. What shipped. What it does. One sentence on why it matters. Move on. TARGET: 100-200 words.
 
-Blog Post: Write like Linear's "Now" blog. First-person where appropriate. Opinionated. Substantive. Not content marketing. Real thinking about real problems in the space. This covers op-eds, press releases, and bylined articles too. Adjust formality based on the description provided.
+LinkedIn Post: TARGET: 150-250 words. Flowing prose only, no markdown headers. 3-5 short paragraphs max. Write like Linear communicates: humble, builder-first, letting the work speak. Share a genuine observation about the space, then back it with what you've built. The confidence comes from having built something real, not from making claims about it. No hashtag spam (one or two max). The post should feel like a founder sharing what they've learned, not a marketing team promoting a product.
+
+Blog Post: TARGET: 500-800 words. Use ## headers to break content into 3-4 sections. Write like Linear's "Now" blog. First-person where appropriate. Opinionated. Substantive. Not content marketing. Real thinking about real problems in the space. Every section must earn its place; if a section doesn't add a new insight, cut it. This covers op-eds, press releases, and bylined articles too. Adjust formality based on the description provided.
 
 Tweet (for X): Study how Cursor and Linear use X. They mix formats. Not every post is text. The feed has rhythm: a sharp take, then a product screenshot, then a blog link, then an infographic. Match that energy.
 
@@ -97,9 +106,11 @@ CRITICAL RULES FOR TWEETS:
 - "tweet_format" is REQUIRED in the response JSON for all tweet content.
 - Default to VISUAL when the topic has data, numbers, a comparison, or a claim that could be illustrated.
 
-Email: For subscriber blasts AND journalist pitches. Adjust tone based on audience. For press: open with why this matters to their beat, get to the angle in the first sentence, keep it under 150 words. For subscribers: key insight distilled, one clear takeaway, link to deeper content.
+Email (press pitch): TARGET: 80-120 words. No headers. Open with why this matters to their beat. Get to the Glossi angle in the first sentence. Every sentence must either advance the story or give the journalist a reason to respond.
 
-Talking Points: Bullet format. Each point is self-contained. Ordered by importance. Also covers briefing docs and internal prep material.
+Email (subscriber blast): TARGET: 150-250 words. One key insight distilled. One clear takeaway. Link to deeper content. The reader should get value from the email itself, not just from clicking through.
+
+Talking Points: Bullet format. Each point is self-contained. Ordered by importance. Also covers briefing docs and internal prep material. TARGET: 5-8 bullets, each 1-2 sentences.
 
 When generating content, first analyze the provided sources, then produce the requested content type with proper citations. After generating, provide distribution strategy recommendations.
 
@@ -2721,6 +2732,9 @@ class PRAgent {
 
     // Replace [NEEDS SOURCE] with badges
     processed = processed.replace(/\[NEEDS SOURCE\]/g, '<span class="pr-needs-source">NEEDS SOURCE</span>');
+
+    // Normalize headers: ensure # markers are always at start of a line
+    processed = processed.replace(/([^\n])(#{1,3}\s)/g, '$1\n\n$2');
 
     // Convert markdown-style headers
     processed = processed.replace(/^### (.+)$/gm, '<h3>$1</h3>');
@@ -6940,10 +6954,12 @@ class NewsMonitor {
         return;
       }
 
-      const addPieceBtn = e.target.closest('.pr-add-piece');
-      if (addPieceBtn) {
+      const addPieceConfirm = e.target.closest('.pr-add-piece-confirm');
+      if (addPieceConfirm) {
         e.stopPropagation();
-        this.showAddPieceDropdown(addPieceBtn.dataset.storyKey, addPieceBtn);
+        const container = addPieceConfirm.closest('.pr-add-piece');
+        const input = container?.querySelector('.pr-add-piece-brief-input');
+        if (input) this.confirmAddPiece(input.value.trim(), container.dataset.addType);
         return;
       }
 
@@ -6954,12 +6970,10 @@ class NewsMonitor {
         return;
       }
 
-      const addPieceConfirm = e.target.closest('.pr-add-piece-confirm');
-      if (addPieceConfirm) {
+      const addPieceBtn = e.target.closest('.pr-add-piece');
+      if (addPieceBtn) {
         e.stopPropagation();
-        const container = addPieceConfirm.closest('.pr-add-piece');
-        const input = container?.querySelector('.pr-add-piece-brief-input');
-        if (input) this.confirmAddPiece(input.value.trim(), container.dataset.addType);
+        this.showAddPieceDropdown(addPieceBtn.dataset.storyKey, addPieceBtn);
         return;
       }
 
