@@ -931,7 +931,10 @@ class PRAgent {
           const draft = draftIndex >= 0 ? this.currentOutput.drafts[draftIndex] : null;
           if (draft && this.dom.generatedContent) {
             this._viewingDraftIndex = draftIndex;
-            this.dom.generatedContent.innerHTML = `<div class="pr-draft-content">${this.formatContent(draft.content, this.currentOutput.citations)}</div>`;
+            if (!draft.renderedHtml) {
+              draft.renderedHtml = this.formatContent(draft.content, this.currentOutput.citations);
+            }
+            this.dom.generatedContent.innerHTML = `<div class="pr-draft-content">${draft.renderedHtml}</div>`;
             versionMenu.querySelectorAll('.pr-version-menu-item').forEach(v => v.classList.remove('active'));
             item.classList.add('active');
             const pillLabel = document.getElementById('pr-version-pill-label');
@@ -977,9 +980,9 @@ class PRAgent {
                 this._isShorteningTweet = true;
                 const shortened = await this.enforceTweetLimit(draft.content, this.currentOutput.tweet_format);
                 draft.content = shortened;
+                draft.renderedHtml = null;
                 this.currentOutput.content = shortened;
-                const el = this.dom.generatedContent.querySelector('.pr-draft-content');
-                if (el) el.innerText = shortened;
+                this.renderDrafts();
                 this._isShorteningTweet = false;
               }
             }
@@ -2564,10 +2567,9 @@ class PRAgent {
     if (!draft || !this.dom.generatedContent) return;
     const el = this.dom.generatedContent.querySelector('.pr-draft-content');
     if (el) {
-      const edited = el.innerText.trim();
-      if (edited && edited !== draft.content) {
-        draft.content = edited;
-      }
+      draft.renderedHtml = el.innerHTML;
+      const md = this.htmlToMarkdown(el);
+      if (md) draft.content = md;
     }
   }
 
@@ -2581,7 +2583,10 @@ class PRAgent {
     this._viewingDraftIndex = 0;
     const latest = drafts[0];
     if (latest) {
-      container.innerHTML = `<div class="pr-draft-content">${this.formatContent(latest.content, this.currentOutput.citations)}</div>`;
+      if (!latest.renderedHtml) {
+        latest.renderedHtml = this.formatContent(latest.content, this.currentOutput.citations);
+      }
+      container.innerHTML = `<div class="pr-draft-content">${latest.renderedHtml}</div>`;
     }
 
     // Update version pill in workspace actions
@@ -2768,6 +2773,29 @@ class PRAgent {
       }
       return `<p class="pr-paragraph">${trimmed.replace(/\n/g, '<br>')}</p>`;
     }).filter(Boolean).join('\n');
+  }
+
+  htmlToMarkdown(el) {
+    let html = el.innerHTML;
+    html = html.replace(/<sup class="pr-citation"[^>]*>(\d+)<\/sup>/gi, '[Source $1]');
+    html = html.replace(/<span class="pr-needs-source">[^<]*<\/span>/gi, '');
+    html = html.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '# $1\n\n');
+    html = html.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '## $1\n\n');
+    html = html.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '### $1\n\n');
+    html = html.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '- $1\n');
+    html = html.replace(/<ul[^>]*>|<\/ul>/gi, '\n');
+    html = html.replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, '**$1**');
+    html = html.replace(/<em[^>]*>([\s\S]*?)<\/em>/gi, '*$1*');
+    html = html.replace(/<br\s*\/?>/gi, '\n');
+    html = html.replace(/<\/p>\s*<p[^>]*>/gi, '\n\n');
+    html = html.replace(/<p[^>]*>/gi, '');
+    html = html.replace(/<\/p>/gi, '\n\n');
+    html = html.replace(/<div[^>]*>/gi, '\n');
+    html = html.replace(/<\/div>/gi, '');
+    html = html.replace(/<[^>]+>/g, '');
+    html = html.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ');
+    html = html.replace(/\n{3,}/g, '\n\n');
+    return html.trim();
   }
 
   showCitationTooltip(e, cite) {
