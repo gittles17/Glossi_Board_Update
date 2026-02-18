@@ -2751,7 +2751,6 @@ class PRAgent {
         timestamp: new Date(output.createdAt).getTime(),
         prompt: null
       }];
-      delete output.content;
     }
     return output;
   }
