@@ -2189,7 +2189,7 @@ Rules:
 // Generate visual prompt via Claude (analyzes tweet text, produces optimal Gemini image prompt)
 app.post('/api/pr/generate-visual-prompt', async (req, res) => {
   try {
-    const { tweet_text, previous_prompt, feedback, reference_image } = req.body;
+    const { tweet_text, previous_prompt, feedback, reference_image, visual_mode } = req.body;
     if (!tweet_text) {
       return res.status(400).json({ success: false, error: 'tweet_text is required' });
     }
@@ -2199,80 +2199,116 @@ app.post('/api/pr/generate-visual-prompt', async (req, res) => {
       return res.status(503).json({ success: false, error: 'ANTHROPIC_API_KEY not configured' });
     }
 
-    let systemPrompt = `You are a visual design director who creates image generation prompts for social media infographics. Your prompts will be sent to Gemini's image generation model.
+    const mode = visual_mode || 'abstract';
 
-You analyze tweet text and produce the single best image prompt that will create a scroll-stopping infographic for X/Twitter.`;
+    let systemPrompt = `You are a visual design director who creates image generation prompts for social media visuals. Your prompts will be sent to Gemini's image generation model.
+
+You analyze tweet text and produce the single best image prompt that will create a scroll-stopping visual for X/Twitter.`;
 
     if (reference_image) {
       systemPrompt += `
 
-REFERENCE IMAGE: A reference image has been provided. Analyze its visual style carefully: color palette, composition, texture, typography treatment, mood, and overall aesthetic. Your prompt MUST reproduce this exact art style. Override the default style rules below with whatever you observe in the reference image. The reference defines the look; the tweet text defines the content.`;
+REFERENCE IMAGE: A reference image has been provided. Analyze its visual style carefully: color palette, composition, texture, mood, and overall aesthetic. Your prompt MUST reproduce this exact art style. Override the default style rules below with whatever you observe in the reference image. The reference defines the look; the tweet text defines the content.`;
     }
 
-    systemPrompt += `
+    if (mode === 'chart') {
+      systemPrompt += `
 
-EXACT STYLE TO MATCH (based on Cursor's @cursor_ai X/Twitter infographics):
+VISUAL MODE: CHART / DATA INFOGRAPHIC
 
-BACKGROUND:
-- Warm off-white/cream background, approximately #ede8e3 or #f0edea. Flat, solid, no gradients, no textures.
+ART DIRECTION:
+- Dark minimal UI design system. Pure black background #000000.
+- Thin white vector line art for axes, gridlines, and labels.
+- Monochromatic grayscale palette with a single accent color: warm orange #E8512A.
+- Scientific instrument aesthetic, brutalist grid composition, ultra high contrast white on black.
 
 TYPOGRAPHY HIERARCHY (strict rules for maximum glanceability):
 People scan, they do not read. Every text element must have a clear, distinct role. Use exactly 3 text sizes.
 
-- LEVEL 1 (Headline): The largest text. Medium weight black (#1a1a1a), top-left aligned, clean sans-serif. 1-2 lines max. Appears exactly once. States the insight.
-- LEVEL 2 (Data labels): Clearly smaller than headline. Medium weight, dark gray (#4a4a4a). Used for chart labels, axis values, category names.
-- LEVEL 3 (Supporting): The smallest text. Regular weight, muted gray (#8a8580). Used for footnotes, source attributions, secondary context.
-
-Hierarchy rules:
-- Each level must be visually distinct with clear size separation.
-- Bold and accent colors used sparingly. When emphasis is everywhere, hierarchy collapses.
-- Spacing signals importance. More whitespace above headlines, tight spacing within data groups.
-- Key text top-left where scanning patterns expect it.
+- LEVEL 1 (Headline): The largest text. Medium weight white (#FFFFFF), top-left aligned, clean sans-serif. 1-2 lines max. Appears exactly once. States the insight.
+- LEVEL 2 (Data labels): Clearly smaller than headline. Medium weight, light gray (#999999). Used for chart labels, axis values, category names.
+- LEVEL 3 (Supporting): The smallest text. Regular weight, muted gray (#666666). Used for footnotes, source attributions, secondary context.
 
 DATA VISUALIZATION (the core of the infographic):
 - Render actual data charts when the content involves numbers, comparisons, trends, or measurements.
-- Chart types: bar charts (vertical or horizontal), line charts, scatter plots, simple area charts.
-- Two data colors only: warm orange (#EC5F3F) for the primary/highlighted series, and medium gray (#b0aca6) for the secondary/comparison series.
-- Thin axis lines in light gray. Small, clean axis labels in muted gray (#8a8580).
-- No gridlines or minimal dashed gridlines. No chart borders. No 3D effects.
+- Chart types: vertical bar data visualizations, line charts, scatter plots, area charts.
+- Two data colors only: warm orange (#E8512A) for the primary/highlighted series, and medium gray (#666666) for the secondary/comparison series.
+- Thin white axis lines. Small, clean axis labels in muted gray.
+- No gridlines or minimal dashed gridlines in dark gray. No chart borders. No 3D effects.
 - Data points/bars should be clearly readable. Clean spacing between bars.
-- Annotate key insights directly on the chart with small callouts in orange or dark gray.
+- Annotate key insights directly on the chart with small callouts in orange or white.
+- Crisp anti-aliased vector strokes throughout.
 
 WHEN THERE IS NO CHART DATA:
-- If the tweet is a claim, opinion, or non-numeric insight, use a clean typographic layout.
-- One large medium-weight stat or pull quote in black, with a small supporting label underneath.
+- If the tweet has no numeric data, create a typographic layout: one large medium-weight stat or pull quote in white, with a small supporting label underneath in gray.
 - Keep to 2-3 lines of text maximum. The typography IS the visual.
 
 LAYOUT:
-- 1200x675 landscape. Generous margins on all sides.
+- 1200x675 landscape (16:9). Generous margins on all sides.
 - Headline at top-left. Chart/visualization centered below it.
 - Small footnote or source at bottom-right if relevant.
-- Extreme whitespace. Never crowd the canvas. Let every element breathe.
+- Even 2-column symmetric layouts when multiple data series are compared.
+- Deep black void background. Extreme whitespace (dark space). Never crowd the canvas.
 
 ANTI-PATTERNS (never do these):
-- Too many text sizes or weights competing for attention.
-- Bold or colored text used so frequently it loses meaning.
-- Dense layouts with insufficient spacing between hierarchy levels.
-- Labels that are the same size as headings.
-- No dark backgrounds. No black or near-black.
+- No light backgrounds. No cream, white, or gray backgrounds. Background MUST be pure black #000000.
+- No gradients except grayscale sphere shading if using abstract elements.
 - No borders around the image. No drop shadows. No 3D effects.
 - No icons, emoji, logos, or decorative elements.
-- No more than 3 colors total (off-white background, black text, orange+gray for data).
+- No more than 3 colors total (black background, white text, orange+gray for data).
 - No complex multi-panel layouts. One chart, one concept.
-- No stock photos. No gradients. No patterns.
+- No stock photos. No patterns besides data visualization.
 
-MOOD: Professional, editorial, confident. Like a chart from a premium tech company's blog or research report. Designed to stop someone mid-scroll because the data itself is interesting and instantly readable.
+MOOD: Technical data dashboard aesthetic, motion graphics still frame, scientific instrument readout. Designed to stop someone mid-scroll because the data is instantly readable against the dark background.`;
+    } else {
+      systemPrompt += `
 
-CRITICAL RULE: Your prompt must describe the VISUAL APPEARANCE of the infographic only. Do NOT include any technical metadata, sizing annotations, pixel values, margin numbers, font-size numbers, or layout measurements in the prompt. Never write things like "70px" or "15px" or "60px margin". Describe sizes using relative terms only: "large medium-weight headline", "medium-sized labels", "small footnote text". The image model will render any numbers it sees as visible text on the image.
+VISUAL MODE: ABSTRACT / GENERATIVE ART
+
+ART DIRECTION:
+- Dark minimal UI design system. Pure black background #000000.
+- Thin white vector line art. Monochromatic grayscale palette with a single accent color: warm orange #E8512A.
+- Geometric abstract shapes: spheres with diagonal stripe patterns, wireframe orbs, pixel art icons, topographic contour line landscapes, particle scatter fields, spirograph geometric patterns, lemniscate orbital path diagrams, node-and-connector flowchart diagrams with branching tree structures, pill-shaped UI components, checkerboard gradient spheres, low-resolution pixel grid icons, hand-drawn sketch icon sets.
+- Technical data dashboard layouts with status indicators as compositional elements (not real data).
+- Crisp anti-aliased vector strokes. Scientific instrument aesthetic.
+- Brutalist grid composition, even 2-column symmetric layouts.
+- Deep black void backgrounds. No gradients except grayscale sphere shading.
+- Ultra high contrast white on black. Motion graphics still frame aesthetic.
+- Generative art + UI design crossover.
+
+CHOOSING THE VISUAL:
+- Read the tweet text carefully. Identify the core concept, theme, or metaphor.
+- Choose abstract shapes and patterns that evoke that concept without being literal.
+- For example: a tweet about growth could use ascending particle fields or expanding spirograph patterns. A tweet about connections could use node-and-connector diagrams. A tweet about data could use topographic contour lines or wireframe orbs.
+- The visual should feel thematically resonant, not illustrative.
+
+LAYOUT:
+- 1200x675 landscape (16:9). Generous margins on all sides.
+- The abstract art should fill the composition in a balanced, centered arrangement.
+- No text in the image unless it is a UI element within the abstract design system (e.g., a status label, a node label as part of the composition).
+- Deep black void background with art elements floating in space.
+
+ANTI-PATTERNS (never do these):
+- No light backgrounds. Background MUST be pure black #000000.
+- No realistic objects, people, faces, hands, or photographs.
+- No literal representations of the tweet content. Always abstract.
+- No busy or cluttered compositions. Every element should breathe.
+- No more than 3 colors: black background, white line art, and orange #E8512A accent.
+- No stock art aesthetic. Think generative code art meets technical UI illustration.
+
+MOOD: Minimal, technical, generative. Like a still frame from a motion graphics piece or a generative art installation. The visual should intrigue and create curiosity that makes someone stop scrolling and read the tweet.`;
+    }
+
+    systemPrompt += `
+
+CRITICAL RULE: Your prompt must describe the VISUAL APPEARANCE only. Do NOT include any technical metadata, sizing annotations, pixel values, margin numbers, font-size numbers, or layout measurements. Never write things like "70px" or "15px". Describe sizes using relative terms only. The image model will render any numbers it sees as visible text on the image.
 
 PROMPT CONSTRUCTION RULES:
 - Include ALL style rules above directly in your prompt using natural visual language.
-- Describe the exact chart type, data values, axis labels, and headline text.
 - Specify colors by hex code (these are for the rendering engine, not visible text).
-- Specify the background color explicitly.
-- If creating a chart, provide the approximate data values and labels.
+- Specify the background color as pure black #000000 explicitly.
 - Be extremely specific about WHAT to show but use relative terms for HOW BIG.
-- NEVER include pixel values, margin sizes, or font sizes as numbers. These will appear as visible artifacts.
+- NEVER include pixel values, margin sizes, or font sizes as numbers.
 
 Return ONLY the image generation prompt text. No explanation, no preamble, no quotes around it. Just the prompt.`;
 
@@ -2448,7 +2484,7 @@ app.get('/og-template', (req, res) => {
 
   const bgStyle = bgImage
     ? `background-image: url(${bgImage}); background-size: cover; background-position: center;`
-    : 'background: #ECE8E2;';
+    : 'background: #000000;';
 
   const html = `<!DOCTYPE html>
 <html>
@@ -2459,9 +2495,9 @@ app.get('/og-template', (req, res) => {
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 1200px; height: 630px; overflow: hidden; }
   .og-wrap { width: 1200px; height: 630px; position: relative; ${bgStyle} }
-  .og-accent { width: 100%; height: 5px; background: #EC5F3F; position: absolute; top: 0; left: 0; z-index: 3; }
-  .og-title-safe { position: absolute; top: 0; left: 0; width: 65%; height: 55%; background: linear-gradient(135deg, #ECE8E2 60%, rgba(236,232,226,0.85) 80%, transparent 100%); z-index: 1; }
-  .og-title { position: absolute; top: 48px; left: 68px; font-family: 'PP Mori', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; font-size: 90px; line-height: 1.05; letter-spacing: -0.035em; color: #1a1a1a; max-width: 780px; z-index: 2; }
+  .og-accent { width: 100%; height: 3px; background: #E8512A; position: absolute; top: 0; left: 0; z-index: 3; }
+  .og-title-safe { position: absolute; top: 0; left: 0; width: 65%; height: 55%; background: linear-gradient(135deg, #000000 60%, rgba(0,0,0,0.85) 80%, transparent 100%); z-index: 1; }
+  .og-title { position: absolute; top: 48px; left: 68px; font-family: 'PP Mori', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; font-size: 90px; line-height: 1.05; letter-spacing: -0.035em; color: #FFFFFF; max-width: 780px; z-index: 2; }
   .og-logo { position: absolute; bottom: 40px; right: 56px; width: 44px; height: 51px; z-index: 2; }
 </style>
 </head>
@@ -2470,7 +2506,7 @@ app.get('/og-template', (req, res) => {
   <div class="og-accent"></div>
   <div class="og-title-safe"></div>
   <div class="og-title">${escapeHtml(title)}</div>
-  <svg class="og-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 306.8 352.69"><path d="m306.8,166.33v73.65c0,8.39-6.83,15.11-15.22,15.11h-80.59c-7.05,0-13.43,1.23-17.91,3.81-4.25,2.35-6.49,5.6-6.49,10.52v68.28c0,8.28-6.72,15-15,15H14.66c-8.06,0-14.66-6.72-14.66-14.77V54.17c0-8.39,6.72-15.22,15.11-15.22h35.59c7.05,0,13.43-1.12,17.91-3.58,4.14-2.24,6.49-5.37,6.49-10.3v-9.96c0-8.39,6.83-15.11,15.11-15.11h126.26c8.39,0,15.11,6.72,15.11,15.11v15.11c0,8.39-6.72,15.11-15.11,15.11h-124.58c-5.37.11-10.75.56-14.66,2.46-1.79.89-3.13,2.13-4.14,3.69-1.01,1.68-1.79,4.03-1.79,7.72v185.58c0,2.24,1.79,3.92,3.92,3.92h95.7c5.26,0,10.3-.56,13.88-2.35,1.68-.9,2.91-2.01,3.81-3.58,1.01-1.57,1.68-3.81,1.68-7.28v-69.17c0-8.39,6.83-15.11,15.22-15.11h86.07c8.39,0,15.22,6.72,15.22,15.11Z" fill="#EC5F3F"/></svg>
+  <svg class="og-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 306.8 352.69"><path d="m306.8,166.33v73.65c0,8.39-6.83,15.11-15.22,15.11h-80.59c-7.05,0-13.43,1.23-17.91,3.81-4.25,2.35-6.49,5.6-6.49,10.52v68.28c0,8.28-6.72,15-15,15H14.66c-8.06,0-14.66-6.72-14.66-14.77V54.17c0-8.39,6.72-15.22,15.11-15.22h35.59c7.05,0,13.43-1.12,17.91-3.58,4.14-2.24,6.49-5.37,6.49-10.3v-9.96c0-8.39,6.83-15.11,15.11-15.11h126.26c8.39,0,15.11,6.72,15.11,15.11v15.11c0,8.39-6.72,15.11-15.11,15.11h-124.58c-5.37.11-10.75.56-14.66,2.46-1.79.89-3.13,2.13-4.14,3.69-1.01,1.68-1.79,4.03-1.79,7.72v185.58c0,2.24,1.79,3.92,3.92,3.92h95.7c5.26,0,10.3-.56,13.88-2.35,1.68-.9,2.91-2.01,3.81-3.58,1.01-1.57,1.68-3.81,1.68-7.28v-69.17c0-8.39,6.83-15.11,15.22-15.11h86.07c8.39,0,15.22,6.72,15.22,15.11Z" fill="#E8512A"/></svg>
 </div>
 </body>
 </html>`;
@@ -2485,21 +2521,21 @@ const ogBgStore = new Map();
 const OG_VISUAL_SYSTEM_PROMPT = `You create image generation prompts for abstract OG card background visuals. The visual will appear behind a blog title on a 1200x630 card.
 
 STYLE:
-- Abstract, sophisticated, minimal. Think editorial illustration for a premium tech blog.
-- Use flowing curves, geometric shapes, line art, or data-inspired abstract patterns.
-- Primary color: warm orange/coral (#EC5F3F). Secondary: muted grays, soft tans.
-- Background must be warm off-white/cream (#ECE8E2 or similar).
-- No text, no words, no letters, no numbers, no labels, no UI elements.
+- Dark minimal UI design system. Pure black background #000000.
+- Thin white vector line art. Monochromatic grayscale palette with single accent color: warm orange #E8512A.
+- Geometric abstract shapes: spheres with diagonal stripe patterns, wireframe orbs, pixel art icons, topographic contour line landscapes, particle scatter fields, spirograph geometric patterns, lemniscate orbital path diagrams, node-and-connector diagrams, pill-shaped UI components, checkerboard gradient spheres.
+- Crisp anti-aliased vector strokes. Scientific instrument aesthetic.
+- No text, no words, no letters, no numbers, no labels.
 - No realistic objects or people. Purely abstract.
-- Clean, airy composition with generous whitespace. Not busy or cluttered.
 - The visual should evoke the theme/mood of the tweet content without being literal.
+- Ultra high contrast white on black. Motion graphics still frame aesthetic.
 
 TITLE SAFE ZONE (STRICT, NON-NEGOTIABLE):
-- A large blog title in dark text will be overlaid in the top-left corner of the image, spanning roughly the left 65% and top 50%.
-- This zone MUST be completely clear. No shapes, no color, no gradients, no textures, no lines, no patterns. Pure plain cream/off-white (#ECE8E2) background only.
+- A large blog title in white text will be overlaid in the top-left corner of the image, spanning roughly the left 65% and top 50%.
+- This zone MUST be completely clear. No shapes, no white lines, no art elements. Pure plain black #000000 background only.
 - "Subtle" or "faint" elements are NOT acceptable in this zone. The title area must be entirely empty.
-- ALL visual elements (every shape, pattern, brushstroke, and color) must be placed ONLY in the bottom-right quadrant and along the right edge. Nothing in the top half or left half.
-- Composition must read as: empty top-left two-thirds for text, art confined to the bottom and far right.
+- ALL visual elements (every shape, pattern, line art) must be placed ONLY in the bottom-right quadrant and along the right edge. Nothing in the top half or left half.
+- Composition must read as: empty black top-left two-thirds for text, art confined to the bottom and far right.
 - If in doubt, pull the art further away from the title zone. Text legibility is the highest priority. Art must never compete with or reduce the readability of text.
 
 OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.`;
@@ -2508,7 +2544,7 @@ OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.
 async function generateOgVisualPrompt(tweetText, refinement, referenceImage) {
   let systemPrompt = OG_VISUAL_SYSTEM_PROMPT;
   if (referenceImage) {
-    systemPrompt += `\n\nREFERENCE IMAGE: A reference image has been provided. Analyze its visual style (colors, composition, texture, mood, aesthetic) and ensure your prompt reproduces that exact art style. The reference defines the look; you may override the default color and style rules with what you observe in the reference. HOWEVER, the TITLE SAFE ZONE rules above are NON-NEGOTIABLE and must NEVER be overridden. Regardless of what the reference image shows, the top-left 65% x 50% of the canvas must remain completely clear of any art, shapes, or visual elements.`;
+    systemPrompt += `\n\nREFERENCE IMAGE: A reference image has been provided. Analyze its visual style (colors, composition, texture, mood, aesthetic) and ensure your prompt reproduces that exact art style. The reference defines the look; you may override the default color and style rules with what you observe in the reference. HOWEVER, the TITLE SAFE ZONE rules above are NON-NEGOTIABLE and must NEVER be overridden. Regardless of what the reference image shows, the top-left 65% x 50% of the canvas must remain completely clear. The background in the title safe zone must be pure black #000000.`;
   }
 
   let userText = `Generate an abstract visual prompt for an OG card. The tweet this supports:\n\n"${tweetText}"`;

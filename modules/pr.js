@@ -10833,6 +10833,11 @@ class DistributeManager {
 
     if (tweetFormat === 'visual') {
       const savedVisualProvider = localStorage.getItem('glossi_visual_provider') || 'gemini';
+      const savedVisualMode = localStorage.getItem('glossi_visual_mode') || 'abstract';
+      const modeSelectHtml = `<select class="pr-og-provider-select" data-action="visual-mode-select">
+                <option value="abstract"${savedVisualMode === 'abstract' ? ' selected' : ''}>Abstract</option>
+                <option value="chart"${savedVisualMode === 'chart' ? ' selected' : ''}>Chart</option>
+              </select>`;
       if (hasImage) {
         const img = media.find(m => m.type === 'image');
         mediaHtml = `
@@ -10844,6 +10849,7 @@ class DistributeManager {
           </div>
           <div class="pr-twitter-visual-feedback">
             <div class="pr-twitter-visual-feedback-row">
+              ${modeSelectHtml}
               <select class="pr-og-provider-select" data-action="visual-provider-select">
                 <option value="gemini"${savedVisualProvider === 'gemini' ? ' selected' : ''}>Gemini</option>
                 <option value="midjourney"${savedVisualProvider === 'midjourney' ? ' selected' : ''}>Midjourney</option>
@@ -10857,18 +10863,23 @@ class DistributeManager {
         mediaHtml = `
           <div class="pr-twitter-visual-loading">
             ${glossiLoaderSVG('glossi-loader-sm')}
-            <span>Generating infographic...</span>
+            <span>Generating visual...</span>
           </div>`;
       } else {
         mediaHtml = `
           <div class="pr-twitter-generate-visual">
             <div class="pr-twitter-generate-visual-hint">
               <i class="ph-light ph-image"></i>
-              <span>Click to generate an AI infographic</span>
+              <span>Click to generate an AI visual</span>
+            </div>
+            <div class="pr-twitter-visual-feedback">
+              <div class="pr-twitter-visual-feedback-row">
+                ${modeSelectHtml}
+              </div>
             </div>
             ${refPillHtml}
             <button class="pr-twitter-generate-visual-btn" data-action="generate-visual">
-              <i class="ph-light ph-magic-wand"></i> Generate Infographic
+              <i class="ph-light ph-magic-wand"></i> Generate Visual
             </button>
           </div>`;
       }
@@ -10994,6 +11005,11 @@ class DistributeManager {
         localStorage.setItem('glossi_visual_provider', sel.value);
       });
     });
+    container.querySelectorAll('[data-action="visual-mode-select"]').forEach(sel => {
+      sel.addEventListener('change', () => {
+        localStorage.setItem('glossi_visual_mode', sel.value);
+      });
+    });
     container.querySelectorAll('[data-action="edit-link-url"]').forEach(el => {
       let debounceTimer;
       el.addEventListener('input', () => {
@@ -11078,7 +11094,8 @@ class DistributeManager {
     const refImage = this.getResolvedRefImage(output);
 
     try {
-      const promptPayload = { tweet_text: tweetText };
+      const visualMode = localStorage.getItem('glossi_visual_mode') || 'abstract';
+      const promptPayload = { tweet_text: tweetText, visual_mode: visualMode };
       if (refImage) promptPayload.reference_image = refImage;
 
       const promptRes = await this.prAgent.apiCall('/api/pr/generate-visual-prompt', {
@@ -11136,7 +11153,8 @@ class DistributeManager {
     const refImage = this.getResolvedRefImage(output);
 
     try {
-      const payload = { tweet_text: tweetText, feedback: feedback };
+      const visualMode = localStorage.getItem('glossi_visual_mode') || 'abstract';
+      const payload = { tweet_text: tweetText, feedback: feedback, visual_mode: visualMode };
       if (output.visual_prompt) payload.previous_prompt = output.visual_prompt;
       if (refImage) payload.reference_image = refImage;
 
