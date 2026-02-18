@@ -2495,13 +2495,12 @@ class PRAgent {
     if (headingLine) {
       let clean = headingLine.trim().replace(/^#+\s*/, '').replace(/\*+/g, '').trim();
       if (clean.length >= 5) {
-        if (clean.length > 80) {
+        if (clean.length > 70) {
           const sentenceEnd = clean.search(/[.!?]\s/);
-          if (sentenceEnd > 10 && sentenceEnd <= 80) {
+          if (sentenceEnd > 10 && sentenceEnd <= 70) {
             clean = clean.substring(0, sentenceEnd + 1);
           } else {
-            const lastSpace = clean.lastIndexOf(' ', 80);
-            clean = clean.substring(0, lastSpace > 20 ? lastSpace : 80);
+            clean = clean.split(/\s+/).slice(0, 7).join(' ');
           }
         }
         return clean;
@@ -2717,6 +2716,8 @@ class PRAgent {
 
   formatContent(content, citations) {
     if (!content) return '<p class="pr-empty-content">No content generated</p>';
+
+    content = content.replace(/\*\*([^*]{50,}?)\*\*/g, '$1');
 
     content = content.replace(/([^\n])\s*(#{1,3}\s+\S)/g, '$1\n\n$2');
 
@@ -3402,7 +3403,21 @@ class PRAgent {
     if (!isMatch) return content;
 
     if (/^#{1,3}\s/.test(rawFirstLine.trim())) {
-      lines.splice(firstNonEmpty, 1);
+      const headingText = rawFirstLine.replace(/^#+\s*/, '').replace(/\*+/g, '').trim();
+      const headingLower = headingText.toLowerCase();
+      if (headingLower.length > titleClean.length + 5 && headingLower.startsWith(titleClean)) {
+        const cutPos = titleClean.length;
+        const wordBoundary = headingText.indexOf(' ', cutPos);
+        const safePos = wordBoundary > cutPos ? wordBoundary : cutPos;
+        const remainder = headingText.substring(safePos).replace(/^[\s,.;:]+/, '').trim();
+        if (remainder) {
+          lines[firstNonEmpty] = remainder;
+        } else {
+          lines.splice(firstNonEmpty, 1);
+        }
+      } else {
+        lines.splice(firstNonEmpty, 1);
+      }
     } else if (titleClean.startsWith(firstLine) || firstLine === titleClean) {
       lines.splice(firstNonEmpty, 1);
     } else if (firstLine.startsWith(titleClean) && firstLine.length > titleClean.length + 5) {
@@ -10492,6 +10507,8 @@ class DistributeManager {
 
   markdownToBlogHtml(text) {
     if (!text) return '<p></p>';
+
+    text = text.replace(/\*\*([^*]{50,}?)\*\*/g, '$1');
 
     text = text.replace(/([^\n])\s*(#{1,3}\s+\S)/g, '$1\n\n$2');
 
