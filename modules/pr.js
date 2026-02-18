@@ -2448,9 +2448,24 @@ class PRAgent {
 
   extractTitle(content, fallbackType) {
     if (!content) return fallbackType;
-    const firstLine = content.split('\n').find(l => l.trim().length > 0) || '';
-    const clean = firstLine.replace(/^#+\s*/, '').replace(/\*+/g, '').trim();
-    return clean.length > 60 ? clean.substring(0, 60) + '...' : clean || fallbackType;
+
+    const lines = content.split('\n');
+
+    const headingLine = lines.find(l => /^#{1,3}\s+\S/.test(l.trim()));
+    if (headingLine) {
+      const clean = headingLine.trim().replace(/^#+\s*/, '').replace(/\*+/g, '').trim();
+      if (clean.length >= 5) return clean.length > 100 ? clean.substring(0, 100) + '...' : clean;
+    }
+
+    const boldMatch = content.match(/^\*\*(.+?)\*\*/);
+    if (boldMatch && boldMatch[1].length >= 5 && boldMatch[1].length <= 100) {
+      return boldMatch[1].trim();
+    }
+
+    const firstLine = (lines.find(l => l.trim().length > 0) || '').replace(/^#+\s*/, '').replace(/\*+/g, '').trim();
+    if (firstLine.length <= 60) return firstLine || fallbackType;
+
+    return fallbackType;
   }
 
   showLoading(context = 'general') {
@@ -3357,17 +3372,32 @@ class PRAgent {
     const firstNonEmpty = lines.findIndex(l => l.trim().length > 0);
     if (firstNonEmpty === -1) return content;
 
-    const firstLine = lines[firstNonEmpty].replace(/^#+\s*/, '').replace(/\*+/g, '').trim().toLowerCase();
-    if (firstLine === titleClean ||
+    const rawFirstLine = lines[firstNonEmpty];
+    const firstLine = rawFirstLine.replace(/^#+\s*/, '').replace(/\*+/g, '').trim().toLowerCase();
+
+    const isMatch = firstLine === titleClean ||
         firstLine.startsWith(titleClean) ||
         titleClean.startsWith(firstLine) ||
         (firstLine.length > 10 && titleClean.includes(firstLine)) ||
-        (titleClean.length > 10 && firstLine.includes(titleClean))) {
+        (titleClean.length > 10 && firstLine.includes(titleClean));
+
+    if (!isMatch) return content;
+
+    if (titleClean.startsWith(firstLine) || firstLine === titleClean) {
       lines.splice(firstNonEmpty, 1);
-      const result = lines.join('\n').replace(/^\n+/, '');
-      return result;
+    } else if (firstLine.startsWith(titleClean) && firstLine.length > titleClean.length + 5) {
+      const originalLine = rawFirstLine.replace(/^#+\s*/, '').replace(/\*+/g, '').trim();
+      const remainder = originalLine.substring(titleClean.length).replace(/^[\s,.;:]+/, '').trim();
+      if (remainder) {
+        lines[firstNonEmpty] = remainder;
+      } else {
+        lines.splice(firstNonEmpty, 1);
+      }
+    } else {
+      lines.splice(firstNonEmpty, 1);
     }
-    return content;
+
+    return lines.join('\n').replace(/^\n+/, '');
   }
 
   _buildBrandedHTML(title, typeLabel, dateStr, contentHTML, sourceInfo) {
@@ -10398,7 +10428,8 @@ class DistributeManager {
     if (!container) return;
 
     const title = output.title || output.news_headline || 'Untitled Post';
-    const content = output.content || '';
+    const rawContent = output.content || '';
+    const content = this.prAgent._stripTitleFromPlainText(rawContent, title);
     const media = output.media_attachments || [];
     const createdAt = output.created_at ? new Date(output.created_at) : new Date();
 
