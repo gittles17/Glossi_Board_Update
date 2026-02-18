@@ -14502,7 +14502,9 @@ svg.spinning,
   margin-bottom: var(--space-1);
 }
 
-.pr-generated-content strong {
+.pr-generated-content strong,
+.pr-draft-content strong {
+  font-weight: 500;
   color: var(--text-primary);
 }
 
