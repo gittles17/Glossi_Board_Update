@@ -10281,6 +10281,11 @@ class DistributeManager {
   selectReviewItem(outputId) {
     const output = this.prAgent.outputs.find(o => o.id === outputId);
     if (!output) return;
+
+    if (!output.content && output.drafts?.length) {
+      output.content = output.drafts[0]?.content || '';
+    }
+
     this.activeReviewItem = output;
 
     // Reset blog slug for the new item
