@@ -946,9 +946,7 @@ class PRAgent {
           const draft = draftIndex >= 0 ? this.currentOutput.drafts[draftIndex] : null;
           if (draft && this.dom.generatedContent) {
             this._viewingDraftIndex = draftIndex;
-            if (!draft.renderedHtml) {
-              draft.renderedHtml = this.formatContent(draft.content, this.currentOutput.citations);
-            }
+            draft.renderedHtml = this.formatContent(draft.content, this.currentOutput.citations);
             this.dom.generatedContent.innerHTML = `<div class="pr-draft-content">${draft.renderedHtml}</div>`;
             versionMenu.querySelectorAll('.pr-version-menu-item').forEach(v => v.classList.remove('active'));
             item.classList.add('active');
@@ -2598,9 +2596,7 @@ class PRAgent {
     this._viewingDraftIndex = 0;
     const latest = drafts[0];
     if (latest) {
-      if (!latest.renderedHtml) {
-        latest.renderedHtml = this.formatContent(latest.content, this.currentOutput.citations);
-      }
+      latest.renderedHtml = this.formatContent(latest.content, this.currentOutput.citations);
       container.innerHTML = `<div class="pr-draft-content">${latest.renderedHtml}</div>`;
     }
 
@@ -2711,80 +2707,30 @@ class PRAgent {
 
     content = content.replace(/([^\n])\s*(#{1,3}\s+\S)/g, '$1\n\n$2');
 
-    const lines = content.split('\n');
-    const blocks = [];
-    let paragraph = [];
-    let listItems = [];
-
-    const flushParagraph = () => {
-      if (!paragraph.length) return;
-      const escaped = paragraph.map(l => this.escapeHtml(l));
-      blocks.push(`<p class="pr-paragraph">${escaped.join('<br>')}</p>`);
-      paragraph = [];
-    };
-
-    const flushList = () => {
-      if (!listItems.length) return;
-      blocks.push(`<ul>${listItems.map(li => `<li>${this.escapeHtml(li)}</li>`).join('')}</ul>`);
-      listItems = [];
-    };
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-
-      if (trimmed === '') {
-        flushList();
-        flushParagraph();
-        continue;
-      }
-
-      if (/^#{1,3}$/.test(trimmed)) continue;
-
-      const headingMatch = trimmed.match(/^(#{1,3})\s+(.+)$/);
-      if (headingMatch) {
-        flushList();
-        flushParagraph();
-        const level = Math.min(headingMatch[1].length, 3);
-        blocks.push(`<h${level}>${this.escapeHtml(headingMatch[2])}</h${level}>`);
-        continue;
-      }
-
-      if (/^>\s/.test(trimmed)) {
-        flushList();
-        flushParagraph();
-        const quoteText = trimmed.replace(/^>\s?/, '');
-        blocks.push(`<blockquote><p>${this.escapeHtml(quoteText)}</p></blockquote>`);
-        continue;
-      }
-
-      if (/^\s*[-*]\s/.test(line)) {
-        flushParagraph();
-        listItems.push(trimmed.replace(/^[-*]\s+/, ''));
-        continue;
-      }
-
-      if (listItems.length) flushList();
-      paragraph.push(trimmed);
-    }
-
-    flushList();
-    flushParagraph();
-
-    let html = blocks.join('\n');
-
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
-
-    html = html.replace(/\[Source (\d+)\]/g, (match, num) => {
+    content = content.replace(/\[Source (\d+)\]/g, (match, num) => {
       const citation = citations?.find(c => c.index === parseInt(num));
       const sourceId = citation?.sourceId || '';
       const verified = citation?.verified !== false;
       return `<sup class="pr-citation" data-source-index="${num}" data-source-id="${sourceId}" data-verified="${verified}">${num}</sup>`;
     });
+    content = content.replace(/\[NEEDS?\s*SOURCE\]/gi, '<span class="pr-needs-source">NEEDS SOURCE</span>');
 
-    html = html.replace(/\[NEEDS?\s*SOURCE\]/gi, '<span class="pr-needs-source">NEEDS SOURCE</span>');
+    if (typeof marked !== 'undefined' && marked.parse) {
+      return marked.parse(content, { breaks: true });
+    }
 
-    return html;
+    const lines = content.split('\n');
+    const blocks = [];
+    let paragraph = [];
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed === '') { if (paragraph.length) { blocks.push(`<p>${paragraph.join('<br>')}</p>`); paragraph = []; } continue; }
+      const hm = trimmed.match(/^(#{1,3})\s+(.+)$/);
+      if (hm) { if (paragraph.length) { blocks.push(`<p>${paragraph.join('<br>')}</p>`); paragraph = []; } blocks.push(`<h${Math.min(hm[1].length,3)}>${this.escapeHtml(hm[2])}</h${Math.min(hm[1].length,3)}>`); continue; }
+      paragraph.push(this.escapeHtml(trimmed));
+    }
+    if (paragraph.length) blocks.push(`<p>${paragraph.join('<br>')}</p>`);
+    return blocks.join('\n');
   }
 
   htmlToMarkdown(el) {
@@ -2794,8 +2740,12 @@ class PRAgent {
     html = html.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '# $1\n\n');
     html = html.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '## $1\n\n');
     html = html.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '### $1\n\n');
+    html = html.replace(/<blockquote[^>]*>\s*<p[^>]*>([\s\S]*?)<\/p>\s*<\/blockquote>/gi, '\n> $1\n\n');
+    html = html.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, '\n> $1\n\n');
+    html = html.replace(/<hr[^>]*\/?>/gi, '\n---\n\n');
     html = html.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '- $1\n');
     html = html.replace(/<ul[^>]*>|<\/ul>/gi, '\n');
+    html = html.replace(/<ol[^>]*>|<\/ol>/gi, '\n');
     html = html.replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, '**$1**');
     html = html.replace(/<em[^>]*>([\s\S]*?)<\/em>/gi, '*$1*');
     html = html.replace(/<br\s*\/?>/gi, '\n');
@@ -10522,116 +10472,15 @@ class DistributeManager {
 
     text = text.replace(/([^\n])\s*(#{1,3}\s+\S)/g, '$1\n\n$2');
 
+    if (typeof marked !== 'undefined' && marked.parse) {
+      let html = marked.parse(text, { breaks: true });
+      html = html.replace(/<a\s/g, '<a style="color: #EC5F3F; text-decoration: none;" ');
+      return html || '<p></p>';
+    }
+
     const escaped = this.escapeHtml(text);
-    const lines = escaped.split('\n');
-    const blocks = [];
-    let currentBlock = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmed = line.trim();
-
-      if (trimmed === '') {
-        if (currentBlock.length > 0) {
-          blocks.push(currentBlock.join('\n'));
-          currentBlock = [];
-        }
-        continue;
-      }
-
-      if (trimmed === '---' || trimmed === '***' || trimmed === '___') {
-        if (currentBlock.length > 0) {
-          blocks.push(currentBlock.join('\n'));
-          currentBlock = [];
-        }
-        blocks.push('---');
-        continue;
-      }
-
-      currentBlock.push(line);
-    }
-
-    if (currentBlock.length > 0) {
-      blocks.push(currentBlock.join('\n'));
-    }
-
-    let html = '';
-
-    for (const block of blocks) {
-      const trimmedBlock = block.trim();
-
-      if (trimmedBlock === '---') {
-        html += '<hr>';
-        continue;
-      }
-
-      if (trimmedBlock.startsWith('### ')) {
-        html += `<h3>${this.applyInlineFormatting(trimmedBlock.slice(4))}</h3>`;
-        continue;
-      }
-
-      if (trimmedBlock.startsWith('## ')) {
-        html += `<h2>${this.applyInlineFormatting(trimmedBlock.slice(3))}</h2>`;
-        continue;
-      }
-
-      if (trimmedBlock.startsWith('# ')) {
-        html += `<h2>${this.applyInlineFormatting(trimmedBlock.slice(2))}</h2>`;
-        continue;
-      }
-
-      if (trimmedBlock.startsWith('&gt; ')) {
-        const quoteText = trimmedBlock.split('\n').map(l => l.replace(/^&gt;\s?/, '')).join(' ');
-        html += `<blockquote><p>${this.applyInlineFormatting(quoteText)}</p></blockquote>`;
-        continue;
-      }
-
-      const listLines = trimmedBlock.split('\n');
-      const isBulletList = listLines.every(l => /^\s*[-*]\s/.test(l));
-      const isNumberedList = listLines.every(l => /^\s*\d+[.)]\s/.test(l));
-
-      if (isBulletList) {
-        const items = listLines.map(l => `<li>${this.applyInlineFormatting(l.replace(/^\s*[-*]\s/, ''))}</li>`).join('');
-        html += `<ul>${items}</ul>`;
-        continue;
-      }
-
-      if (isNumberedList) {
-        const items = listLines.map(l => `<li>${this.applyInlineFormatting(l.replace(/^\s*\d+[.)]\s/, ''))}</li>`).join('');
-        html += `<ol>${items}</ol>`;
-        continue;
-      }
-
-      const paragraphLines = trimmedBlock.split('\n');
-      let paraHtml = '';
-      for (const pLine of paragraphLines) {
-        const pTrimmed = pLine.trim();
-        if (pTrimmed.startsWith('### ')) {
-          if (paraHtml) { html += `<p>${this.applyInlineFormatting(paraHtml)}</p>`; paraHtml = ''; }
-          html += `<h3>${this.applyInlineFormatting(pTrimmed.slice(4))}</h3>`;
-        } else if (pTrimmed.startsWith('## ')) {
-          if (paraHtml) { html += `<p>${this.applyInlineFormatting(paraHtml)}</p>`; paraHtml = ''; }
-          html += `<h2>${this.applyInlineFormatting(pTrimmed.slice(3))}</h2>`;
-        } else {
-          paraHtml += (paraHtml ? ' ' : '') + pTrimmed;
-        }
-      }
-      if (paraHtml) {
-        html += `<p>${this.applyInlineFormatting(paraHtml)}</p>`;
-      }
-    }
-
-    return html || '<p></p>';
-  }
-
-  applyInlineFormatting(text) {
-    let result = text;
-    result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    result = result.replace(/__(.+?)__/g, '<strong>$1</strong>');
-    result = result.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    result = result.replace(/_(.+?)_/g, '<em>$1</em>');
-    result = result.replace(/(https?:\/\/[^\s<]+)/g, '<a style="color: #EC5F3F; text-decoration: none;">$1</a>');
-    return result;
+    const paragraphs = escaped.split(/\n\n+/).filter(p => p.trim());
+    return paragraphs.map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('') || '<p></p>';
   }
 
   renderEmailPreview(output) {
