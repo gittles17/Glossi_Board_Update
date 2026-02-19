@@ -912,6 +912,7 @@ class PRAgent {
 
     // Export menu items
     document.getElementById('pr-export-text')?.addEventListener('click', () => this.exportAs('text'));
+    document.getElementById('pr-export-md')?.addEventListener('click', () => this.exportAs('markdown'));
     document.getElementById('pr-export-html')?.addEventListener('click', () => this.exportAs('html'));
     document.getElementById('pr-export-pdf')?.addEventListener('click', () => this.exportAs('pdf'));
 
@@ -3694,6 +3695,25 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
       parts.push('', divider, 'glossi.io | will.erwin@glossi.io');
       this.downloadFile(parts.join('\n'), `${filename}.txt`, 'text/plain');
 
+    } else if (format === 'markdown') {
+      const contentHTML = this._getCleanContentHTML(sourceInfo);
+      const bodyMd = this._htmlToMarkdown(contentHTML);
+      const strippedBody = this._stripTitleFromPlainText(bodyMd, title);
+      const parts = [`# ${title}`];
+      if (typeLabel || dateStr) {
+        parts.push('', `*${[typeLabel, dateStr].filter(Boolean).join(' | ')}*`);
+      }
+      parts.push('', '---', '', strippedBody.trim());
+      if (sourceInfo) {
+        parts.push('', '---', '');
+        const srcLine = sourceInfo.url
+          ? `Source: [${sourceInfo.headline}](${sourceInfo.url})${sourceInfo.outlet ? ` (${sourceInfo.outlet})` : ''}`
+          : `Source: "${sourceInfo.headline}"${sourceInfo.outlet ? ` (${sourceInfo.outlet})` : ''}`;
+        parts.push(srcLine);
+      }
+      parts.push('', '---', '', '*[Glossi](https://glossi.io) | will.erwin@glossi.io*', '');
+      this.downloadFile(parts.join('\n'), `${filename}.md`, 'text/markdown');
+
     } else if (format === 'html') {
       const contentHTML = this._getCleanContentHTML(sourceInfo);
       const html = this._buildBrandedHTML(title, typeLabel, dateStr, contentHTML, sourceInfo);
@@ -3746,6 +3766,75 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
     let html = clone.innerHTML;
     html = this._stripSourceReferences(html, sourceInfo);
     return html;
+  }
+
+  _htmlToMarkdown(html) {
+    const container = document.createElement('div');
+    container.innerHTML = html;
+
+    const convert = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent.replace(/\n\s*/g, ' ');
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+      const tag = node.tagName.toLowerCase();
+      const children = Array.from(node.childNodes).map(convert).join('');
+
+      switch (tag) {
+        case 'h1': return `# ${children.trim()}\n\n`;
+        case 'h2': return `## ${children.trim()}\n\n`;
+        case 'h3': return `### ${children.trim()}\n\n`;
+        case 'h4': return `#### ${children.trim()}\n\n`;
+        case 'h5': return `##### ${children.trim()}\n\n`;
+        case 'h6': return `###### ${children.trim()}\n\n`;
+        case 'p': return `${children.trim()}\n\n`;
+        case 'br': return '\n';
+        case 'strong':
+        case 'b': return `**${children.trim()}**`;
+        case 'em':
+        case 'i': return `*${children.trim()}*`;
+        case 'a': {
+          const href = node.getAttribute('href') || '';
+          return href ? `[${children.trim()}](${href})` : children;
+        }
+        case 'img': {
+          const src = node.getAttribute('src') || '';
+          const alt = node.getAttribute('alt') || '';
+          return src ? `![${alt}](${src})\n\n` : '';
+        }
+        case 'blockquote': return `> ${children.trim().replace(/\n/g, '\n> ')}\n\n`;
+        case 'code': {
+          if (node.parentElement?.tagName?.toLowerCase() === 'pre') return children;
+          return `\`${children}\``;
+        }
+        case 'pre': return `\`\`\`\n${node.textContent.trim()}\n\`\`\`\n\n`;
+        case 'ul': {
+          const items = Array.from(node.children)
+            .filter(c => c.tagName?.toLowerCase() === 'li')
+            .map(li => `- ${convert(li).replace(/^\s+|\s+$/g, '').replace(/\n{2,}/g, '\n')}`)
+            .join('\n');
+          return `${items}\n\n`;
+        }
+        case 'ol': {
+          const items = Array.from(node.children)
+            .filter(c => c.tagName?.toLowerCase() === 'li')
+            .map((li, i) => `${i + 1}. ${convert(li).replace(/^\s+|\s+$/g, '').replace(/\n{2,}/g, '\n')}`)
+            .join('\n');
+          return `${items}\n\n`;
+        }
+        case 'li': return children;
+        case 'hr': return '---\n\n';
+        case 'div':
+        case 'section':
+        case 'article':
+        case 'span': return children;
+        default: return children;
+      }
+    };
+
+    let md = Array.from(container.childNodes).map(convert).join('');
+    return md.replace(/\n{3,}/g, '\n\n').trim();
   }
 
   async _exportPDF(title, typeLabel, dateStr, filename, sourceInfo) {
