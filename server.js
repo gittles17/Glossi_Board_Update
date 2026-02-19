@@ -3141,6 +3141,139 @@ app.delete('/api/x/tweet/:id', async (req, res) => {
 });
 
 // ============================================
+// LINKEDIN: FETCH ORGANIZATION POSTS
+// ============================================
+
+app.get('/api/linkedin/posts', async (req, res) => {
+  try {
+    const tokens = await getLinkedInTokens();
+    if (!tokens || !tokens.access_token) {
+      return res.json({ success: true, posts: [], connected: false });
+    }
+
+    const orgId = tokens.org_id || process.env.LINKEDIN_ORG_ID;
+    if (!orgId) {
+      return res.json({ success: true, posts: [], connected: true, error: 'Organization ID not found' });
+    }
+
+    const count = Math.min(parseInt(req.query.count) || 50, 100);
+    const postsUrl = `https://api.linkedin.com/rest/posts?author=urn:li:organization:${orgId}&count=${count}&sortBy=LAST_MODIFIED`;
+
+    const postsRes = await axios.get(postsUrl, {
+      headers: {
+        'Authorization': `Bearer ${tokens.access_token}`,
+        'LinkedIn-Version': LINKEDIN_API_VERSION,
+        'X-Restli-Protocol-Version': '2.0.0'
+      },
+      timeout: 15000
+    });
+
+    const rawPosts = postsRes.data?.elements || [];
+    const posts = [];
+
+    for (const post of rawPosts) {
+      const urn = post.id || post.urn;
+      let likes = 0, comments = 0, shares = 0;
+
+      try {
+        const encodedUrn = encodeURIComponent(urn);
+        const actionsRes = await axios.get(`https://api.linkedin.com/rest/socialActions/${encodedUrn}`, {
+          headers: {
+            'Authorization': `Bearer ${tokens.access_token}`,
+            'LinkedIn-Version': LINKEDIN_API_VERSION,
+            'X-Restli-Protocol-Version': '2.0.0'
+          },
+          timeout: 5000
+        });
+        const counts = actionsRes.data;
+        likes = counts?.likesSummary?.totalLikes || 0;
+        comments = counts?.commentsSummary?.totalFirstLevelComments || 0;
+        shares = counts?.shareCount || 0;
+      } catch (_) {}
+
+      const activityId = urn.split(':').pop();
+      const postUrl = `https://www.linkedin.com/feed/update/urn:li:activity:${activityId}`;
+
+      posts.push({
+        id: urn,
+        channel: 'linkedin',
+        text: post.commentary || '',
+        created_at: post.createdAt ? new Date(post.createdAt).toISOString() : null,
+        likes,
+        comments,
+        shares,
+        url: postUrl,
+        media: post.content?.media?.id || null,
+        visibility: post.visibility
+      });
+    }
+
+    res.json({ success: true, posts, connected: true });
+  } catch (error) {
+    const errMsg = error.response?.data?.message || error.message;
+    const status = error.response?.status;
+    if (status === 401) {
+      return res.json({ success: true, posts: [], connected: false, error: 'Token expired' });
+    }
+    res.status(500).json({ success: false, error: errMsg });
+  }
+});
+
+// ============================================
+// X (TWITTER): FETCH USER TWEETS
+// ============================================
+
+app.get('/api/x/posts', async (req, res) => {
+  if (!isXConfigured()) {
+    return res.json({ success: true, posts: [], connected: false });
+  }
+
+  try {
+    const meRequest = { url: 'https://api.twitter.com/2/users/me', method: 'GET' };
+    const meRes = await axios.get(meRequest.url, {
+      headers: { ...xAuthHeader(meRequest) },
+      timeout: 8000
+    });
+    const userId = meRes.data?.data?.id;
+    const username = meRes.data?.data?.username;
+    if (!userId) {
+      return res.json({ success: true, posts: [], connected: false, error: 'Could not determine user ID' });
+    }
+
+    const maxResults = Math.min(parseInt(req.query.count) || 50, 100);
+    const tweetsUrl = `https://api.twitter.com/2/users/${userId}/tweets?max_results=${maxResults}&exclude=retweets&tweet.fields=created_at,public_metrics,text,entities`;
+    const tweetsRequest = { url: tweetsUrl, method: 'GET' };
+    const tweetsRes = await axios.get(tweetsRequest.url, {
+      headers: { ...xAuthHeader(tweetsRequest) },
+      timeout: 15000
+    });
+
+    const rawTweets = tweetsRes.data?.data || [];
+    const posts = rawTweets.map(tweet => ({
+      id: tweet.id,
+      channel: 'x',
+      text: tweet.text || '',
+      created_at: tweet.created_at || null,
+      likes: tweet.public_metrics?.like_count || 0,
+      comments: tweet.public_metrics?.reply_count || 0,
+      shares: tweet.public_metrics?.retweet_count || 0,
+      impressions: tweet.public_metrics?.impression_count || 0,
+      url: `https://x.com/${username}/status/${tweet.id}`,
+      entities: tweet.entities || null
+    }));
+
+    res.json({ success: true, posts, connected: true, username });
+  } catch (error) {
+    const status = error.response?.status;
+    const detail = error.response?.data?.detail || error.response?.data?.errors?.[0]?.message || error.message;
+    if (status === 401 || status === 403) {
+      return res.json({ success: true, posts: [], connected: false, error: detail });
+    }
+    res.status(500).json({ success: false, error: detail });
+  }
+});
+
+// ============================================
 // DISTRIBUTION ENDPOINTS
 // ============================================
 

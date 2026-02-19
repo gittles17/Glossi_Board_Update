@@ -86,6 +86,9 @@
         <button class="pr-nav-item" data-stage="distribute" title="Distribute" aria-label="Distribute">
           <i class="ph-light ph-share-network"></i>
         </button>
+        <button class="pr-nav-item" data-stage="live" title="Live" aria-label="Live">
+          <i class="ph-light ph-broadcast"></i>
+        </button>
       </div>
       <button class="pr-nav-item pr-nav-sources" id="pr-nav-sources-btn" title="Sources" aria-label="Sources">
         <i class="ph-light ph-folder"></i>
@@ -657,6 +660,56 @@
 
         </div>
       </div>
+
+      <!-- Live Stage Content -->
+      <div class="pr-stage-content" id="pr-live-stage" data-stage="live">
+        <div class="pr-live-layout">
+
+          <!-- Left: Post Feed -->
+          <div class="pr-live-feed" id="pr-live-feed">
+            <div class="pr-live-feed-header">
+              <span class="pr-panel-label">Live Posts</span>
+              <button class="pr-live-refresh-btn" id="pr-live-refresh-btn" title="Refresh" aria-label="Refresh">
+                <i class="ph-light ph-arrows-clockwise"></i>
+              </button>
+            </div>
+            <div class="pr-live-filters" id="pr-live-filters">
+              <button class="pr-live-filter-btn active" data-channel="all">All</button>
+              <button class="pr-live-filter-btn" data-channel="linkedin">
+                <i class="ph-light ph-linkedin-logo"></i> LinkedIn
+              </button>
+              <button class="pr-live-filter-btn" data-channel="x">
+                <i class="ph-light ph-x-logo"></i> X
+              </button>
+              <button class="pr-live-filter-btn" data-channel="blog">
+                <i class="ph-light ph-article"></i> Blog
+              </button>
+            </div>
+            <div class="pr-live-feed-list" id="pr-live-feed-list">
+              <div class="pr-live-feed-empty" id="pr-live-feed-empty">
+                <i class="ph-light ph-broadcast" style="font-size: 32px; opacity: 0.3;"></i>
+                <p>Navigate to Live to see your published posts.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Post Preview -->
+          <div class="pr-live-preview" id="pr-live-preview">
+            <div class="pr-live-preview-empty" id="pr-live-preview-empty">
+              <i class="ph-light ph-eye" style="font-size: 48px; opacity: 0.3;"></i>
+              <p>Select a post to preview.</p>
+            </div>
+            <div class="pr-live-preview-content" id="pr-live-preview-content" style="display:none">
+              <div class="pr-live-preview-header" id="pr-live-preview-header"></div>
+              <div class="pr-live-preview-body" id="pr-live-preview-body"></div>
+              <div class="pr-live-preview-stats" id="pr-live-preview-stats"></div>
+              <div class="pr-live-preview-actions" id="pr-live-preview-actions"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
     </div>
   </main>
 

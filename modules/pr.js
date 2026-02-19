@@ -342,6 +342,9 @@ class PRAgent {
     // Initialize distribute manager
     this.distributeManager = new DistributeManager(this);
     await this.distributeManager.init();
+
+    this.liveManager = new LiveManager(this);
+    await this.liveManager.init();
     
     // Add "Edit Foundation" button to sources header
     this.addEditFoundationButton();
@@ -12174,4 +12177,324 @@ class DistributeManager {
   }
 }
 
-export { PRAgent, CONTENT_TYPES, WizardManager, MediaManager, NewsMonitor, CalendarManager, AngleManager, DistributeManager };
+class LiveManager {
+  constructor(prAgent) {
+    this.prAgent = prAgent;
+    this.posts = [];
+    this.activeFilter = 'all';
+    this.selectedPost = null;
+    this.loaded = false;
+    this.loading = false;
+  }
+
+  async init() {
+    this.bindEvents();
+    this.observeStageSwitch();
+  }
+
+  bindEvents() {
+    const refreshBtn = document.getElementById('pr-live-refresh-btn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => this.fetchAll());
+    }
+
+    const filters = document.querySelectorAll('.pr-live-filter-btn[data-channel]');
+    filters.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filters.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.activeFilter = btn.dataset.channel;
+        this.renderFeed();
+      });
+    });
+  }
+
+  observeStageSwitch() {
+    const navItems = document.querySelectorAll('.pr-nav-item[data-stage]');
+    navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        if (item.dataset.stage === 'live' && !this.loaded) {
+          this.fetchAll();
+        }
+      });
+    });
+  }
+
+  async fetchAll() {
+    if (this.loading) return;
+    this.loading = true;
+
+    const refreshBtn = document.getElementById('pr-live-refresh-btn');
+    if (refreshBtn) refreshBtn.classList.add('spinning');
+
+    this.showSkeletons();
+
+    try {
+      const [linkedinRes, xRes, blogRes] = await Promise.allSettled([
+        this.prAgent.apiCall('/api/linkedin/posts'),
+        this.prAgent.apiCall('/api/x/posts'),
+        this.prAgent.apiCall('/api/pr/outputs')
+      ]);
+
+      this.posts = [];
+      const warnings = [];
+
+      if (linkedinRes.status === 'fulfilled' && linkedinRes.value?.success) {
+        if (linkedinRes.value.connected === false) {
+          warnings.push({ channel: 'linkedin', msg: 'LinkedIn not connected' });
+        }
+        if (linkedinRes.value.posts) {
+          this.posts.push(...linkedinRes.value.posts);
+        }
+      }
+
+      if (xRes.status === 'fulfilled' && xRes.value?.success) {
+        if (xRes.value.connected === false) {
+          warnings.push({ channel: 'x', msg: 'X not connected' });
+        }
+        if (xRes.value.posts) {
+          this.posts.push(...xRes.value.posts);
+        }
+      }
+
+      if (blogRes.status === 'fulfilled' && blogRes.value?.success && blogRes.value.outputs) {
+        const blogs = blogRes.value.outputs
+          .filter(o => o.content_type === 'blog_post' && o.status === 'published')
+          .map(b => ({
+            id: b.id,
+            channel: 'blog',
+            text: b.title || '',
+            body: b.content || '',
+            created_at: b.published_at || b.created_at || null,
+            likes: 0,
+            comments: 0,
+            shares: 0,
+            url: b.og_data?.url || `https://glossi.io/blog/${this.slugify(b.title)}.html`,
+            slug: b.og_data?.slug || this.slugify(b.title)
+          }));
+        this.posts.push(...blogs);
+      }
+
+      this.posts.sort((a, b) => {
+        const da = a.created_at ? new Date(a.created_at) : new Date(0);
+        const db = b.created_at ? new Date(b.created_at) : new Date(0);
+        return db - da;
+      });
+
+      this.loaded = true;
+      this.renderFeed(warnings);
+
+    } catch (err) {
+      this.renderError(err.message);
+    } finally {
+      this.loading = false;
+      if (refreshBtn) refreshBtn.classList.remove('spinning');
+    }
+  }
+
+  slugify(text) {
+    if (!text) return '';
+    return text.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').substring(0, 80);
+  }
+
+  showSkeletons() {
+    const list = document.getElementById('pr-live-feed-list');
+    if (!list) return;
+    let html = '';
+    for (let i = 0; i < 6; i++) {
+      html += `<div class="pr-live-skeleton">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="pr-live-skeleton-line icon"></div>
+          <div class="pr-live-skeleton-line short"></div>
+        </div>
+        <div class="pr-live-skeleton-line long"></div>
+        <div class="pr-live-skeleton-line medium"></div>
+      </div>`;
+    }
+    list.innerHTML = html;
+  }
+
+  renderFeed(warnings = []) {
+    const list = document.getElementById('pr-live-feed-list');
+    if (!list) return;
+
+    const filtered = this.activeFilter === 'all'
+      ? this.posts
+      : this.posts.filter(p => p.channel === this.activeFilter);
+
+    if (filtered.length === 0 && warnings.length === 0) {
+      list.innerHTML = `<div class="pr-live-feed-empty" id="pr-live-feed-empty">
+        <i class="ph-light ph-broadcast" style="font-size: 32px; opacity: 0.3;"></i>
+        <p>${this.loaded ? 'No published posts found.' : 'Navigate to Live to see your published posts.'}</p>
+      </div>`;
+      return;
+    }
+
+    let html = '';
+
+    warnings.forEach(w => {
+      html += `<div class="pr-live-not-connected">
+        <i class="ph-light ph-warning-circle"></i>
+        <span>${this.escapeHtml(w.msg)}</span>
+      </div>`;
+    });
+
+    filtered.forEach(post => {
+      const iconClass = post.channel;
+      const iconMap = { linkedin: 'ph-linkedin-logo', x: 'ph-x-logo', blog: 'ph-article' };
+      const icon = iconMap[post.channel] || 'ph-broadcast';
+      const snippet = this.truncate(post.text, 140);
+      const date = this.formatDate(post.created_at);
+      const isActive = this.selectedPost?.id === post.id ? ' active' : '';
+
+      html += `<div class="pr-live-card${isActive}" data-post-id="${this.escapeHtml(post.id)}">
+        <div class="pr-live-card-top">
+          <div class="pr-live-card-icon ${iconClass}">
+            <i class="ph-light ${icon}"></i>
+          </div>
+          <span class="pr-live-card-date">${date}</span>
+        </div>
+        <div class="pr-live-card-snippet">${this.escapeHtml(snippet)}</div>
+        <div class="pr-live-card-stats">
+          <span class="pr-live-card-stat"><i class="ph-light ph-heart"></i> ${this.formatNum(post.likes)}</span>
+          <span class="pr-live-card-stat"><i class="ph-light ph-chat-circle"></i> ${this.formatNum(post.comments)}</span>
+          <span class="pr-live-card-stat"><i class="ph-light ph-share"></i> ${this.formatNum(post.shares)}</span>
+          ${post.impressions ? `<span class="pr-live-card-stat"><i class="ph-light ph-eye"></i> ${this.formatNum(post.impressions)}</span>` : ''}
+        </div>
+      </div>`;
+    });
+
+    list.innerHTML = html;
+
+    list.querySelectorAll('.pr-live-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const postId = card.dataset.postId;
+        const post = this.posts.find(p => String(p.id) === String(postId));
+        if (post) this.selectPost(post);
+      });
+    });
+  }
+
+  selectPost(post) {
+    this.selectedPost = post;
+
+    document.querySelectorAll('.pr-live-card').forEach(c => {
+      c.classList.toggle('active', c.dataset.postId === String(post.id));
+    });
+
+    const emptyEl = document.getElementById('pr-live-preview-empty');
+    const contentEl = document.getElementById('pr-live-preview-content');
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (contentEl) contentEl.style.display = '';
+
+    this.renderPreview(post);
+  }
+
+  renderPreview(post) {
+    const headerEl = document.getElementById('pr-live-preview-header');
+    const bodyEl = document.getElementById('pr-live-preview-body');
+    const statsEl = document.getElementById('pr-live-preview-stats');
+    const actionsEl = document.getElementById('pr-live-preview-actions');
+
+    const iconMap = { linkedin: 'ph-linkedin-logo', x: 'ph-x-logo', blog: 'ph-article' };
+    const labelMap = { linkedin: 'LinkedIn', x: 'X', blog: 'Glossi Blog' };
+    const icon = iconMap[post.channel] || 'ph-broadcast';
+    const label = labelMap[post.channel] || post.channel;
+
+    if (headerEl) {
+      headerEl.innerHTML = `
+        <div class="pr-live-preview-channel ${post.channel}">
+          <i class="ph-light ${icon}"></i>
+          <span>${label}</span>
+        </div>
+        <span class="pr-live-preview-date">${this.formatDateFull(post.created_at)}</span>
+      `;
+    }
+
+    if (bodyEl) {
+      const displayText = post.channel === 'blog' && post.body ? post.body : post.text;
+      bodyEl.textContent = displayText || '';
+    }
+
+    if (statsEl) {
+      let statsHtml = '';
+      statsHtml += this.statBlock(post.likes, 'Likes');
+      statsHtml += this.statBlock(post.comments, post.channel === 'x' ? 'Replies' : 'Comments');
+      statsHtml += this.statBlock(post.shares, post.channel === 'x' ? 'Retweets' : 'Shares');
+      if (post.impressions) {
+        statsHtml += this.statBlock(post.impressions, 'Views');
+      }
+      statsEl.innerHTML = statsHtml;
+    }
+
+    if (actionsEl && post.url) {
+      actionsEl.innerHTML = `
+        <a href="${this.escapeHtml(post.url)}" target="_blank" rel="noopener noreferrer" class="pr-live-view-btn">
+          <i class="ph-light ph-arrow-square-out"></i>
+          View Live Post
+        </a>
+      `;
+    } else if (actionsEl) {
+      actionsEl.innerHTML = '';
+    }
+  }
+
+  statBlock(value, label) {
+    return `<div class="pr-live-preview-stat">
+      <span class="pr-live-preview-stat-value">${this.formatNum(value)}</span>
+      <span class="pr-live-preview-stat-label">${label}</span>
+    </div>`;
+  }
+
+  renderError(msg) {
+    const list = document.getElementById('pr-live-feed-list');
+    if (!list) return;
+    list.innerHTML = `<div class="pr-live-feed-empty">
+      <i class="ph-light ph-warning-circle" style="font-size: 32px; opacity: 0.3;"></i>
+      <p>Failed to load posts. ${this.escapeHtml(msg)}</p>
+    </div>`;
+  }
+
+  truncate(str, len) {
+    if (!str) return '';
+    if (str.length <= len) return str;
+    return str.substring(0, len).trim() + '...';
+  }
+
+  formatNum(n) {
+    if (n == null) return '0';
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return String(n);
+  }
+
+  formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now - d;
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'now';
+    if (diffMin < 60) return `${diffMin}m`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH}h`;
+    const diffD = Math.floor(diffH / 24);
+    if (diffD < 7) return `${diffD}d`;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  formatDateFull(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+
+  escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+}
+
+export { PRAgent, CONTENT_TYPES, WizardManager, MediaManager, NewsMonitor, CalendarManager, AngleManager, DistributeManager, LiveManager };
