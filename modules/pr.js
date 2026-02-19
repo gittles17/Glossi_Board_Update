@@ -12671,22 +12671,25 @@ class LiveManager {
     const el = document.getElementById('pr-live-stats-grid');
     if (!el) return;
     const s = this.computeStats();
+    const totalLikes = s.totalLikes;
+    const totalComments = s.totalComments;
+    const totalShares = s.totalShares;
     el.innerHTML = `
-      <div class="pr-live-stat-card">
-        <span class="pr-live-stat-card-value">${this.formatNum(s.totalImpressions || s.totalEngagement)}</span>
-        <span class="pr-live-stat-card-label">${s.totalImpressions ? 'Total Reach' : 'Total Engagement'}</span>
-      </div>
-      <div class="pr-live-stat-card">
-        <span class="pr-live-stat-card-value">${s.engagementRate}</span>
-        <span class="pr-live-stat-card-label">Avg Engagement / Post</span>
-      </div>
       <div class="pr-live-stat-card">
         <span class="pr-live-stat-card-value">${s.total}</span>
         <span class="pr-live-stat-card-label">Total Posts</span>
       </div>
       <div class="pr-live-stat-card">
-        <span class="pr-live-stat-card-value">${Object.keys(s.channels).length}</span>
-        <span class="pr-live-stat-card-label">Active Channels</span>
+        <span class="pr-live-stat-card-value">${this.formatNum(totalLikes)}</span>
+        <span class="pr-live-stat-card-label">Total Likes</span>
+      </div>
+      <div class="pr-live-stat-card">
+        <span class="pr-live-stat-card-value">${this.formatNum(totalComments)}</span>
+        <span class="pr-live-stat-card-label">Total Comments</span>
+      </div>
+      <div class="pr-live-stat-card">
+        <span class="pr-live-stat-card-value">${this.formatNum(totalShares)}</span>
+        <span class="pr-live-stat-card-label">Total Shares</span>
       </div>
     `;
   }
@@ -12700,95 +12703,76 @@ class LiveManager {
   }
 
   renderChannelChart() {
-    const canvas = document.getElementById('pr-live-chart-channels');
+    const canvas = document.getElementById('pr-live-chart-top-bars');
     if (!canvas || typeof Chart === 'undefined') return;
-    const s = this.computeStats();
-    const colors = this.getChartColors();
-    const channels = ['linkedin', 'x', 'blog'];
-    const labels = ['LinkedIn', 'X', 'Blog'];
-
-    if (this.charts.channels) this.charts.channels.destroy();
 
     const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-tertiary').trim() || '#888';
     const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim() || '#333';
+    const colors = this.getChartColors();
+
+    const ranked = [...this.getFilteredPosts()]
+      .map(p => ({ ...p, score: (p.likes || 0) + (p.comments || 0) + (p.shares || 0) }))
+      .filter(p => p.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10);
+
+    if (ranked.length === 0) return;
+
+    const labels = ranked.map(p => this.truncate(p.text, 30));
+    const data = ranked.map(p => p.score);
+    const bgColors = ranked.map(p => colors[p.channel] || '#888');
+
+    if (this.charts.channels) this.charts.channels.destroy();
 
     this.charts.channels = new Chart(canvas, {
       type: 'bar',
       data: {
         labels,
-        datasets: [
-          { label: 'Likes', data: channels.map(c => s.channels[c]?.likes || 0), backgroundColor: channels.map(c => colors[c]), borderRadius: 4 },
-          { label: 'Comments', data: channels.map(c => s.channels[c]?.comments || 0), backgroundColor: channels.map(c => colors[c] + '99'), borderRadius: 4 },
-          { label: 'Shares', data: channels.map(c => s.channels[c]?.shares || 0), backgroundColor: channels.map(c => colors[c] + '55'), borderRadius: 4 }
-        ]
+        datasets: [{ data, backgroundColor: bgColors, borderRadius: 4 }]
       },
       options: {
+        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: true, position: 'bottom', labels: { color: textColor, boxWidth: 12, padding: 12, font: { size: 11 } } } },
+        plugins: { legend: { display: false } },
         scales: {
-          x: { grid: { display: false }, ticks: { color: textColor, font: { size: 11 } } },
-          y: { grid: { color: borderColor }, ticks: { color: textColor, font: { size: 10 } }, beginAtZero: true }
+          x: { grid: { color: borderColor }, ticks: { color: textColor, font: { size: 10 } }, beginAtZero: true },
+          y: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } }
         }
       }
     });
   }
 
   renderTrendChart() {
-    const canvas = document.getElementById('pr-live-chart-trend');
+    const canvas = document.getElementById('pr-live-chart-breakdown');
     if (!canvas || typeof Chart === 'undefined') return;
-    const colors = this.getChartColors();
+
+    const s = this.computeStats();
     const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-tertiary').trim() || '#888';
-    const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim() || '#333';
-
-    const postsWithDates = this.getFilteredPosts().filter(p => p.created_at);
-    if (postsWithDates.length === 0) return;
-
-    const weekMap = {};
-    for (const p of postsWithDates) {
-      const d = new Date(p.created_at);
-      const weekStart = new Date(d);
-      weekStart.setDate(d.getDate() - d.getDay());
-      const key = weekStart.toISOString().split('T')[0];
-      if (!weekMap[key]) weekMap[key] = { linkedin: 0, x: 0, blog: 0 };
-      weekMap[key][p.channel] = (weekMap[key][p.channel] || 0) + (p.likes || 0) + (p.comments || 0) + (p.shares || 0);
-    }
-
-    const sortedWeeks = Object.keys(weekMap).sort();
-    const weekLabels = sortedWeeks.map(w => {
-      const d = new Date(w);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    });
+    const accentGreen = getComputedStyle(document.documentElement).getPropertyValue('--accent-green').trim() || '#4ade80';
 
     if (this.charts.trend) this.charts.trend.destroy();
 
-    const datasets = [];
-    for (const [ch, color] of Object.entries(colors)) {
-      const data = sortedWeeks.map(w => weekMap[w][ch] || 0);
-      if (data.some(v => v > 0)) {
-        datasets.push({
-          label: ch === 'linkedin' ? 'LinkedIn' : ch === 'x' ? 'X' : 'Blog',
-          data,
-          borderColor: color,
-          backgroundColor: color + '22',
-          fill: true,
-          tension: 0.3,
-          pointRadius: 3,
-          pointBackgroundColor: color
-        });
-      }
-    }
+    const hasData = s.totalLikes + s.totalComments + s.totalShares > 0;
+    if (!hasData) return;
 
     this.charts.trend = new Chart(canvas, {
-      type: 'line',
-      data: { labels: weekLabels, datasets },
+      type: 'doughnut',
+      data: {
+        labels: ['Likes', 'Comments', 'Shares'],
+        datasets: [{
+          data: [s.totalLikes, s.totalComments, s.totalShares],
+          backgroundColor: [accentGreen, '#0A66C2', accentGreen + '55'],
+          borderWidth: 0,
+          hoverOffset: 4
+        }]
+      },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: true, position: 'bottom', labels: { color: textColor, boxWidth: 12, padding: 12, font: { size: 11 } } } },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
-          y: { grid: { color: borderColor }, ticks: { color: textColor, font: { size: 10 } }, beginAtZero: true }
+        cutout: '60%',
+        plugins: {
+          legend: { display: true, position: 'bottom', labels: { color: textColor, boxWidth: 12, padding: 16, font: { size: 11 } } }
         }
       }
     });
