@@ -11747,6 +11747,15 @@ class DistributeManager {
         this.activeReviewItem.status = 'published';
         this.activeReviewItem.phase = 'distribute';
 
+        window.dispatchEvent(new CustomEvent('glossi-published', {
+          detail: {
+            channel: 'linkedin',
+            text: this.activeReviewItem.content || this.activeReviewItem.title || '',
+            url: result.post_urn ? `https://www.linkedin.com/feed/update/${result.post_urn}` : null,
+            created_at: new Date().toISOString()
+          }
+        }));
+
         try {
           await this.prAgent.apiCall('/api/pr/outputs', {
             method: 'POST',
@@ -11857,6 +11866,15 @@ class DistributeManager {
         this.activeReviewItem.phase = 'distribute';
         this.activeReviewItem.published_channel = 'twitter';
         this.activeReviewItem.tweet_url = result.tweet_url || null;
+
+        window.dispatchEvent(new CustomEvent('glossi-published', {
+          detail: {
+            channel: 'x',
+            text: this.activeReviewItem.content || this.activeReviewItem.title || '',
+            url: result.tweet_url || null,
+            created_at: new Date().toISOString()
+          }
+        }));
         this.activeReviewItem.tweet_id = result.tweet_id || null;
         this.activeReviewItem.tweet_ids = result.tweet_ids || [];
         this.activeReviewItem.published_at = new Date().toISOString();
@@ -12181,15 +12199,22 @@ class LiveManager {
   constructor(prAgent) {
     this.prAgent = prAgent;
     this.posts = [];
+    this.postIndex = new Map();
     this.activeFilter = 'all';
     this.selectedPost = null;
     this.loaded = false;
     this.loading = false;
+    this.isOnLiveTab = false;
+    this.warnings = [];
+    this.pollTimers = {};
+    this.pollIntervals = { x: 30000, linkedin: 180000, blog: 300000 };
+    this.pollBackoff = { x: 1, linkedin: 1, blog: 1 };
   }
 
   async init() {
     this.bindEvents();
     this.observeStageSwitch();
+    this.listenForPublishEvents();
   }
 
   bindEvents() {
@@ -12213,11 +12238,118 @@ class LiveManager {
     const navItems = document.querySelectorAll('.pr-nav-item[data-stage]');
     navItems.forEach(item => {
       item.addEventListener('click', () => {
-        if (item.dataset.stage === 'live' && !this.loaded) {
-          this.fetchAll();
+        const enteringLive = item.dataset.stage === 'live';
+        if (enteringLive && !this.isOnLiveTab) {
+          this.isOnLiveTab = true;
+          this.clearNavBadge();
+          if (!this.loaded) {
+            this.fetchAll();
+          }
+          this.startPolling();
+        } else if (!enteringLive && this.isOnLiveTab) {
+          this.isOnLiveTab = false;
+          this.stopPolling();
         }
       });
     });
+  }
+
+  listenForPublishEvents() {
+    window.addEventListener('glossi-published', (e) => {
+      const { channel, text, url, created_at } = e.detail || {};
+      if (!channel || !text) return;
+      const post = {
+        id: `glossi-${Date.now()}`,
+        channel,
+        text,
+        created_at: created_at || new Date().toISOString(),
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        url: url || null
+      };
+      this.mergeNewPosts([post]);
+    });
+  }
+
+  startPolling() {
+    this.stopPolling();
+    for (const channel of ['linkedin', 'x', 'blog']) {
+      this.schedulePoll(channel);
+    }
+  }
+
+  stopPolling() {
+    for (const key of Object.keys(this.pollTimers)) {
+      clearTimeout(this.pollTimers[key]);
+      delete this.pollTimers[key];
+    }
+  }
+
+  schedulePoll(channel) {
+    const interval = this.pollIntervals[channel] * this.pollBackoff[channel];
+    this.pollTimers[channel] = setTimeout(() => this.pollChannel(channel), interval);
+  }
+
+  async pollChannel(channel) {
+    if (!this.isOnLiveTab) return;
+    try {
+      const endpointMap = {
+        linkedin: '/api/linkedin/posts',
+        x: '/api/x/posts',
+        blog: '/api/blog/posts'
+      };
+      const res = await this.prAgent.apiCall(endpointMap[channel]);
+      if (res?.success && res.posts) {
+        this.pollBackoff[channel] = 1;
+        this.mergeNewPosts(res.posts);
+      }
+    } catch (_) {
+      this.pollBackoff[channel] = Math.min(this.pollBackoff[channel] * 2, 8);
+    }
+    if (this.isOnLiveTab) {
+      this.schedulePoll(channel);
+    }
+  }
+
+  mergeNewPosts(incoming) {
+    const newPosts = [];
+    for (const post of incoming) {
+      if (!this.postIndex.has(String(post.id))) {
+        newPosts.push(post);
+        this.postIndex.set(String(post.id), post);
+        this.posts.push(post);
+      } else {
+        const existing = this.postIndex.get(String(post.id));
+        if (post.likes !== existing.likes || post.comments !== existing.comments || post.shares !== existing.shares) {
+          Object.assign(existing, { likes: post.likes, comments: post.comments, shares: post.shares, impressions: post.impressions });
+        }
+      }
+    }
+
+    if (newPosts.length === 0) return;
+
+    this.posts.sort((a, b) => {
+      const da = a.created_at ? new Date(a.created_at) : new Date(0);
+      const db = b.created_at ? new Date(b.created_at) : new Date(0);
+      return db - da;
+    });
+
+    if (this.isOnLiveTab) {
+      this.renderFeed(this.warnings, newPosts.map(p => String(p.id)));
+    } else {
+      this.showNavBadge();
+    }
+  }
+
+  showNavBadge() {
+    const badge = document.getElementById('pr-live-nav-badge');
+    if (badge) badge.style.display = 'flex';
+  }
+
+  clearNavBadge() {
+    const badge = document.getElementById('pr-live-nav-badge');
+    if (badge) badge.style.display = 'none';
   }
 
   async fetchAll() {
@@ -12227,7 +12359,7 @@ class LiveManager {
     const refreshBtn = document.getElementById('pr-live-refresh-btn');
     if (refreshBtn) refreshBtn.classList.add('spinning');
 
-    this.showSkeletons();
+    if (!this.loaded) this.showSkeletons();
 
     try {
       const [linkedinRes, xRes, blogRes] = await Promise.allSettled([
@@ -12237,32 +12369,42 @@ class LiveManager {
       ]);
 
       this.posts = [];
-      const warnings = [];
+      this.postIndex.clear();
+      this.warnings = [];
 
       if (linkedinRes.status === 'fulfilled' && linkedinRes.value?.success) {
         if (linkedinRes.value.connected === false) {
-          warnings.push({ channel: 'linkedin', msg: 'LinkedIn not connected' });
+          this.warnings.push({ channel: 'linkedin', msg: 'LinkedIn not connected' });
         }
         if (linkedinRes.value.posts) {
-          this.posts.push(...linkedinRes.value.posts);
+          for (const p of linkedinRes.value.posts) {
+            this.posts.push(p);
+            this.postIndex.set(String(p.id), p);
+          }
         }
       } else {
-        warnings.push({ channel: 'linkedin', msg: 'Could not reach LinkedIn' });
+        this.warnings.push({ channel: 'linkedin', msg: 'Could not reach LinkedIn' });
       }
 
       if (xRes.status === 'fulfilled' && xRes.value?.success) {
         if (xRes.value.connected === false) {
-          warnings.push({ channel: 'x', msg: 'X not connected' });
+          this.warnings.push({ channel: 'x', msg: 'X not connected' });
         }
         if (xRes.value.posts) {
-          this.posts.push(...xRes.value.posts);
+          for (const p of xRes.value.posts) {
+            this.posts.push(p);
+            this.postIndex.set(String(p.id), p);
+          }
         }
       } else {
-        warnings.push({ channel: 'x', msg: 'Could not reach X' });
+        this.warnings.push({ channel: 'x', msg: 'Could not reach X' });
       }
 
       if (blogRes.status === 'fulfilled' && blogRes.value?.success && blogRes.value.posts) {
-        this.posts.push(...blogRes.value.posts);
+        for (const p of blogRes.value.posts) {
+          this.posts.push(p);
+          this.postIndex.set(String(p.id), p);
+        }
       }
 
       this.posts.sort((a, b) => {
@@ -12272,7 +12414,7 @@ class LiveManager {
       });
 
       this.loaded = true;
-      this.renderFeed(warnings);
+      this.renderFeed(this.warnings);
 
     } catch (err) {
       this.renderError(err.message);
@@ -12299,7 +12441,7 @@ class LiveManager {
     list.innerHTML = html;
   }
 
-  renderFeed(warnings = []) {
+  renderFeed(warnings = [], newIds = []) {
     const list = document.getElementById('pr-live-feed-list');
     if (!list) return;
 
@@ -12315,6 +12457,7 @@ class LiveManager {
       return;
     }
 
+    const newIdSet = new Set(newIds);
     let html = '';
 
     warnings.forEach(w => {
@@ -12332,8 +12475,9 @@ class LiveManager {
       const snippet = this.truncate(snippetSource, 140);
       const date = post.date_display || this.formatDate(post.created_at);
       const isActive = this.selectedPost?.id === post.id ? ' active' : '';
+      const isNew = newIdSet.has(String(post.id)) ? ' pr-live-card-new' : '';
 
-      html += `<div class="pr-live-card${isActive}" data-post-id="${this.escapeHtml(post.id)}">
+      html += `<div class="pr-live-card${isActive}${isNew}" data-post-id="${this.escapeHtml(post.id)}">
         <div class="pr-live-card-top">
           <div class="pr-live-card-icon ${iconClass}">
             <i class="ph-light ${icon}"></i>

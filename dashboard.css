@@ -21554,6 +21554,25 @@ body.pr-resizing * {
   font-size: 16px;
 }
 
+.pr-live-card-new {
+  animation: pr-live-fade-in 0.4s ease both;
+}
+
+@keyframes pr-live-fade-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pr-live-nav-badge {
+  width: 8px;
+  min-width: 8px;
+  height: 8px;
+  padding: 0;
+  border-radius: 50%;
+  top: 6px;
+  right: 6px;
+}
+
 /* Mobile */
 @media (max-width: 768px) {
   .pr-live-layout {
