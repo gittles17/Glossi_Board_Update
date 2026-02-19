@@ -2560,7 +2560,7 @@ app.get('/og-template', (req, res) => {
   html, body { width: 1200px; height: 630px; overflow: hidden; }
   .og-wrap { width: 1200px; height: 630px; position: relative; ${bgStyle} }
   .og-accent { width: 100%; height: 3px; background: #E8512A; position: absolute; top: 0; left: 0; z-index: 3; }
-  .og-title-safe { position: absolute; top: 0; left: 0; width: 65%; height: 55%; background: linear-gradient(135deg, #000000 60%, rgba(0,0,0,0.85) 80%, transparent 100%); z-index: 1; }
+  .og-title-safe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(ellipse 120% 130% at 85% 85%, transparent 30%, rgba(0,0,0,0.4) 55%, rgba(0,0,0,0.75) 75%, #000000 100%); z-index: 1; }
   .og-title { position: absolute; top: 48px; left: 68px; font-family: 'PP Mori', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; font-size: 90px; line-height: 1.05; letter-spacing: -0.035em; color: #FFFFFF; max-width: 780px; z-index: 2; }
   .og-logo { position: absolute; bottom: 40px; right: 56px; width: 44px; height: 51px; z-index: 2; }
 </style>
@@ -2594,13 +2594,14 @@ STYLE:
 - The visual should evoke the theme/mood of the tweet content without being literal.
 - Ultra high contrast white on black. Motion graphics still frame aesthetic.
 
-TITLE SAFE ZONE (STRICT, NON-NEGOTIABLE):
-- A large blog title in white text will be overlaid in the top-left corner of the image, spanning roughly the left 65% and top 50%.
-- This zone MUST be completely clear. No shapes, no white lines, no art elements. Pure plain black #000000 background only.
-- "Subtle" or "faint" elements are NOT acceptable in this zone. The title area must be entirely empty.
-- ALL visual elements (every shape, pattern, line art) must be placed ONLY in the bottom-right quadrant and along the right edge. Nothing in the top half or left half.
-- Composition must read as: empty black top-left two-thirds for text, art confined to the bottom and far right.
-- If in doubt, pull the art further away from the title zone. Text legibility is the highest priority. Art must never compete with or reduce the readability of text.
+COMPOSITION AND TEXT LEGIBILITY:
+- A large white blog title will be overlaid in the top-left area of the image (roughly left 60%, top 45%).
+- The primary visual weight and densest art elements should be concentrated in the bottom-right region, right edge, and bottom edge.
+- Art CAN extend into the text area, but it must dissolve and fade naturally as it approaches the top-left. Think atmospheric fog, scattered particles thinning out, trailing wisps, or gradient opacity falloff.
+- In the text zone, any art must be very faint (5-15% opacity feel), sparse, and low-contrast against the black background. No bright white or orange elements competing with the title.
+- The transition from dense art to sparse/empty should feel organic and gradual, NOT a hard rectangular cutoff. Avoid any visible box, mask edge, or sharp boundary.
+- Imagine the art as emanating from the bottom-right and naturally dissipating toward the top-left, like smoke or light scattering.
+- Text legibility is the highest priority, but achieve it through gradual fadeout, not an empty void.
 
 OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.`;
 
