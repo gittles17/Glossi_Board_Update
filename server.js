@@ -3170,39 +3170,46 @@ app.get('/api/linkedin/posts', async (req, res) => {
     const rawPosts = postsRes.data?.elements || [];
 
     const metadataMap = {};
+    let metadataError = null;
     if (rawPosts.length > 0) {
       try {
         const urns = rawPosts.map(p => p.id).filter(Boolean);
         const batchSize = 20;
         for (let i = 0; i < urns.length; i += batchSize) {
           const batch = urns.slice(i, i + batchSize);
-          const idsList = batch.map(u => encodeURIComponent(u)).join(',');
+          const idsList = batch.join(',');
           const metaRes = await axios.get(
             `https://api.linkedin.com/rest/socialMetadata?ids=List(${idsList})`,
             { headers: liHeaders, timeout: 10000 }
           );
           const results = metaRes.data?.results || {};
-          for (const [urn, meta] of Object.entries(results)) {
+          for (const [key, meta] of Object.entries(results)) {
+            const entityUrn = meta.entity || key;
             let totalReactions = 0;
             if (meta.reactionSummaries) {
               for (const r of Object.values(meta.reactionSummaries)) {
                 totalReactions += r.count || 0;
               }
             }
-            metadataMap[urn] = {
+            const stats = {
               likes: totalReactions,
               comments: meta.commentSummary?.topLevelCount || 0
             };
+            metadataMap[key] = stats;
+            if (entityUrn !== key) {
+              metadataMap[entityUrn] = stats;
+            }
           }
         }
-      } catch (_) {}
+      } catch (metaErr) {
+        metadataError = metaErr.response?.data?.message || metaErr.message;
+      }
     }
 
     const posts = rawPosts.map(post => {
       const urn = post.id;
       const meta = metadataMap[urn] || {};
-      const activityUrn = urn.replace('urn:li:share:', 'urn:li:activity:').replace('urn:li:ugcPost:', 'urn:li:activity:');
-      const postUrl = `https://www.linkedin.com/feed/update/${activityUrn}`;
+      const postUrl = `https://www.linkedin.com/feed/update/${urn}`;
 
       return {
         id: urn,
@@ -3218,7 +3225,9 @@ app.get('/api/linkedin/posts', async (req, res) => {
       };
     });
 
-    res.json({ success: true, posts, connected: true });
+    const response = { success: true, posts, connected: true };
+    if (metadataError) response.metadataError = metadataError;
+    res.json(response);
   } catch (error) {
     const errMsg = error.response?.data?.message || error.message;
     const status = error.response?.status;
