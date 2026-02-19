@@ -5580,6 +5580,10 @@ class NewsMonitor {
     this._newsArchivedExpanded = false;
     this._customArchivedExpanded = false;
 
+    // "New" article tracking (persisted to localStorage)
+    this._lastNewsViewTimestamp = null;
+    this._newArticleIds = new Set();
+
     // Favorites state (persisted to PostgreSQL)
     this._favoriteIds = new Set();
     this._favoritesFilter = 'all';
@@ -5592,6 +5596,7 @@ class NewsMonitor {
     this.setupPanelResize();
     this.loadCustomCards();
     this.loadArchivedNewsIds();
+    this.loadLastNewsView();
     await this.loadFavorites();
     this.setupFavoritesFilter();
     await this.loadCachedNews();
@@ -6151,7 +6156,6 @@ class NewsMonitor {
       }
       const data = await response.json();
       if (data.success && data.news && data.news.length > 0) {
-        // Filter out news older than 30 days
         const now = Date.now();
         const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
         const filteredNews = data.news.filter(item => {
@@ -6159,20 +6163,31 @@ class NewsMonitor {
           return (now - itemDate.getTime()) < thirtyDaysMs;
         });
         
-        // Check if filtered news is all stale (>7 days old)
-        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+        // Check if filtered news is all stale (>2 days old, safety net for missed cron)
+        const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
         const hasRecentNews = filteredNews.some(item => {
-          const itemDate = new Date(item.date || item.fetched_at);
-          return (now - itemDate.getTime()) < sevenDaysMs;
+          const fetchedAt = new Date(item.fetched_at || item.date);
+          return (now - fetchedAt.getTime()) < twoDaysMs;
         });
+        
+        // Tag articles fetched since user's last visit as "new"
+        this._newArticleIds = new Set();
+        if (this._lastNewsViewTimestamp) {
+          for (const item of filteredNews) {
+            const fetchedAt = new Date(item.fetched_at || item.date).getTime();
+            if (fetchedAt > this._lastNewsViewTimestamp) {
+              this._newArticleIds.add(item.url || item.headline);
+            }
+          }
+        }
         
         this.newsHooks = filteredNews;
         this.normalizeNewsContentTypes();
         this.renderNews();
+        this.updateNewBadgeCount();
+        this.saveLastNewsView();
         
-        // Auto-refresh if no recent news (all cached news is >7 days old or empty)
         if (!hasRecentNews) {
-          console.log('Cached news is stale, auto-refreshing...');
           setTimeout(() => this.refreshNews(), 1000);
         }
       } else {
@@ -6364,9 +6379,11 @@ class NewsMonitor {
       const newsId = item.url || item.headline;
       const inWorkspace = this._stories.has(newsId);
       const isFavorited = this._favoriteIds.has(newsId);
+      const isNew = this._newArticleIds.has(newsId);
       html += `
-        <div class="pr-news-item ${isStale ? 'stale' : ''} ${inWorkspace ? 'in-workspace' : ''} ${isFavorited ? 'favorited' : ''}" data-news-id="${this.escapeHtml(newsId)}">
+        <div class="pr-news-item ${isStale ? 'stale' : ''} ${inWorkspace ? 'in-workspace' : ''} ${isFavorited ? 'favorited' : ''} ${isNew ? 'is-new' : ''}" data-news-id="${this.escapeHtml(newsId)}">
           ${inWorkspace ? '<span class="pr-card-status-badge">In Progress</span>' : ''}
+          ${isNew && !inWorkspace ? '<span class="pr-card-new-badge">New</span>' : ''}
           <button class="pr-news-card-favorite ${isFavorited ? 'active' : ''}" data-favorite-id="${this.escapeHtml(newsId)}" data-favorite-type="news" title="${isFavorited ? 'Remove from favorites' : 'Add to favorites'}"><i class="${isFavorited ? 'ph-fill' : 'ph-light'} ph-heart"></i></button>
           <button class="pr-news-card-archive" data-archive-news-id="${this.escapeHtml(newsId)}" title="Archive"><i class="ph-light ph-archive"></i></button>
           <div class="pr-news-headline-row">
@@ -6560,6 +6577,40 @@ class NewsMonitor {
     this._archivedNewsIds.delete(newsId);
     this.saveArchivedNewsIds();
     this.renderNews();
+  }
+
+  // =========================================
+  // "NEW" ARTICLE TRACKING
+  // =========================================
+
+  loadLastNewsView() {
+    try {
+      const saved = localStorage.getItem('pr_last_news_view');
+      if (saved) this._lastNewsViewTimestamp = parseInt(saved, 10);
+    } catch (e) { /* ignore */ }
+  }
+
+  saveLastNewsView() {
+    try {
+      localStorage.setItem('pr_last_news_view', String(Date.now()));
+    } catch (e) { /* ignore */ }
+  }
+
+  updateNewBadgeCount() {
+    const btn = this.dom.fetchNewsBtn;
+    if (!btn) return;
+    const count = this._newArticleIds.size;
+    let badge = btn.querySelector('.pr-new-count-badge');
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'pr-new-count-badge';
+        btn.appendChild(badge);
+      }
+      badge.textContent = count;
+    } else if (badge) {
+      badge.remove();
+    }
   }
 
   // =========================================
