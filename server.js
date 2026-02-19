@@ -3174,31 +3174,30 @@ app.get('/api/linkedin/posts', async (req, res) => {
     if (rawPosts.length > 0) {
       try {
         const urns = rawPosts.map(p => p.id).filter(Boolean);
-        const batchSize = 20;
-        for (let i = 0; i < urns.length; i += batchSize) {
-          const batch = urns.slice(i, i + batchSize);
-          const idsList = batch.join(',');
-          const metaRes = await axios.get(
-            `https://api.linkedin.com/rest/socialMetadata?ids=List(${idsList})`,
-            { headers: liHeaders, timeout: 10000 }
+        const concurrency = 5;
+        for (let i = 0; i < urns.length; i += concurrency) {
+          const chunk = urns.slice(i, i + concurrency);
+          const results = await Promise.allSettled(
+            chunk.map(urn =>
+              axios.get(
+                `https://api.linkedin.com/rest/socialMetadata/${encodeURIComponent(urn)}`,
+                { headers: liHeaders, timeout: 8000 }
+              ).then(r => ({ urn, data: r.data }))
+            )
           );
-          const results = metaRes.data?.results || {};
-          for (const [key, meta] of Object.entries(results)) {
-            const entityUrn = meta.entity || key;
+          for (const result of results) {
+            if (result.status !== 'fulfilled' || !result.value?.data) continue;
+            const { urn, data } = result.value;
             let totalReactions = 0;
-            if (meta.reactionSummaries) {
-              for (const r of Object.values(meta.reactionSummaries)) {
+            if (data.reactionSummaries) {
+              for (const r of Object.values(data.reactionSummaries)) {
                 totalReactions += r.count || 0;
               }
             }
-            const stats = {
+            metadataMap[urn] = {
               likes: totalReactions,
-              comments: meta.commentSummary?.topLevelCount || 0
+              comments: data.commentSummary?.topLevelCount || 0
             };
-            metadataMap[key] = stats;
-            if (entityUrn !== key) {
-              metadataMap[entityUrn] = stats;
-            }
           }
         }
       } catch (metaErr) {
