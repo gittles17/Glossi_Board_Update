@@ -3157,56 +3157,66 @@ app.get('/api/linkedin/posts', async (req, res) => {
     }
 
     const count = Math.min(parseInt(req.query.count) || 50, 100);
-    const postsUrl = `https://api.linkedin.com/rest/posts?author=urn:li:organization:${orgId}&count=${count}&sortBy=LAST_MODIFIED`;
+    const authorUrn = encodeURIComponent(`urn:li:organization:${orgId}`);
+    const postsUrl = `https://api.linkedin.com/rest/posts?author=${authorUrn}&q=author&count=${count}&sortBy=LAST_MODIFIED`;
 
-    const postsRes = await axios.get(postsUrl, {
-      headers: {
-        'Authorization': `Bearer ${tokens.access_token}`,
-        'LinkedIn-Version': LINKEDIN_API_VERSION,
-        'X-Restli-Protocol-Version': '2.0.0'
-      },
-      timeout: 15000
-    });
+    const liHeaders = {
+      'Authorization': `Bearer ${tokens.access_token}`,
+      'LinkedIn-Version': LINKEDIN_API_VERSION,
+      'X-Restli-Protocol-Version': '2.0.0'
+    };
 
+    const postsRes = await axios.get(postsUrl, { headers: liHeaders, timeout: 15000 });
     const rawPosts = postsRes.data?.elements || [];
-    const posts = [];
 
-    for (const post of rawPosts) {
-      const urn = post.id || post.urn;
-      let likes = 0, comments = 0, shares = 0;
-
+    const metadataMap = {};
+    if (rawPosts.length > 0) {
       try {
-        const encodedUrn = encodeURIComponent(urn);
-        const actionsRes = await axios.get(`https://api.linkedin.com/rest/socialActions/${encodedUrn}`, {
-          headers: {
-            'Authorization': `Bearer ${tokens.access_token}`,
-            'LinkedIn-Version': LINKEDIN_API_VERSION,
-            'X-Restli-Protocol-Version': '2.0.0'
-          },
-          timeout: 5000
-        });
-        const counts = actionsRes.data;
-        likes = counts?.likesSummary?.totalLikes || 0;
-        comments = counts?.commentsSummary?.totalFirstLevelComments || 0;
-        shares = counts?.shareCount || 0;
+        const urns = rawPosts.map(p => p.id).filter(Boolean);
+        const batchSize = 20;
+        for (let i = 0; i < urns.length; i += batchSize) {
+          const batch = urns.slice(i, i + batchSize);
+          const idsList = batch.map(u => encodeURIComponent(u)).join(',');
+          const metaRes = await axios.get(
+            `https://api.linkedin.com/rest/socialMetadata?ids=List(${idsList})`,
+            { headers: liHeaders, timeout: 10000 }
+          );
+          const results = metaRes.data?.results || {};
+          for (const [urn, meta] of Object.entries(results)) {
+            let totalReactions = 0;
+            if (meta.reactionSummaries) {
+              for (const r of Object.values(meta.reactionSummaries)) {
+                totalReactions += r.count || 0;
+              }
+            }
+            metadataMap[urn] = {
+              likes: totalReactions,
+              comments: meta.commentSummary?.topLevelCount || 0
+            };
+          }
+        }
       } catch (_) {}
+    }
 
-      const activityId = urn.split(':').pop();
-      const postUrl = `https://www.linkedin.com/feed/update/urn:li:activity:${activityId}`;
+    const posts = rawPosts.map(post => {
+      const urn = post.id;
+      const meta = metadataMap[urn] || {};
+      const activityUrn = urn.replace('urn:li:share:', 'urn:li:activity:').replace('urn:li:ugcPost:', 'urn:li:activity:');
+      const postUrl = `https://www.linkedin.com/feed/update/${activityUrn}`;
 
-      posts.push({
+      return {
         id: urn,
         channel: 'linkedin',
         text: post.commentary || '',
-        created_at: post.createdAt ? new Date(post.createdAt).toISOString() : null,
-        likes,
-        comments,
-        shares,
+        created_at: post.publishedAt ? new Date(post.publishedAt).toISOString() : (post.createdAt ? new Date(post.createdAt).toISOString() : null),
+        likes: meta.likes || 0,
+        comments: meta.comments || 0,
+        shares: 0,
         url: postUrl,
         media: post.content?.media?.id || null,
         visibility: post.visibility
-      });
-    }
+      };
+    });
 
     res.json({ success: true, posts, connected: true });
   } catch (error) {
@@ -3216,6 +3226,55 @@ app.get('/api/linkedin/posts', async (req, res) => {
       return res.json({ success: true, posts: [], connected: false, error: 'Token expired' });
     }
     res.status(500).json({ success: false, error: errMsg });
+  }
+});
+
+// ============================================
+// GLOSSI BLOG: FETCH FROM RESOURCES PAGE
+// ============================================
+
+app.get('/api/blog/posts', async (req, res) => {
+  try {
+    const pageRes = await axios.get('https://www.glossi.io/resources.html', { timeout: 10000 });
+    const html = pageRes.data;
+
+    const posts = [];
+    const cardRegex = /<a\s+href="([^"]*\/blog\/[^"]+)"\s+class="card"\s+data-type="article"[^>]*>[\s\S]*?<span class="card-type">([^<]*)<\/span>\s*<h3>([^<]*)<\/h3>\s*<p>([^<]*)<\/p>\s*<span class="card-meta">([^<]*)<\/span>/g;
+
+    let match;
+    while ((match = cardRegex.exec(html)) !== null) {
+      const [, href, category, title, description, dateStr] = match;
+      const url = href.startsWith('http') ? href : `https://www.glossi.io${href}`;
+      const slug = href.split('/').pop().replace('.html', '');
+
+      let parsedDate = null;
+      const fullDateMatch = dateStr.match(/([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})/);
+      const monthYearMatch = dateStr.match(/([A-Za-z]+)\s+(\d{4})/);
+      if (fullDateMatch) {
+        parsedDate = new Date(`${fullDateMatch[1]} ${fullDateMatch[2]}, ${fullDateMatch[3]}`).toISOString();
+      } else if (monthYearMatch) {
+        parsedDate = new Date(`${monthYearMatch[1]} 1, ${monthYearMatch[2]}`).toISOString();
+      }
+
+      posts.push({
+        id: `blog-${slug}`,
+        channel: 'blog',
+        text: title.trim(),
+        description: description.trim().replace(/&mdash;/g, ',').replace(/&amp;/g, '&'),
+        category: category.trim(),
+        created_at: parsedDate,
+        date_display: dateStr.trim(),
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        url,
+        slug
+      });
+    }
+
+    res.json({ success: true, posts });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message, posts: [] });
   }
 });
 

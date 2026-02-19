@@ -12233,7 +12233,7 @@ class LiveManager {
       const [linkedinRes, xRes, blogRes] = await Promise.allSettled([
         this.prAgent.apiCall('/api/linkedin/posts'),
         this.prAgent.apiCall('/api/x/posts'),
-        this.prAgent.apiCall('/api/pr/outputs')
+        this.prAgent.apiCall('/api/blog/posts')
       ]);
 
       this.posts = [];
@@ -12246,6 +12246,8 @@ class LiveManager {
         if (linkedinRes.value.posts) {
           this.posts.push(...linkedinRes.value.posts);
         }
+      } else {
+        warnings.push({ channel: 'linkedin', msg: 'Could not reach LinkedIn' });
       }
 
       if (xRes.status === 'fulfilled' && xRes.value?.success) {
@@ -12255,24 +12257,12 @@ class LiveManager {
         if (xRes.value.posts) {
           this.posts.push(...xRes.value.posts);
         }
+      } else {
+        warnings.push({ channel: 'x', msg: 'Could not reach X' });
       }
 
-      if (blogRes.status === 'fulfilled' && blogRes.value?.success && blogRes.value.outputs) {
-        const blogs = blogRes.value.outputs
-          .filter(o => o.content_type === 'blog_post' && o.status === 'published')
-          .map(b => ({
-            id: b.id,
-            channel: 'blog',
-            text: b.title || '',
-            body: b.content || '',
-            created_at: b.published_at || b.created_at || null,
-            likes: 0,
-            comments: 0,
-            shares: 0,
-            url: b.og_data?.url || `https://glossi.io/blog/${this.slugify(b.title)}.html`,
-            slug: b.og_data?.slug || this.slugify(b.title)
-          }));
-        this.posts.push(...blogs);
+      if (blogRes.status === 'fulfilled' && blogRes.value?.success && blogRes.value.posts) {
+        this.posts.push(...blogRes.value.posts);
       }
 
       this.posts.sort((a, b) => {
@@ -12290,11 +12280,6 @@ class LiveManager {
       this.loading = false;
       if (refreshBtn) refreshBtn.classList.remove('spinning');
     }
-  }
-
-  slugify(text) {
-    if (!text) return '';
-    return text.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').substring(0, 80);
   }
 
   showSkeletons() {
@@ -12343,8 +12328,9 @@ class LiveManager {
       const iconClass = post.channel;
       const iconMap = { linkedin: 'ph-linkedin-logo', x: 'ph-x-logo', blog: 'ph-article' };
       const icon = iconMap[post.channel] || 'ph-broadcast';
-      const snippet = this.truncate(post.text, 140);
-      const date = this.formatDate(post.created_at);
+      const snippetSource = post.channel === 'blog' && post.description ? `${post.text}: ${post.description}` : post.text;
+      const snippet = this.truncate(snippetSource, 140);
+      const date = post.date_display || this.formatDate(post.created_at);
       const isActive = this.selectedPost?.id === post.id ? ' active' : '';
 
       html += `<div class="pr-live-card${isActive}" data-post-id="${this.escapeHtml(post.id)}">
@@ -12407,13 +12393,22 @@ class LiveManager {
           <i class="ph-light ${icon}"></i>
           <span>${label}</span>
         </div>
-        <span class="pr-live-preview-date">${this.formatDateFull(post.created_at)}</span>
+        <span class="pr-live-preview-date">${post.date_display || this.formatDateFull(post.created_at)}</span>
       `;
     }
 
     if (bodyEl) {
-      const displayText = post.channel === 'blog' && post.body ? post.body : post.text;
-      bodyEl.textContent = displayText || '';
+      let displayText = post.text || '';
+      if (post.channel === 'blog') {
+        displayText = post.text || '';
+        if (post.description) {
+          displayText += '\n\n' + post.description;
+        }
+        if (post.category) {
+          displayText = post.category + '\n\n' + displayText;
+        }
+      }
+      bodyEl.textContent = displayText;
     }
 
     if (statsEl) {
