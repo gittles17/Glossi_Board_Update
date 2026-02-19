@@ -21590,6 +21590,34 @@ body.pr-resizing * {
   justify-content: space-between;
 }
 
+.pr-live-time-filters {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.pr-live-time-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: var(--radius-full, 999px);
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.pr-live-time-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.pr-live-time-btn.active {
+  background: rgba(var(--accent-green-rgb), 0.12);
+  border-color: rgba(var(--accent-green-rgb), 0.3);
+  color: var(--accent-green);
+}
+
 .pr-live-stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -21632,6 +21660,12 @@ body.pr-resizing * {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   background: var(--surface-primary);
+}
+
+.pr-live-chart-wrap {
+  position: relative;
+  height: 220px;
+  width: 100%;
 }
 
 .pr-live-chart-title {

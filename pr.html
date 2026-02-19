@@ -702,6 +702,12 @@
             <div class="pr-live-analytics" id="pr-live-analytics">
               <div class="pr-live-analytics-header">
                 <span class="pr-panel-label">Analytics</span>
+                <div class="pr-live-time-filters" id="pr-live-time-filters">
+                  <button class="pr-live-time-btn" data-range="7">7d</button>
+                  <button class="pr-live-time-btn" data-range="30">30d</button>
+                  <button class="pr-live-time-btn" data-range="90">90d</button>
+                  <button class="pr-live-time-btn active" data-range="all">All</button>
+                </div>
               </div>
 
               <div class="pr-live-stats-grid" id="pr-live-stats-grid"></div>
@@ -709,11 +715,11 @@
               <div class="pr-live-chart-row">
                 <div class="pr-live-chart-card">
                   <h4 class="pr-live-chart-title">Channel Comparison</h4>
-                  <canvas id="pr-live-chart-channels" height="200"></canvas>
+                  <div class="pr-live-chart-wrap"><canvas id="pr-live-chart-channels"></canvas></div>
                 </div>
                 <div class="pr-live-chart-card">
                   <h4 class="pr-live-chart-title">Engagement Trend</h4>
-                  <canvas id="pr-live-chart-trend" height="200"></canvas>
+                  <div class="pr-live-chart-wrap"><canvas id="pr-live-chart-trend"></canvas></div>
                 </div>
               </div>
 

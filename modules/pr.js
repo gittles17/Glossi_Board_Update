@@ -12212,6 +12212,7 @@ class LiveManager {
     this.charts = {};
     this.cachedInsights = null;
     this.insightsLoading = false;
+    this.timeRange = 'all';
   }
 
   async init() {
@@ -12248,6 +12249,17 @@ class LiveManager {
         this.generateInsights();
       });
     }
+
+    const timeBtns = document.querySelectorAll('.pr-live-time-btn[data-range]');
+    timeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        timeBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.timeRange = btn.dataset.range;
+        this.cachedInsights = null;
+        this.renderAnalytics();
+      });
+    });
   }
 
   observeStageSwitch() {
@@ -12606,6 +12618,18 @@ class LiveManager {
     }
   }
 
+  getFilteredPosts() {
+    if (this.timeRange === 'all') return this.posts;
+    const days = parseInt(this.timeRange);
+    if (!days) return this.posts;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    return this.posts.filter(p => {
+      if (!p.created_at) return false;
+      return new Date(p.created_at) >= cutoff;
+    });
+  }
+
   renderAnalytics() {
     if (this.posts.length === 0) return;
     this.renderStatCards();
@@ -12619,8 +12643,9 @@ class LiveManager {
   }
 
   computeStats() {
+    const filtered = this.getFilteredPosts();
     const stats = { total: 0, totalLikes: 0, totalComments: 0, totalShares: 0, totalImpressions: 0, channels: {} };
-    for (const p of this.posts) {
+    for (const p of filtered) {
       stats.total++;
       stats.totalLikes += p.likes || 0;
       stats.totalComments += p.comments || 0;
@@ -12716,7 +12741,7 @@ class LiveManager {
     const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-tertiary').trim() || '#888';
     const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim() || '#333';
 
-    const postsWithDates = this.posts.filter(p => p.created_at);
+    const postsWithDates = this.getFilteredPosts().filter(p => p.created_at);
     if (postsWithDates.length === 0) return;
 
     const weekMap = {};
@@ -12773,7 +12798,7 @@ class LiveManager {
     const el = document.getElementById('pr-live-heatmap');
     if (!el) return;
 
-    const postsWithDates = this.posts.filter(p => p.created_at);
+    const postsWithDates = this.getFilteredPosts().filter(p => p.created_at);
     const grid = {};
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -12822,7 +12847,7 @@ class LiveManager {
     const el = document.getElementById('pr-live-top-posts');
     if (!el) return;
 
-    const ranked = [...this.posts]
+    const ranked = [...this.getFilteredPosts()]
       .map(p => ({ ...p, score: (p.likes || 0) + (p.comments || 0) + (p.shares || 0) }))
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
@@ -12853,7 +12878,8 @@ class LiveManager {
   }
 
   async generateInsights() {
-    if (this.posts.length === 0) return;
+    const filtered = this.getFilteredPosts();
+    if (filtered.length === 0) return;
     this.insightsLoading = true;
     const bodyEl = document.getElementById('pr-live-insights-body');
     const regenBtn = document.getElementById('pr-live-insights-regen');
@@ -12871,7 +12897,7 @@ class LiveManager {
     }
 
     try {
-      const ranked = [...this.posts]
+      const ranked = [...filtered]
         .map(p => ({ ...p, score: (p.likes || 0) + (p.comments || 0) + (p.shares || 0) }))
         .sort((a, b) => b.score - a.score);
 
