@@ -12209,6 +12209,9 @@ class LiveManager {
     this.pollTimers = {};
     this.pollIntervals = { x: 30000, linkedin: 180000, blog: 300000 };
     this.pollBackoff = { x: 1, linkedin: 1, blog: 1 };
+    this.charts = {};
+    this.cachedInsights = null;
+    this.insightsLoading = false;
   }
 
   async init() {
@@ -12232,6 +12235,19 @@ class LiveManager {
         this.renderFeed();
       });
     });
+
+    const backBtn = document.getElementById('pr-live-back-btn');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => this.showAnalytics());
+    }
+
+    const regenBtn = document.getElementById('pr-live-insights-regen');
+    if (regenBtn) {
+      regenBtn.addEventListener('click', () => {
+        this.cachedInsights = null;
+        this.generateInsights();
+      });
+    }
   }
 
   observeStageSwitch() {
@@ -12337,6 +12353,7 @@ class LiveManager {
 
     if (this.isOnLiveTab) {
       this.renderFeed(this.warnings, newPosts.map(p => String(p.id)));
+      this.renderAnalytics();
     } else {
       this.showNavBadge();
     }
@@ -12415,6 +12432,7 @@ class LiveManager {
 
       this.loaded = true;
       this.renderFeed(this.warnings);
+      this.renderAnalytics();
 
     } catch (err) {
       this.renderError(err.message);
@@ -12512,12 +12530,22 @@ class LiveManager {
       c.classList.toggle('active', c.dataset.postId === String(post.id));
     });
 
-    const emptyEl = document.getElementById('pr-live-preview-empty');
+    const analyticsEl = document.getElementById('pr-live-analytics');
     const contentEl = document.getElementById('pr-live-preview-content');
-    if (emptyEl) emptyEl.style.display = 'none';
+    if (analyticsEl) analyticsEl.style.display = 'none';
     if (contentEl) contentEl.style.display = '';
 
     this.renderPreview(post);
+  }
+
+  showAnalytics() {
+    this.selectedPost = null;
+    document.querySelectorAll('.pr-live-card').forEach(c => c.classList.remove('active'));
+
+    const analyticsEl = document.getElementById('pr-live-analytics');
+    const contentEl = document.getElementById('pr-live-preview-content');
+    if (analyticsEl) analyticsEl.style.display = '';
+    if (contentEl) contentEl.style.display = 'none';
   }
 
   renderPreview(post) {
@@ -12576,6 +12604,391 @@ class LiveManager {
     } else if (actionsEl) {
       actionsEl.innerHTML = '';
     }
+  }
+
+  renderAnalytics() {
+    if (this.posts.length === 0) return;
+    this.renderStatCards();
+    this.renderChannelChart();
+    this.renderTrendChart();
+    this.renderHeatmap();
+    this.renderTopPosts();
+    if (!this.cachedInsights && !this.insightsLoading) {
+      this.generateInsights();
+    }
+  }
+
+  computeStats() {
+    const stats = { total: 0, totalLikes: 0, totalComments: 0, totalShares: 0, totalImpressions: 0, channels: {} };
+    for (const p of this.posts) {
+      stats.total++;
+      stats.totalLikes += p.likes || 0;
+      stats.totalComments += p.comments || 0;
+      stats.totalShares += p.shares || 0;
+      stats.totalImpressions += p.impressions || 0;
+      if (!stats.channels[p.channel]) {
+        stats.channels[p.channel] = { count: 0, likes: 0, comments: 0, shares: 0, impressions: 0 };
+      }
+      const ch = stats.channels[p.channel];
+      ch.count++;
+      ch.likes += p.likes || 0;
+      ch.comments += p.comments || 0;
+      ch.shares += p.shares || 0;
+      ch.impressions += p.impressions || 0;
+    }
+    stats.totalEngagement = stats.totalLikes + stats.totalComments + stats.totalShares;
+    stats.engagementRate = stats.total > 0 ? (stats.totalEngagement / stats.total).toFixed(1) : '0';
+    stats.avgEngagement = stats.total > 0 ? (stats.totalEngagement / stats.total).toFixed(1) : '0';
+    return stats;
+  }
+
+  renderStatCards() {
+    const el = document.getElementById('pr-live-stats-grid');
+    if (!el) return;
+    const s = this.computeStats();
+    el.innerHTML = `
+      <div class="pr-live-stat-card">
+        <span class="pr-live-stat-card-value">${this.formatNum(s.totalImpressions || s.totalEngagement)}</span>
+        <span class="pr-live-stat-card-label">${s.totalImpressions ? 'Total Reach' : 'Total Engagement'}</span>
+      </div>
+      <div class="pr-live-stat-card">
+        <span class="pr-live-stat-card-value">${s.engagementRate}</span>
+        <span class="pr-live-stat-card-label">Avg Engagement / Post</span>
+      </div>
+      <div class="pr-live-stat-card">
+        <span class="pr-live-stat-card-value">${s.total}</span>
+        <span class="pr-live-stat-card-label">Total Posts</span>
+      </div>
+      <div class="pr-live-stat-card">
+        <span class="pr-live-stat-card-value">${Object.keys(s.channels).length}</span>
+        <span class="pr-live-stat-card-label">Active Channels</span>
+      </div>
+    `;
+  }
+
+  getChartColors() {
+    return {
+      linkedin: '#0A66C2',
+      x: getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#e0e0e0',
+      blog: getComputedStyle(document.documentElement).getPropertyValue('--accent-green').trim() || '#4ade80'
+    };
+  }
+
+  renderChannelChart() {
+    const canvas = document.getElementById('pr-live-chart-channels');
+    if (!canvas || typeof Chart === 'undefined') return;
+    const s = this.computeStats();
+    const colors = this.getChartColors();
+    const channels = ['linkedin', 'x', 'blog'];
+    const labels = ['LinkedIn', 'X', 'Blog'];
+
+    if (this.charts.channels) this.charts.channels.destroy();
+
+    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-tertiary').trim() || '#888';
+    const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim() || '#333';
+
+    this.charts.channels = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Likes', data: channels.map(c => s.channels[c]?.likes || 0), backgroundColor: channels.map(c => colors[c]), borderRadius: 4 },
+          { label: 'Comments', data: channels.map(c => s.channels[c]?.comments || 0), backgroundColor: channels.map(c => colors[c] + '99'), borderRadius: 4 },
+          { label: 'Shares', data: channels.map(c => s.channels[c]?.shares || 0), backgroundColor: channels.map(c => colors[c] + '55'), borderRadius: 4 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: true, position: 'bottom', labels: { color: textColor, boxWidth: 12, padding: 12, font: { size: 11 } } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: textColor, font: { size: 11 } } },
+          y: { grid: { color: borderColor }, ticks: { color: textColor, font: { size: 10 } }, beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  renderTrendChart() {
+    const canvas = document.getElementById('pr-live-chart-trend');
+    if (!canvas || typeof Chart === 'undefined') return;
+    const colors = this.getChartColors();
+    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-tertiary').trim() || '#888';
+    const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim() || '#333';
+
+    const postsWithDates = this.posts.filter(p => p.created_at);
+    if (postsWithDates.length === 0) return;
+
+    const weekMap = {};
+    for (const p of postsWithDates) {
+      const d = new Date(p.created_at);
+      const weekStart = new Date(d);
+      weekStart.setDate(d.getDate() - d.getDay());
+      const key = weekStart.toISOString().split('T')[0];
+      if (!weekMap[key]) weekMap[key] = { linkedin: 0, x: 0, blog: 0 };
+      weekMap[key][p.channel] = (weekMap[key][p.channel] || 0) + (p.likes || 0) + (p.comments || 0) + (p.shares || 0);
+    }
+
+    const sortedWeeks = Object.keys(weekMap).sort();
+    const weekLabels = sortedWeeks.map(w => {
+      const d = new Date(w);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+
+    if (this.charts.trend) this.charts.trend.destroy();
+
+    const datasets = [];
+    for (const [ch, color] of Object.entries(colors)) {
+      const data = sortedWeeks.map(w => weekMap[w][ch] || 0);
+      if (data.some(v => v > 0)) {
+        datasets.push({
+          label: ch === 'linkedin' ? 'LinkedIn' : ch === 'x' ? 'X' : 'Blog',
+          data,
+          borderColor: color,
+          backgroundColor: color + '22',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3,
+          pointBackgroundColor: color
+        });
+      }
+    }
+
+    this.charts.trend = new Chart(canvas, {
+      type: 'line',
+      data: { labels: weekLabels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: true, position: 'bottom', labels: { color: textColor, boxWidth: 12, padding: 12, font: { size: 11 } } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+          y: { grid: { color: borderColor }, ticks: { color: textColor, font: { size: 10 } }, beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  renderHeatmap() {
+    const el = document.getElementById('pr-live-heatmap');
+    if (!el) return;
+
+    const postsWithDates = this.posts.filter(p => p.created_at);
+    const grid = {};
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    for (const p of postsWithDates) {
+      const d = new Date(p.created_at);
+      const day = d.getDay();
+      const hour = d.getHours();
+      const key = `${day}-${hour}`;
+      if (!grid[key]) grid[key] = { total: 0, count: 0 };
+      grid[key].total += (p.likes || 0) + (p.comments || 0) + (p.shares || 0);
+      grid[key].count++;
+    }
+
+    let maxAvg = 0;
+    for (const v of Object.values(grid)) {
+      const avg = v.count > 0 ? v.total / v.count : 0;
+      if (avg > maxAvg) maxAvg = avg;
+    }
+
+    let html = '<div class="pr-live-heatmap-label"></div>';
+    for (let h = 0; h < 24; h++) {
+      html += `<div class="pr-live-heatmap-header">${h === 0 ? '12a' : h < 12 ? h + 'a' : h === 12 ? '12p' : (h - 12) + 'p'}</div>`;
+    }
+
+    for (let d = 0; d < 7; d++) {
+      html += `<div class="pr-live-heatmap-label">${days[d]}</div>`;
+      for (let h = 0; h < 24; h++) {
+        const cell = grid[`${d}-${h}`];
+        const avg = cell && cell.count > 0 ? cell.total / cell.count : 0;
+        let level = 0;
+        if (maxAvg > 0) {
+          const ratio = avg / maxAvg;
+          if (ratio > 0.75) level = 4;
+          else if (ratio > 0.5) level = 3;
+          else if (ratio > 0.25) level = 2;
+          else if (ratio > 0) level = 1;
+        }
+        html += `<div class="pr-live-heatmap-cell level-${level}" title="${days[d]} ${h}:00 - Avg: ${avg.toFixed(1)}"></div>`;
+      }
+    }
+
+    el.innerHTML = html;
+  }
+
+  renderTopPosts() {
+    const el = document.getElementById('pr-live-top-posts');
+    if (!el) return;
+
+    const ranked = [...this.posts]
+      .map(p => ({ ...p, score: (p.likes || 0) + (p.comments || 0) + (p.shares || 0) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+
+    if (ranked.length === 0) {
+      el.innerHTML = '<div class="pr-live-insights-empty"><p>No posts to rank yet.</p></div>';
+      return;
+    }
+
+    const iconMap = { linkedin: 'ph-linkedin-logo', x: 'ph-x-logo', blog: 'ph-article' };
+    el.innerHTML = ranked.map((p, i) => {
+      const icon = iconMap[p.channel] || 'ph-broadcast';
+      const text = this.truncate(p.text, 60);
+      return `<div class="pr-live-top-post-row" data-post-id="${this.escapeHtml(p.id)}">
+        <span class="pr-live-top-post-rank">${i + 1}</span>
+        <span class="pr-live-top-post-icon ${p.channel}"><i class="ph-light ${icon}"></i></span>
+        <span class="pr-live-top-post-text">${this.escapeHtml(text)}</span>
+        <span class="pr-live-top-post-score">${this.formatNum(p.score)}</span>
+      </div>`;
+    }).join('');
+
+    el.querySelectorAll('.pr-live-top-post-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const post = this.posts.find(p => String(p.id) === String(row.dataset.postId));
+        if (post) this.selectPost(post);
+      });
+    });
+  }
+
+  async generateInsights() {
+    if (this.posts.length === 0) return;
+    this.insightsLoading = true;
+    const bodyEl = document.getElementById('pr-live-insights-body');
+    const regenBtn = document.getElementById('pr-live-insights-regen');
+    if (regenBtn) regenBtn.classList.add('spinning');
+
+    if (bodyEl) {
+      bodyEl.innerHTML = `<div class="pr-live-insights-skeleton">
+        <div class="pr-live-skeleton-line long"></div>
+        <div class="pr-live-skeleton-line medium"></div>
+        <div class="pr-live-skeleton-line long"></div>
+        <div class="pr-live-skeleton-line short"></div>
+        <div class="pr-live-skeleton-line long"></div>
+        <div class="pr-live-skeleton-line medium"></div>
+      </div>`;
+    }
+
+    try {
+      const ranked = [...this.posts]
+        .map(p => ({ ...p, score: (p.likes || 0) + (p.comments || 0) + (p.shares || 0) }))
+        .sort((a, b) => b.score - a.score);
+
+      const top = ranked.slice(0, 10);
+      const bottom = ranked.slice(-5).reverse();
+      const stats = this.computeStats();
+
+      const postSummary = top.map((p, i) => `${i + 1}. [${p.channel}] "${this.truncate(p.text, 100)}" - ${p.likes} likes, ${p.comments} comments, ${p.shares} shares (score: ${p.score})`).join('\n');
+      const bottomSummary = bottom.map((p, i) => `${i + 1}. [${p.channel}] "${this.truncate(p.text, 100)}" - ${p.likes} likes, ${p.comments} comments, ${p.shares} shares (score: ${p.score})`).join('\n');
+
+      const channelBreakdown = Object.entries(stats.channels).map(([ch, d]) =>
+        `${ch}: ${d.count} posts, ${d.likes} likes, ${d.comments} comments, ${d.shares} shares`
+      ).join('\n');
+
+      const prompt = `Analyze this social media content performance data for Glossi (a 3D product visualization and creative automation platform). Identify patterns and give actionable suggestions.
+
+TOP PERFORMING POSTS:
+${postSummary}
+
+LOWEST PERFORMING POSTS:
+${bottomSummary}
+
+CHANNEL BREAKDOWN:
+${channelBreakdown}
+
+TOTALS: ${stats.total} posts, ${stats.totalEngagement} total engagement, ${stats.engagementRate} avg engagement/post
+
+Respond in exactly this format with 4 sections. Use concise bullet points. No fluff.
+
+WORKING:
+- [pattern 1 about what content performs best]
+- [pattern 2]
+- [pattern 3]
+
+NOT WORKING:
+- [pattern 1 about what underperforms]
+- [pattern 2]
+
+SUGGESTIONS:
+- [specific actionable suggestion 1]
+- [specific actionable suggestion 2]
+- [specific actionable suggestion 3]
+- [specific actionable suggestion 4]
+
+CHANNEL FIT:
+- [which content type works best on which platform]
+- [recommendation 2]`;
+
+      const res = await this.prAgent.apiCall('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system: 'You are a social media analytics expert. Be specific and data-driven. Reference actual post content when identifying patterns. Keep each bullet to 1-2 sentences max.',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 1024
+        })
+      });
+
+      const text = res?.content?.[0]?.text || res?.message || '';
+      this.cachedInsights = text;
+      this.renderInsightsText(text);
+
+    } catch (err) {
+      if (bodyEl) {
+        bodyEl.innerHTML = `<div class="pr-live-insights-empty"><p>Could not generate insights. ${this.escapeHtml(err.message || '')}</p></div>`;
+      }
+    } finally {
+      this.insightsLoading = false;
+      if (regenBtn) regenBtn.classList.remove('spinning');
+    }
+  }
+
+  renderInsightsText(text) {
+    const bodyEl = document.getElementById('pr-live-insights-body');
+    if (!bodyEl || !text) return;
+
+    const sectionMap = {
+      'WORKING': 'What\'s Working',
+      'NOT WORKING': 'What\'s Not Working',
+      'SUGGESTIONS': 'Content Suggestions',
+      'CHANNEL FIT': 'Channel Fit'
+    };
+
+    const sections = [];
+    const lines = text.split('\n');
+    let currentKey = null;
+    let currentLines = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      const headerMatch = trimmed.match(/^(WORKING|NOT WORKING|SUGGESTIONS|CHANNEL FIT):?\s*$/i);
+      if (headerMatch) {
+        if (currentKey) sections.push({ key: currentKey, lines: currentLines });
+        currentKey = headerMatch[1].toUpperCase();
+        currentLines = [];
+      } else if (trimmed && currentKey) {
+        currentLines.push(trimmed);
+      }
+    }
+    if (currentKey) sections.push({ key: currentKey, lines: currentLines });
+
+    if (sections.length === 0) {
+      bodyEl.innerHTML = `<div class="pr-live-insight-section"><div class="pr-live-insight-section-body">${this.escapeHtml(text)}</div></div>`;
+      return;
+    }
+
+    bodyEl.innerHTML = sections.map(s => {
+      const title = sectionMap[s.key] || s.key;
+      const bullets = s.lines.map(l => {
+        const clean = l.replace(/^[-*]\s*/, '');
+        return `<li>${this.escapeHtml(clean)}</li>`;
+      }).join('');
+      return `<div class="pr-live-insight-section">
+        <div class="pr-live-insight-section-title">${title}</div>
+        <div class="pr-live-insight-section-body"><ul>${bullets}</ul></div>
+      </div>`;
+    }).join('');
   }
 
   statBlock(value, label) {

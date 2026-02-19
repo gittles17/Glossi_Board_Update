@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/light/style.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/fill/style.css">
   <link rel="stylesheet" href="dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
 <body class="pr-page">
   <h1 class="sr-only">Glossi PR Content Studio</h1>
@@ -694,13 +695,62 @@
             </div>
           </div>
 
-          <!-- Right: Post Preview -->
+          <!-- Right: Analytics + Post Preview -->
           <div class="pr-live-preview" id="pr-live-preview">
-            <div class="pr-live-preview-empty" id="pr-live-preview-empty">
-              <i class="ph-light ph-eye" style="font-size: 48px; opacity: 0.3;"></i>
-              <p>Select a post to preview.</p>
+
+            <!-- Analytics Dashboard (default view) -->
+            <div class="pr-live-analytics" id="pr-live-analytics">
+              <div class="pr-live-analytics-header">
+                <span class="pr-panel-label">Analytics</span>
+              </div>
+
+              <div class="pr-live-stats-grid" id="pr-live-stats-grid"></div>
+
+              <div class="pr-live-chart-row">
+                <div class="pr-live-chart-card">
+                  <h4 class="pr-live-chart-title">Channel Comparison</h4>
+                  <canvas id="pr-live-chart-channels" height="200"></canvas>
+                </div>
+                <div class="pr-live-chart-card">
+                  <h4 class="pr-live-chart-title">Engagement Trend</h4>
+                  <canvas id="pr-live-chart-trend" height="200"></canvas>
+                </div>
+              </div>
+
+              <div class="pr-live-chart-card">
+                <h4 class="pr-live-chart-title">Best Posting Times</h4>
+                <div class="pr-live-heatmap" id="pr-live-heatmap"></div>
+              </div>
+
+              <div class="pr-live-chart-card">
+                <h4 class="pr-live-chart-title">Top Performing Posts</h4>
+                <div class="pr-live-top-posts" id="pr-live-top-posts"></div>
+              </div>
+
+              <div class="pr-live-chart-card pr-live-insights-card">
+                <div class="pr-live-insights-header">
+                  <h4 class="pr-live-chart-title">
+                    <i class="ph-light ph-lightbulb"></i>
+                    Content Insights
+                  </h4>
+                  <button class="pr-live-insights-regen" id="pr-live-insights-regen" title="Regenerate">
+                    <i class="ph-light ph-arrows-clockwise"></i>
+                  </button>
+                </div>
+                <div class="pr-live-insights-body" id="pr-live-insights-body">
+                  <div class="pr-live-insights-empty">
+                    <p>Insights will appear after posts are loaded.</p>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            <!-- Post Preview (shown when a card is clicked) -->
             <div class="pr-live-preview-content" id="pr-live-preview-content" style="display:none">
+              <button class="pr-live-back-btn" id="pr-live-back-btn">
+                <i class="ph-light ph-arrow-left"></i>
+                Back to Analytics
+              </button>
               <div class="pr-live-preview-header" id="pr-live-preview-header"></div>
               <div class="pr-live-preview-body" id="pr-live-preview-body"></div>
               <div class="pr-live-preview-stats" id="pr-live-preview-stats"></div>
