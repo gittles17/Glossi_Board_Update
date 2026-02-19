@@ -1992,6 +1992,23 @@ class PRAgent {
         console.error('Failed to parse PDF:', err);
         return;
       }
+    } else if (['jpg', 'jpeg', 'png'].includes(ext)) {
+      try {
+        const base64 = await this._fileToBase64(file);
+        const res = await fetch('/api/pr/analyze-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64, mediaType: file.type || 'image/png', fileName: file.name })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Analysis failed');
+        content = data.content;
+        type = 'image';
+      } catch (err) {
+        console.error('Image analysis failed:', err);
+        this.showToast('Failed to analyze image', 'error');
+        return;
+      }
     } else if (['mp3', 'wav', 'm4a', 'webm'].includes(ext)) {
       if (!this.openaiApiKey) {
         this.showToast('OpenAI API key required for audio transcription', 'error');
@@ -3972,9 +3989,42 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
       } catch (err) {
         console.error('Failed to read PDF:', err);
       }
+    } else if (/\.(jpe?g|png)$/.test(fileName)) {
+      try {
+        if (preview) {
+          preview.style.display = 'block';
+          preview.textContent = 'Analyzing image...';
+        }
+        const base64 = await this._fileToBase64(file);
+        const res = await fetch('/api/pr/analyze-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64, mediaType: file.type || 'image/png', fileName: file.name })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Analysis failed');
+        this._pendingFileContent = data.content;
+        this._pendingFileName = file.name;
+        if (preview) {
+          preview.textContent = data.content.substring(0, 500) + (data.content.length > 500 ? '...' : '');
+        }
+      } catch (err) {
+        console.error('Failed to analyze image:', err);
+        this.prAgent.showToast('Failed to analyze image', 'error');
+        if (preview) preview.style.display = 'none';
+      }
     } else {
       this.prAgent.showToast('Unsupported file type', 'error');
     }
+  }
+
+  _fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 
   // =========================================

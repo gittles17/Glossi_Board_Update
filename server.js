@@ -2012,6 +2012,70 @@ Return ONLY valid JSON.`;
   }
 });
 
+app.post('/api/pr/analyze-image', async (req, res) => {
+  try {
+    const { image, mediaType, fileName } = req.body;
+    if (!image) {
+      return res.status(400).json({ success: false, error: 'No image data provided' });
+    }
+
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicKey) {
+      return res.status(500).json({ success: false, error: 'Anthropic API key not configured' });
+    }
+
+    const visionPrompt = `Analyze this image thoroughly. Extract ALL text visible in the image (OCR). Then provide a detailed description of what the image contains.
+
+Format your response as:
+
+TITLE: [brief descriptive title, max 8 words]
+
+TEXT CONTENT:
+[All text found in the image, preserving structure]
+
+SUMMARY: [1-2 sentence summary]
+
+KEY POINTS:
+- [key point 1]
+- [key point 2]
+- [key point 3 if applicable]`;
+
+    const analysisResponse = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: 'claude-haiku-4-5',
+      max_tokens: 4096,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: mediaType || 'image/png',
+              data: image
+            }
+          },
+          { type: 'text', text: visionPrompt }
+        ]
+      }]
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01'
+      }
+    });
+
+    const content = analysisResponse.data.content?.[0]?.text || '';
+    res.json({ success: true, content, fileName });
+  } catch (error) {
+    console.error('Error analyzing image:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.response?.data?.error?.message || error.message || 'Failed to analyze image'
+    });
+  }
+});
+
 // Fetch fresh articles (Claude web search)
 app.post('/api/pr/articles', async (req, res) => {
   try {
