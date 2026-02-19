@@ -12489,13 +12489,14 @@ class LiveManager {
     const refreshBtn = document.getElementById('pr-live-refresh-btn');
     if (refreshBtn) refreshBtn.classList.add('spinning');
 
-    if (!this.loaded) this.showSkeletons();
+    this.showSkeletons();
 
     try {
+      const noRetry = { retries: 0 };
       const [linkedinRes, xRes, blogRes] = await Promise.allSettled([
-        this.prAgent.apiCall('/api/linkedin/posts'),
-        this.prAgent.apiCall('/api/x/posts'),
-        this.prAgent.apiCall('/api/blog/posts')
+        this.prAgent.apiCall('/api/linkedin/posts', {}, noRetry.retries),
+        this.prAgent.apiCall('/api/x/posts', {}, noRetry.retries),
+        this.prAgent.apiCall('/api/blog/posts', {}, noRetry.retries)
       ]);
 
       this.posts = [];
@@ -12504,7 +12505,7 @@ class LiveManager {
 
       if (linkedinRes.status === 'fulfilled' && linkedinRes.value?.success) {
         if (linkedinRes.value.connected === false) {
-          this.warnings.push({ channel: 'linkedin', msg: 'LinkedIn not connected' });
+          this.warnings.push({ channel: 'linkedin', msg: 'LinkedIn not connected. Add credentials in Settings.' });
         }
         if (linkedinRes.value.posts) {
           for (const p of linkedinRes.value.posts) {
@@ -12518,7 +12519,7 @@ class LiveManager {
 
       if (xRes.status === 'fulfilled' && xRes.value?.success) {
         if (xRes.value.connected === false) {
-          this.warnings.push({ channel: 'x', msg: 'X not connected' });
+          this.warnings.push({ channel: 'x', msg: 'X not connected. Add credentials in Settings.' });
         }
         if (xRes.value.posts) {
           for (const p of xRes.value.posts) {
@@ -12535,6 +12536,8 @@ class LiveManager {
           this.posts.push(p);
           this.postIndex.set(String(p.id), p);
         }
+      } else if (blogRes.status === 'rejected' || (blogRes.status === 'fulfilled' && !blogRes.value?.success)) {
+        this.warnings.push({ channel: 'blog', msg: 'Could not load blog posts' });
       }
 
       this.posts.sort((a, b) => {
@@ -12580,10 +12583,19 @@ class LiveManager {
       ? this.posts
       : this.posts.filter(p => p.channel === this.activeFilter);
 
-    if (filtered.length === 0 && warnings.length === 0) {
+    const channelWarnings = this.activeFilter === 'all'
+      ? warnings
+      : warnings.filter(w => w.channel === this.activeFilter);
+
+    if (filtered.length === 0 && channelWarnings.length === 0) {
+      const channelLabels = { linkedin: 'LinkedIn', x: 'X', blog: 'Blog' };
+      const channelLabel = channelLabels[this.activeFilter] || '';
+      const emptyMsg = this.loaded
+        ? (channelLabel ? `No ${channelLabel} posts found.` : 'No published posts found.')
+        : 'Navigate to Live to see your published posts.';
       list.innerHTML = `<div class="pr-live-feed-empty" id="pr-live-feed-empty">
         <i class="ph-light ph-broadcast" style="font-size: 32px; opacity: 0.3;"></i>
-        <p>${this.loaded ? 'No published posts found.' : 'Navigate to Live to see your published posts.'}</p>
+        <p>${emptyMsg}</p>
       </div>`;
       return;
     }
@@ -12591,7 +12603,7 @@ class LiveManager {
     const newIdSet = new Set(newIds);
     let html = '';
 
-    warnings.forEach(w => {
+    channelWarnings.forEach(w => {
       html += `<div class="pr-live-not-connected">
         <i class="ph-light ph-warning-circle"></i>
         <span>${this.escapeHtml(w.msg)}</span>
