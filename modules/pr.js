@@ -11133,7 +11133,22 @@ class DistributeManager {
             <div class="pr-twitter-link-card-desc">${this.escapeHtml(output.link_desc || 'Preview will update when URL is added')}</div>
           </div>
         </div>
-        ${ogPromptRow}`;
+        ${ogPromptRow}
+        <div class="pr-moodboard-section">
+          <div class="pr-moodboard-header" data-action="toggle-moodboard">
+            <i class="ph-light ph-palette"></i>
+            <span>Style Board</span>
+            <span class="pr-moodboard-count" id="pr-moodboard-count"></span>
+            <i class="ph-light ph-caret-down pr-moodboard-caret"></i>
+          </div>
+          <div class="pr-moodboard-body" id="pr-moodboard-body" style="display:none;">
+            <div class="pr-moodboard-grid" id="pr-moodboard-grid"></div>
+            <label class="pr-moodboard-upload-btn">
+              <i class="ph-light ph-plus"></i> Add image
+              <input type="file" accept="image/*" data-action="moodboard-upload" hidden>
+            </label>
+          </div>
+        </div>`;
     }
 
     const tweetHtml = `
@@ -11278,6 +11293,68 @@ class DistributeManager {
         this.renderTwitterPreview(output);
       });
     });
+    container.querySelectorAll('[data-action="toggle-moodboard"]').forEach(el => {
+      el.addEventListener('click', () => {
+        const body = document.getElementById('pr-moodboard-body');
+        if (body) {
+          const open = body.style.display === 'none';
+          body.style.display = open ? 'block' : 'none';
+          el.querySelector('.pr-moodboard-caret')?.classList.toggle('open', open);
+          if (open) this.loadMoodboard();
+        }
+      });
+    });
+    container.querySelectorAll('[data-action="moodboard-upload"]').forEach(input => {
+      input.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        e.target.value = '';
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+          const res = await this.prAgent.apiCall('/api/pr/moodboard', { method: 'POST', body: formData });
+          if (res.success) this.loadMoodboard();
+        } catch (err) {
+          this.prAgent.showToast('Failed to upload image', 'error');
+        }
+      });
+    });
+  }
+
+  async loadMoodboard() {
+    try {
+      const res = await this.prAgent.apiCall('/api/pr/moodboard');
+      const grid = document.getElementById('pr-moodboard-grid');
+      const count = document.getElementById('pr-moodboard-count');
+      if (!grid) return;
+      const images = res.images || [];
+      if (count) count.textContent = images.length > 0 ? `(${images.length})` : '';
+      if (images.length === 0) {
+        grid.innerHTML = '<div class="pr-moodboard-empty">No style references yet. Add images to guide generation.</div>';
+        return;
+      }
+      grid.innerHTML = images.map(img => `
+        <div class="pr-moodboard-thumb" data-filename="${img.filename}">
+          <img src="${img.url}" alt="">
+          <button class="pr-moodboard-thumb-remove" data-action="moodboard-delete" data-filename="${img.filename}"><i class="ph-light ph-x"></i></button>
+        </div>
+      `).join('');
+      grid.querySelectorAll('[data-action="moodboard-delete"]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const filename = btn.dataset.filename;
+          try {
+            await this.prAgent.apiCall(`/api/pr/moodboard/${filename}`, { method: 'DELETE' });
+            this.loadMoodboard();
+          } catch (err) {
+            this.prAgent.showToast('Failed to remove image', 'error');
+          }
+        });
+      });
+    } catch (err) {
+      const grid = document.getElementById('pr-moodboard-grid');
+      if (grid) grid.innerHTML = '<div class="pr-moodboard-empty">Failed to load style board</div>';
+    }
   }
 
   async autoGenerateVisual(output) {

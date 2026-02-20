@@ -2198,6 +2198,77 @@ app.post('/api/pr/upload-media', upload.single('file'), (req, res) => {
   }
 });
 
+// ============================================
+// STYLE MOODBOARD
+// ============================================
+
+const MOODBOARD_DIR = path.join(__dirname, 'moodboard');
+
+app.get('/api/pr/moodboard', (req, res) => {
+  try {
+    if (!fs.existsSync(MOODBOARD_DIR)) {
+      return res.json({ success: true, images: [] });
+    }
+    const files = fs.readdirSync(MOODBOARD_DIR)
+      .filter(f => /\.(jpe?g|png|gif|webp)$/i.test(f))
+      .map(f => {
+        const stat = fs.statSync(path.join(MOODBOARD_DIR, f));
+        return { filename: f, url: `/moodboard/${f}`, size: stat.size, created: stat.birthtime };
+      })
+      .sort((a, b) => new Date(b.created) - new Date(a.created));
+    res.json({ success: true, images: files });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/pr/moodboard', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowed.includes(req.file.mimetype)) {
+      return res.status(400).json({ success: false, error: 'Only JPEG, PNG, GIF, and WebP images are supported' });
+    }
+    if (!fs.existsSync(MOODBOARD_DIR)) fs.mkdirSync(MOODBOARD_DIR, { recursive: true });
+
+    const ext = path.extname(req.file.originalname) || '.png';
+    const filename = `mb-${Date.now()}-${crypto.randomUUID().slice(0, 8)}${ext}`;
+    const filepath = path.join(MOODBOARD_DIR, filename);
+    fs.writeFileSync(filepath, req.file.buffer);
+
+    res.json({
+      success: true,
+      image: { filename, url: `/moodboard/${filename}`, size: req.file.size }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/pr/moodboard/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename.replace(/[^a-zA-Z0-9._-]/g, '');
+    const filepath = path.join(MOODBOARD_DIR, filename);
+    if (fs.existsSync(filepath)) {
+      fs.unlinkSync(filepath);
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ success: false, error: 'Image not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+function getMoodboardImages() {
+  if (!fs.existsSync(MOODBOARD_DIR)) return [];
+  return fs.readdirSync(MOODBOARD_DIR)
+    .filter(f => /\.(jpe?g|png|gif|webp)$/i.test(f))
+    .map(f => ({ filename: f, filepath: path.join(MOODBOARD_DIR, f), url: `/moodboard/${f}` }));
+}
+
 // Shorten tweet text to fit within character limit
 app.post('/api/pr/shorten-tweet', async (req, res) => {
   try {
@@ -2830,24 +2901,40 @@ app.post('/api/pr/generate-og-image', async (req, res) => {
     let bgDataUrl = '';
     const useProvider = provider || 'gemini';
     const imagePrompt = custom_prompt.trim();
+    const boardImages = getMoodboardImages();
 
     try {
       if (useProvider === 'midjourney' && process.env.MIDJOURNEY_API_KEY) {
-        let srefUrl = '';
-        let srefId = '';
+        const srefUrls = [];
+        const tempSrefIds = [];
+
         if (reference_image) {
-          srefId = crypto.randomUUID();
+          const srefId = crypto.randomUUID();
           srefStore.set(srefId, reference_image);
           setTimeout(() => srefStore.delete(srefId), 300000);
-          srefUrl = `${APP_URL}/og-sref/${srefId}`;
+          tempSrefIds.push(srefId);
+          srefUrls.push(`${APP_URL}/og-sref/${srefId}`);
         }
+
+        for (const img of boardImages) {
+          srefUrls.push(`${APP_URL}${img.url}`);
+        }
+
         try {
-          bgDataUrl = await generateImageMidjourney(imagePrompt, srefUrl);
+          bgDataUrl = await generateImageMidjourney(imagePrompt, srefUrls.join(' '));
         } finally {
-          if (srefId) srefStore.delete(srefId);
+          tempSrefIds.forEach(id => srefStore.delete(id));
         }
       } else if (process.env.GEMINI_API_KEY) {
-        bgDataUrl = await generateImageGemini(imagePrompt, reference_image);
+        let geminiRef = reference_image || '';
+        if (!geminiRef && boardImages.length > 0) {
+          const pick = boardImages[Math.floor(Math.random() * boardImages.length)];
+          const buf = fs.readFileSync(pick.filepath);
+          const ext = path.extname(pick.filename).toLowerCase();
+          const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp' };
+          geminiRef = `data:${mimeMap[ext] || 'image/png'};base64,${buf.toString('base64')}`;
+        }
+        bgDataUrl = await generateImageGemini(imagePrompt, geminiRef);
       }
     } catch (aiErr) {
       return res.json({ success: false, error: aiErr.message || 'Image generation failed. Try again.' });
