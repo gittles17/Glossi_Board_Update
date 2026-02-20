@@ -2637,11 +2637,27 @@ NEVER DO THIS:
 - Never describe "floating" or "ethereal" or "dreamlike" qualities. Keep it precise and mechanical.
 - Never interpret the tweet content literally. Do not depict the subject matter of the tweet.
 
-TWEET CONNECTION:
-- The tweet content is provided only for loose thematic inspiration.
-- Choose a motif from the library that has an abstract, associative connection to the tweet's mood or domain.
-- Example: a tweet about growth could map to a topographic contour landscape. A tweet about technology could map to node-and-connector diagrams. A tweet about clarity could map to a single wireframe sphere.
-- If no obvious connection exists, pick any motif that looks good. Visual quality matters more than thematic relevance.
+TWEET CONNECTION (required, not optional):
+- Read the tweet carefully. Identify its core topic, argument, or emotion.
+- Choose a motif that has a clear, intentional conceptual link to that core idea. The viewer should be able to look at the visual and the title together and feel they belong.
+- The connection must be abstract (no literal depictions), but it must be deliberate, not random.
+- Do NOT fall back to a generic motif. Every generation must reflect the specific tweet.
+
+EXAMPLE MAPPINGS (use these as reasoning patterns, not rigid rules):
+- Growth, scaling, momentum -> topographic contour lines rising, or a bar chart ascending
+- Data, analytics, metrics -> particle scatter field, or abstract bar/line chart shapes
+- Strategy, planning, roadmap -> node-and-connector diagram with directional flow
+- Technology, product, engineering -> wireframe UI card panels, or pixel art icons
+- Networking, connections, community -> node-and-connector web, multiple linked circles
+- Focus, clarity, simplicity -> single wireframe sphere, clean and centered
+- Disruption, change, breaking patterns -> spirograph with one broken/diverging orbital path
+- Investment, funding, capital -> checkerboard gradient sphere (value/structure duality)
+- Design, craft, aesthetics -> lissajous geometric pattern, precise and elegant
+- Leadership, vision, direction -> electromagnetic field lines radiating outward from a point
+- Competition, market dynamics -> two pill-shaped toggle elements in tension, or opposing particle fields
+- Infrastructure, systems, operations -> wireframe rectangles arranged like a system diagram
+- Storytelling, narrative, content -> topographic landscape with flowing contour lines (journey)
+- Risk, uncertainty, volatility -> particle scatter field with uneven density and trailing wisps
 
 COMPOSITION AND TEXT LEGIBILITY:
 - A large white blog title will be overlaid in the top-left area (roughly left 60%, top 45%).
@@ -2664,7 +2680,7 @@ async function generateOgVisualPrompt(tweetText, refinement, referenceImage) {
     systemPrompt += `\n\nREFERENCE IMAGE: A reference image has been provided. Analyze its visual style (colors, composition, texture, mood, aesthetic) and ensure your prompt reproduces that exact art style. The reference defines the look; you may override the default color and style rules with what you observe in the reference. HOWEVER, the COMPOSITION AND TEXT LEGIBILITY rules above are NON-NEGOTIABLE. Art must still fade naturally toward the top-left text area. Dense elements stay in the bottom-right; any art near the title must be very faint and sparse.`;
   }
 
-  let userText = `Generate an abstract visual prompt for an OG card. The tweet this supports:\n\n"${tweetText}"`;
+  let userText = `Generate an abstract visual prompt for an OG card. Read the tweet below, identify its core theme, then choose a motif that clearly connects to that theme.\n\nTweet:\n"${tweetText}"`;
   if (refinement) {
     userText += `\n\nAdditional style direction from the user: ${refinement}`;
   }
@@ -3345,6 +3361,30 @@ app.get('/api/linkedin/posts', async (req, res) => {
 // GLOSSI BLOG: FETCH FROM RESOURCES PAGE
 // ============================================
 
+async function scrapeCaseStudyDetails(url) {
+  try {
+    const res = await axios.get(url, { timeout: 8000 });
+    const html = res.data;
+    const stats = [];
+    const statRegex = /<div class="cs-stat-label">([^<]*)<\/div>\s*<div class="cs-stat-num">([^<]*)<\/div>/g;
+    let sm;
+    while ((sm = statRegex.exec(html)) !== null) {
+      stats.push({ label: sm[1].trim(), value: sm[2].trim().replace(/&mdash;/g, ',').replace(/&amp;/g, '&') });
+    }
+    const quoteMatch = html.match(/<blockquote>\s*<p>([^<]+)<\/p>\s*<\/blockquote>/);
+    const quote = quoteMatch
+      ? quoteMatch[1].replace(/&ldquo;|&rdquo;/g, '"').replace(/&mdash;/g, ',').replace(/&amp;/g, '&').trim()
+      : null;
+    const imgMatch = html.match(/<div class="cs-hero-image">\s*<img src="([^"]+)"/);
+    const heroImage = imgMatch ? imgMatch[1] : null;
+    const companyMatch = html.match(/<div class="cs-hero-tag">[^<]*<\/div>\s*<span[^>]*>([^<]*)<\/span>/);
+    const company = companyMatch ? companyMatch[1].trim() : null;
+    return { stats, quote, heroImage, company };
+  } catch {
+    return { stats: [], quote: null, heroImage: null, company: null };
+  }
+}
+
 app.get('/api/blog/posts', async (req, res) => {
   try {
     const pageRes = await axios.get('https://www.glossi.io/resources.html', { timeout: 10000 });
@@ -3368,12 +3408,16 @@ app.get('/api/blog/posts', async (req, res) => {
         parsedDate = new Date(`${monthYearMatch[1]} 1, ${monthYearMatch[2]}`).toISOString();
       }
 
+      const isCaseStudy = category.trim().toLowerCase() === 'customer story'
+        || href.includes('/customers/');
+
       posts.push({
         id: `blog-${slug}`,
         channel: 'blog',
         text: title.trim(),
         description: description.trim().replace(/&mdash;/g, ',').replace(/&amp;/g, '&'),
         category: category.trim(),
+        is_case_study: isCaseStudy,
         created_at: parsedDate,
         date_display: dateStr.trim(),
         likes: 0,
@@ -3383,6 +3427,14 @@ app.get('/api/blog/posts', async (req, res) => {
         slug
       });
     }
+
+    const caseStudies = posts.filter(p => p.is_case_study);
+    const enrichments = await Promise.all(
+      caseStudies.map(cs => scrapeCaseStudyDetails(cs.url))
+    );
+    caseStudies.forEach((cs, i) => {
+      cs.case_study = enrichments[i];
+    });
 
     res.json({ success: true, posts });
   } catch (error) {
