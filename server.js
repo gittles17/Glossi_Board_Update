@@ -3039,6 +3039,16 @@ function isXConfigured() {
   return !!(X_API_KEY && X_API_KEY_SECRET && X_ACCESS_TOKEN && X_ACCESS_TOKEN_SECRET);
 }
 
+app.get('/api/x/debug-creds', (req, res) => {
+  const mask = (s) => s ? `${s.slice(0, 4)}...${s.slice(-4)} (len=${s.length})` : 'MISSING';
+  res.json({
+    key: mask(X_API_KEY),
+    secret: mask(X_API_KEY_SECRET),
+    token: mask(X_ACCESS_TOKEN),
+    tokenSecret: mask(X_ACCESS_TOKEN_SECRET)
+  });
+});
+
 app.get('/api/x/status', async (req, res) => {
   if (!isXConfigured()) {
     return res.json({ success: true, connected: false, reason: 'X API credentials not configured' });
