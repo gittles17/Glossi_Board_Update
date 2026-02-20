@@ -5828,6 +5828,7 @@ class NewsMonitor {
   setupDOM() {
     this.dom = {
       fetchNewsBtn: document.getElementById('pr-fetch-news-btn'),
+      fetchTldrBtn: document.getElementById('pr-fetch-tldr-btn'),
       regeneratePlansBtn: document.getElementById('pr-regenerate-plans-btn'),
       newsHooksList: document.getElementById('pr-news-hooks-list'),
       sourcesDrawer: document.getElementById('pr-sources-drawer'),
@@ -5859,6 +5860,7 @@ class NewsMonitor {
 
   setupEventListeners() {
     this.dom.fetchNewsBtn?.addEventListener('click', () => this.refreshNews());
+    this.dom.fetchTldrBtn?.addEventListener('click', () => this.fetchTldrNewsletter());
     this.dom.regeneratePlansBtn?.addEventListener('click', () => this.regenerateContentPlans());
 
     // Strategy sub-tab switching
@@ -6293,6 +6295,42 @@ class NewsMonitor {
     }
   }
 
+  async fetchTldrNewsletter() {
+    if (this.dom.fetchTldrBtn) {
+      this.dom.fetchTldrBtn.disabled = true;
+      this.dom.fetchTldrBtn.classList.add('spinning');
+    }
+
+    this._newsLoaderId = startLoaderStatus(this.dom.newsHooksList, 'tldr');
+
+    try {
+      const response = await fetch('/api/pr/fetch-tldr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch TLDR newsletter');
+      }
+
+      this.newsHooks = data.news || [];
+      this.normalizeNewsContentTypes();
+      this.renderNews();
+      this.prAgent.showToast(`TLDR AI: ${data.newCount || 0} new articles added`, 'success');
+    } catch (error) {
+      this.prAgent.showToast('Failed to fetch TLDR newsletter', 'error');
+    } finally {
+      stopLoaderStatus(this._newsLoaderId);
+      this._newsLoaderId = null;
+      if (this.dom.fetchTldrBtn) {
+        this.dom.fetchTldrBtn.disabled = false;
+        this.dom.fetchTldrBtn.classList.remove('spinning');
+      }
+    }
+  }
+
   normalizeNewsContentTypes() {
     for (const hook of this.newsHooks) {
       if (Array.isArray(hook.content_plan)) {
@@ -6441,6 +6479,7 @@ class NewsMonitor {
           </div>
           <div class="pr-news-meta">
             <span class="pr-news-outlet">${this.escapeHtml(item.outlet)}</span>
+            ${item.source === 'tldr' ? '<span class="pr-news-source-badge">TLDR AI</span>' : ''}
             <span class="pr-news-date">${daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`}</span>
           </div>
           <p class="pr-news-summary">${this.escapeHtml(item.summary)}</p>

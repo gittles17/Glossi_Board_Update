@@ -82,7 +82,18 @@ const OUTLET_NAME_MAP = {
   'businessoffashion.com': 'Business of Fashion',
   'www.businessoffashion.com': 'Business of Fashion',
   'theinterline.com': 'The Interline',
-  'www.theinterline.com': 'The Interline'
+  'www.theinterline.com': 'The Interline',
+  'blog.google': 'Google',
+  'fortune.com': 'Fortune',
+  'www.fortune.com': 'Fortune',
+  '9to5mac.com': '9to5Mac',
+  'www.9to5mac.com': '9to5Mac',
+  'ben-evans.com': 'Ben Evans',
+  'www.ben-evans.com': 'Ben Evans',
+  'tomtunguz.com': 'Tom Tunguz',
+  'arxiv.org': 'arXiv',
+  'testingcatalog.com': 'Testing Catalog',
+  'www.testingcatalog.com': 'Testing Catalog'
 };
 
 function normalizeOutletName(rawOutlet) {
@@ -334,12 +345,14 @@ async function initDatabase() {
           )
         `);
         
-        // Migration: add angle columns if they don't exist (for existing databases)
+        // Migration: add columns if they don't exist (for existing databases)
         await pool.query(`
           DO $$ BEGIN
             ALTER TABLE pr_news_hooks ADD COLUMN IF NOT EXISTS angle_title TEXT;
             ALTER TABLE pr_news_hooks ADD COLUMN IF NOT EXISTS angle_narrative TEXT;
             ALTER TABLE pr_news_hooks ADD COLUMN IF NOT EXISTS content_plan JSONB;
+            ALTER TABLE pr_news_hooks ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'rss';
+            ALTER TABLE pr_news_hooks ADD COLUMN IF NOT EXISTS glossi_takeaway TEXT;
           END $$;
         `);
         
@@ -1863,6 +1876,202 @@ app.delete('/api/pr/news-hooks/old', async (req, res) => {
     res.json({ success: true, deleted: result.rowCount });
   } catch (error) {
     console.error('Error deleting old news hooks:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Fetch and analyze TLDR AI newsletter
+app.post('/api/pr/fetch-tldr', async (req, res) => {
+  try {
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicKey) {
+      return res.status(500).json({ success: false, error: 'Anthropic API key not configured' });
+    }
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const newsletterUrl = `https://tldr.tech/ai/${today}`;
+
+    let html;
+    try {
+      const response = await axios.get(newsletterUrl, {
+        timeout: 15000,
+        headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' }
+      });
+      html = response.data;
+    } catch {
+      const latestResponse = await axios.get('https://tldr.tech/api/latest/ai', {
+        timeout: 15000,
+        headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' }
+      });
+      html = latestResponse.data;
+    }
+
+    function decodeEntities(str) {
+      return str.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ');
+    }
+    function strip(h) {
+      return decodeEntities(h.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim();
+    }
+
+    const articles = [];
+    const artRe = /<article[^>]*>\s*<a[^>]*href="([^"]+)"[^>]*>\s*<h3>([\s\S]*?)<\/h3>\s*<\/a>\s*<div class="newsletter-html"[^>]*>([\s\S]*?)<\/div>\s*<\/article>/gi;
+    let m;
+    while ((m = artRe.exec(html)) !== null) {
+      const rawUrl = decodeEntities(m[1]);
+      const title = strip(m[2]);
+      const desc = strip(m[3]);
+      if (title.toLowerCase().includes('sponsor')) continue;
+      const cleanUrl = rawUrl.replace(/[?&]utm_source=tldrai/g, '').replace(/[?&]$/, '');
+      articles.push({
+        url: cleanUrl,
+        title: title.replace(/\s*\(\d+\s*minute\s*read\)\s*$/i, ''),
+        description: desc
+      });
+    }
+
+    if (articles.length === 0) {
+      return res.json({ success: true, news: [], message: 'No articles found in today\'s newsletter' });
+    }
+
+    // Fetch full article content in parallel
+    await Promise.all(articles.map(async (article) => {
+      try {
+        const resp = await axios.get(article.url, {
+          timeout: 8000,
+          headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
+          maxContentLength: 500000
+        });
+        if (typeof resp.data === 'string') {
+          const paras = [];
+          const pRe = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+          let pm;
+          while ((pm = pRe.exec(resp.data)) !== null) {
+            const t = strip(pm[1]).trim();
+            if (t.length > 30) paras.push(t);
+          }
+          article.fullContent = paras.join('\n\n').substring(0, 5000) || null;
+        }
+      } catch { article.fullContent = null; }
+    }));
+
+    const analysisPrompt = `You are a strategic analyst for Glossi, an AI-powered 3D product visualization platform.
+
+ABOUT GLOSSI:
+- Product: AI + 3D engine that creates unlimited product photos (eliminates photoshoots)
+- Customers: Enterprise brands (CPG, fashion, beauty, e-commerce)
+- Buyers: CMOs, creative directors, e-commerce directors
+- Stage: Seed-stage startup, actively fundraising
+
+RELEVANCE CRITERIA (priority order):
+1. AI creative/marketing tools, image generation for commercial use
+2. E-commerce platforms, 3D/AR product visualization, visual commerce
+3. Creative automation, brand asset management, content production
+4. DTC brand strategies, retail digital transformation, fashion tech
+5. Enterprise AI adoption in marketing/creative operations
+6. Funding/M&A in creative tech, martech, or adjacent markets
+
+EXCLUDE: Pure AI research, cybersecurity, dev tools, healthcare, biotech, fintech, crypto, autonomous vehicles, robotics, gaming, celebrity/corporate drama, politics, AI philosophy, model benchmarks.
+
+ARTICLES:
+${articles.map((a, i) => `
+${i + 1}. TITLE: ${a.title}
+   URL: ${a.url}
+   SUMMARY: ${a.description}
+   ${a.fullContent ? `EXCERPT:\n${a.fullContent.substring(0, 2000)}` : ''}
+`).join('\n')}
+
+Return ONLY relevant articles as JSON:
+{
+  "articles": [
+    {
+      "title": "Clean article title",
+      "url": "Article URL",
+      "outlet": "Publication name (from URL domain)",
+      "summary": "1-2 sentence summary",
+      "relevance": "Why this matters to Glossi's market",
+      "angle_title": "Short label (3-5 words)",
+      "glossi_takeaway": "Specific, actionable insight for Glossi: investor talking points, positioning, sales angles, or strategic implications. 2-3 sentences."
+    }
+  ]
+}
+
+Only include clearly relevant articles. Quality over quantity.`;
+
+    const analysisResponse = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: 'claude-haiku-4-5',
+      max_tokens: 4096,
+      system: 'You are a strategic business analyst. Return only valid JSON.',
+      messages: [{ role: 'user', content: analysisPrompt }]
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01'
+      }
+    });
+
+    const analysisText = analysisResponse.data.content?.[0]?.text || '{}';
+    let analysisData;
+    try {
+      let cleaned = analysisText.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      analysisData = jsonMatch ? JSON.parse(jsonMatch[0]) : { articles: [] };
+    } catch {
+      analysisData = { articles: [] };
+    }
+
+    let insertedCount = 0;
+    for (const item of (analysisData.articles || [])) {
+      try {
+        const existing = await pool.query(
+          'SELECT id FROM pr_news_hooks WHERE url = $1 OR headline = $2 LIMIT 1',
+          [item.url || '', item.title || '']
+        );
+        if (existing.rows.length > 0) continue;
+
+        await pool.query(`
+          INSERT INTO pr_news_hooks (headline, outlet, date, url, summary, relevance, angle_title, angle_narrative, glossi_takeaway, source, fetched_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'tldr', NOW())
+        `, [
+          item.title || 'No title',
+          item.outlet || 'TLDR AI',
+          today,
+          item.url || '',
+          item.summary || '',
+          item.relevance || '',
+          item.angle_title || 'TLDR AI Insight',
+          item.glossi_takeaway || '',
+          item.glossi_takeaway || ''
+        ]);
+        insertedCount++;
+      } catch (err) {
+        console.error('Error inserting TLDR article:', err.message);
+      }
+    }
+
+    const allNews = await pool.query(`
+      SELECT * FROM pr_news_hooks
+      WHERE date > NOW() - INTERVAL '30 days'
+        AND (relevance IS NULL OR (relevance NOT ILIKE '%EXCLUDED%' AND relevance NOT ILIKE '%Not relevant%'))
+      ORDER BY date DESC, fetched_at DESC
+    `);
+
+    const allNormalized = allNews.rows.map(item => ({
+      ...item,
+      outlet: normalizeOutletName(item.outlet)
+    }));
+
+    res.json({
+      success: true,
+      news: allNormalized,
+      tldrCount: analysisData.articles?.length || 0,
+      newCount: insertedCount
+    });
+  } catch (error) {
+    console.error('Error fetching TLDR newsletter:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

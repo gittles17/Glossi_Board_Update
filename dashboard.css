@@ -16491,6 +16491,24 @@ svg.spinning,
   margin-left: var(--space-2);
 }
 
+.pr-news-source-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.pr-news-source-badge::after {
+  content: "\00B7";
+  margin-left: var(--space-2);
+}
+
 /* Summary */
 .pr-news-summary {
   font-size: 13px;
