@@ -11098,7 +11098,7 @@ class DistributeManager {
             <img src="${this.escapeHtml(output._ogBgImage)}" class="pr-og-position-img" data-action="og-drag-img" style="transform: translate(${output._ogPosX || 0}px, ${output._ogPosY || 0}px) scale(${(output._ogScale || 100) / 100});">
           </div>
           <div class="pr-og-position-controls">
-            <input type="range" min="100" max="300" value="${output._ogScale || 100}" data-action="og-scale" class="pr-og-scale-slider" title="Zoom">
+            <input type="range" min="25" max="300" value="${output._ogScale || 100}" data-action="og-scale" class="pr-og-scale-slider" title="Zoom">
             <button class="pr-og-composite-btn" data-action="composite-og"><i class="ph-light ph-check"></i> Apply</button>
           </div>
         </div>`;
@@ -11471,10 +11471,14 @@ class DistributeManager {
     const scale = (output._ogScale || 100) / 100;
     const imgW = frameW * scale;
     const imgH = frameH * scale;
-    const offsetX = (imgW - frameW) / 2 - px;
-    const offsetY = (imgH - frameH) / 2 - py;
-    if (axis === 'x') return imgW > frameW ? (offsetX / (imgW - frameW)) * 100 : 50;
-    return imgH > frameH ? (offsetY / (imgH - frameH)) * 100 : 50;
+    if (axis === 'x') {
+      const diff = imgW - frameW;
+      if (Math.abs(diff) < 1) return 50;
+      return ((diff / 2 - px) / diff) * 100;
+    }
+    const diff = imgH - frameH;
+    if (Math.abs(diff) < 1) return 50;
+    return ((diff / 2 - py) / diff) * 100;
   }
 
   async fetchLinkMetadata(output) {

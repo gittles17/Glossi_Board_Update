@@ -20919,7 +20919,7 @@ body.pr-resizing * {
   overflow: hidden;
   cursor: grab;
   position: relative;
-  background: #000;
+  background: #0d0d0d;
 }
 
 .pr-og-position-frame:active {

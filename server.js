@@ -2566,8 +2566,8 @@ app.get('/og-template', (req, res) => {
   const escapeHtml = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const bgStyle = bgUrl
-    ? `background-image: url(${bgUrl}); background-size: ${bgScale}%; background-position: ${bgPosX}% ${bgPosY}%;`
-    : 'background: #000000;';
+    ? `background-color: #0d0d0d; background-image: url(${bgUrl}); background-size: ${bgScale}%; background-position: ${bgPosX}% ${bgPosY}%; background-repeat: no-repeat;`
+    : 'background: #0d0d0d;';
 
   const html = `<!DOCTYPE html>
 <html>
@@ -2579,7 +2579,7 @@ app.get('/og-template', (req, res) => {
   html, body { width: 1200px; height: 630px; overflow: hidden; }
   .og-wrap { width: 1200px; height: 630px; position: relative; ${bgStyle} }
   .og-accent { width: 100%; height: 3px; background: #E8512A; position: absolute; top: 0; left: 0; z-index: 3; }
-  .og-title-safe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(ellipse 120% 130% at 85% 85%, transparent 30%, rgba(0,0,0,0.4) 55%, rgba(0,0,0,0.75) 75%, #000000 100%); z-index: 1; }
+  .og-title-safe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(ellipse 120% 130% at 85% 85%, transparent 30%, rgba(13,13,13,0.4) 55%, rgba(13,13,13,0.75) 75%, #0d0d0d 100%); z-index: 1; }
   .og-title { position: absolute; top: 48px; left: 68px; font-family: 'PP Mori', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; font-size: 90px; line-height: 1.05; letter-spacing: -0.035em; color: #FFFFFF; max-width: 780px; z-index: 2; }
   .og-logo { position: absolute; bottom: 40px; right: 56px; width: 44px; height: 51px; z-index: 2; }
 </style>
