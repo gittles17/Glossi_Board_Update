@@ -11087,15 +11087,15 @@ class DistributeManager {
 
       let ogImageHtml = '';
       const savedProvider = localStorage.getItem('glossi_og_provider') || 'gemini';
-      const savedRefinement = output._ogRefinement || '';
-      const ogRefineRow = `<div class="pr-twitter-visual-feedback">
+      const savedOgPrompt = output._ogCustomPrompt || '';
+      const ogPromptRow = `<div class="pr-twitter-visual-feedback">
           <div class="pr-twitter-visual-feedback-row">
             <select class="pr-og-provider-select" data-action="og-provider-select">
               <option value="gemini"${savedProvider === 'gemini' ? ' selected' : ''}>Gemini</option>
               <option value="midjourney"${savedProvider === 'midjourney' ? ' selected' : ''}>Midjourney</option>
             </select>
-            <input type="text" class="pr-twitter-visual-feedback-input" data-action="og-refinement" placeholder="Describe adjustments (e.g. more minimal, cooler tones)" value="${this.escapeHtml(savedRefinement)}">
-            <button class="pr-twitter-visual-feedback-btn" data-action="generate-og-image">${ogImage ? 'Refine' : 'Generate'}</button>
+            <input type="text" class="pr-twitter-visual-feedback-input" data-action="og-custom-prompt" placeholder="Describe the visual (e.g. wireframe sphere with contour lines, bottom-right)" value="${this.escapeHtml(savedOgPrompt)}">
+            <button class="pr-twitter-visual-feedback-btn" data-action="generate-og-image">${ogImage ? 'Regenerate' : 'Generate'}</button>
           </div>
           ${refPillHtml}
         </div>`;
@@ -11133,14 +11133,7 @@ class DistributeManager {
             <div class="pr-twitter-link-card-desc">${this.escapeHtml(output.link_desc || 'Preview will update when URL is added')}</div>
           </div>
         </div>
-        ${ogRefineRow}
-        ${output._ogPromptReasoning ? `<div class="pr-og-reasoning">
-          <div class="pr-og-reasoning-toggle" data-action="toggle-og-reasoning"><i class="ph-light ph-info"></i> Prompt reasoning</div>
-          <div class="pr-og-reasoning-body" style="display:none;">
-            <div class="pr-og-reasoning-row"><span class="pr-og-reasoning-label">Theme</span><span>${this.escapeHtml(output._ogPromptReasoning.theme || '')}</span></div>
-            <div class="pr-og-reasoning-row"><span class="pr-og-reasoning-label">Motif</span><span>${this.escapeHtml(output._ogPromptReasoning.motif || '')}</span></div>
-          </div>
-        </div>` : ''}`;
+        ${ogPromptRow}`;
     }
 
     const tweetHtml = `
@@ -11233,9 +11226,9 @@ class DistributeManager {
         this.persistOutput(output);
       });
     });
-    container.querySelectorAll('[data-action="og-refinement"]').forEach(el => {
+    container.querySelectorAll('[data-action="og-custom-prompt"]').forEach(el => {
       el.addEventListener('input', () => {
-        output._ogRefinement = el.value;
+        output._ogCustomPrompt = el.value;
       });
     });
     container.querySelectorAll('[data-action="og-provider-select"]').forEach(sel => {
@@ -11283,12 +11276,6 @@ class DistributeManager {
         output.visual_ref_image = '';
         this.persistOutput(output);
         this.renderTwitterPreview(output);
-      });
-    });
-    container.querySelectorAll('[data-action="toggle-og-reasoning"]').forEach(toggle => {
-      toggle.addEventListener('click', () => {
-        const body = toggle.nextElementSibling;
-        if (body) body.style.display = body.style.display === 'none' ? 'block' : 'none';
       });
     });
   }
@@ -11415,6 +11402,12 @@ class DistributeManager {
     const title = output.link_title || output.title || '';
     if (!title.trim()) return;
 
+    const customPrompt = output._ogCustomPrompt || '';
+    if (!customPrompt.trim()) {
+      await this.prAgent.showConfirm('Enter a visual prompt to generate the image', 'Link Preview');
+      return;
+    }
+
     output._ogGenerating = true;
     this.renderTwitterPreview(output);
 
@@ -11423,9 +11416,8 @@ class DistributeManager {
     try {
       const ogPayload = {
         title,
-        tweet_text: output.content || '',
-        provider: localStorage.getItem('glossi_og_provider') || 'gemini',
-        refinement: output._ogRefinement || ''
+        custom_prompt: customPrompt,
+        provider: localStorage.getItem('glossi_og_provider') || 'gemini'
       };
       if (refImage) ogPayload.reference_image = refImage;
 
@@ -11439,7 +11431,6 @@ class DistributeManager {
 
       if (res.success && res.image) {
         output.og_image = res.image;
-        if (res.prompt_reasoning) output._ogPromptReasoning = res.prompt_reasoning;
         this.persistOutput(output);
         this.renderTwitterPreview(output);
       } else {

@@ -2773,9 +2773,11 @@ async function generateImageGemini(prompt, referenceImage) {
 }
 
 // Helper: generate image via Midjourney (legnext.ai)
+const MJ_OG_MOODBOARD_ID = '7423588848690528293';
+
 async function generateImageMidjourney(prompt, srefUrl) {
   const mjKey = process.env.MIDJOURNEY_API_KEY;
-  let mjPrompt = `${prompt}, minimal vector line art, pure black background, white wireframe strokes, scientific diagram aesthetic, ultra high contrast --v 7 --ar 40:21 --style raw --no photorealistic, gradient, colorful, text, words, letters, painting, 3d render, glow, bloom, lens flare, busy, cluttered`;
+  let mjPrompt = `${prompt}, minimal vector line art, pure black background, white wireframe strokes, scientific diagram aesthetic, ultra high contrast --v 7 --ar 40:21 --style raw --p ${MJ_OG_MOODBOARD_ID} --no photorealistic, gradient, colorful, text, words, letters, painting, 3d render, glow, bloom, lens flare, busy, cluttered`;
   if (srefUrl) mjPrompt += ` --sref ${srefUrl}`;
 
   const createRes = await axios.post('https://api.legnext.ai/api/v1/diffusion', {
@@ -2819,43 +2821,38 @@ async function generateImageMidjourney(prompt, srefUrl) {
 app.post('/api/pr/generate-og-image', async (req, res) => {
   let browser;
   try {
-    const { title, tweet_text, provider, refinement, reference_image } = req.body;
+    const { title, custom_prompt, provider, reference_image } = req.body;
     if (!title) {
       return res.status(400).json({ success: false, error: 'title is required' });
     }
+    if (!custom_prompt || !custom_prompt.trim()) {
+      return res.status(400).json({ success: false, error: 'Enter a visual prompt to generate the image' });
+    }
 
     let bgDataUrl = '';
-    let promptReasoning = null;
     const useProvider = provider || 'gemini';
+    const imagePrompt = custom_prompt.trim();
 
-    if (tweet_text && process.env.ANTHROPIC_API_KEY) {
-      try {
-        const promptResult = await generateOgVisualPrompt(tweet_text, refinement, reference_image);
-        const imagePrompt = promptResult.imagePrompt;
-        promptReasoning = promptResult.reasoning;
-
-        if (imagePrompt) {
-          if (useProvider === 'midjourney' && process.env.MIDJOURNEY_API_KEY) {
-            let srefUrl = '';
-            let srefId = '';
-            if (reference_image) {
-              srefId = crypto.randomUUID();
-              srefStore.set(srefId, reference_image);
-              setTimeout(() => srefStore.delete(srefId), 300000);
-              srefUrl = `${APP_URL}/og-sref/${srefId}`;
-            }
-            try {
-              bgDataUrl = await generateImageMidjourney(imagePrompt, srefUrl);
-            } finally {
-              if (srefId) srefStore.delete(srefId);
-            }
-          } else if (process.env.GEMINI_API_KEY) {
-            bgDataUrl = await generateImageGemini(imagePrompt, reference_image);
-          }
+    try {
+      if (useProvider === 'midjourney' && process.env.MIDJOURNEY_API_KEY) {
+        let srefUrl = '';
+        let srefId = '';
+        if (reference_image) {
+          srefId = crypto.randomUUID();
+          srefStore.set(srefId, reference_image);
+          setTimeout(() => srefStore.delete(srefId), 300000);
+          srefUrl = `${APP_URL}/og-sref/${srefId}`;
         }
-      } catch (aiErr) {
-        return res.json({ success: false, error: aiErr.message || 'Image generation failed. Try again.' });
+        try {
+          bgDataUrl = await generateImageMidjourney(imagePrompt, srefUrl);
+        } finally {
+          if (srefId) srefStore.delete(srefId);
+        }
+      } else if (process.env.GEMINI_API_KEY) {
+        bgDataUrl = await generateImageGemini(imagePrompt, reference_image);
       }
+    } catch (aiErr) {
+      return res.json({ success: false, error: aiErr.message || 'Image generation failed. Try again.' });
     }
 
     const puppeteer = require('puppeteer');
@@ -2881,9 +2878,7 @@ app.post('/api/pr/generate-og-image', async (req, res) => {
     const base64 = screenshot.toString('base64');
     const dataUrl = `data:image/png;base64,${base64}`;
 
-    const response = { success: true, image: dataUrl };
-    if (promptReasoning) response.prompt_reasoning = promptReasoning;
-    res.json(response);
+    res.json({ success: true, image: dataUrl });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   } finally {
