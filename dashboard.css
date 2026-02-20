@@ -20926,6 +20926,17 @@ body.pr-resizing * {
   cursor: grabbing;
 }
 
+.pr-og-gradient-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse 120% 130% at 85% 85%, transparent 30%, rgba(13,13,13,0.4) 55%, rgba(13,13,13,0.75) 75%, #0d0d0d 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .pr-og-position-img {
   width: 100%;
   height: 100%;

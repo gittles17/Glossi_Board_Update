@@ -11096,6 +11096,7 @@ class DistributeManager {
         ogImageHtml = `<div class="pr-og-position-wrap">
           <div class="pr-og-position-frame" data-action="og-drag-area">
             <img src="${this.escapeHtml(output._ogBgImage)}" class="pr-og-position-img" data-action="og-drag-img" style="transform: translate(${output._ogPosX || 0}px, ${output._ogPosY || 0}px) scale(${(output._ogScale || 100) / 100});">
+            <div class="pr-og-gradient-overlay"></div>
           </div>
           <div class="pr-og-position-controls">
             <input type="range" min="25" max="300" value="${output._ogScale || 100}" data-action="og-scale" class="pr-og-scale-slider" title="Zoom">
@@ -11431,12 +11432,13 @@ class DistributeManager {
     const title = output.link_title || output.title || '';
     if (!title.trim() || !output._ogBgImage) return;
 
+    const frame = document.querySelector('[data-action="og-drag-area"]');
+    const frameWidth = frame ? frame.offsetWidth : 480;
+
     output._ogGenerating = true;
     this.renderTwitterPreview(output);
 
     try {
-      const frame = document.querySelector('[data-action="og-drag-area"]');
-      const frameWidth = frame ? frame.offsetWidth : 480;
 
       const formData = new FormData();
       formData.append('title', title);

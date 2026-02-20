@@ -2550,6 +2550,7 @@ app.get('/og-template', (req, res) => {
   let bgPosX = 0;
   let bgPosY = 0;
   let bgScale = 100;
+  let bgFrameW = 480;
 
   if (bgData) {
     try {
@@ -2558,10 +2559,14 @@ app.get('/og-template', (req, res) => {
       bgPosX = parsed.posX ?? 0;
       bgPosY = parsed.posY ?? 0;
       bgScale = parsed.scale ?? 100;
+      bgFrameW = parsed.frameWidth || 480;
     } catch {
       bgUrl = bgData;
     }
   }
+
+  const bgFrameH = bgFrameW * 21 / 40;
+  const bgZoom = 1200 / bgFrameW;
 
   const escapeHtml = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -2574,7 +2579,8 @@ app.get('/og-template', (req, res) => {
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 1200px; height: 630px; overflow: hidden; }
   .og-wrap { width: 1200px; height: 630px; position: relative; background: #0d0d0d; overflow: hidden; }
-  .og-bg { position: absolute; top: 0; left: 0; width: 100%; transform-origin: 50% 50%; transform: translate(${bgPosX}px, ${bgPosY}px) scale(${bgScale / 100}); pointer-events: none; }
+  .og-bg-layer { position: absolute; top: 0; left: 0; width: ${bgFrameW}px; height: ${bgFrameH}px; transform: scale(${bgZoom}); transform-origin: top left; overflow: hidden; }
+  .og-bg { width: 100%; height: 100%; object-fit: cover; transform-origin: center center; transform: translate(${bgPosX}px, ${bgPosY}px) scale(${bgScale / 100}); }
   .og-accent { width: 100%; height: 3px; background: #E8512A; position: absolute; top: 0; left: 0; z-index: 3; }
   .og-title-safe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(ellipse 120% 130% at 85% 85%, transparent 30%, rgba(13,13,13,0.4) 55%, rgba(13,13,13,0.75) 75%, #0d0d0d 100%); z-index: 1; }
   .og-title { position: absolute; top: 48px; left: 68px; font-family: 'PP Mori', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; font-size: 90px; line-height: 1.05; letter-spacing: -0.035em; color: #FFFFFF; max-width: 780px; z-index: 2; }
@@ -2583,7 +2589,7 @@ app.get('/og-template', (req, res) => {
 </head>
 <body>
 <div class="og-wrap">
-  ${bgUrl ? `<img class="og-bg" src="${bgUrl}">` : ''}
+  ${bgUrl ? `<div class="og-bg-layer"><img class="og-bg" src="${bgUrl}"></div>` : ''}
   <div class="og-accent"></div>
   <div class="og-title-safe"></div>
   <div class="og-title">${escapeHtml(title)}</div>
@@ -2628,8 +2634,7 @@ app.post('/api/pr/generate-og-image', upload.single('file'), async (req, res) =>
     }
 
     const bgId = crypto.randomUUID();
-    const sf = 1200 / frameWidth;
-    ogBgStore.set(bgId, JSON.stringify({ url: bgDataUrl, posX: posX * sf, posY: posY * sf, scale }));
+    ogBgStore.set(bgId, JSON.stringify({ url: bgDataUrl, posX, posY, scale, frameWidth }));
     setTimeout(() => ogBgStore.delete(bgId), 60000);
 
     const puppeteer = require('puppeteer');
