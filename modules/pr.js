@@ -12522,23 +12522,36 @@ class LiveManager {
     });
 
     filtered.forEach(post => {
-      const iconClass = post.channel;
+      const isCaseStudy = post.is_case_study;
+      const iconClass = isCaseStudy ? 'case-study' : post.channel;
       const iconMap = { linkedin: 'ph-linkedin-logo', x: 'ph-x-logo', blog: 'ph-article' };
-      const icon = iconMap[post.channel] || 'ph-broadcast';
+      const icon = isCaseStudy ? 'ph-users' : (iconMap[post.channel] || 'ph-broadcast');
       const snippetSource = post.channel === 'blog' && post.description ? `${post.text}: ${post.description}` : post.text;
       const snippet = this.truncate(snippetSource, 140);
       const date = post.date_display || this.formatDate(post.created_at);
       const isActive = this.selectedPost?.id === post.id ? ' active' : '';
       const isNew = newIdSet.has(String(post.id)) ? ' pr-live-card-new' : '';
+      const caseStudyClass = isCaseStudy ? ' pr-live-card-case-study' : '';
 
-      html += `<div class="pr-live-card${isActive}${isNew}" data-post-id="${this.escapeHtml(post.id)}">
+      let caseStudyStatsHtml = '';
+      if (isCaseStudy && post.case_study?.stats?.length) {
+        caseStudyStatsHtml = '<div class="pr-live-cs-stats">';
+        post.case_study.stats.forEach(s => {
+          caseStudyStatsHtml += `<div class="pr-live-cs-stat"><span class="pr-live-cs-stat-val">${this.escapeHtml(s.value)}</span><span class="pr-live-cs-stat-label">${this.escapeHtml(s.label)}</span></div>`;
+        });
+        caseStudyStatsHtml += '</div>';
+      }
+
+      html += `<div class="pr-live-card${isActive}${isNew}${caseStudyClass}" data-post-id="${this.escapeHtml(post.id)}">
         <div class="pr-live-card-top">
           <div class="pr-live-card-icon ${iconClass}">
             <i class="ph-light ${icon}"></i>
           </div>
+          ${isCaseStudy ? '<span class="pr-live-cs-badge">Case Study</span>' : ''}
           <span class="pr-live-card-date">${date}</span>
         </div>
         <div class="pr-live-card-snippet">${this.escapeHtml(snippet)}</div>
+        ${caseStudyStatsHtml}
         <div class="pr-live-card-stats">
           <span class="pr-live-card-stat"><i class="ph-light ph-heart"></i> ${this.formatNum(post.likes)}</span>
           <span class="pr-live-card-stat"><i class="ph-light ph-chat-circle"></i> ${this.formatNum(post.comments)}</span>
@@ -12592,12 +12605,13 @@ class LiveManager {
 
     const iconMap = { linkedin: 'ph-linkedin-logo', x: 'ph-x-logo', blog: 'ph-article' };
     const labelMap = { linkedin: 'LinkedIn', x: 'X', blog: 'Glossi Blog' };
-    const icon = iconMap[post.channel] || 'ph-broadcast';
-    const label = labelMap[post.channel] || post.channel;
+    const icon = post.is_case_study ? 'ph-users' : (iconMap[post.channel] || 'ph-broadcast');
+    const label = post.is_case_study ? 'Case Study' : (labelMap[post.channel] || post.channel);
 
     if (headerEl) {
+      const channelClass = post.is_case_study ? 'case-study' : post.channel;
       headerEl.innerHTML = `
-        <div class="pr-live-preview-channel ${post.channel}">
+        <div class="pr-live-preview-channel ${channelClass}">
           <i class="ph-light ${icon}"></i>
           <span>${label}</span>
         </div>
@@ -12606,17 +12620,40 @@ class LiveManager {
     }
 
     if (bodyEl) {
-      let displayText = post.text || '';
-      if (post.channel === 'blog') {
-        displayText = post.text || '';
+      if (post.is_case_study && post.case_study) {
+        const cs = post.case_study;
+        let csHtml = '';
+        if (cs.heroImage) {
+          csHtml += `<img src="${this.escapeHtml(cs.heroImage)}" alt="" class="pr-live-cs-hero-img">`;
+        }
+        csHtml += `<div class="pr-live-cs-preview-title">${this.escapeHtml(post.text)}</div>`;
         if (post.description) {
-          displayText += '\n\n' + post.description;
+          csHtml += `<div class="pr-live-cs-preview-desc">${this.escapeHtml(post.description)}</div>`;
         }
-        if (post.category) {
-          displayText = post.category + '\n\n' + displayText;
+        if (cs.stats?.length) {
+          csHtml += '<div class="pr-live-cs-preview-stats">';
+          cs.stats.forEach(s => {
+            csHtml += `<div class="pr-live-cs-preview-stat"><span class="pr-live-cs-preview-stat-val">${this.escapeHtml(s.value)}</span><span class="pr-live-cs-preview-stat-label">${this.escapeHtml(s.label)}</span></div>`;
+          });
+          csHtml += '</div>';
         }
+        if (cs.quote) {
+          csHtml += `<blockquote class="pr-live-cs-preview-quote">${this.escapeHtml(cs.quote)}</blockquote>`;
+        }
+        bodyEl.innerHTML = csHtml;
+      } else {
+        let displayText = post.text || '';
+        if (post.channel === 'blog') {
+          displayText = post.text || '';
+          if (post.description) {
+            displayText += '\n\n' + post.description;
+          }
+          if (post.category) {
+            displayText = post.category + '\n\n' + displayText;
+          }
+        }
+        bodyEl.textContent = displayText;
       }
-      bodyEl.textContent = displayText;
     }
 
     if (statsEl) {
@@ -12631,10 +12668,11 @@ class LiveManager {
     }
 
     if (actionsEl && post.url) {
+      const viewLabel = post.is_case_study ? 'View Case Study' : 'View Live Post';
       actionsEl.innerHTML = `
         <a href="${this.escapeHtml(post.url)}" target="_blank" rel="noopener noreferrer" class="pr-live-view-btn">
           <i class="ph-light ph-arrow-square-out"></i>
-          View Live Post
+          ${viewLabel}
         </a>
       `;
     } else if (actionsEl) {

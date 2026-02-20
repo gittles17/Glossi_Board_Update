@@ -21529,6 +21529,134 @@ body.pr-resizing * {
   right: 6px;
 }
 
+/* Case Study cards in Live feed */
+.pr-live-card-icon.case-study {
+  color: #EC5F3F;
+  background: rgba(236, 95, 63, 0.1);
+}
+
+.pr-live-cs-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #EC5F3F;
+  background: rgba(236, 95, 63, 0.08);
+  padding: 2px 7px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.pr-live-card-case-study {
+  border-color: rgba(236, 95, 63, 0.15);
+}
+
+.pr-live-card-case-study:hover {
+  border-color: rgba(236, 95, 63, 0.3);
+}
+
+.pr-live-cs-stats {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: 2px;
+}
+
+.pr-live-cs-stat {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: var(--surface-secondary, rgba(128, 128, 128, 0.05));
+  border-radius: var(--radius-sm);
+  padding: 5px 7px;
+  min-width: 0;
+}
+
+.pr-live-cs-stat-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pr-live-cs-stat-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Case Study preview panel */
+.pr-live-preview-channel.case-study {
+  color: #EC5F3F;
+}
+
+.pr-live-cs-hero-img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary, #f5f5f5);
+  margin-bottom: var(--space-3);
+}
+
+.pr-live-cs-preview-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin-bottom: var(--space-2);
+}
+
+.pr-live-cs-preview-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--space-3);
+}
+
+.pr-live-cs-preview-stats {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.pr-live-cs-preview-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-secondary, rgba(128, 128, 128, 0.05));
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.pr-live-cs-preview-stat-val {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.pr-live-cs-preview-stat-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.pr-live-cs-preview-quote {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  padding: var(--space-3);
+  border-left: 3px solid #EC5F3F;
+  background: rgba(236, 95, 63, 0.03);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin: 0;
+}
+
 /* ============================================
    LIVE ANALYTICS DASHBOARD
    ============================================ */
