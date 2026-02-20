@@ -11435,12 +11435,16 @@ class DistributeManager {
     this.renderTwitterPreview(output);
 
     try {
+      const frame = document.querySelector('[data-action="og-drag-area"]');
+      const frameWidth = frame ? frame.offsetWidth : 480;
+
       const formData = new FormData();
       formData.append('title', title);
       formData.append('bg_image', output._ogBgImage);
-      formData.append('bg_pos_x', String(this.ogCalcBgPos(output, 'x')));
-      formData.append('bg_pos_y', String(this.ogCalcBgPos(output, 'y')));
-      formData.append('bg_scale', String(output._ogScale || 100));
+      formData.append('pos_x', String(output._ogPosX || 0));
+      formData.append('pos_y', String(output._ogPosY || 0));
+      formData.append('scale', String(output._ogScale || 100));
+      formData.append('frame_width', String(frameWidth));
 
       const res = await this.prAgent.apiCall('/api/pr/generate-og-image', {
         method: 'POST',
@@ -11464,22 +11468,6 @@ class DistributeManager {
     }
   }
 
-  ogCalcBgPos(output, axis) {
-    const frameW = 480, frameH = 252;
-    const px = output._ogPosX || 0;
-    const py = output._ogPosY || 0;
-    const scale = (output._ogScale || 100) / 100;
-    const imgW = frameW * scale;
-    const imgH = frameH * scale;
-    if (axis === 'x') {
-      const diff = imgW - frameW;
-      if (Math.abs(diff) < 1) return 50;
-      return ((diff / 2 - px) / diff) * 100;
-    }
-    const diff = imgH - frameH;
-    if (Math.abs(diff) < 1) return 50;
-    return ((diff / 2 - py) / diff) * 100;
-  }
 
   async fetchLinkMetadata(output) {
     if (!output.link_url) return;

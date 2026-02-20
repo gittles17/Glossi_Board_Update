@@ -2547,16 +2547,16 @@ app.get('/og-template', (req, res) => {
   const bgData = bgId ? ogBgStore.get(bgId) : null;
 
   let bgUrl = '';
-  let bgPosX = 50;
-  let bgPosY = 50;
+  let bgPosX = 0;
+  let bgPosY = 0;
   let bgScale = 100;
 
   if (bgData) {
     try {
       const parsed = JSON.parse(bgData);
       bgUrl = parsed.url || '';
-      bgPosX = parsed.posX ?? 50;
-      bgPosY = parsed.posY ?? 50;
+      bgPosX = parsed.posX ?? 0;
+      bgPosY = parsed.posY ?? 0;
       bgScale = parsed.scale ?? 100;
     } catch {
       bgUrl = bgData;
@@ -2564,10 +2564,6 @@ app.get('/og-template', (req, res) => {
   }
 
   const escapeHtml = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-  const bgStyle = bgUrl
-    ? `background-color: #0d0d0d; background-image: url(${bgUrl}); background-size: ${bgScale}%; background-position: ${bgPosX}% ${bgPosY}%; background-repeat: no-repeat;`
-    : 'background: #0d0d0d;';
 
   const html = `<!DOCTYPE html>
 <html>
@@ -2577,7 +2573,8 @@ app.get('/og-template', (req, res) => {
   @font-face { font-family: 'PP Mori'; src: url('/fonts/PPMori-Regular.otf') format('opentype'); font-weight: 400; font-style: normal; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 1200px; height: 630px; overflow: hidden; }
-  .og-wrap { width: 1200px; height: 630px; position: relative; ${bgStyle} }
+  .og-wrap { width: 1200px; height: 630px; position: relative; background: #0d0d0d; overflow: hidden; }
+  .og-bg { position: absolute; top: 0; left: 0; width: 100%; transform-origin: 50% 50%; transform: translate(${bgPosX}px, ${bgPosY}px) scale(${bgScale / 100}); pointer-events: none; }
   .og-accent { width: 100%; height: 3px; background: #E8512A; position: absolute; top: 0; left: 0; z-index: 3; }
   .og-title-safe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(ellipse 120% 130% at 85% 85%, transparent 30%, rgba(13,13,13,0.4) 55%, rgba(13,13,13,0.75) 75%, #0d0d0d 100%); z-index: 1; }
   .og-title { position: absolute; top: 48px; left: 68px; font-family: 'PP Mori', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; font-size: 90px; line-height: 1.05; letter-spacing: -0.035em; color: #FFFFFF; max-width: 780px; z-index: 2; }
@@ -2586,6 +2583,7 @@ app.get('/og-template', (req, res) => {
 </head>
 <body>
 <div class="og-wrap">
+  ${bgUrl ? `<img class="og-bg" src="${bgUrl}">` : ''}
   <div class="og-accent"></div>
   <div class="og-title-safe"></div>
   <div class="og-title">${escapeHtml(title)}</div>
@@ -2605,9 +2603,10 @@ app.post('/api/pr/generate-og-image', upload.single('file'), async (req, res) =>
   let browser;
   try {
     const title = req.body.title || '';
-    const bgPosX = parseFloat(req.body.bg_pos_x) || 50;
-    const bgPosY = parseFloat(req.body.bg_pos_y) || 50;
-    const bgScale = parseFloat(req.body.bg_scale) || 100;
+    const posX = parseFloat(req.body.pos_x) || 0;
+    const posY = parseFloat(req.body.pos_y) || 0;
+    const scale = parseFloat(req.body.scale) || 100;
+    const frameWidth = parseFloat(req.body.frame_width) || 480;
 
     if (!title.trim()) {
       return res.status(400).json({ success: false, error: 'title is required' });
@@ -2629,7 +2628,8 @@ app.post('/api/pr/generate-og-image', upload.single('file'), async (req, res) =>
     }
 
     const bgId = crypto.randomUUID();
-    ogBgStore.set(bgId, JSON.stringify({ url: bgDataUrl, posX: bgPosX, posY: bgPosY, scale: bgScale }));
+    const sf = 1200 / frameWidth;
+    ogBgStore.set(bgId, JSON.stringify({ url: bgDataUrl, posX: posX * sf, posY: posY * sf, scale }));
     setTimeout(() => ogBgStore.delete(bgId), 60000);
 
     const puppeteer = require('puppeteer');
