@@ -2686,7 +2686,7 @@ async function generateOgVisualPrompt(tweetText, refinement, referenceImage) {
 
   const promptRes = await axios.post('https://api.anthropic.com/v1/messages', {
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 512,
+    max_tokens: 300,
     system: systemPrompt,
     messages: [{ role: 'user', content: userContent }]
   }, {
@@ -2706,17 +2706,19 @@ async function generateImageGemini(prompt, referenceImage) {
   const model = 'gemini-3-pro-image-preview';
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
 
+  const stylePrefix = 'Generate a minimal vector illustration on a pure black #000000 background. Use only white #FFFFFF thin line art with optional sparse orange #E8512A accents. No gradients, no textures, no photorealism, no 3D rendering, no text or labels. Crisp anti-aliased strokes, scientific instrument aesthetic. At least 60% of the image must be empty black space. ';
+
   const parts = [];
   if (referenceImage) {
     const refMatch = referenceImage.match(/^data:(image\/\w+);base64,(.+)$/);
     if (refMatch) {
       parts.push({ inlineData: { mimeType: refMatch[1], data: refMatch[2] } });
-      parts.push({ text: `Use the attached image as an art style reference. Match its visual style, color palette, composition, and aesthetic exactly. Here is what to generate:\n\n${prompt}` });
+      parts.push({ text: `Use the attached image as an art style reference. Match its visual style, color palette, composition, and aesthetic exactly. Here is what to generate:\n\n${stylePrefix}${prompt}` });
     } else {
-      parts.push({ text: prompt });
+      parts.push({ text: `${stylePrefix}${prompt}` });
     }
   } else {
-    parts.push({ text: prompt });
+    parts.push({ text: `${stylePrefix}${prompt}` });
   }
 
   const imageRes = await axios.post(apiUrl, {
@@ -2739,7 +2741,7 @@ async function generateImageGemini(prompt, referenceImage) {
 // Helper: generate image via Midjourney (legnext.ai)
 async function generateImageMidjourney(prompt, srefUrl) {
   const mjKey = process.env.MIDJOURNEY_API_KEY;
-  let mjPrompt = `${prompt} --v 7 --ar 40:21 --style raw`;
+  let mjPrompt = `${prompt}, minimal vector line art, pure black background, white wireframe strokes, scientific diagram aesthetic, ultra high contrast --v 7 --ar 40:21 --style raw --no photorealistic, gradient, colorful, text, words, letters, painting, 3d render, glow, bloom, lens flare, busy, cluttered`;
   if (srefUrl) mjPrompt += ` --sref ${srefUrl}`;
 
   const createRes = await axios.post('https://api.legnext.ai/api/v1/diffusion', {
