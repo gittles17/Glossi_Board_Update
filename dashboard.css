@@ -20881,6 +20881,7 @@ body.pr-resizing * {
 }
 
 .pr-og-upload-zone {
+  flex-direction: column;
   border: 1px dashed rgba(255,255,255,0.12);
   transition: border-color 150ms ease, background 150ms ease;
 }
