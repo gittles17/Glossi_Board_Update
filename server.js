@@ -3081,21 +3081,32 @@ function isXConfigured() {
 
 app.get('/api/x/debug-creds', async (req, res) => {
   const mask = (s) => s ? `${s.slice(0, 4)}...${s.slice(-4)} (len=${s.length})` : 'MISSING';
-  let twitterTime = null;
+  let bearerTest = null;
   try {
-    await axios.get('https://api.twitter.com/2/tweets/search/recent?query=test', { timeout: 5000 });
+    const basicAuth = Buffer.from(`${X_API_KEY}:${X_API_KEY_SECRET}`).toString('base64');
+    const tokenRes = await axios.post('https://api.twitter.com/oauth2/token',
+      'grant_type=client_credentials',
+      { headers: { Authorization: `Basic ${basicAuth}`, 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 8000 }
+    );
+    bearerTest = { ok: true, tokenType: tokenRes.data?.token_type };
   } catch (e) {
-    twitterTime = e.response?.headers?.date || null;
+    bearerTest = { ok: false, status: e.response?.status, error: e.response?.data?.errors?.[0]?.message || e.message };
   }
-  const serverTime = new Date().toUTCString();
+  let oauth1Test = null;
+  try {
+    const request = { url: 'https://api.twitter.com/2/users/me', method: 'GET' };
+    await axios.get(request.url, { headers: { ...xAuthHeader(request) }, timeout: 8000 });
+    oauth1Test = { ok: true };
+  } catch (e) {
+    oauth1Test = { ok: false, status: e.response?.status, error: e.response?.data?.detail || e.message };
+  }
   res.json({
     key: mask(X_API_KEY),
     secret: mask(X_API_KEY_SECRET),
     token: mask(X_ACCESS_TOKEN),
     tokenSecret: mask(X_ACCESS_TOKEN_SECRET),
-    serverTime,
-    twitterTime,
-    skewMs: twitterTime ? new Date(twitterTime).getTime() - new Date(serverTime).getTime() : null
+    bearerTest,
+    oauth1Test
   });
 });
 
