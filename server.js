@@ -2581,6 +2581,20 @@ app.get('/og-template', (req, res) => {
 // Temporary in-memory store for OG background images (avoids passing base64 in URL)
 const ogBgStore = new Map();
 
+// Temporary in-memory store for style reference images (served to Midjourney via public URL)
+const srefStore = new Map();
+
+app.get('/og-sref/:id', (req, res) => {
+  const data = srefStore.get(req.params.id);
+  if (!data) return res.status(404).end();
+  const match = data.match(/^data:(image\/\w+);base64,(.+)$/);
+  if (!match) return res.status(404).end();
+  const buffer = Buffer.from(match[2], 'base64');
+  res.set('Content-Type', match[1]);
+  res.set('Cache-Control', 'no-store');
+  res.send(buffer);
+});
+
 // OG card visual prompt system (shared by both providers)
 const OG_VISUAL_SYSTEM_PROMPT = `You create image generation prompts for abstract OG card background visuals. The visual will appear behind a blog title on a 1200x630 card.
 
@@ -2609,7 +2623,7 @@ OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.
 async function generateOgVisualPrompt(tweetText, refinement, referenceImage) {
   let systemPrompt = OG_VISUAL_SYSTEM_PROMPT;
   if (referenceImage) {
-    systemPrompt += `\n\nREFERENCE IMAGE: A reference image has been provided. Analyze its visual style (colors, composition, texture, mood, aesthetic) and ensure your prompt reproduces that exact art style. The reference defines the look; you may override the default color and style rules with what you observe in the reference. HOWEVER, the TITLE SAFE ZONE rules above are NON-NEGOTIABLE and must NEVER be overridden. Regardless of what the reference image shows, the top-left 65% x 50% of the canvas must remain completely clear. The background in the title safe zone must be pure black #000000.`;
+    systemPrompt += `\n\nREFERENCE IMAGE: A reference image has been provided. Analyze its visual style (colors, composition, texture, mood, aesthetic) and ensure your prompt reproduces that exact art style. The reference defines the look; you may override the default color and style rules with what you observe in the reference. HOWEVER, the COMPOSITION AND TEXT LEGIBILITY rules above are NON-NEGOTIABLE. Art must still fade naturally toward the top-left text area. Dense elements stay in the bottom-right; any art near the title must be very faint and sparse.`;
   }
 
   let userText = `Generate an abstract visual prompt for an OG card. The tweet this supports:\n\n"${tweetText}"`;
@@ -2685,9 +2699,10 @@ async function generateImageGemini(prompt, referenceImage) {
 }
 
 // Helper: generate image via Midjourney (legnext.ai)
-async function generateImageMidjourney(prompt) {
+async function generateImageMidjourney(prompt, srefUrl) {
   const mjKey = process.env.MIDJOURNEY_API_KEY;
-  const mjPrompt = `${prompt} --v 7 --ar 40:21 --style raw`;
+  let mjPrompt = `${prompt} --v 7 --ar 40:21 --style raw`;
+  if (srefUrl) mjPrompt += ` --sref ${srefUrl}`;
 
   const createRes = await axios.post('https://api.legnext.ai/api/v1/diffusion', {
     text: mjPrompt
@@ -2744,7 +2759,19 @@ app.post('/api/pr/generate-og-image', async (req, res) => {
 
         if (imagePrompt) {
           if (useProvider === 'midjourney' && process.env.MIDJOURNEY_API_KEY) {
-            bgDataUrl = await generateImageMidjourney(imagePrompt);
+            let srefUrl = '';
+            let srefId = '';
+            if (reference_image) {
+              srefId = crypto.randomUUID();
+              srefStore.set(srefId, reference_image);
+              setTimeout(() => srefStore.delete(srefId), 300000);
+              srefUrl = `${APP_URL}/og-sref/${srefId}`;
+            }
+            try {
+              bgDataUrl = await generateImageMidjourney(imagePrompt, srefUrl);
+            } finally {
+              if (srefId) srefStore.delete(srefId);
+            }
           } else if (process.env.GEMINI_API_KEY) {
             bgDataUrl = await generateImageGemini(imagePrompt, reference_image);
           }
