@@ -11133,7 +11133,14 @@ class DistributeManager {
             <div class="pr-twitter-link-card-desc">${this.escapeHtml(output.link_desc || 'Preview will update when URL is added')}</div>
           </div>
         </div>
-        ${ogRefineRow}`;
+        ${ogRefineRow}
+        ${output._ogPromptReasoning ? `<div class="pr-og-reasoning">
+          <div class="pr-og-reasoning-toggle" data-action="toggle-og-reasoning"><i class="ph-light ph-info"></i> Prompt reasoning</div>
+          <div class="pr-og-reasoning-body" style="display:none;">
+            <div class="pr-og-reasoning-row"><span class="pr-og-reasoning-label">Theme</span><span>${this.escapeHtml(output._ogPromptReasoning.theme || '')}</span></div>
+            <div class="pr-og-reasoning-row"><span class="pr-og-reasoning-label">Motif</span><span>${this.escapeHtml(output._ogPromptReasoning.motif || '')}</span></div>
+          </div>
+        </div>` : ''}`;
     }
 
     const tweetHtml = `
@@ -11276,6 +11283,12 @@ class DistributeManager {
         output.visual_ref_image = '';
         this.persistOutput(output);
         this.renderTwitterPreview(output);
+      });
+    });
+    container.querySelectorAll('[data-action="toggle-og-reasoning"]').forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        const body = toggle.nextElementSibling;
+        if (body) body.style.display = body.style.display === 'none' ? 'block' : 'none';
       });
     });
   }
@@ -11426,6 +11439,7 @@ class DistributeManager {
 
       if (res.success && res.image) {
         output.og_image = res.image;
+        if (res.prompt_reasoning) output._ogPromptReasoning = res.prompt_reasoning;
         this.persistOutput(output);
         this.renderTwitterPreview(output);
       } else {

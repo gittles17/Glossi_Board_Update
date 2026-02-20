@@ -2666,12 +2666,15 @@ COMPOSITION AND TEXT LEGIBILITY:
 - The transition from art to empty black must be organic and gradual, not a hard rectangular cutoff.
 - Text legibility is the highest priority.
 
-PROMPT FORMAT:
-- Write the prompt as a flat, specific visual description. Describe exactly what shapes appear, where they are placed, their size, and their stroke weight.
-- Do not write in an aspirational or abstract style. Be concrete: "A wireframe sphere with 12 longitude lines and 6 latitude lines, positioned in the lower-right corner, 300px diameter" is better than "An ethereal orb representing connectivity."
-- Keep the prompt under 100 words.
+PROCESS (follow this exact structure in your output):
+1. THEME: In one sentence, state the core topic/emotion/argument of the tweet.
+2. MOTIF: Name which motif(s) from the library you are selecting and why they connect to the theme.
+3. PROMPT: Write the final image generation prompt as a flat, specific visual description. Describe exactly what shapes appear, where they are placed, their size, and stroke weight. Be concrete, not aspirational. Keep under 100 words.
 
-OUTPUT: Return ONLY the image prompt. No explanation, no preamble, no commentary.`;
+OUTPUT FORMAT (use these exact labels):
+THEME: [one sentence]
+MOTIF: [motif name(s) and brief justification]
+PROMPT: [the image generation prompt]`;
 
 // Helper: generate image prompt via Claude
 async function generateOgVisualPrompt(tweetText, refinement, referenceImage) {
@@ -2702,7 +2705,7 @@ async function generateOgVisualPrompt(tweetText, refinement, referenceImage) {
 
   const promptRes = await axios.post('https://api.anthropic.com/v1/messages', {
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 300,
+    max_tokens: 500,
     system: systemPrompt,
     messages: [{ role: 'user', content: userContent }]
   }, {
@@ -2713,7 +2716,22 @@ async function generateOgVisualPrompt(tweetText, refinement, referenceImage) {
     },
     timeout: 15000
   });
-  return promptRes.data?.content?.[0]?.text?.trim() || '';
+
+  const raw = promptRes.data?.content?.[0]?.text?.trim() || '';
+
+  const themeMatch = raw.match(/THEME:\s*(.+?)(?=\nMOTIF:)/s);
+  const motifMatch = raw.match(/MOTIF:\s*(.+?)(?=\nPROMPT:)/s);
+  const promptMatch = raw.match(/PROMPT:\s*(.+)/s);
+
+  const theme = themeMatch ? themeMatch[1].trim() : '';
+  const motif = motifMatch ? motifMatch[1].trim() : '';
+  const imagePrompt = promptMatch ? promptMatch[1].trim() : raw;
+
+  return {
+    imagePrompt,
+    reasoning: { theme, motif },
+    raw
+  };
 }
 
 // Helper: generate image via Gemini
@@ -2807,11 +2825,14 @@ app.post('/api/pr/generate-og-image', async (req, res) => {
     }
 
     let bgDataUrl = '';
+    let promptReasoning = null;
     const useProvider = provider || 'gemini';
 
     if (tweet_text && process.env.ANTHROPIC_API_KEY) {
       try {
-        const imagePrompt = await generateOgVisualPrompt(tweet_text, refinement, reference_image);
+        const promptResult = await generateOgVisualPrompt(tweet_text, refinement, reference_image);
+        const imagePrompt = promptResult.imagePrompt;
+        promptReasoning = promptResult.reasoning;
 
         if (imagePrompt) {
           if (useProvider === 'midjourney' && process.env.MIDJOURNEY_API_KEY) {
@@ -2860,7 +2881,9 @@ app.post('/api/pr/generate-og-image', async (req, res) => {
     const base64 = screenshot.toString('base64');
     const dataUrl = `data:image/png;base64,${base64}`;
 
-    res.json({ success: true, image: dataUrl });
+    const response = { success: true, image: dataUrl };
+    if (promptReasoning) response.prompt_reasoning = promptReasoning;
+    res.json(response);
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   } finally {
