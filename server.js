@@ -2200,77 +2200,6 @@ app.post('/api/pr/upload-media', upload.single('file'), (req, res) => {
   }
 });
 
-// ============================================
-// STYLE MOODBOARD
-// ============================================
-
-const MOODBOARD_DIR = path.join(__dirname, 'moodboard');
-
-app.get('/api/pr/moodboard', (req, res) => {
-  try {
-    if (!fs.existsSync(MOODBOARD_DIR)) {
-      return res.json({ success: true, images: [] });
-    }
-    const files = fs.readdirSync(MOODBOARD_DIR)
-      .filter(f => /\.(jpe?g|png|gif|webp)$/i.test(f))
-      .map(f => {
-        const stat = fs.statSync(path.join(MOODBOARD_DIR, f));
-        return { filename: f, url: `/moodboard/${f}`, size: stat.size, created: stat.birthtime };
-      })
-      .sort((a, b) => new Date(b.created) - new Date(a.created));
-    res.json({ success: true, images: files });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.post('/api/pr/moodboard', upload.single('file'), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, error: 'No file uploaded' });
-    }
-    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowed.includes(req.file.mimetype)) {
-      return res.status(400).json({ success: false, error: 'Only JPEG, PNG, GIF, and WebP images are supported' });
-    }
-    if (!fs.existsSync(MOODBOARD_DIR)) fs.mkdirSync(MOODBOARD_DIR, { recursive: true });
-
-    const ext = path.extname(req.file.originalname) || '.png';
-    const filename = `mb-${Date.now()}-${crypto.randomUUID().slice(0, 8)}${ext}`;
-    const filepath = path.join(MOODBOARD_DIR, filename);
-    fs.writeFileSync(filepath, req.file.buffer);
-
-    res.json({
-      success: true,
-      image: { filename, url: `/moodboard/${filename}`, size: req.file.size }
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.delete('/api/pr/moodboard/:filename', (req, res) => {
-  try {
-    const filename = req.params.filename.replace(/[^a-zA-Z0-9._-]/g, '');
-    const filepath = path.join(MOODBOARD_DIR, filename);
-    if (fs.existsSync(filepath)) {
-      fs.unlinkSync(filepath);
-      res.json({ success: true });
-    } else {
-      res.status(404).json({ success: false, error: 'Image not found' });
-    }
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-function getMoodboardImages() {
-  if (!fs.existsSync(MOODBOARD_DIR)) return [];
-  return fs.readdirSync(MOODBOARD_DIR)
-    .filter(f => /\.(jpe?g|png|gif|webp)$/i.test(f))
-    .map(f => ({ filename: f, filepath: path.join(MOODBOARD_DIR, f), url: `/moodboard/${f}` }));
-}
-
 // Shorten tweet text to fit within character limit
 app.post('/api/pr/shorten-tweet', async (req, res) => {
   try {
@@ -2615,12 +2544,29 @@ app.post('/api/pr/og-metadata', async (req, res) => {
 app.get('/og-template', (req, res) => {
   const title = decodeURIComponent(req.query.title || 'Untitled');
   const bgId = req.query.bgId || '';
-  const bgImage = bgId ? (ogBgStore.get(bgId) || '') : '';
+  const bgData = bgId ? ogBgStore.get(bgId) : null;
+
+  let bgUrl = '';
+  let bgPosX = 50;
+  let bgPosY = 50;
+  let bgScale = 100;
+
+  if (bgData) {
+    try {
+      const parsed = JSON.parse(bgData);
+      bgUrl = parsed.url || '';
+      bgPosX = parsed.posX ?? 50;
+      bgPosY = parsed.posY ?? 50;
+      bgScale = parsed.scale ?? 100;
+    } catch {
+      bgUrl = bgData;
+    }
+  }
 
   const escapeHtml = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-  const bgStyle = bgImage
-    ? `background-image: url(${bgImage}); background-size: cover; background-position: center;`
+  const bgStyle = bgUrl
+    ? `background-image: url(${bgUrl}); background-size: ${bgScale}%; background-position: ${bgPosX}% ${bgPosY}%;`
     : 'background: #000000;';
 
   const html = `<!DOCTYPE html>
@@ -2654,293 +2600,37 @@ app.get('/og-template', (req, res) => {
 // Temporary in-memory store for OG background images (avoids passing base64 in URL)
 const ogBgStore = new Map();
 
-// Temporary in-memory store for style reference images (served to Midjourney via public URL)
-const srefStore = new Map();
-
-app.get('/og-sref/:id', (req, res) => {
-  const data = srefStore.get(req.params.id);
-  if (!data) return res.status(404).end();
-  const match = data.match(/^data:(image\/\w+);base64,(.+)$/);
-  if (!match) return res.status(404).end();
-  const buffer = Buffer.from(match[2], 'base64');
-  res.set('Content-Type', match[1]);
-  res.set('Cache-Control', 'no-store');
-  res.send(buffer);
-});
-
-// OG card visual prompt system (shared by both providers)
-const OG_VISUAL_SYSTEM_PROMPT = `You create image generation prompts for abstract OG card background visuals. The visual will appear behind a blog title on a 1200x630 card.
-
-VISUAL IDENTITY (non-negotiable):
-- Pure black background #000000. No gradients, no dark gray, no textures on the background itself.
-- White monochrome line art with optional subtle warm orange #E8512A accents. No other colors.
-- Crisp, thin vector strokes. 1-2px line weight feel. Anti-aliased. No brush textures, no grain, no noise.
-- Scientific instrument aesthetic. Think oscilloscope displays, technical diagrams, data visualization stills.
-- Ultra high contrast: pure white (#FFFFFF) elements on pure black (#000000). No midtones, no soft grays.
-
-APPROVED MOTIF LIBRARY (choose 1-3 from this list, combine creatively):
-- Wireframe spheres/orbs (with latitude-longitude grid lines or diagonal stripe shading)
-- Checkerboard gradient spheres (half black, half checkerboard dissolving into pixels)
-- Spirograph/lissajous geometric patterns (thin overlapping ellipses or orbital paths)
-- Topographic contour line landscapes (flowing parallel lines suggesting terrain)
-- Particle scatter fields (small dots distributed in organic clusters)
-- Pixel art icons (8-bit style, small, used as accent elements)
-- Node-and-connector diagrams (circles connected by thin lines, circuit-board feel)
-- Pill-shaped UI toggle components (rounded rectangle outlines)
-- Bar chart or data visualization shapes (abstract, no labels)
-- Electromagnetic field line diagrams (symmetrical curved lines radiating from a center)
-- Thin wireframe rectangles suggesting UI cards or panels (with faint inner detail)
-
-Do NOT invent motifs outside this library. Variations and combinations of these motifs are encouraged, but the base shapes must come from this list.
-
-COMPLEXITY AND NEGATIVE SPACE:
-- Maximum 2-3 primary visual elements in the entire composition.
-- At least 60% of the total image area must be pure black empty space.
-- Less is more. A single well-placed wireframe orb is better than a busy collage.
-- Elements should feel deliberately placed, like objects on a museum pedestal, not scattered randomly.
-- Small accent elements (a few particles, a faint contour line) can support the primary shapes but should not compete for attention.
-
-NEVER DO THIS:
-- Never generate realistic objects, people, animals, buildings, or landscapes.
-- Never generate photographs, painterly textures, watercolor, oil paint, or 3D renders.
-- Never include text, words, letters, numbers, labels, or UI text of any kind.
-- Never use color beyond white, black, and the single orange accent #E8512A.
-- Never fill the frame. Never create wallpaper-like tiling patterns.
-- Never use soft glows, lens flares, bloom effects, or atmospheric haze.
-- Never describe "floating" or "ethereal" or "dreamlike" qualities. Keep it precise and mechanical.
-- Never interpret the tweet content literally. Do not depict the subject matter of the tweet.
-
-TWEET CONNECTION (required, not optional):
-- Read the tweet carefully. Identify its core topic, argument, or emotion.
-- Choose a motif that has a clear, intentional conceptual link to that core idea. The viewer should be able to look at the visual and the title together and feel they belong.
-- The connection must be abstract (no literal depictions), but it must be deliberate, not random.
-- Do NOT fall back to a generic motif. Every generation must reflect the specific tweet.
-
-EXAMPLE MAPPINGS (use these as reasoning patterns, not rigid rules):
-- Growth, scaling, momentum -> topographic contour lines rising, or a bar chart ascending
-- Data, analytics, metrics -> particle scatter field, or abstract bar/line chart shapes
-- Strategy, planning, roadmap -> node-and-connector diagram with directional flow
-- Technology, product, engineering -> wireframe UI card panels, or pixel art icons
-- Networking, connections, community -> node-and-connector web, multiple linked circles
-- Focus, clarity, simplicity -> single wireframe sphere, clean and centered
-- Disruption, change, breaking patterns -> spirograph with one broken/diverging orbital path
-- Investment, funding, capital -> checkerboard gradient sphere (value/structure duality)
-- Design, craft, aesthetics -> lissajous geometric pattern, precise and elegant
-- Leadership, vision, direction -> electromagnetic field lines radiating outward from a point
-- Competition, market dynamics -> two pill-shaped toggle elements in tension, or opposing particle fields
-- Infrastructure, systems, operations -> wireframe rectangles arranged like a system diagram
-- Storytelling, narrative, content -> topographic landscape with flowing contour lines (journey)
-- Risk, uncertainty, volatility -> particle scatter field with uneven density and trailing wisps
-
-COMPOSITION AND TEXT LEGIBILITY:
-- A large white blog title will be overlaid in the top-left area (roughly left 60%, top 45%).
-- Primary visual elements must be concentrated in the bottom-right quadrant, right edge, or bottom edge.
-- Art may extend faintly into the text area, but must dissolve naturally (sparse particles thinning out, trailing line endings). No bright or dense elements in the top-left.
-- The transition from art to empty black must be organic and gradual, not a hard rectangular cutoff.
-- Text legibility is the highest priority.
-
-PROCESS (follow this exact structure in your output):
-1. THEME: In one sentence, state the core topic/emotion/argument of the tweet.
-2. MOTIF: Name which motif(s) from the library you are selecting and why they connect to the theme.
-3. PROMPT: Write the final image generation prompt as a flat, specific visual description. Describe exactly what shapes appear, where they are placed, their size, and stroke weight. Be concrete, not aspirational. Keep under 100 words.
-
-OUTPUT FORMAT (use these exact labels):
-THEME: [one sentence]
-MOTIF: [motif name(s) and brief justification]
-PROMPT: [the image generation prompt]`;
-
-// Helper: generate image prompt via Claude
-async function generateOgVisualPrompt(tweetText, refinement, referenceImage) {
-  let systemPrompt = OG_VISUAL_SYSTEM_PROMPT;
-  if (referenceImage) {
-    systemPrompt += `\n\nREFERENCE IMAGE: A reference image has been provided. Analyze its visual style (colors, composition, texture, mood, aesthetic) and ensure your prompt reproduces that exact art style. The reference defines the look; you may override the default color and style rules with what you observe in the reference. HOWEVER, the COMPOSITION AND TEXT LEGIBILITY rules above are NON-NEGOTIABLE. Art must still fade naturally toward the top-left text area. Dense elements stay in the bottom-right; any art near the title must be very faint and sparse.`;
-  }
-
-  let userText = `Generate an abstract visual prompt for an OG card. Read the tweet below, identify its core theme, then choose a motif that clearly connects to that theme.\n\nTweet:\n"${tweetText}"`;
-  if (refinement) {
-    userText += `\n\nAdditional style direction from the user: ${refinement}`;
-  }
-
-  let userContent;
-  if (referenceImage) {
-    const refMatch = referenceImage.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (refMatch) {
-      userContent = [
-        { type: 'image', source: { type: 'base64', media_type: refMatch[1], data: refMatch[2] } },
-        { type: 'text', text: userText }
-      ];
-    } else {
-      userContent = userText;
-    }
-  } else {
-    userContent = userText;
-  }
-
-  const promptRes = await axios.post('https://api.anthropic.com/v1/messages', {
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 500,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: userContent }]
-  }, {
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
-    timeout: 15000
-  });
-
-  const raw = promptRes.data?.content?.[0]?.text?.trim() || '';
-
-  const themeMatch = raw.match(/THEME:\s*(.+?)(?=\nMOTIF:)/s);
-  const motifMatch = raw.match(/MOTIF:\s*(.+?)(?=\nPROMPT:)/s);
-  const promptMatch = raw.match(/PROMPT:\s*(.+)/s);
-
-  const theme = themeMatch ? themeMatch[1].trim() : '';
-  const motif = motifMatch ? motifMatch[1].trim() : '';
-  const imagePrompt = promptMatch ? promptMatch[1].trim() : raw;
-
-  return {
-    imagePrompt,
-    reasoning: { theme, motif },
-    raw
-  };
-}
-
-// Helper: generate image via Gemini
-async function generateImageGemini(prompt, referenceImage) {
-  const geminiKey = process.env.GEMINI_API_KEY;
-  const model = 'gemini-3-pro-image-preview';
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
-
-  const stylePrefix = 'Generate a minimal vector illustration on a pure black #000000 background. Use only white #FFFFFF thin line art with optional sparse orange #E8512A accents. No gradients, no textures, no photorealism, no 3D rendering, no text or labels. Crisp anti-aliased strokes, scientific instrument aesthetic. At least 60% of the image must be empty black space. ';
-
-  const parts = [];
-  if (referenceImage) {
-    const refMatch = referenceImage.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (refMatch) {
-      parts.push({ inlineData: { mimeType: refMatch[1], data: refMatch[2] } });
-      parts.push({ text: `Use the attached image as an art style reference. Match its visual style, color palette, composition, and aesthetic exactly. Here is what to generate:\n\n${stylePrefix}${prompt}` });
-    } else {
-      parts.push({ text: `${stylePrefix}${prompt}` });
-    }
-  } else {
-    parts.push({ text: `${stylePrefix}${prompt}` });
-  }
-
-  const imageRes = await axios.post(apiUrl, {
-    contents: [{ role: 'user', parts }],
-    generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
-  }, {
-    headers: { 'Content-Type': 'application/json' },
-    timeout: 90000
-  });
-
-  const resParts = imageRes.data?.candidates?.[0]?.content?.parts || [];
-  const imagePart = resParts.find(p => p.inlineData);
-  if (imagePart) {
-    const mimeType = imagePart.inlineData.mimeType || 'image/png';
-    return `data:${mimeType};base64,${imagePart.inlineData.data}`;
-  }
-  return '';
-}
-
-// Helper: generate image via Midjourney (legnext.ai)
-async function generateImageMidjourney(prompt, srefUrl) {
-  const mjKey = process.env.MIDJOURNEY_API_KEY;
-  let mjPrompt = `${prompt}, minimal vector line art, pure black background, white wireframe strokes, scientific diagram aesthetic, ultra high contrast --v 7 --ar 40:21 --style raw --no photorealistic, gradient, colorful, text, words, letters, painting, 3d render, glow, bloom, lens flare, busy, cluttered`;
-  if (srefUrl) mjPrompt += ` --sref ${srefUrl}`;
-
-  const createRes = await axios.post('https://api.legnext.ai/api/v1/diffusion', {
-    text: mjPrompt
-  }, {
-    headers: { 'x-api-key': mjKey, 'Content-Type': 'application/json' },
-    timeout: 15000
-  });
-
-  const jobId = createRes.data?.job_id;
-  if (!jobId) throw new Error('Midjourney job creation failed');
-
-  const maxAttempts = 40;
-  for (let i = 0; i < maxAttempts; i++) {
-    await new Promise(r => setTimeout(r, 3000));
-
-    const statusRes = await axios.get(`https://api.legnext.ai/api/v1/job/${jobId}`, {
-      headers: { 'x-api-key': mjKey },
-      timeout: 10000
-    });
-
-    const status = statusRes.data?.status;
-    if (status === 'completed') {
-      const imageUrl = statusRes.data?.output?.image_urls?.[0] || statusRes.data?.output?.image_url;
-      if (!imageUrl) throw new Error('Midjourney completed but no image URL');
-
-      const imgRes = await axios.get(imageUrl, { responseType: 'arraybuffer', timeout: 30000 });
-      const base64 = Buffer.from(imgRes.data).toString('base64');
-      const contentType = imgRes.headers['content-type'] || 'image/png';
-      return `data:${contentType};base64,${base64}`;
-    }
-    if (status === 'failed') {
-      const errMsg = statusRes.data?.error?.message || 'Midjourney generation failed';
-      throw new Error(errMsg);
-    }
-  }
-  throw new Error('Midjourney generation timed out');
-}
-
-// Generate OG link preview image: AI abstract visual + Puppeteer composite
-app.post('/api/pr/generate-og-image', async (req, res) => {
+// Composite OG image: overlay title text on uploaded background image
+app.post('/api/pr/generate-og-image', upload.single('file'), async (req, res) => {
   let browser;
   try {
-    const { title, custom_prompt, provider, reference_image } = req.body;
-    if (!title) {
+    const title = req.body.title || '';
+    const bgPosX = parseFloat(req.body.bg_pos_x) || 50;
+    const bgPosY = parseFloat(req.body.bg_pos_y) || 50;
+    const bgScale = parseFloat(req.body.bg_scale) || 100;
+
+    if (!title.trim()) {
       return res.status(400).json({ success: false, error: 'title is required' });
-    }
-    if (!custom_prompt || !custom_prompt.trim()) {
-      return res.status(400).json({ success: false, error: 'Enter a visual prompt to generate the image' });
     }
 
     let bgDataUrl = '';
-    const useProvider = provider || 'gemini';
-    const imagePrompt = custom_prompt.trim();
-    const boardImages = getMoodboardImages();
-
-    try {
-      if (useProvider === 'midjourney' && process.env.MIDJOURNEY_API_KEY) {
-        const srefUrls = [];
-        const tempSrefIds = [];
-
-        if (reference_image) {
-          const srefId = crypto.randomUUID();
-          srefStore.set(srefId, reference_image);
-          setTimeout(() => srefStore.delete(srefId), 300000);
-          tempSrefIds.push(srefId);
-          srefUrls.push(`${APP_URL}/og-sref/${srefId}`);
-        }
-
-        for (const img of boardImages) {
-          srefUrls.push(`${APP_URL}${img.url}`);
-        }
-
-        try {
-          bgDataUrl = await generateImageMidjourney(imagePrompt, srefUrls.join(' '));
-        } finally {
-          tempSrefIds.forEach(id => srefStore.delete(id));
-        }
-      } else if (process.env.GEMINI_API_KEY) {
-        let geminiRef = reference_image || '';
-        if (!geminiRef && boardImages.length > 0) {
-          const pick = boardImages[Math.floor(Math.random() * boardImages.length)];
-          const buf = fs.readFileSync(pick.filepath);
-          const ext = path.extname(pick.filename).toLowerCase();
-          const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp' };
-          geminiRef = `data:${mimeMap[ext] || 'image/png'};base64,${buf.toString('base64')}`;
-        }
-        bgDataUrl = await generateImageGemini(imagePrompt, geminiRef);
+    if (req.file) {
+      const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowed.includes(req.file.mimetype)) {
+        return res.status(400).json({ success: false, error: 'Only JPEG, PNG, GIF, and WebP images are supported' });
       }
-    } catch (aiErr) {
-      return res.json({ success: false, error: aiErr.message || 'Image generation failed. Try again.' });
+      bgDataUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    } else if (req.body.bg_image) {
+      bgDataUrl = req.body.bg_image;
     }
+
+    if (!bgDataUrl) {
+      return res.status(400).json({ success: false, error: 'Upload a background image' });
+    }
+
+    const bgId = crypto.randomUUID();
+    ogBgStore.set(bgId, JSON.stringify({ url: bgDataUrl, posX: bgPosX, posY: bgPosY, scale: bgScale }));
+    setTimeout(() => ogBgStore.delete(bgId), 60000);
 
     const puppeteer = require('puppeteer');
     browser = await puppeteer.launch({
@@ -2950,13 +2640,6 @@ app.post('/api/pr/generate-og-image', async (req, res) => {
 
     const page = await browser.newPage();
     await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 2 });
-
-    let bgId = '';
-    if (bgDataUrl) {
-      bgId = crypto.randomUUID();
-      ogBgStore.set(bgId, bgDataUrl);
-      setTimeout(() => ogBgStore.delete(bgId), 60000);
-    }
 
     const templateUrl = `http://127.0.0.1:${PORT}/og-template?title=${encodeURIComponent(title)}&bgId=${bgId}`;
     await page.goto(templateUrl, { waitUntil: 'networkidle0', timeout: 30000 });

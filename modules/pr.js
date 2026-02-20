@@ -11086,27 +11086,29 @@ class DistributeManager {
       const ogGenerating = output._ogGenerating || false;
 
       let ogImageHtml = '';
-      const savedProvider = localStorage.getItem('glossi_og_provider') || 'gemini';
-      const savedOgPrompt = output._ogCustomPrompt || '';
-      const ogPromptRow = `<div class="pr-twitter-visual-feedback">
-          <div class="pr-twitter-visual-feedback-row">
-            <select class="pr-og-provider-select" data-action="og-provider-select">
-              <option value="gemini"${savedProvider === 'gemini' ? ' selected' : ''}>Gemini</option>
-              <option value="midjourney"${savedProvider === 'midjourney' ? ' selected' : ''}>Midjourney</option>
-            </select>
-            <input type="text" class="pr-twitter-visual-feedback-input" data-action="og-custom-prompt" placeholder="Describe the visual (e.g. wireframe sphere with contour lines, bottom-right)" value="${this.escapeHtml(savedOgPrompt)}">
-            <button class="pr-twitter-visual-feedback-btn" data-action="generate-og-image">${ogImage ? 'Regenerate' : 'Generate'}</button>
-          </div>
-          ${refPillHtml}
-        </div>`;
+      const hasBgImage = !!output._ogBgImage;
 
       if (ogGenerating) {
-        ogImageHtml = `<div class="pr-twitter-link-card-image-loading">${glossiLoaderSVG('glossi-loader-sm')}<span>Generating preview...</span></div>`;
+        ogImageHtml = `<div class="pr-twitter-link-card-image-loading">${glossiLoaderSVG('glossi-loader-sm')}<span>Compositing preview...</span></div>`;
       } else if (ogImage) {
         ogImageHtml = `<div class="pr-twitter-link-card-image"><img src="${this.escapeHtml(ogImage)}" alt=""><button class="pr-twitter-link-card-image-remove" data-action="remove-og-image" title="Remove"><i class="ph-light ph-x"></i></button></div>`;
+      } else if (hasBgImage) {
+        ogImageHtml = `<div class="pr-og-position-wrap">
+          <div class="pr-og-position-frame" data-action="og-drag-area">
+            <img src="${this.escapeHtml(output._ogBgImage)}" class="pr-og-position-img" data-action="og-drag-img" style="transform: translate(${output._ogPosX || 0}px, ${output._ogPosY || 0}px) scale(${(output._ogScale || 100) / 100});">
+          </div>
+          <div class="pr-og-position-controls">
+            <input type="range" min="100" max="300" value="${output._ogScale || 100}" data-action="og-scale" class="pr-og-scale-slider" title="Zoom">
+            <button class="pr-og-composite-btn" data-action="composite-og"><i class="ph-light ph-check"></i> Apply</button>
+          </div>
+        </div>`;
       } else {
-        ogImageHtml = `<div class="pr-twitter-link-card-generate">
-          <button data-action="generate-og-image"><i class="ph-light ph-image"></i> Generate Link Preview</button>
+        ogImageHtml = `<div class="pr-twitter-link-card-generate pr-og-upload-zone" data-action="og-drop-zone">
+          <label class="pr-og-upload-label">
+            <i class="ph-light ph-upload-simple"></i> Upload background image
+            <input type="file" accept="image/*" data-action="og-upload" hidden>
+          </label>
+          <span class="pr-og-upload-hint">or drag and drop</span>
         </div>`;
       }
 
@@ -11133,22 +11135,9 @@ class DistributeManager {
             <div class="pr-twitter-link-card-desc">${this.escapeHtml(output.link_desc || 'Preview will update when URL is added')}</div>
           </div>
         </div>
-        ${ogPromptRow}
-        <div class="pr-moodboard-section">
-          <div class="pr-moodboard-header" data-action="toggle-moodboard">
-            <i class="ph-light ph-palette"></i>
-            <span>Style Board</span>
-            <span class="pr-moodboard-count" id="pr-moodboard-count"></span>
-            <i class="ph-light ph-caret-down pr-moodboard-caret"></i>
-          </div>
-          <div class="pr-moodboard-body" id="pr-moodboard-body" style="display:none;">
-            <div class="pr-moodboard-grid" id="pr-moodboard-grid"></div>
-            <label class="pr-moodboard-upload-btn">
-              <i class="ph-light ph-plus"></i> Add image
-              <input type="file" accept="image/*" data-action="moodboard-upload" hidden>
-            </label>
-          </div>
-        </div>`;
+        ${hasBgImage && !ogImage ? '' : hasBgImage || ogImage ? `<div class="pr-og-reupload-row">
+          <label class="pr-og-reupload-btn"><i class="ph-light ph-arrow-counter-clockwise"></i> Replace image<input type="file" accept="image/*" data-action="og-upload" hidden></label>
+        </div>` : ''}`;
     }
 
     const tweetHtml = `
@@ -11241,120 +11230,83 @@ class DistributeManager {
         this.persistOutput(output);
       });
     });
-    container.querySelectorAll('[data-action="og-custom-prompt"]').forEach(el => {
-      el.addEventListener('input', () => {
-        output._ogCustomPrompt = el.value;
-      });
-    });
-    container.querySelectorAll('[data-action="og-provider-select"]').forEach(sel => {
-      sel.addEventListener('change', () => {
-        localStorage.setItem('glossi_og_provider', sel.value);
-      });
-    });
-    container.querySelectorAll('[data-action="generate-og-image"]').forEach(btn => {
-      btn.addEventListener('click', () => this.generateOgImage(output));
-    });
     container.querySelectorAll('[data-action="remove-og-image"]').forEach(btn => {
       btn.addEventListener('click', () => {
         output.og_image = '';
+        output._ogBgImage = '';
         this.persistOutput(output);
         this.renderTwitterPreview(output);
       });
     });
-    container.querySelectorAll('[data-action="ref-image-upload"]').forEach(pill => {
-      pill.addEventListener('click', () => {
-        const fileInput = pill.closest('.pr-ref-image-pill-row')?.querySelector('[data-action="ref-image-file"]');
-        fileInput?.click();
-      });
-    });
-    container.querySelectorAll('[data-action="ref-image-file"]').forEach(input => {
-      input.addEventListener('change', async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        e.target.value = '';
-        try {
-          const formData = new FormData();
-          formData.append('file', file);
-          const res = await this.prAgent.apiCall('/api/pr/upload-media', { method: 'POST', body: formData });
-          if (res.success && res.url) {
-            output.visual_ref_image = res.url;
-            this.persistOutput(output);
-            this.renderTwitterPreview(output);
-          }
-        } catch (err) {
-          this.prAgent.showToast('Failed to upload reference image', 'error');
-        }
-      });
-    });
-    container.querySelectorAll('[data-action="ref-image-remove"]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        output.visual_ref_image = '';
-        this.persistOutput(output);
-        this.renderTwitterPreview(output);
-      });
-    });
-    container.querySelectorAll('[data-action="toggle-moodboard"]').forEach(el => {
-      el.addEventListener('click', () => {
-        const body = document.getElementById('pr-moodboard-body');
-        if (body) {
-          const open = body.style.display === 'none';
-          body.style.display = open ? 'block' : 'none';
-          el.querySelector('.pr-moodboard-caret')?.classList.toggle('open', open);
-          if (open) this.loadMoodboard();
-        }
-      });
-    });
-    container.querySelectorAll('[data-action="moodboard-upload"]').forEach(input => {
-      input.addEventListener('change', async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        e.target.value = '';
-        const formData = new FormData();
-        formData.append('file', file);
-        try {
-          const res = await this.prAgent.apiCall('/api/pr/moodboard', { method: 'POST', body: formData });
-          if (res.success) this.loadMoodboard();
-        } catch (err) {
-          this.prAgent.showToast('Failed to upload image', 'error');
-        }
-      });
-    });
-  }
 
-  async loadMoodboard() {
-    try {
-      const res = await this.prAgent.apiCall('/api/pr/moodboard');
-      const grid = document.getElementById('pr-moodboard-grid');
-      const count = document.getElementById('pr-moodboard-count');
-      if (!grid) return;
-      const images = res.images || [];
-      if (count) count.textContent = images.length > 0 ? `(${images.length})` : '';
-      if (images.length === 0) {
-        grid.innerHTML = '<div class="pr-moodboard-empty">No style references yet. Add images to guide generation.</div>';
-        return;
-      }
-      grid.innerHTML = images.map(img => `
-        <div class="pr-moodboard-thumb" data-filename="${img.filename}">
-          <img src="${img.url}" alt="">
-          <button class="pr-moodboard-thumb-remove" data-action="moodboard-delete" data-filename="${img.filename}"><i class="ph-light ph-x"></i></button>
-        </div>
-      `).join('');
-      grid.querySelectorAll('[data-action="moodboard-delete"]').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const filename = btn.dataset.filename;
-          try {
-            await this.prAgent.apiCall(`/api/pr/moodboard/${filename}`, { method: 'DELETE' });
-            this.loadMoodboard();
-          } catch (err) {
-            this.prAgent.showToast('Failed to remove image', 'error');
-          }
-        });
+    const handleOgUpload = (file) => {
+      if (!file || !file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        output._ogBgImage = reader.result;
+        output._ogPosX = 0;
+        output._ogPosY = 0;
+        output._ogScale = 100;
+        output.og_image = '';
+        this.renderTwitterPreview(output);
+      };
+      reader.readAsDataURL(file);
+    };
+
+    container.querySelectorAll('[data-action="og-upload"]').forEach(input => {
+      input.addEventListener('change', (e) => {
+        handleOgUpload(e.target.files?.[0]);
+        e.target.value = '';
       });
-    } catch (err) {
-      const grid = document.getElementById('pr-moodboard-grid');
-      if (grid) grid.innerHTML = '<div class="pr-moodboard-empty">Failed to load style board</div>';
-    }
+    });
+
+    container.querySelectorAll('[data-action="og-drop-zone"]').forEach(zone => {
+      zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        handleOgUpload(e.dataTransfer.files?.[0]);
+      });
+    });
+
+    container.querySelectorAll('[data-action="og-drag-area"]').forEach(frame => {
+      const img = frame.querySelector('[data-action="og-drag-img"]');
+      if (!img) return;
+      let dragging = false, startX = 0, startY = 0, origX = 0, origY = 0;
+
+      frame.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        dragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        origX = output._ogPosX || 0;
+        origY = output._ogPosY || 0;
+      });
+
+      const onMove = (e) => {
+        if (!dragging) return;
+        output._ogPosX = origX + (e.clientX - startX);
+        output._ogPosY = origY + (e.clientY - startY);
+        img.style.transform = `translate(${output._ogPosX}px, ${output._ogPosY}px) scale(${(output._ogScale || 100) / 100})`;
+      };
+
+      const onUp = () => { dragging = false; };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    container.querySelectorAll('[data-action="og-scale"]').forEach(slider => {
+      slider.addEventListener('input', () => {
+        output._ogScale = parseInt(slider.value);
+        const img = container.querySelector('[data-action="og-drag-img"]');
+        if (img) img.style.transform = `translate(${output._ogPosX || 0}px, ${output._ogPosY || 0}px) scale(${output._ogScale / 100})`;
+      });
+    });
+
+    container.querySelectorAll('[data-action="composite-og"]').forEach(btn => {
+      btn.addEventListener('click', () => this.compositeOgImage(output));
+    });
   }
 
   async autoGenerateVisual(output) {
@@ -11475,33 +11427,24 @@ class DistributeManager {
     }
   }
 
-  async generateOgImage(output) {
+  async compositeOgImage(output) {
     const title = output.link_title || output.title || '';
-    if (!title.trim()) return;
-
-    const customPrompt = output._ogCustomPrompt || '';
-    if (!customPrompt.trim()) {
-      await this.prAgent.showConfirm('Enter a visual prompt to generate the image', 'Link Preview');
-      return;
-    }
+    if (!title.trim() || !output._ogBgImage) return;
 
     output._ogGenerating = true;
     this.renderTwitterPreview(output);
 
-    const refImage = this.getResolvedRefImage(output);
-
     try {
-      const ogPayload = {
-        title,
-        custom_prompt: customPrompt,
-        provider: localStorage.getItem('glossi_og_provider') || 'gemini'
-      };
-      if (refImage) ogPayload.reference_image = refImage;
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('bg_image', output._ogBgImage);
+      formData.append('bg_pos_x', String(this.ogCalcBgPos(output, 'x')));
+      formData.append('bg_pos_y', String(this.ogCalcBgPos(output, 'y')));
+      formData.append('bg_scale', String(output._ogScale || 100));
 
       const res = await this.prAgent.apiCall('/api/pr/generate-og-image', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ogPayload)
+        body: formData
       });
 
       output._ogGenerating = false;
@@ -11512,13 +11455,26 @@ class DistributeManager {
         this.renderTwitterPreview(output);
       } else {
         this.renderTwitterPreview(output);
-        await this.prAgent.showConfirm(res.error || 'OG image generation failed', 'Link Preview Error');
+        await this.prAgent.showConfirm(res.error || 'Compositing failed', 'Link Preview Error');
       }
     } catch (e) {
       output._ogGenerating = false;
       this.renderTwitterPreview(output);
       await this.prAgent.showConfirm(e.message || 'Network error', 'Link Preview Error');
     }
+  }
+
+  ogCalcBgPos(output, axis) {
+    const frameW = 480, frameH = 252;
+    const px = output._ogPosX || 0;
+    const py = output._ogPosY || 0;
+    const scale = (output._ogScale || 100) / 100;
+    const imgW = frameW * scale;
+    const imgH = frameH * scale;
+    const offsetX = (imgW - frameW) / 2 - px;
+    const offsetY = (imgH - frameH) / 2 - py;
+    if (axis === 'x') return imgW > frameW ? (offsetX / (imgW - frameW)) * 100 : 50;
+    return imgH > frameH ? (offsetY / (imgH - frameH)) * 100 : 50;
   }
 
   async fetchLinkMetadata(output) {
