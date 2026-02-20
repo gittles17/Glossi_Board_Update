@@ -10177,10 +10177,6 @@ class DistributeManager {
       this.showMediaUrlInput('Paste video URL...');
     });
 
-    document.getElementById('pr-media-link-btn')?.addEventListener('click', () => {
-      this._mediaUrlMode = 'link';
-      this.showMediaUrlInput('Paste link URL...');
-    });
 
     document.getElementById('pr-media-url-confirm')?.addEventListener('click', () => {
       this.confirmMediaUrl();
@@ -10404,23 +10400,17 @@ class DistributeManager {
     // Clean citations from content before review
     output.content = await this.cleanCitationsForReview(output);
 
-    // Extract URLs from content and move to first comment
-    const extractedLink = this.extractFirstLink(output.content);
-    if (extractedLink) {
-      output.first_comment = extractedLink;
-      output.content = output.content.replace(extractedLink, '').trim();
-    }
-
     // Initialize media_attachments if not present
     if (!output.media_attachments) output.media_attachments = [];
 
-    // Fetch OG data for link if present
-    if (extractedLink) {
+    // Fetch OG data for the first link in the body (for preview card)
+    const bodyLink = this.extractFirstLink(output.content);
+    if (bodyLink) {
       try {
         const ogRes = await this.prAgent.apiCall('/api/pr/og-metadata', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: extractedLink })
+          body: JSON.stringify({ url: bodyLink })
         });
         if (ogRes.success && ogRes.og) {
           output.og_data = ogRes.og;
@@ -10607,17 +10597,18 @@ class DistributeManager {
       if (downloadBlogBtn) downloadBlogBtn.style.display = 'none';
     }
 
-    // Re-fetch OG data if output has a first_comment link but no og_data (e.g. older outputs)
-    if (output.first_comment && !output.og_data) {
+    // Re-fetch OG data if content has a link but no og_data (e.g. older outputs)
+    const bodyLink = this.extractFirstLink(output.content);
+    if (bodyLink && !output.og_data) {
       this.prAgent.apiCall('/api/pr/og-metadata', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: output.first_comment })
+        body: JSON.stringify({ url: bodyLink })
       }).then(ogRes => {
         if (ogRes.success && ogRes.og) {
           output.og_data = ogRes.og;
           this.persistOutput(output);
-          this.renderFirstComment(output);
+          this.renderLinkedInPreview(output);
         }
       }).catch(() => {});
     }
@@ -10629,7 +10620,6 @@ class DistributeManager {
       () => this.renderEmailPreview(output),
       () => isXPublished ? this.renderTwitterPublishedState(output) : this.renderTwitterPreview(output),
       () => this.renderHashtags(output),
-      () => this.renderFirstComment(output),
       () => this.renderCharCount(output)
     ];
     for (const fn of previews) {
@@ -10687,6 +10677,21 @@ class DistributeManager {
       }
     }
 
+    // Build OG link preview card (shown below body when a URL is in the post)
+    let linkPreviewHtml = '';
+    if (output.og_data && !mediaHtml) {
+      const og = output.og_data;
+      linkPreviewHtml = `
+        <div class="pr-li-link-preview">
+          ${og.image ? `<div class="pr-li-link-preview-image"><img src="${this.escapeHtml(og.image)}" alt=""></div>` : ''}
+          <div class="pr-li-link-preview-body">
+            <div class="pr-li-link-preview-domain">${this.escapeHtml(og.domain || '')}</div>
+            <div class="pr-li-link-preview-title">${this.escapeHtml(og.title || '')}</div>
+          </div>
+        </div>
+      `;
+    }
+
     container.innerHTML = `
       <div class="pr-li-header">
         <div class="pr-li-avatar">${avatarHtml}</div>
@@ -10702,6 +10707,7 @@ class DistributeManager {
       <div class="pr-li-body ${isLong ? 'pr-li-body-truncated' : ''}">${formattedBody}</div>
       ${isLong ? '<div class="pr-li-see-more-wrap"><span class="pr-li-see-more" data-action="see-more">...more</span></div>' : ''}
       ${mediaHtml}
+      ${linkPreviewHtml}
       <div class="pr-li-engagement">
         <div class="pr-li-action"><i class="ph-light ph-thumbs-up"></i> Like</div>
         <div class="pr-li-action"><i class="ph-light ph-chat-teardrop"></i> Comment</div>
@@ -10797,13 +10803,11 @@ class DistributeManager {
       email: document.getElementById('pr-email-preview-wrap'),
       twitter: document.getElementById('pr-twitter-preview-wrap')
     };
-    const firstCommentWrap = document.getElementById('pr-li-first-comment-wrap');
     const hashtagsWrap = document.getElementById('pr-distribute-hashtags');
     const charCount = document.getElementById('pr-distribute-char-count');
     const mediaBar = document.getElementById('pr-distribute-media-bar');
     const mediaUrlInput = document.getElementById('pr-distribute-media-url-input');
 
-    // Hide all preview wraps, then show the active one
     Object.values(wraps).forEach(w => { if (w) w.style.display = 'none'; });
     if (wraps[channel]) wraps[channel].style.display = '';
 
@@ -10811,7 +10815,6 @@ class DistributeManager {
     const isTwitter = channel === 'twitter';
     const isBlog = channel === 'blog';
     const isPublishable = isLinkedin || isTwitter;
-    if (firstCommentWrap) firstCommentWrap.style.display = isLinkedin && this.activeReviewItem?.first_comment ? '' : 'none';
     if (hashtagsWrap) hashtagsWrap.style.display = 'none';
     if (charCount) charCount.style.display = (isLinkedin || isTwitter) ? '' : 'none';
     if (mediaBar) mediaBar.style.display = isPublishable && this.activeReviewItem?.status === 'review' ? 'flex' : 'none';
@@ -11478,9 +11481,7 @@ class DistributeManager {
     const url = input?.value?.trim();
     if (!url) return;
 
-    if (this._mediaUrlMode === 'link') {
-      this.addFirstCommentLink(url);
-    } else if (this._mediaUrlMode === 'video') {
+    if (this._mediaUrlMode === 'video') {
       this.addMedia({ type: 'video', url, thumbnail: this.getVideoThumbnail(url) });
     } else {
       this.addMedia({ type: 'image', url });
@@ -11488,33 +11489,6 @@ class DistributeManager {
     this.hideMediaUrlInput();
   }
 
-  async addFirstCommentLink(url) {
-    if (!this.activeReviewItem) return;
-
-    this.activeReviewItem.first_comment = url;
-
-    try {
-      const ogRes = await this.prAgent.apiCall('/api/pr/og-metadata', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
-      });
-      if (ogRes.success && ogRes.og) {
-        this.activeReviewItem.og_data = ogRes.og;
-      }
-    } catch (e) { /* silent */ }
-
-    this.persistOutput(this.activeReviewItem);
-    this.renderFirstComment(this.activeReviewItem);
-  }
-
-  removeFirstCommentLink() {
-    if (!this.activeReviewItem) return;
-    this.activeReviewItem.first_comment = null;
-    this.activeReviewItem.og_data = null;
-    this.persistOutput(this.activeReviewItem);
-    this.renderFirstComment(this.activeReviewItem);
-  }
 
   getVideoThumbnail(url) {
     // Extract YouTube thumbnail
@@ -11607,62 +11581,6 @@ class DistributeManager {
     this.renderCharCount(this.activeReviewItem);
   }
 
-  // First comment rendering
-  renderFirstComment(output) {
-    const wrap = document.getElementById('pr-li-first-comment-wrap');
-    const container = document.getElementById('pr-li-first-comment');
-    if (!wrap || !container) return;
-
-    const comment = output.first_comment;
-    if (!comment) {
-      wrap.style.display = 'none';
-      return;
-    }
-    wrap.style.display = 'block';
-
-    const li = this.settings.linkedin || {};
-    const name = li.name || 'Glossi';
-    const photoUrl = li.photoUrl || 'assets/glossi-logo.svg';
-    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
-
-    const avatarHtml = photoUrl
-      ? `<img src="${this.escapeHtml(photoUrl)}" alt="">`
-      : `<span class="pr-li-comment-avatar-placeholder">${initials}</span>`;
-
-    // Build link preview inside comment if OG data
-    let commentLinkPreview = '';
-    if (output.og_data) {
-      const og = output.og_data;
-      commentLinkPreview = `
-        <div class="pr-li-link-preview" style="margin-top: 8px; border-radius: 6px; overflow: hidden; border: 1px solid #383838;">
-          ${og.image ? `<div class="pr-li-link-preview-image"><img src="${this.escapeHtml(og.image)}" alt=""></div>` : ''}
-          <div class="pr-li-link-preview-body">
-            <div class="pr-li-link-preview-domain">${this.escapeHtml(og.domain || '')}</div>
-            <div class="pr-li-link-preview-title">${this.escapeHtml(og.title || '')}</div>
-          </div>
-        </div>
-      `;
-    }
-
-    const canRemove = output.status === 'review';
-    const removeLinkBtn = canRemove
-      ? `<button class="pr-li-comment-remove" data-action="remove-link" title="Remove link"><i class="ph-light ph-x"></i></button>`
-      : '';
-
-    container.innerHTML = `
-      <div class="pr-li-comment-header">
-        <div class="pr-li-comment-avatar">${avatarHtml}</div>
-        <div class="pr-li-comment-name">${this.escapeHtml(name)}</div>
-        ${removeLinkBtn}
-      </div>
-      <div class="pr-li-comment-text">${this.escapeHtml(comment)}</div>
-      ${commentLinkPreview}
-    `;
-
-    container.querySelector('[data-action="remove-link"]')?.addEventListener('click', () => {
-      this.removeFirstCommentLink();
-    });
-  }
 
   async persistOutput(output) {
     try {
@@ -11839,8 +11757,7 @@ class DistributeManager {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: this.activeReviewItem.content,
-          hashtags: this.activeReviewItem.hashtags || [],
-          first_comment: this.activeReviewItem.first_comment || null
+          hashtags: this.activeReviewItem.hashtags || []
         })
       });
 
@@ -11869,12 +11786,6 @@ class DistributeManager {
         this.render();
         this.selectReviewItem(this.activeReviewItem.id);
 
-        if (result.comment_error) {
-          await this.prAgent.showConfirm(
-            `Post published successfully, but the first comment failed: ${result.comment_error}`,
-            'Comment Warning'
-          );
-        }
       } else {
         await this.prAgent.showConfirm(
           `Publishing failed: ${result.error || 'Unknown error'}. Please try again.`,

@@ -2972,18 +2972,16 @@ app.post('/api/linkedin/publish', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Organization ID not found. Set LINKEDIN_ORG_ID in environment variables or reconnect your account.' });
     }
 
-    const { content, hashtags, first_comment } = req.body;
+    const { content, hashtags } = req.body;
     if (!content) {
       return res.status(400).json({ success: false, error: 'Post content is required' });
     }
 
-    // Build commentary with hashtags appended
     let commentary = content;
     if (hashtags && hashtags.length > 0) {
       commentary += '\n\n' + hashtags.map(h => (h.startsWith('#') ? h : '#' + h)).join(' ');
     }
 
-    // Create the post
     const postPayload = {
       author: `urn:li:organization:${orgId}`,
       commentary,
@@ -3007,30 +3005,7 @@ app.post('/api/linkedin/publish', async (req, res) => {
 
     const postUrn = postRes.headers['x-restli-id'] || null;
 
-    // Post first comment if provided
-    let commentError = null;
-    if (first_comment && postUrn) {
-      // Small delay to let LinkedIn index the post
-      await new Promise(r => setTimeout(r, 2000));
-      try {
-        await axios.post('https://api.linkedin.com/rest/socialActions/' + encodeURIComponent(postUrn) + '/comments', {
-          actor: `urn:li:organization:${orgId}`,
-          object: postUrn,
-          message: { text: first_comment }
-        }, {
-          headers: {
-            'Authorization': `Bearer ${tokens.access_token}`,
-            'Content-Type': 'application/json',
-            'LinkedIn-Version': LINKEDIN_API_VERSION,
-            'X-Restli-Protocol-Version': '2.0.0'
-          }
-        });
-      } catch (commentErr) {
-        commentError = commentErr.response?.data?.message || commentErr.message;
-      }
-    }
-
-    res.json({ success: true, post_urn: postUrn, comment_error: commentError });
+    res.json({ success: true, post_urn: postUrn });
   } catch (error) {
     const errMsg = error.response?.data?.message || error.message;
     res.status(error.response?.status || 500).json({ success: false, error: errMsg });
@@ -3339,7 +3314,7 @@ app.get('/api/blog/posts', async (req, res) => {
     const html = pageRes.data;
 
     const posts = [];
-    const cardRegex = /<a\s+href="([^"]*\/blog\/[^"]+)"\s+class="card"\s+data-type="article"[^>]*>[\s\S]*?<span class="card-type">([^<]*)<\/span>\s*<h3>([^<]*)<\/h3>\s*<p>([^<]*)<\/p>\s*<span class="card-meta">([^<]*)<\/span>/g;
+    const cardRegex = /<a\s+href="([^"]+)"\s+class="card"\s+data-type="[^"]*"[^>]*>[\s\S]*?<span class="card-type">([^<]*)<\/span>\s*<h3>([^<]*)<\/h3>\s*<p>([^<]*)<\/p>\s*<span class="card-meta">([^<]*)<\/span>/g;
 
     let match;
     while ((match = cardRegex.exec(html)) !== null) {
