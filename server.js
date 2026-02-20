@@ -2598,26 +2598,64 @@ app.get('/og-sref/:id', (req, res) => {
 // OG card visual prompt system (shared by both providers)
 const OG_VISUAL_SYSTEM_PROMPT = `You create image generation prompts for abstract OG card background visuals. The visual will appear behind a blog title on a 1200x630 card.
 
-STYLE:
-- Dark minimal UI design system. Pure black background #000000.
-- Thin white vector line art. Monochromatic grayscale palette with single accent color: warm orange #E8512A.
-- Geometric abstract shapes: spheres with diagonal stripe patterns, wireframe orbs, pixel art icons, topographic contour line landscapes, particle scatter fields, spirograph geometric patterns, lemniscate orbital path diagrams, node-and-connector diagrams, pill-shaped UI components, checkerboard gradient spheres.
-- Crisp anti-aliased vector strokes. Scientific instrument aesthetic.
-- No text, no words, no letters, no numbers, no labels.
-- No realistic objects or people. Purely abstract.
-- The visual should evoke the theme/mood of the tweet content without being literal.
-- Ultra high contrast white on black. Motion graphics still frame aesthetic.
+VISUAL IDENTITY (non-negotiable):
+- Pure black background #000000. No gradients, no dark gray, no textures on the background itself.
+- White monochrome line art with optional subtle warm orange #E8512A accents. No other colors.
+- Crisp, thin vector strokes. 1-2px line weight feel. Anti-aliased. No brush textures, no grain, no noise.
+- Scientific instrument aesthetic. Think oscilloscope displays, technical diagrams, data visualization stills.
+- Ultra high contrast: pure white (#FFFFFF) elements on pure black (#000000). No midtones, no soft grays.
+
+APPROVED MOTIF LIBRARY (choose 1-3 from this list, combine creatively):
+- Wireframe spheres/orbs (with latitude-longitude grid lines or diagonal stripe shading)
+- Checkerboard gradient spheres (half black, half checkerboard dissolving into pixels)
+- Spirograph/lissajous geometric patterns (thin overlapping ellipses or orbital paths)
+- Topographic contour line landscapes (flowing parallel lines suggesting terrain)
+- Particle scatter fields (small dots distributed in organic clusters)
+- Pixel art icons (8-bit style, small, used as accent elements)
+- Node-and-connector diagrams (circles connected by thin lines, circuit-board feel)
+- Pill-shaped UI toggle components (rounded rectangle outlines)
+- Bar chart or data visualization shapes (abstract, no labels)
+- Electromagnetic field line diagrams (symmetrical curved lines radiating from a center)
+- Thin wireframe rectangles suggesting UI cards or panels (with faint inner detail)
+
+Do NOT invent motifs outside this library. Variations and combinations of these motifs are encouraged, but the base shapes must come from this list.
+
+COMPLEXITY AND NEGATIVE SPACE:
+- Maximum 2-3 primary visual elements in the entire composition.
+- At least 60% of the total image area must be pure black empty space.
+- Less is more. A single well-placed wireframe orb is better than a busy collage.
+- Elements should feel deliberately placed, like objects on a museum pedestal, not scattered randomly.
+- Small accent elements (a few particles, a faint contour line) can support the primary shapes but should not compete for attention.
+
+NEVER DO THIS:
+- Never generate realistic objects, people, animals, buildings, or landscapes.
+- Never generate photographs, painterly textures, watercolor, oil paint, or 3D renders.
+- Never include text, words, letters, numbers, labels, or UI text of any kind.
+- Never use color beyond white, black, and the single orange accent #E8512A.
+- Never fill the frame. Never create wallpaper-like tiling patterns.
+- Never use soft glows, lens flares, bloom effects, or atmospheric haze.
+- Never describe "floating" or "ethereal" or "dreamlike" qualities. Keep it precise and mechanical.
+- Never interpret the tweet content literally. Do not depict the subject matter of the tweet.
+
+TWEET CONNECTION:
+- The tweet content is provided only for loose thematic inspiration.
+- Choose a motif from the library that has an abstract, associative connection to the tweet's mood or domain.
+- Example: a tweet about growth could map to a topographic contour landscape. A tweet about technology could map to node-and-connector diagrams. A tweet about clarity could map to a single wireframe sphere.
+- If no obvious connection exists, pick any motif that looks good. Visual quality matters more than thematic relevance.
 
 COMPOSITION AND TEXT LEGIBILITY:
-- A large white blog title will be overlaid in the top-left area of the image (roughly left 60%, top 45%).
-- The primary visual weight and densest art elements should be concentrated in the bottom-right region, right edge, and bottom edge.
-- Art CAN extend into the text area, but it must dissolve and fade naturally as it approaches the top-left. Think atmospheric fog, scattered particles thinning out, trailing wisps, or gradient opacity falloff.
-- In the text zone, any art must be very faint (5-15% opacity feel), sparse, and low-contrast against the black background. No bright white or orange elements competing with the title.
-- The transition from dense art to sparse/empty should feel organic and gradual, NOT a hard rectangular cutoff. Avoid any visible box, mask edge, or sharp boundary.
-- Imagine the art as emanating from the bottom-right and naturally dissipating toward the top-left, like smoke or light scattering.
-- Text legibility is the highest priority, but achieve it through gradual fadeout, not an empty void.
+- A large white blog title will be overlaid in the top-left area (roughly left 60%, top 45%).
+- Primary visual elements must be concentrated in the bottom-right quadrant, right edge, or bottom edge.
+- Art may extend faintly into the text area, but must dissolve naturally (sparse particles thinning out, trailing line endings). No bright or dense elements in the top-left.
+- The transition from art to empty black must be organic and gradual, not a hard rectangular cutoff.
+- Text legibility is the highest priority.
 
-OUTPUT: Return ONLY the image prompt, nothing else. No explanation, no preamble.`;
+PROMPT FORMAT:
+- Write the prompt as a flat, specific visual description. Describe exactly what shapes appear, where they are placed, their size, and their stroke weight.
+- Do not write in an aspirational or abstract style. Be concrete: "A wireframe sphere with 12 longitude lines and 6 latitude lines, positioned in the lower-right corner, 300px diameter" is better than "An ethereal orb representing connectivity."
+- Keep the prompt under 100 words.
+
+OUTPUT: Return ONLY the image prompt. No explanation, no preamble, no commentary.`;
 
 // Helper: generate image prompt via Claude
 async function generateOgVisualPrompt(tweetText, refinement, referenceImage) {
@@ -3039,13 +3077,23 @@ function isXConfigured() {
   return !!(X_API_KEY && X_API_KEY_SECRET && X_ACCESS_TOKEN && X_ACCESS_TOKEN_SECRET);
 }
 
-app.get('/api/x/debug-creds', (req, res) => {
+app.get('/api/x/debug-creds', async (req, res) => {
   const mask = (s) => s ? `${s.slice(0, 4)}...${s.slice(-4)} (len=${s.length})` : 'MISSING';
+  let twitterTime = null;
+  try {
+    await axios.get('https://api.twitter.com/2/tweets/search/recent?query=test', { timeout: 5000 });
+  } catch (e) {
+    twitterTime = e.response?.headers?.date || null;
+  }
+  const serverTime = new Date().toUTCString();
   res.json({
     key: mask(X_API_KEY),
     secret: mask(X_API_KEY_SECRET),
     token: mask(X_ACCESS_TOKEN),
-    tokenSecret: mask(X_ACCESS_TOKEN_SECRET)
+    tokenSecret: mask(X_ACCESS_TOKEN_SECRET),
+    serverTime,
+    twitterTime,
+    skewMs: twitterTime ? new Date(twitterTime).getTime() - new Date(serverTime).getTime() : null
   });
 });
 
