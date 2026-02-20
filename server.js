@@ -3016,10 +3016,10 @@ app.post('/api/linkedin/publish', async (req, res) => {
 // X (TWITTER) API PUBLISHING
 // ============================================
 
-const X_API_KEY = process.env.X_API_KEY;
-const X_API_KEY_SECRET = process.env.X_API_KEY_SECRET;
-const X_ACCESS_TOKEN = process.env.X_ACCESS_TOKEN;
-const X_ACCESS_TOKEN_SECRET = process.env.X_ACCESS_TOKEN_SECRET;
+const X_API_KEY = (process.env.X_API_KEY || '').trim();
+const X_API_KEY_SECRET = (process.env.X_API_KEY_SECRET || '').trim();
+const X_ACCESS_TOKEN = (process.env.X_ACCESS_TOKEN || '').trim();
+const X_ACCESS_TOKEN_SECRET = (process.env.X_ACCESS_TOKEN_SECRET || '').trim();
 
 const xOauth = OAuth({
   consumer: { key: X_API_KEY || '', secret: X_API_KEY_SECRET || '' },
@@ -3058,11 +3058,10 @@ app.get('/api/x/status', async (req, res) => {
     });
   } catch (error) {
     const status = error.response?.status;
-    const detail = error.response?.data?.detail || error.response?.data?.errors?.[0]?.message || error.message;
-    if (status === 401 || status === 403) {
-      return res.json({ success: true, connected: false, reason: detail });
-    }
-    res.json({ success: true, connected: false, reason: detail });
+    const twitterErrors = error.response?.data;
+    const detail = twitterErrors?.detail || twitterErrors?.errors?.[0]?.message || error.message;
+    const title = twitterErrors?.title || '';
+    res.json({ success: true, connected: false, reason: detail, status, title });
   }
 });
 
