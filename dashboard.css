@@ -384,7 +384,7 @@ body::after {
 }
 
 .nav-logo-icon {
-  height: 29px;
+  height: 38px;
   width: auto;
   opacity: 0.95;
   transition: opacity var(--duration-fast);
@@ -396,7 +396,7 @@ body::after {
 }
 
 .logo-img {
-  height: 15px;
+  height: 29px;
   width: auto;
   opacity: 0.95;
   transition: opacity var(--duration-fast);
@@ -421,11 +421,9 @@ body::after {
   gap: var(--space-3);
 }
 
-/* Inline nav links (desktop) */
+/* Inline nav links (hidden, all in hamburger now) */
 .nav-links {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
+  display: none;
 }
 
 .nav-link {
@@ -456,34 +454,12 @@ body::after {
 }
 
 .nav-settings-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: none;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  font-size: 16px;
-  cursor: pointer;
-  transition: color var(--duration-fast);
-  padding: 0;
-  margin-left: var(--space-2);
+  display: none;
 }
 
-.nav-settings-icon:hover {
-  color: var(--text-primary);
-}
-
-/* Social links in nav bar */
+/* Social links in nav bar (hidden, all in hamburger now) */
 .nav-social-links {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: var(--space-2);
-  padding-left: var(--space-3);
-  border-left: 1px solid var(--border-color);
+  display: none;
 }
 
 .nav-social-link {
@@ -533,9 +509,16 @@ body::after {
   color: var(--text-primary);
 }
 
-/* Hide hamburger on desktop, show inline links */
-.nav-right .nav-mobile-menu {
-  display: none;
+/* Glossi logo in nav-right */
+.nav-glossi-logo {
+  height: 17px;
+  width: auto;
+  opacity: 0.9;
+}
+
+/* Hamburger menu always visible */
+.nav-hamburger {
+  display: block;
 }
 
 .dropdown-wrapper {
@@ -6109,15 +6092,8 @@ h2.section-title-h4 {
     padding: 0 max(var(--space-4), env(safe-area-inset-right)) 0 max(var(--space-4), env(safe-area-inset-left));
   }
 
-  /* Mobile: hide inline nav links, social links, and gear, show hamburger */
-  .nav-links,
-  .nav-settings-icon,
-  .nav-social-links {
-    display: none;
-  }
-
-  .nav-right .nav-mobile-menu {
-    display: block;
+  .nav-glossi-logo {
+    height: 22px;
   }
 
   /* ============================================
