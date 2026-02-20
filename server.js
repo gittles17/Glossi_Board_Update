@@ -3071,7 +3071,17 @@ app.get('/api/x/status', async (req, res) => {
     const twitterErrors = error.response?.data;
     const detail = twitterErrors?.detail || twitterErrors?.errors?.[0]?.message || error.message;
     const title = twitterErrors?.title || '';
-    res.json({ success: true, connected: false, reason: detail, status, title });
+    const reqData = { url: 'https://api.twitter.com/2/users/me', method: 'GET' };
+    const authHdr = xAuthHeader(reqData)?.Authorization || '';
+    const hasNonce = authHdr.includes('oauth_nonce');
+    const hasSig = authHdr.includes('oauth_signature');
+    const hasConsumer = authHdr.includes('oauth_consumer_key');
+    const hasToken = authHdr.includes('oauth_token');
+    res.json({
+      success: true, connected: false, reason: detail, status, title,
+      fullError: typeof twitterErrors === 'object' ? twitterErrors : String(twitterErrors).slice(0, 200),
+      authCheck: { hasNonce, hasSig, hasConsumer, hasToken, headerLen: authHdr.length }
+    });
   }
 });
 
