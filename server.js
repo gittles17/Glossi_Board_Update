@@ -2773,11 +2773,9 @@ async function generateImageGemini(prompt, referenceImage) {
 }
 
 // Helper: generate image via Midjourney (legnext.ai)
-const MJ_OG_MOODBOARD_ID = '7423588848690528293';
-
 async function generateImageMidjourney(prompt, srefUrl) {
   const mjKey = process.env.MIDJOURNEY_API_KEY;
-  let mjPrompt = `${prompt}, minimal vector line art, pure black background, white wireframe strokes, scientific diagram aesthetic, ultra high contrast --v 7 --ar 40:21 --style raw --p ${MJ_OG_MOODBOARD_ID} --no photorealistic, gradient, colorful, text, words, letters, painting, 3d render, glow, bloom, lens flare, busy, cluttered`;
+  let mjPrompt = `${prompt}, minimal vector line art, pure black background, white wireframe strokes, scientific diagram aesthetic, ultra high contrast --v 7 --ar 40:21 --style raw --no photorealistic, gradient, colorful, text, words, letters, painting, 3d render, glow, bloom, lens flare, busy, cluttered`;
   if (srefUrl) mjPrompt += ` --sref ${srefUrl}`;
 
   const createRes = await axios.post('https://api.legnext.ai/api/v1/diffusion', {
