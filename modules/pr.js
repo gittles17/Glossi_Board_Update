@@ -11604,12 +11604,16 @@ class DistributeManager {
     }
 
     try {
+      const media = this.activeReviewItem.media_attachments || [];
+      const imageAttachment = media.find(m => m.type === 'image');
+
       const result = await this.prAgent.apiCall('/api/linkedin/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: this.activeReviewItem.content,
-          hashtags: this.activeReviewItem.hashtags || []
+          hashtags: this.activeReviewItem.hashtags || [],
+          media_url: imageAttachment?.url || null
         })
       });
 

@@ -3060,7 +3060,7 @@ app.post('/api/linkedin/publish', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Organization ID not found. Set LINKEDIN_ORG_ID in environment variables or reconnect your account.' });
     }
 
-    const { content, hashtags } = req.body;
+    const { content, hashtags, media_url } = req.body;
     if (!content) {
       return res.status(400).json({ success: false, error: 'Post content is required' });
     }
@@ -3068,6 +3068,52 @@ app.post('/api/linkedin/publish', async (req, res) => {
     let commentary = content;
     if (hashtags && hashtags.length > 0) {
       commentary += '\n\n' + hashtags.map(h => (h.startsWith('#') ? h : '#' + h)).join(' ');
+    }
+
+    const liHeaders = {
+      'Authorization': `Bearer ${tokens.access_token}`,
+      'Content-Type': 'application/json',
+      'LinkedIn-Version': LINKEDIN_API_VERSION,
+      'X-Restli-Protocol-Version': '2.0.0'
+    };
+
+    let imageUrn = null;
+
+    if (media_url) {
+      try {
+        let imageBuffer;
+        if (media_url.startsWith('data:')) {
+          const matches = media_url.match(/^data:([^;]+);base64,(.+)$/);
+          if (!matches) throw new Error('Invalid data URL format');
+          imageBuffer = Buffer.from(matches[2], 'base64');
+        } else {
+          const imgRes = await axios.get(media_url, { responseType: 'arraybuffer', timeout: 30000 });
+          imageBuffer = Buffer.from(imgRes.data);
+        }
+
+        const initRes = await axios.post(
+          'https://api.linkedin.com/rest/images?action=initializeUpload',
+          { initializeUploadRequest: { owner: `urn:li:organization:${orgId}` } },
+          { headers: liHeaders }
+        );
+
+        const uploadUrl = initRes.data?.value?.uploadUrl;
+        imageUrn = initRes.data?.value?.image;
+
+        if (!uploadUrl || !imageUrn) throw new Error('LinkedIn did not return an upload URL');
+
+        await axios.put(uploadUrl, imageBuffer, {
+          headers: {
+            'Authorization': `Bearer ${tokens.access_token}`,
+            'Content-Type': 'application/octet-stream'
+          },
+          maxContentLength: 20 * 1024 * 1024,
+          maxBodyLength: 20 * 1024 * 1024
+        });
+      } catch (mediaErr) {
+        const msg = mediaErr.response?.data?.message || mediaErr.message;
+        return res.status(400).json({ success: false, error: 'LinkedIn image upload failed: ' + msg });
+      }
     }
 
     const postPayload = {
@@ -3082,13 +3128,12 @@ app.post('/api/linkedin/publish', async (req, res) => {
       lifecycleState: 'PUBLISHED'
     };
 
+    if (imageUrn) {
+      postPayload.content = { media: { id: imageUrn } };
+    }
+
     const postRes = await axios.post('https://api.linkedin.com/rest/posts', postPayload, {
-      headers: {
-        'Authorization': `Bearer ${tokens.access_token}`,
-        'Content-Type': 'application/json',
-        'LinkedIn-Version': LINKEDIN_API_VERSION,
-        'X-Restli-Protocol-Version': '2.0.0'
-      }
+      headers: liHeaders
     });
 
     const postUrn = postRes.headers['x-restli-id'] || null;
