@@ -265,6 +265,18 @@ async function initDatabase() {
           END $$;
         `);
 
+        // Migration: Add tweet-format and link/visual preview columns
+        await pool.query(`
+          DO $$ BEGIN
+            ALTER TABLE pr_outputs ADD COLUMN IF NOT EXISTS tweet_format VARCHAR(20);
+            ALTER TABLE pr_outputs ADD COLUMN IF NOT EXISTS visual_title TEXT;
+            ALTER TABLE pr_outputs ADD COLUMN IF NOT EXISTS link_url TEXT;
+            ALTER TABLE pr_outputs ADD COLUMN IF NOT EXISTS link_title TEXT;
+            ALTER TABLE pr_outputs ADD COLUMN IF NOT EXISTS link_desc TEXT;
+            ALTER TABLE pr_outputs ADD COLUMN IF NOT EXISTS og_image TEXT;
+          END $$;
+        `);
+
         // Media outlets (user-added customs)
         await pool.query(`
           CREATE TABLE IF NOT EXISTS pr_outlets (
@@ -939,20 +951,21 @@ app.get('/api/pr/outputs', async (req, res) => {
 // Save output
 app.post('/api/pr/outputs', async (req, res) => {
   try {
-    const { id, content_type, title, content, sources, citations, strategy, status, phase, story_key, news_headline, drafts, content_plan_index, media_attachments, hashtags, first_comment, og_data, category, is_custom, angle_title, angle_narrative, published_channel, tweet_url, tweet_id, tweet_ids, published_at, published_snapshot } = req.body;
+    const { id, content_type, title, content, sources, citations, strategy, status, phase, story_key, news_headline, drafts, content_plan_index, media_attachments, hashtags, first_comment, og_data, category, is_custom, angle_title, angle_narrative, published_channel, tweet_url, tweet_id, tweet_ids, published_at, published_snapshot, tweet_format, visual_title, link_url, link_title, link_desc, og_image } = req.body;
     
     if (!useDatabase) {
       return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
     await pool.query(`
-      INSERT INTO pr_outputs (id, content_type, title, content, sources, citations, strategy, status, phase, story_key, news_headline, drafts, content_plan_index, media_attachments, hashtags, first_comment, og_data, category, is_custom, angle_title, angle_narrative, published_channel, tweet_url, tweet_id, tweet_ids, published_at, published_snapshot, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, NOW())
+      INSERT INTO pr_outputs (id, content_type, title, content, sources, citations, strategy, status, phase, story_key, news_headline, drafts, content_plan_index, media_attachments, hashtags, first_comment, og_data, category, is_custom, angle_title, angle_narrative, published_channel, tweet_url, tweet_id, tweet_ids, published_at, published_snapshot, tweet_format, visual_title, link_url, link_title, link_desc, og_image, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, NOW())
       ON CONFLICT (id) DO UPDATE SET
         content_type = $2, title = $3, content = $4, sources = $5, citations = $6, strategy = $7, status = $8, phase = $9,
         story_key = $10, news_headline = $11, drafts = $12, content_plan_index = $13, media_attachments = $14, hashtags = $15, first_comment = $16, og_data = $17, category = $18, is_custom = $19, angle_title = $20, angle_narrative = $21,
-        published_channel = $22, tweet_url = $23, tweet_id = $24, tweet_ids = $25, published_at = $26, published_snapshot = $27
-    `, [id, content_type, title, content, JSON.stringify(sources), JSON.stringify(citations), JSON.stringify(strategy), status, phase || 'edit', story_key || null, news_headline || null, JSON.stringify(drafts || null), content_plan_index != null ? content_plan_index : null, JSON.stringify(media_attachments || null), JSON.stringify(hashtags || null), first_comment || null, JSON.stringify(og_data || null), category || null, is_custom === true, angle_title || null, angle_narrative || null, published_channel || null, tweet_url || null, tweet_id || null, JSON.stringify(tweet_ids || null), published_at || null, JSON.stringify(published_snapshot || null)]);
+        published_channel = $22, tweet_url = $23, tweet_id = $24, tweet_ids = $25, published_at = $26, published_snapshot = $27,
+        tweet_format = $28, visual_title = $29, link_url = $30, link_title = $31, link_desc = $32, og_image = $33
+    `, [id, content_type, title, content, JSON.stringify(sources), JSON.stringify(citations), JSON.stringify(strategy), status, phase || 'edit', story_key || null, news_headline || null, JSON.stringify(drafts || null), content_plan_index != null ? content_plan_index : null, JSON.stringify(media_attachments || null), JSON.stringify(hashtags || null), first_comment || null, JSON.stringify(og_data || null), category || null, is_custom === true, angle_title || null, angle_narrative || null, published_channel || null, tweet_url || null, tweet_id || null, JSON.stringify(tweet_ids || null), published_at || null, JSON.stringify(published_snapshot || null), tweet_format || null, visual_title || null, link_url || null, link_title || null, link_desc || null, og_image || null]);
     
     res.json({ success: true });
   } catch (error) {
@@ -3206,12 +3219,28 @@ app.post('/api/x/publish', async (req, res) => {
         const finalizeForm = new FormData();
         finalizeForm.append('command', 'FINALIZE');
         finalizeForm.append('media_id', mediaId);
-        await axios.post(finalizeRequest.url, finalizeForm, {
+        const finalizeRes = await axios.post(finalizeRequest.url, finalizeForm, {
           headers: {
             ...xAuthHeader(finalizeRequest),
             ...finalizeForm.getHeaders()
           }
         });
+
+        if (finalizeRes.data?.processing_info) {
+          let processing = finalizeRes.data.processing_info;
+          while (processing && processing.state !== 'succeeded') {
+            if (processing.state === 'failed') {
+              throw new Error(processing.error?.message || 'Media processing failed');
+            }
+            const waitSec = processing.check_after_secs || 2;
+            await new Promise(r => setTimeout(r, waitSec * 1000));
+            const statusReq = { url: 'https://upload.twitter.com/1.1/media/upload.json', method: 'GET' };
+            const statusRes = await axios.get(`${statusReq.url}?command=STATUS&media_id=${mediaId}`, {
+              headers: { ...xAuthHeader({ url: `${statusReq.url}?command=STATUS&media_id=${mediaId}`, method: 'GET' }) }
+            });
+            processing = statusRes.data?.processing_info;
+          }
+        }
       } catch (mediaErr) {
         return res.status(400).json({ success: false, error: 'Media upload failed: ' + (mediaErr.response?.data?.errors?.[0]?.message || mediaErr.message) });
       }
