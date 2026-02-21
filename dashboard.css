@@ -11905,7 +11905,7 @@ a.dropdown-item {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
+  flex: 1;
   min-height: 0;
 }
 
@@ -16083,7 +16083,10 @@ svg.spinning,
    ============================================ */
 
 .pr-news-hooks-section {
-  /* Styles inherited from .pr-workflow-section */
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 /* .pr-news-hooks-header removed; replaced by .pr-news-hooks-toolbar */
