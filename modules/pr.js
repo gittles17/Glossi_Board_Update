@@ -10119,9 +10119,6 @@ class DistributeManager {
       this.activeReviewItem.tweet_format = newFormat;
       this.persistOutput(this.activeReviewItem);
       this.renderTwitterPreview(this.activeReviewItem);
-      if (newFormat === 'visual' && !this.activeReviewItem.media_attachments?.some(m => m.type === 'image')) {
-        this.autoGenerateVisual(this.activeReviewItem);
-      }
     });
 
     // Schedule
@@ -11055,63 +11052,36 @@ class DistributeManager {
           </div>`;
 
     if (tweetFormat === 'visual') {
-      const savedVisualProvider = localStorage.getItem('glossi_visual_provider') || 'gemini';
-      const savedVisualMode = localStorage.getItem('glossi_visual_mode') || 'abstract';
-      const modeSelectHtml = `<select class="pr-og-provider-select" data-action="visual-mode-select">
-                <option value="abstract"${savedVisualMode === 'abstract' ? ' selected' : ''}>Abstract</option>
-                <option value="chart"${savedVisualMode === 'chart' ? ' selected' : ''}>Chart</option>
-              </select>`;
+      const visualTitle = output.visual_title || '';
       if (hasImage) {
         const img = media.find(m => m.type === 'image');
-        const isUploaded = img.source === 'upload';
         mediaHtml = `
-          <div class="pr-twitter-image-card pr-visual-drop-target" data-action="visual-drop-zone">
-            <img src="${this.escapeHtml(img.url)}" alt="">
-            <button class="pr-twitter-image-remove" data-action="remove-twitter-image" title="Remove image">
-              <i class="ph-light ph-x"></i>
-            </button>
-            <input type="file" class="pr-visual-file-input" data-action="visual-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
-          </div>
-          ${isUploaded ? '' : `<div class="pr-twitter-visual-feedback">
-            <div class="pr-twitter-visual-feedback-row">
-              ${modeSelectHtml}
-              <select class="pr-og-provider-select" data-action="visual-provider-select">
-                <option value="gemini"${savedVisualProvider === 'gemini' ? ' selected' : ''}>Gemini</option>
-                <option value="midjourney"${savedVisualProvider === 'midjourney' ? ' selected' : ''}>Midjourney</option>
-              </select>
-              <input type="text" class="pr-twitter-visual-feedback-input" data-action="visual-feedback" placeholder="Describe adjustments (e.g. make the stat larger, change layout)">
-              <button class="pr-twitter-visual-feedback-btn" data-action="submit-feedback">Refine</button>
+          <div class="pr-twitter-link-card">
+            <div class="pr-twitter-image-card pr-visual-drop-target" data-action="visual-drop-zone">
+              <img src="${this.escapeHtml(img.url)}" alt="">
+              ${visualTitle ? `<div class="pr-visual-title-overlay">${this.escapeHtml(visualTitle)}</div>` : ''}
+              <button class="pr-twitter-image-remove" data-action="remove-twitter-image" title="Remove image">
+                <i class="ph-light ph-x"></i>
+              </button>
+              <input type="file" class="pr-visual-file-input" data-action="visual-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
             </div>
-            ${refPillHtml}
-          </div>`}`;
-      } else if (output._visualGenerating) {
-        mediaHtml = `
-          <div class="pr-twitter-visual-loading">
-            ${glossiLoaderSVG('glossi-loader-sm')}
-            <span>Generating visual...</span>
+            <div class="pr-twitter-link-card-body">
+              <input type="text" class="pr-visual-title-input" data-action="edit-visual-title" placeholder="Add overlay title (optional)" value="${this.escapeHtml(visualTitle)}">
+            </div>
           </div>`;
       } else {
         mediaHtml = `
-          <div class="pr-twitter-generate-visual pr-visual-drop-target" data-action="visual-drop-zone">
-            <div class="pr-twitter-generate-visual-hint">
-              <i class="ph-light ph-image"></i>
-              <span>Drop an image here, or generate one</span>
+          <div class="pr-twitter-link-card">
+            <div class="pr-twitter-link-card-generate pr-og-upload-zone pr-visual-drop-target" data-action="visual-drop-zone">
+              <label class="pr-og-upload-label">
+                <i class="ph-light ph-upload-simple"></i> Upload image
+                <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-action="visual-file-input" hidden>
+              </label>
+              <span class="pr-og-upload-hint">or drag and drop</span>
             </div>
-            <div class="pr-twitter-visual-feedback">
-              <div class="pr-twitter-visual-feedback-row">
-                ${modeSelectHtml}
-              </div>
+            <div class="pr-twitter-link-card-body">
+              <input type="text" class="pr-visual-title-input" data-action="edit-visual-title" placeholder="Add overlay title (optional)" value="${this.escapeHtml(visualTitle)}">
             </div>
-            ${refPillHtml}
-            <div class="pr-visual-action-row">
-              <button class="pr-twitter-generate-visual-btn" data-action="generate-visual">
-                <i class="ph-light ph-magic-wand"></i> Generate
-              </button>
-              <button class="pr-twitter-generate-visual-btn pr-visual-upload-btn" data-action="visual-upload-browse">
-                <i class="ph-light ph-upload-simple"></i> Upload
-              </button>
-            </div>
-            <input type="file" class="pr-visual-file-input" data-action="visual-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
           </div>`;
       }
     } else if (tweetFormat === 'link') {
@@ -11205,9 +11175,6 @@ class DistributeManager {
 
     container.innerHTML = tweetHtml || '<div style="padding: 24px; color: #71767b; text-align: center;">No content to preview</div>';
 
-    container.querySelectorAll('[data-action="generate-visual"]').forEach(btn => {
-      btn.addEventListener('click', () => this.autoGenerateVisual(output));
-    });
     container.querySelectorAll('[data-action="remove-twitter-image"]').forEach(btn => {
       btn.addEventListener('click', () => {
         output.media_attachments = (output.media_attachments || []).filter(m => m.type !== 'image');
@@ -11226,11 +11193,6 @@ class DistributeManager {
         if (file && file.type.startsWith('image/')) this.uploadVisualFile(output, file);
       });
     });
-    container.querySelectorAll('[data-action="visual-upload-browse"]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        container.querySelector('[data-action="visual-file-input"]')?.click();
-      });
-    });
     container.querySelectorAll('[data-action="visual-file-input"]').forEach(input => {
       input.addEventListener('change', (e) => {
         const file = e.target.files?.[0];
@@ -11238,34 +11200,23 @@ class DistributeManager {
         e.target.value = '';
       });
     });
-    container.querySelectorAll('[data-action="submit-feedback"]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const input = container.querySelector('[data-action="visual-feedback"]');
-        const feedback = input?.value?.trim();
-        if (feedback) {
-          this.refineVisual(output, feedback);
-        }
-      });
-    });
-    container.querySelectorAll('[data-action="visual-feedback"]').forEach(el => {
-      el.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const feedback = el.value.trim();
-          if (feedback) {
-            this.refineVisual(output, feedback);
+    container.querySelectorAll('[data-action="edit-visual-title"]').forEach(el => {
+      el.addEventListener('input', () => {
+        output.visual_title = el.value;
+        this.persistOutput(output);
+        const overlay = container.querySelector('.pr-visual-title-overlay');
+        if (overlay) {
+          overlay.textContent = el.value;
+          overlay.style.display = el.value ? '' : 'none';
+        } else if (el.value) {
+          const imgCard = container.querySelector('.pr-twitter-image-card');
+          if (imgCard) {
+            const div = document.createElement('div');
+            div.className = 'pr-visual-title-overlay';
+            div.textContent = el.value;
+            imgCard.appendChild(div);
           }
         }
-      });
-    });
-    container.querySelectorAll('[data-action="visual-provider-select"]').forEach(sel => {
-      sel.addEventListener('change', () => {
-        localStorage.setItem('glossi_visual_provider', sel.value);
-      });
-    });
-    container.querySelectorAll('[data-action="visual-mode-select"]').forEach(sel => {
-      sel.addEventListener('change', () => {
-        localStorage.setItem('glossi_visual_mode', sel.value);
       });
     });
     container.querySelectorAll('[data-action="edit-link-url"]').forEach(el => {

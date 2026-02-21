@@ -21083,26 +21083,38 @@ body.pr-resizing * {
   height: 14px;
 }
 
-.pr-visual-action-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.pr-visual-upload-btn {
-  background: transparent;
-  border: 1px solid #2f3336;
-  color: #e7e9ea;
-}
-
-.pr-visual-upload-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
 .pr-visual-drop-target.drag-over {
   outline: 2px solid #EC5F3F;
   outline-offset: -2px;
   opacity: 0.7;
+}
+
+.pr-visual-title-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 24px 16px 14px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+.pr-visual-title-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #e7e9ea;
+  font-size: 13px;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.pr-visual-title-input::placeholder {
+  color: #71767b;
 }
 
 /* Reference image pill (inline per-output) */
