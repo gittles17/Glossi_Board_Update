@@ -6229,6 +6229,16 @@ class NewsMonitor {
         this.renderNews();
         this.updateNewBadgeCount();
         this.saveLastNewsView();
+
+        const missingPlanArticles = data.news.filter(item => {
+          if (item.archived_at) return false;
+          let cp = item.content_plan;
+          if (typeof cp === 'string') { try { cp = JSON.parse(cp); } catch (e) { return true; } }
+          return !cp || !Array.isArray(cp) || cp.length === 0;
+        });
+        if (missingPlanArticles.length > 0) {
+          this._backfillContentPlans(missingPlanArticles);
+        }
         
         if (!hasRecentNews && !this._autoRefreshAttempted) {
           this._autoRefreshAttempted = true;
@@ -6393,6 +6403,49 @@ class NewsMonitor {
         this.dom.regeneratePlansBtn.disabled = false;
         this.dom.regeneratePlansBtn.classList.remove('spinning');
       }
+    }
+  }
+
+  async _backfillContentPlans(articles) {
+    try {
+      const payload = articles.map(a => ({
+        headline: a.headline,
+        outlet: a.outlet,
+        date: a.date,
+        summary: a.summary,
+        url: a.url
+      }));
+
+      const response = await fetch('/api/pr/regenerate-plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articles: payload })
+      });
+
+      const data = await response.json();
+      if (!data.success || !data.plans?.length) return;
+
+      const plansByUrl = new Map();
+      for (const plan of data.plans) {
+        if (plan.url) plansByUrl.set(plan.url, plan);
+      }
+
+      let updated = 0;
+      for (const item of this.newsHooks) {
+        const match = plansByUrl.get(item.url);
+        if (match) {
+          item.content_plan = match.content_plan;
+          if (match.angle_title) item.angle_title = match.angle_title;
+          if (match.angle_narrative) item.angle_narrative = match.angle_narrative;
+          updated++;
+        }
+      }
+
+      if (updated > 0) {
+        this.normalizeNewsContentTypes();
+        this.renderNews();
+      }
+    } catch (_) {
     }
   }
 

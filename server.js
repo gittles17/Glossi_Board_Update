@@ -498,6 +498,63 @@ AUDIENCE TAG: Each content piece MUST include an "audience" field with one of: "
 
 TONE FOR DESCRIPTIONS: Write content plan descriptions like a sharp comms lead, not a template. Instead of "Thought leadership post tied to this news" write something like "Founder take: why compositing beats generation for brand teams, told through this news hook." Be specific to the article.`;
 
+async function generatePlansForArticles(articles, anthropicKey) {
+  if (!articles.length || !anthropicKey) return [];
+
+  const articlesList = articles.map((a, i) => `
+${i + 1}. HEADLINE: ${a.headline}
+   OUTLET: ${a.outlet}
+   DATE: ${a.date || 'Recent'}
+   SUMMARY: ${a.summary || ''}
+   URL: ${a.url || ''}
+`).join('\n');
+
+  const prompt = `You are a PR strategist for Glossi, a seed-stage startup building AI-powered product photography tools. Given these news articles, generate a content plan for EACH article.
+
+ARTICLES:
+${articlesList}
+
+For each article, return a content_plan array with 2-5 content pieces. Every article MUST have a non-empty content_plan.
+
+Return JSON:
+{
+  "plans": [
+    {
+      "url": "the article URL",
+      "angle_title": "Short story angle name (3-6 words)",
+      "angle_narrative": "1-2 sentences explaining the story angle AND Glossi connection.",
+      "content_plan": [
+        {"type": "tweet", "description": "Specific description", "priority": 1, "audience": "builders"},
+        {"type": "blog_post", "description": "Specific description", "priority": 2, "audience": "brands"}
+      ]
+    }
+  ]
+}
+
+${CONTENT_PLAN_RULES}`;
+
+  const response = await axios.post('https://api.anthropic.com/v1/messages', {
+    model: 'claude-haiku-4-5',
+    max_tokens: 4096,
+    system: 'You are a strategic PR content planner. Always return valid JSON.',
+    messages: [{ role: 'user', content: prompt }]
+  }, {
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': anthropicKey,
+      'anthropic-version': '2023-06-01'
+    },
+    timeout: 60000
+  });
+
+  const text = response.data?.content?.[0]?.text || '';
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return [];
+
+  const parsed = JSON.parse(jsonMatch[0]);
+  return parsed.plans || [];
+}
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', database: useDatabase });
@@ -1565,6 +1622,7 @@ ${CONTENT_PLAN_RULES}
 CRITICAL: Only include articles you're recommending. Do NOT include articles with "EXCLUDED" or "Not relevant" in the relevance field. If you think an article should be excluded, simply don't add it to the JSON array.
 
 Rules:
+- REQUIRED: Every article in your response MUST include a non-empty "content_plan" array with 2-5 content pieces. Never omit content_plan.
 - CRITICAL: Return ONLY 5-10 EXCELLENT articles (quality over quantity)
 - STRICT STANDARD: Every article must have DIRECT, OBVIOUS connection to Glossi's market
 - Focus heavily on Core Topics (1-4) - these are the best articles
@@ -1656,10 +1714,28 @@ EXCLUDE (specific examples):
         date: articleDate
       };
     });
+
+    const missingPlans = normalizedNews.filter(item =>
+      !item.content_plan || !Array.isArray(item.content_plan) || item.content_plan.length === 0
+    );
+    if (missingPlans.length > 0) {
+      try {
+        const plans = await generatePlansForArticles(missingPlans, anthropicKey);
+        const plansByUrl = new Map(plans.map(p => [p.url, p]));
+        for (const item of normalizedNews) {
+          const plan = plansByUrl.get(item.url);
+          if (plan && (!item.content_plan || !Array.isArray(item.content_plan) || item.content_plan.length === 0)) {
+            item.content_plan = plan.content_plan;
+            if (plan.angle_title && !item.angle_title) item.angle_title = plan.angle_title;
+            if (plan.angle_narrative && !item.angle_narrative) item.angle_narrative = plan.angle_narrative;
+          }
+        }
+      } catch (err) {
+        console.error('Content plan backfill failed:', err.message);
+      }
+    }
     
     if (useDatabase) {
-      // Accumulate articles: only insert new ones, skip duplicates (match by URL or headline)
-      // Old articles are cleaned up by the 30-day retention policy on the GET endpoint
       let insertedCount = 0;
       let skippedCount = 0;
       
