@@ -3178,7 +3178,7 @@ app.post('/api/linkedin/publish', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Organization ID not found. Set LINKEDIN_ORG_ID in environment variables or reconnect your account.' });
     }
 
-    const { content, hashtags, media_url } = req.body;
+    const { content, hashtags, media_url, link_url, link_title, link_description, link_image } = req.body;
     if (!content) {
       return res.status(400).json({ success: false, error: 'Post content is required' });
     }
@@ -3195,39 +3195,44 @@ app.post('/api/linkedin/publish', async (req, res) => {
       'X-Restli-Protocol-Version': '2.0.0'
     };
 
+    async function uploadImageToLinkedIn(imageUrl) {
+      let imageBuffer;
+      if (imageUrl.startsWith('data:')) {
+        const matches = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (!matches) throw new Error('Invalid data URL format');
+        imageBuffer = Buffer.from(matches[2], 'base64');
+      } else {
+        const imgRes = await axios.get(imageUrl, { responseType: 'arraybuffer', timeout: 30000 });
+        imageBuffer = Buffer.from(imgRes.data);
+      }
+
+      const initRes = await axios.post(
+        'https://api.linkedin.com/rest/images?action=initializeUpload',
+        { initializeUploadRequest: { owner: `urn:li:organization:${orgId}` } },
+        { headers: liHeaders }
+      );
+
+      const uploadUrl = initRes.data?.value?.uploadUrl;
+      const urn = initRes.data?.value?.image;
+      if (!uploadUrl || !urn) throw new Error('LinkedIn did not return an upload URL');
+
+      await axios.put(uploadUrl, imageBuffer, {
+        headers: {
+          'Authorization': `Bearer ${tokens.access_token}`,
+          'Content-Type': 'application/octet-stream'
+        },
+        maxContentLength: 20 * 1024 * 1024,
+        maxBodyLength: 20 * 1024 * 1024
+      });
+
+      return urn;
+    }
+
     let imageUrn = null;
 
     if (media_url) {
       try {
-        let imageBuffer;
-        if (media_url.startsWith('data:')) {
-          const matches = media_url.match(/^data:([^;]+);base64,(.+)$/);
-          if (!matches) throw new Error('Invalid data URL format');
-          imageBuffer = Buffer.from(matches[2], 'base64');
-        } else {
-          const imgRes = await axios.get(media_url, { responseType: 'arraybuffer', timeout: 30000 });
-          imageBuffer = Buffer.from(imgRes.data);
-        }
-
-        const initRes = await axios.post(
-          'https://api.linkedin.com/rest/images?action=initializeUpload',
-          { initializeUploadRequest: { owner: `urn:li:organization:${orgId}` } },
-          { headers: liHeaders }
-        );
-
-        const uploadUrl = initRes.data?.value?.uploadUrl;
-        imageUrn = initRes.data?.value?.image;
-
-        if (!uploadUrl || !imageUrn) throw new Error('LinkedIn did not return an upload URL');
-
-        await axios.put(uploadUrl, imageBuffer, {
-          headers: {
-            'Authorization': `Bearer ${tokens.access_token}`,
-            'Content-Type': 'application/octet-stream'
-          },
-          maxContentLength: 20 * 1024 * 1024,
-          maxBodyLength: 20 * 1024 * 1024
-        });
+        imageUrn = await uploadImageToLinkedIn(media_url);
       } catch (mediaErr) {
         const msg = mediaErr.response?.data?.message || mediaErr.message;
         return res.status(400).json({ success: false, error: 'LinkedIn image upload failed: ' + msg });
@@ -3248,6 +3253,22 @@ app.post('/api/linkedin/publish', async (req, res) => {
 
     if (imageUrn) {
       postPayload.content = { media: { id: imageUrn } };
+    } else if (link_url && !media_url) {
+      const articleContent = {
+        source: link_url,
+        title: link_title || link_url,
+        description: link_description || ''
+      };
+
+      if (link_image) {
+        try {
+          articleContent.thumbnail = await uploadImageToLinkedIn(link_image);
+        } catch (_) {
+          // Publish without thumbnail if upload fails
+        }
+      }
+
+      postPayload.content = { article: articleContent };
     }
 
     const postRes = await axios.post('https://api.linkedin.com/rest/posts', postPayload, {

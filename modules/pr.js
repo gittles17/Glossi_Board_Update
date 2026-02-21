@@ -10251,6 +10251,10 @@ class DistributeManager {
       this.showMediaUrlInput('Paste video URL...');
     });
 
+    document.getElementById('pr-media-link-btn')?.addEventListener('click', () => {
+      this._mediaUrlMode = 'link';
+      this.showMediaUrlInput('Paste article or webpage URL...');
+    });
 
     document.getElementById('pr-media-url-confirm')?.addEventListener('click', () => {
       this.confirmMediaUrl();
@@ -10750,10 +10754,15 @@ class DistributeManager {
 
     // Build OG link preview card (shown below body when a URL is in the post)
     let linkPreviewHtml = '';
+    const hasLinkAttachment = media.some(m => m.type === 'link');
     if (output.og_data && !mediaHtml) {
       const og = output.og_data;
+      const linkRemoveBtn = hasLinkAttachment && output.status === 'review'
+        ? `<button class="pr-li-media-remove pr-li-link-remove" data-action="remove-link" title="Remove"><i class="ph-light ph-x"></i></button>`
+        : '';
       linkPreviewHtml = `
         <div class="pr-li-link-preview">
+          ${linkRemoveBtn}
           ${og.image ? `<div class="pr-li-link-preview-image"><img src="${this.escapeHtml(og.image)}" alt=""></div>` : ''}
           <div class="pr-li-link-preview-body">
             <div class="pr-li-link-preview-domain">${this.escapeHtml(og.domain || '')}</div>
@@ -10807,6 +10816,15 @@ class DistributeManager {
     container.querySelector('[data-action="remove-media"]')?.addEventListener('click', () => {
       if (this.activeReviewItem) {
         this.activeReviewItem.media_attachments = [];
+        this.persistOutput(this.activeReviewItem);
+        this.renderLinkedInPreview(this.activeReviewItem);
+      }
+    });
+
+    container.querySelector('[data-action="remove-link"]')?.addEventListener('click', () => {
+      if (this.activeReviewItem) {
+        this.activeReviewItem.media_attachments = (this.activeReviewItem.media_attachments || []).filter(m => m.type !== 'link');
+        this.activeReviewItem.og_data = null;
         this.persistOutput(this.activeReviewItem);
         this.renderLinkedInPreview(this.activeReviewItem);
       }
@@ -11383,10 +11401,29 @@ class DistributeManager {
 
     if (this._mediaUrlMode === 'video') {
       this.addMedia({ type: 'video', url, thumbnail: this.getVideoThumbnail(url) });
+    } else if (this._mediaUrlMode === 'link') {
+      this.addMedia({ type: 'link', url });
+      this.fetchOgForLink(url);
     } else {
       this.addMedia({ type: 'image', url });
     }
     this.hideMediaUrlInput();
+  }
+
+  async fetchOgForLink(url) {
+    if (!this.activeReviewItem) return;
+    try {
+      const ogRes = await this.prAgent.apiCall('/api/pr/og-metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      if (ogRes.success && ogRes.og) {
+        this.activeReviewItem.og_data = ogRes.og;
+        this.persistOutput(this.activeReviewItem);
+        this.renderLinkedInPreview(this.activeReviewItem);
+      }
+    } catch (_) {}
   }
 
 
@@ -11657,15 +11694,28 @@ class DistributeManager {
     try {
       const media = this.activeReviewItem.media_attachments || [];
       const imageAttachment = media.find(m => m.type === 'image');
+      const linkAttachment = media.find(m => m.type === 'link');
+      const og = this.activeReviewItem.og_data;
+
+      const payload = {
+        content: this.activeReviewItem.content,
+        hashtags: this.activeReviewItem.hashtags || [],
+        media_url: imageAttachment?.url || null
+      };
+
+      if (linkAttachment && !imageAttachment) {
+        payload.link_url = linkAttachment.url;
+        if (og) {
+          payload.link_title = og.title || '';
+          payload.link_description = og.description || '';
+          payload.link_image = og.image || '';
+        }
+      }
 
       const result = await this.prAgent.apiCall('/api/linkedin/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: this.activeReviewItem.content,
-          hashtags: this.activeReviewItem.hashtags || [],
-          media_url: imageAttachment?.url || null
-        })
+        body: JSON.stringify(payload)
       });
 
       if (result.success) {

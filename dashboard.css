@@ -19694,6 +19694,14 @@ body.pr-resizing * {
   text-decoration: none;
   color: inherit;
   cursor: default;
+  position: relative;
+}
+
+.pr-li-link-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
 }
 
 .pr-li-link-preview-image {
