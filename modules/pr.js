@@ -6160,12 +6160,6 @@ class NewsMonitor {
   getFilteredNews() {
     let filtered = [...this.newsHooks];
     
-    // Remove excluded/irrelevant articles
-    filtered = filtered.filter(item => {
-      const relevance = (item.relevance || '').toLowerCase();
-      return !relevance.includes('excluded') && !relevance.includes('not relevant');
-    });
-    
     // Apply search filter
     if (this.searchQuery) {
       const q = this.searchQuery;
@@ -6239,7 +6233,8 @@ class NewsMonitor {
         this.updateNewBadgeCount();
         this.saveLastNewsView();
         
-        if (!hasRecentNews) {
+        if (!hasRecentNews && !this._autoRefreshAttempted) {
+          this._autoRefreshAttempted = true;
           setTimeout(() => this.refreshNews(), 1000);
         }
       } else {
@@ -6254,22 +6249,22 @@ class NewsMonitor {
   }
 
   async refreshNews() {
-    // Show loading state
     if (this.dom.fetchNewsBtn) {
       this.dom.fetchNewsBtn.disabled = true;
       this.dom.fetchNewsBtn.classList.add('spinning');
     }
     
+    const previousNews = this.newsHooks;
     if (this.dom.newsHooksList) {
       this.dom.newsHooksList.innerHTML = '';
     }
     this._newsLoaderId = startLoaderStatus(this.dom.newsHooksList, 'news');
 
     try {
-      const response = await fetch('/api/pr/news-hooks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const response = await fetch('/api/pr/news-hooks');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
       
@@ -6281,10 +6276,8 @@ class NewsMonitor {
       this.normalizeNewsContentTypes();
       this.renderNews();
     } catch (error) {
-      console.error('Error refreshing news:', error);
-      if (this.dom.newsHooksList) {
-        this.dom.newsHooksList.innerHTML = '<p class="pr-news-hooks-empty">Failed to load news. Try again.</p>';
-      }
+      this.newsHooks = previousNews;
+      this.renderNews();
     } finally {
       stopLoaderStatus(this._newsLoaderId);
       this._newsLoaderId = null;

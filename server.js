@@ -1933,7 +1933,17 @@ app.post('/api/pr/fetch-tldr', async (req, res) => {
     }
 
     if (articles.length === 0) {
-      return res.json({ success: true, news: [], message: 'No articles found in today\'s newsletter' });
+      const existingNews = await pool.query(`
+        SELECT * FROM pr_news_hooks
+        WHERE date > NOW() - INTERVAL '30 days'
+          AND (relevance IS NULL OR (relevance NOT ILIKE '%EXCLUDED%' AND relevance NOT ILIKE '%Not relevant%'))
+        ORDER BY date DESC, fetched_at DESC
+      `);
+      const existingNormalized = existingNews.rows.map(item => ({
+        ...item,
+        outlet: normalizeOutletName(item.outlet)
+      }));
+      return res.json({ success: true, news: existingNormalized, tldrCount: 0, newCount: 0, message: 'No new articles found in today\'s newsletter' });
     }
 
     // Fetch full article content in parallel
