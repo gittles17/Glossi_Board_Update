@@ -21103,19 +21103,6 @@ body.pr-resizing * {
   pointer-events: none;
 }
 
-.pr-visual-title-input {
-  width: 100%;
-  background: transparent;
-  border: none;
-  color: #e7e9ea;
-  font-size: 13px;
-  padding: 10px 12px;
-  outline: none;
-}
-
-.pr-visual-title-input::placeholder {
-  color: #71767b;
-}
 
 /* Reference image pill (inline per-output) */
 .pr-ref-image-pill-row {

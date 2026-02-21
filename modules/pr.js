@@ -11053,37 +11053,58 @@ class DistributeManager {
 
     if (tweetFormat === 'visual') {
       const visualTitle = output.visual_title || '';
+      const hasVisualBg = !!output._visualBgImage;
+
+      let visualImageHtml = '';
       if (hasImage) {
         const img = media.find(m => m.type === 'image');
-        mediaHtml = `
-          <div class="pr-twitter-link-card">
-            <div class="pr-twitter-image-card pr-visual-drop-target" data-action="visual-drop-zone">
-              <img src="${this.escapeHtml(img.url)}" alt="">
-              ${visualTitle ? `<div class="pr-visual-title-overlay">${this.escapeHtml(visualTitle)}</div>` : ''}
-              <button class="pr-twitter-image-remove" data-action="remove-twitter-image" title="Remove image">
-                <i class="ph-light ph-x"></i>
-              </button>
-              <input type="file" class="pr-visual-file-input" data-action="visual-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
+        visualImageHtml = `
+          <div class="pr-twitter-image-card pr-visual-drop-target" data-action="visual-drop-zone">
+            <img src="${this.escapeHtml(img.url)}" alt="">
+            ${visualTitle ? `<div class="pr-visual-title-overlay">${this.escapeHtml(visualTitle)}</div>` : ''}
+            <button class="pr-twitter-image-remove" data-action="remove-twitter-image" title="Remove image">
+              <i class="ph-light ph-x"></i>
+            </button>
+          </div>`;
+      } else if (hasVisualBg) {
+        visualImageHtml = `
+          <div class="pr-og-position-wrap">
+            <div class="pr-og-position-frame" data-action="visual-drag-area">
+              <img src="${this.escapeHtml(output._visualBgImage)}" class="pr-og-position-img" data-action="visual-drag-img" style="transform: translate(${output._visualPosX || 0}px, ${output._visualPosY || 0}px) scale(${(output._visualScale || 100) / 100});">
             </div>
-            <div class="pr-twitter-link-card-body">
-              <input type="text" class="pr-visual-title-input" data-action="edit-visual-title" placeholder="Add overlay title (optional)" value="${this.escapeHtml(visualTitle)}">
+            <div class="pr-og-position-controls">
+              <input type="range" min="25" max="300" value="${output._visualScale || 100}" data-action="visual-scale" class="pr-og-scale-slider" title="Zoom">
+              <button class="pr-og-composite-btn" data-action="visual-apply"><i class="ph-light ph-check"></i> Apply</button>
             </div>
           </div>`;
       } else {
-        mediaHtml = `
-          <div class="pr-twitter-link-card">
-            <div class="pr-twitter-link-card-generate pr-og-upload-zone pr-visual-drop-target" data-action="visual-drop-zone">
-              <label class="pr-og-upload-label">
-                <i class="ph-light ph-upload-simple"></i> Upload image
-                <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-action="visual-file-input" hidden>
-              </label>
-              <span class="pr-og-upload-hint">or drag and drop</span>
-            </div>
-            <div class="pr-twitter-link-card-body">
-              <input type="text" class="pr-visual-title-input" data-action="edit-visual-title" placeholder="Add overlay title (optional)" value="${this.escapeHtml(visualTitle)}">
-            </div>
+        visualImageHtml = `
+          <div class="pr-twitter-link-card-generate pr-og-upload-zone pr-visual-drop-target" data-action="visual-drop-zone">
+            <label class="pr-og-upload-label">
+              <i class="ph-light ph-upload-simple"></i> Upload image
+              <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-action="visual-file-input" hidden>
+            </label>
+            <span class="pr-og-upload-hint">or drag and drop</span>
           </div>`;
       }
+
+      mediaHtml = `
+        <div class="pr-twitter-link-input-wrap">
+          <div class="pr-twitter-link-input-label">
+            <i class="ph-light ph-text-aa"></i>
+            <span>Image Title</span>
+          </div>
+          <input type="text" class="pr-twitter-link-url-input" data-action="edit-visual-title" placeholder="Title text overlaid on the image" value="${this.escapeHtml(visualTitle)}">
+        </div>
+        <div class="pr-twitter-link-card">
+          ${visualImageHtml}
+          ${hasImage ? `<div class="pr-twitter-link-card-body">
+            <div class="pr-twitter-link-card-title">${this.escapeHtml(visualTitle || 'Image Preview')}</div>
+          </div>` : ''}
+        </div>
+        ${hasImage ? `<div class="pr-og-reupload-row">
+          <label class="pr-og-reupload-btn"><i class="ph-light ph-arrow-counter-clockwise"></i> Replace image<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-action="visual-file-input" hidden></label>
+        </div>` : ''}`;
     } else if (tweetFormat === 'link') {
       const linkUrl = output.link_url || '';
       const domain = linkUrl ? (() => { try { return new URL(linkUrl).hostname.replace('www.', ''); } catch { return ''; } })() : '';
@@ -11178,27 +11199,75 @@ class DistributeManager {
     container.querySelectorAll('[data-action="remove-twitter-image"]').forEach(btn => {
       btn.addEventListener('click', () => {
         output.media_attachments = (output.media_attachments || []).filter(m => m.type !== 'image');
-        output.visual_prompt = '';
+        output._visualBgImage = '';
         this.persistOutput(output);
         this.renderTwitterPreview(output);
       });
     });
+
+    const handleVisualUpload = (file) => {
+      if (!file || !file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        output._visualBgImage = reader.result;
+        output._visualPosX = 0;
+        output._visualPosY = 0;
+        output._visualScale = 100;
+        output.media_attachments = (output.media_attachments || []).filter(m => m.type !== 'image');
+        this.renderTwitterPreview(output);
+      };
+      reader.readAsDataURL(file);
+    };
+
     container.querySelectorAll('[data-action="visual-drop-zone"]').forEach(zone => {
       zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
       zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
       zone.addEventListener('drop', (e) => {
         e.preventDefault();
         zone.classList.remove('drag-over');
-        const file = e.dataTransfer.files?.[0];
-        if (file && file.type.startsWith('image/')) this.uploadVisualFile(output, file);
+        handleVisualUpload(e.dataTransfer.files?.[0]);
       });
     });
     container.querySelectorAll('[data-action="visual-file-input"]').forEach(input => {
       input.addEventListener('change', (e) => {
-        const file = e.target.files?.[0];
-        if (file) this.uploadVisualFile(output, file);
+        handleVisualUpload(e.target.files?.[0]);
         e.target.value = '';
       });
+    });
+
+    container.querySelectorAll('[data-action="visual-drag-area"]').forEach(frame => {
+      const img = frame.querySelector('[data-action="visual-drag-img"]');
+      if (!img) return;
+      let dragging = false, startX = 0, startY = 0, origX = 0, origY = 0;
+      frame.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        dragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        origX = output._visualPosX || 0;
+        origY = output._visualPosY || 0;
+      });
+      const onMove = (e) => {
+        if (!dragging) return;
+        output._visualPosX = origX + (e.clientX - startX);
+        output._visualPosY = origY + (e.clientY - startY);
+        img.style.transform = `translate(${output._visualPosX}px, ${output._visualPosY}px) scale(${(output._visualScale || 100) / 100})`;
+      };
+      const onUp = () => { dragging = false; };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    container.querySelectorAll('[data-action="visual-scale"]').forEach(slider => {
+      slider.addEventListener('input', () => {
+        output._visualScale = parseInt(slider.value);
+        const img = container.querySelector('[data-action="visual-drag-img"]');
+        if (img) img.style.transform = `translate(${output._visualPosX || 0}px, ${output._visualPosY || 0}px) scale(${output._visualScale / 100})`;
+      });
+    });
+
+    container.querySelectorAll('[data-action="visual-apply"]').forEach(btn => {
+      btn.addEventListener('click', () => this.applyVisualCrop(output));
     });
     container.querySelectorAll('[data-action="edit-visual-title"]').forEach(el => {
       el.addEventListener('input', () => {
@@ -11208,14 +11277,10 @@ class DistributeManager {
         if (overlay) {
           overlay.textContent = el.value;
           overlay.style.display = el.value ? '' : 'none';
-        } else if (el.value) {
-          const imgCard = container.querySelector('.pr-twitter-image-card');
-          if (imgCard) {
-            const div = document.createElement('div');
-            div.className = 'pr-visual-title-overlay';
-            div.textContent = el.value;
-            imgCard.appendChild(div);
-          }
+        }
+        const cardTitle = container.querySelector('.pr-twitter-link-card-title');
+        if (cardTitle) {
+          cardTitle.textContent = el.value || 'Image Preview';
         }
       });
     });
@@ -11550,21 +11615,53 @@ class DistributeManager {
     } catch (e) { /* silent */ }
   }
 
-  async uploadVisualFile(output, file) {
-    if (!file || !file.type.startsWith('image/')) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res = await fetch('/api/pr/upload-media', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (data.success) {
-        if (!output.media_attachments) output.media_attachments = [];
-        output.media_attachments = output.media_attachments.filter(m => m.type !== 'image');
-        output.media_attachments.unshift({ type: 'image', url: data.url, filename: data.filename, source: 'upload' });
-        this.persistOutput(output);
-        this.renderTwitterPreview(output);
-      }
-    } catch (e) { /* silent */ }
+  async applyVisualCrop(output) {
+    if (!output._visualBgImage) return;
+    const frame = document.querySelector('[data-action="visual-drag-area"]');
+    if (!frame) return;
+
+    const frameRect = frame.getBoundingClientRect();
+    const canvas = document.createElement('canvas');
+    canvas.width = frameRect.width * 2;
+    canvas.height = frameRect.height * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = output._visualBgImage;
+
+    await new Promise((resolve) => {
+      if (img.complete) resolve();
+      else img.onload = resolve;
+    });
+
+    const scale = (output._visualScale || 100) / 100;
+    const posX = output._visualPosX || 0;
+    const posY = output._visualPosY || 0;
+    const drawW = img.naturalWidth * scale;
+    const drawH = img.naturalHeight * scale;
+    const offsetX = (frameRect.width - img.naturalWidth) / 2 + posX;
+    const offsetY = (frameRect.height - img.naturalHeight) / 2 + posY;
+    ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const formData = new FormData();
+      formData.append('file', blob, 'visual.png');
+      try {
+        const res = await fetch('/api/pr/upload-media', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          if (!output.media_attachments) output.media_attachments = [];
+          output.media_attachments = output.media_attachments.filter(m => m.type !== 'image');
+          output.media_attachments.unshift({ type: 'image', url: data.url, source: 'upload' });
+          output._visualBgImage = '';
+          this.persistOutput(output);
+          this.renderTwitterPreview(output);
+        }
+      } catch (e) { /* silent */ }
+    }, 'image/png');
   }
 
   addMedia(attachment) {
