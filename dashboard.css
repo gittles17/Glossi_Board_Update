@@ -21031,77 +21031,7 @@ body.pr-resizing * {
   line-height: 1.4;
 }
 
-/* Twitter Generate Visual */
-.pr-twitter-generate-visual {
-  margin-top: 10px;
-  border: 1px dashed #2f3336;
-  border-radius: 16px;
-  padding: 14px;
-  background: #16181c;
-}
 
-.pr-twitter-generate-visual-hint {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #71767b;
-  margin-bottom: 8px;
-}
-
-.pr-twitter-generate-visual-hint i {
-  font-size: 16px;
-  color: #EC5F3F;
-}
-
-.pr-twitter-generate-visual-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #e7e9ea;
-  background: #EC5F3F;
-  border: none;
-  border-radius: 100px;
-  cursor: pointer;
-  transition: background 150ms ease;
-}
-
-.pr-twitter-generate-visual-btn:hover {
-  background: #d9533a;
-}
-
-.pr-twitter-generate-visual-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.pr-twitter-generate-visual-btn .glossi-loader {
-  width: 14px;
-  height: 14px;
-}
-
-.pr-visual-drop-target.drag-over {
-  outline: 2px solid #EC5F3F;
-  outline-offset: -2px;
-  opacity: 0.7;
-}
-
-.pr-visual-title-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 24px 16px 14px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.3;
-  pointer-events: none;
-}
 
 
 /* Reference image pill (inline per-output) */
