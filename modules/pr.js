@@ -5634,8 +5634,7 @@ class NewsMonitor {
     this._customSourceFlow = false;
     this._pendingAngleSource = null;
 
-    // News card archive state (persisted to localStorage)
-    this._archivedNewsIds = new Set();
+    // News card archive state (persisted to database via archived_at column)
     this._newsArchivedExpanded = false;
     this._customArchivedExpanded = false;
 
@@ -5654,7 +5653,6 @@ class NewsMonitor {
     this.setupFileTree();
     this.setupPanelResize();
     this.loadCustomCards();
-    this.loadArchivedNewsIds();
     this.loadLastNewsView();
     await this.loadFavorites();
     this.setupFavoritesFilter();
@@ -6210,23 +6208,15 @@ class NewsMonitor {
       const data = await response.json();
       if (data.success && data.news && data.news.length > 0) {
         const now = Date.now();
-        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-        const filteredNews = data.news.filter(item => {
-          const itemDate = new Date(item.date || item.fetched_at);
-          return (now - itemDate.getTime()) < thirtyDaysMs;
-        });
-        
-        // Check if filtered news is all stale (>2 days old, safety net for missed cron)
         const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
-        const hasRecentNews = filteredNews.some(item => {
+        const hasRecentNews = data.news.some(item => {
           const fetchedAt = new Date(item.fetched_at || item.date);
-          return (now - fetchedAt.getTime()) < twoDaysMs;
+          return !item.archived_at && (now - fetchedAt.getTime()) < twoDaysMs;
         });
         
-        // Tag articles fetched since user's last visit as "new"
         this._newArticleIds = new Set();
         if (this._lastNewsViewTimestamp) {
-          for (const item of filteredNews) {
+          for (const item of data.news) {
             const fetchedAt = new Date(item.fetched_at || item.date).getTime();
             if (fetchedAt > this._lastNewsViewTimestamp) {
               this._newArticleIds.add(item.url || item.headline);
@@ -6234,7 +6224,7 @@ class NewsMonitor {
           }
         }
         
-        this.newsHooks = filteredNews;
+        this.newsHooks = data.news;
         this.normalizeNewsContentTypes();
         this.renderNews();
         this.updateNewBadgeCount();
@@ -6262,10 +6252,17 @@ class NewsMonitor {
     }
 
     const previousNews = this.newsHooks;
+
     if (this.dom.newsHooksList) {
-      this.dom.newsHooksList.innerHTML = '';
+      this.dom.newsHooksList.classList.add('pr-news-refreshing');
+      let overlay = this.dom.newsHooksList.querySelector('.pr-news-refresh-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'pr-news-refresh-overlay';
+        this.dom.newsHooksList.appendChild(overlay);
+      }
+      this._newsLoaderId = startLoaderStatus(overlay, 'news');
     }
-    this._newsLoaderId = startLoaderStatus(this.dom.newsHooksList, 'news');
 
     let totalNew = 0;
 
@@ -6284,10 +6281,8 @@ class NewsMonitor {
       totalNew += rssData.newCount || 0;
       this.newsHooks = rssData.news || [];
       this.normalizeNewsContentTypes();
-      this.renderNews();
     } catch (error) {
       this.newsHooks = previousNews;
-      this.renderNews();
     }
 
     try {
@@ -6301,13 +6296,21 @@ class NewsMonitor {
           totalNew += tldrData.newCount || 0;
           this.newsHooks = tldrData.news || [];
           this.normalizeNewsContentTypes();
-          this.renderNews();
         }
       }
     } catch { }
 
     stopLoaderStatus(this._newsLoaderId);
     this._newsLoaderId = null;
+
+    if (this.dom.newsHooksList) {
+      this.dom.newsHooksList.classList.remove('pr-news-refreshing');
+      const overlay = this.dom.newsHooksList.querySelector('.pr-news-refresh-overlay');
+      if (overlay) overlay.remove();
+    }
+
+    this.renderNews();
+
     if (this.dom.fetchNewsBtn) {
       this.dom.fetchNewsBtn.disabled = false;
       this.dom.fetchNewsBtn.classList.remove('spinning');
@@ -6337,7 +6340,7 @@ class NewsMonitor {
 
     try {
       const allArticles = this.newsHooks || [];
-      const articles = allArticles.filter(item => !this._archivedNewsIds.has(item.url || item.headline));
+      const articles = allArticles.filter(item => !item.archived_at);
 
       if (articles.length === 0) {
         return;
@@ -6396,12 +6399,10 @@ class NewsMonitor {
   renderNews() {
     if (!this.dom.newsHooksList) return;
 
-    // Apply filters
     const filteredNews = this.getFilteredNews();
 
-    // Separate active vs archived
-    let activeNews = filteredNews.filter(item => !this._archivedNewsIds.has(item.url || item.headline));
-    const archivedNews = filteredNews.filter(item => this._archivedNewsIds.has(item.url || item.headline));
+    let activeNews = filteredNews.filter(item => !item.archived_at);
+    const archivedNews = filteredNews.filter(item => !!item.archived_at);
 
     // Apply favorites filter
     if (this._favoritesFilter === 'favorites') {
@@ -6630,29 +6631,26 @@ class NewsMonitor {
   // NEWS CARD ARCHIVE
   // =========================================
 
-  loadArchivedNewsIds() {
-    try {
-      const saved = localStorage.getItem('pr_archived_news_ids');
-      if (saved) this._archivedNewsIds = new Set(JSON.parse(saved));
-    } catch (e) { /* ignore */ }
-  }
-
-  saveArchivedNewsIds() {
-    try {
-      localStorage.setItem('pr_archived_news_ids', JSON.stringify([...this._archivedNewsIds]));
-    } catch (e) { /* ignore */ }
-  }
-
   archiveNewsCard(newsId) {
-    this._archivedNewsIds.add(newsId);
-    this.saveArchivedNewsIds();
+    const item = this.newsHooks.find(h => (h.url || h.headline) === newsId);
+    if (item) item.archived_at = new Date().toISOString();
     this.renderNews();
+    fetch('/api/pr/news-hooks/archive', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newsId })
+    }).catch(() => {});
   }
 
   unarchiveNewsCard(newsId) {
-    this._archivedNewsIds.delete(newsId);
-    this.saveArchivedNewsIds();
+    const item = this.newsHooks.find(h => (h.url || h.headline) === newsId);
+    if (item) item.archived_at = null;
     this.renderNews();
+    fetch('/api/pr/news-hooks/unarchive', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newsId })
+    }).catch(() => {});
   }
 
   // =========================================
@@ -12888,11 +12886,14 @@ CHANNEL FIT:
 
     for (const line of lines) {
       const trimmed = line.trim();
-      const headerMatch = trimmed.match(/^(WORKING|NOT WORKING|SUGGESTIONS|CHANNEL FIT):?\s*$/i);
+      const stripped = trimmed.replace(/\*\*/g, '');
+      const headerMatch = stripped.match(/^(WORKING|NOT WORKING|SUGGESTIONS|CHANNEL FIT):?\s*(.*)/i);
       if (headerMatch) {
         if (currentKey) sections.push({ key: currentKey, lines: currentLines });
         currentKey = headerMatch[1].toUpperCase();
         currentLines = [];
+        const trailing = headerMatch[2].replace(/^[-*]\s*/, '').trim();
+        if (trailing) currentLines.push(trailing);
       } else if (trimmed && currentKey) {
         currentLines.push(trimmed);
       }
@@ -12900,7 +12901,11 @@ CHANNEL FIT:
     if (currentKey) sections.push({ key: currentKey, lines: currentLines });
 
     if (sections.length === 0) {
-      bodyEl.innerHTML = `<div class="pr-live-insight-section"><div class="pr-live-insight-section-body">${this.escapeHtml(text)}</div></div>`;
+      if (typeof marked !== 'undefined' && marked.parse) {
+        bodyEl.innerHTML = `<div class="pr-live-insight-section"><div class="pr-live-insight-section-body">${marked.parse(text, { breaks: true })}</div></div>`;
+      } else {
+        bodyEl.innerHTML = `<div class="pr-live-insight-section"><div class="pr-live-insight-section-body">${this.escapeHtml(text)}</div></div>`;
+      }
       return;
     }
 

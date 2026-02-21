@@ -13968,12 +13968,32 @@ svg.spinning,
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .pr-news-hooks-list:has(.pr-news-hooks-empty),
 .pr-news-hooks-list:has(.glossi-loader-status) {
   justify-content: center;
   align-items: center;
+}
+
+.pr-news-hooks-list.pr-news-refreshing .pr-news-items,
+.pr-news-hooks-list.pr-news-refreshing .pr-news-archived-section,
+.pr-news-hooks-list.pr-news-refreshing .pr-news-show-more {
+  opacity: 0.3;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.pr-news-refresh-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius-md);
 }
 
 /* ============================================

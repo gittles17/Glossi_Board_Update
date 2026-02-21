@@ -9,6 +9,7 @@ const OAuth = require('oauth-1.0a');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const cron = require('node-cron');
 
 const compression = require('compression');
 const app = express();
@@ -365,6 +366,7 @@ async function initDatabase() {
             ALTER TABLE pr_news_hooks ADD COLUMN IF NOT EXISTS content_plan JSONB;
             ALTER TABLE pr_news_hooks ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'rss';
             ALTER TABLE pr_news_hooks ADD COLUMN IF NOT EXISTS glossi_takeaway TEXT;
+            ALTER TABLE pr_news_hooks ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP;
           END $$;
         `);
         
@@ -1336,15 +1338,19 @@ app.post('/api/pr/news-hooks', async (req, res) => {
       return res.status(500).json({ success: false, error: 'Anthropic API key not configured in environment variables' });
     }
     
-    // Clean up old news hooks before fetching new ones (by article date)
+    // Run housekeeping: auto-archive stale articles, delete old archived ones
     if (useDatabase) {
       try {
         await pool.query(`
-          DELETE FROM pr_news_hooks 
-          WHERE date < NOW() - INTERVAL '30 days'
+          UPDATE pr_news_hooks SET archived_at = NOW()
+          WHERE archived_at IS NULL AND fetched_at < NOW() - INTERVAL '3 days'
+        `);
+        await pool.query(`
+          DELETE FROM pr_news_hooks
+          WHERE archived_at IS NOT NULL AND archived_at < NOW() - INTERVAL '30 days'
         `);
       } catch (cleanupError) {
-        console.error('Error cleaning up old news:', cleanupError);
+        console.error('Error during news housekeeping:', cleanupError);
       }
     }
     
@@ -1696,11 +1702,10 @@ EXCLUDE (specific examples):
       
       console.log(`Inserted ${insertedCount} new, skipped ${skippedCount} duplicates out of ${normalizedNews.length} analyzed`);
       
-      // Return ALL articles from DB (accumulated, not just new ones), excluding irrelevant
       const allNews = await pool.query(`
         SELECT * FROM pr_news_hooks 
-        WHERE date > NOW() - INTERVAL '30 days'
-          AND (relevance IS NULL OR (relevance NOT ILIKE '%EXCLUDED%' AND relevance NOT ILIKE '%Not relevant%'))
+        WHERE (relevance IS NULL OR (relevance NOT ILIKE '%EXCLUDED%' AND relevance NOT ILIKE '%Not relevant%'))
+          AND (archived_at IS NULL OR archived_at > NOW() - INTERVAL '30 days')
         ORDER BY date DESC, fetched_at DESC
       `);
       
@@ -1740,15 +1745,13 @@ app.get('/api/pr/news-hooks', async (req, res) => {
       return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
-    // Only return news from the last 30 days, excluding irrelevant articles
     const result = await pool.query(`
       SELECT * FROM pr_news_hooks 
-      WHERE date > NOW() - INTERVAL '30 days'
-        AND (relevance IS NULL OR (relevance NOT ILIKE '%EXCLUDED%' AND relevance NOT ILIKE '%Not relevant%'))
+      WHERE (relevance IS NULL OR (relevance NOT ILIKE '%EXCLUDED%' AND relevance NOT ILIKE '%Not relevant%'))
+        AND (archived_at IS NULL OR archived_at > NOW() - INTERVAL '30 days')
       ORDER BY date DESC, fetched_at DESC
     `);
     
-    // Normalize outlet names on read (handles old cached data with raw domains)
     const normalizedNews = result.rows.map(item => ({
       ...item,
       outlet: normalizeOutletName(item.outlet)
@@ -1756,9 +1759,8 @@ app.get('/api/pr/news-hooks', async (req, res) => {
     
     res.json({ success: true, news: normalizedNews });
   } catch (error) {
-    console.error('Error loading news hooks:', error);
     res.status(500).json({ success: false, error: error.message });
-  }
+    }
 });
 
 // Delete excluded/irrelevant articles from the database
@@ -1774,6 +1776,46 @@ app.delete('/api/pr/news-hooks/excluded', async (req, res) => {
     `);
     
     res.json({ success: true, deleted: result.rowCount });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Archive a news card (set archived_at timestamp)
+app.patch('/api/pr/news-hooks/archive', async (req, res) => {
+  try {
+    const { newsId } = req.body;
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    if (!newsId) {
+      return res.status(400).json({ success: false, error: 'newsId is required' });
+    }
+    await pool.query(
+      `UPDATE pr_news_hooks SET archived_at = NOW() WHERE (url = $1 OR headline = $1) AND archived_at IS NULL`,
+      [newsId]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Unarchive a news card (clear archived_at)
+app.patch('/api/pr/news-hooks/unarchive', async (req, res) => {
+  try {
+    const { newsId } = req.body;
+    if (!useDatabase) {
+      return res.status(503).json({ success: false, error: 'Database not configured' });
+    }
+    if (!newsId) {
+      return res.status(400).json({ success: false, error: 'newsId is required' });
+    }
+    await pool.query(
+      `UPDATE pr_news_hooks SET archived_at = NULL WHERE (url = $1 OR headline = $1)`,
+      [newsId]
+    );
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -1955,8 +1997,8 @@ app.post('/api/pr/fetch-tldr', async (req, res) => {
     if (articles.length === 0) {
       const existingNews = await pool.query(`
         SELECT * FROM pr_news_hooks
-        WHERE date > NOW() - INTERVAL '30 days'
-          AND (relevance IS NULL OR (relevance NOT ILIKE '%EXCLUDED%' AND relevance NOT ILIKE '%Not relevant%'))
+        WHERE (relevance IS NULL OR (relevance NOT ILIKE '%EXCLUDED%' AND relevance NOT ILIKE '%Not relevant%'))
+          AND (archived_at IS NULL OR archived_at > NOW() - INTERVAL '30 days')
         ORDER BY date DESC, fetched_at DESC
       `);
       const existingNormalized = existingNews.rows.map(item => ({
@@ -2084,8 +2126,8 @@ Only include clearly relevant articles. Quality over quantity.`;
 
     const allNews = await pool.query(`
       SELECT * FROM pr_news_hooks
-      WHERE date > NOW() - INTERVAL '30 days'
-        AND (relevance IS NULL OR (relevance NOT ILIKE '%EXCLUDED%' AND relevance NOT ILIKE '%Not relevant%'))
+      WHERE (relevance IS NULL OR (relevance NOT ILIKE '%EXCLUDED%' AND relevance NOT ILIKE '%Not relevant%'))
+        AND (archived_at IS NULL OR archived_at > NOW() - INTERVAL '30 days')
       ORDER BY date DESC, fetched_at DESC
     `);
 
@@ -4128,10 +4170,73 @@ function validateEnvironment() {
   }
 }
 
+// Auto-archive articles older than 3 days, delete archived articles older than 30 days
+async function runNewsHousekeeping() {
+  if (!useDatabase) return;
+  try {
+    const archived = await pool.query(`
+      UPDATE pr_news_hooks SET archived_at = NOW()
+      WHERE archived_at IS NULL AND fetched_at < NOW() - INTERVAL '3 days'
+    `);
+    if (archived.rowCount > 0) {
+      console.log(`Auto-archived ${archived.rowCount} articles older than 3 days`);
+    }
+
+    const deleted = await pool.query(`
+      DELETE FROM pr_news_hooks WHERE archived_at IS NOT NULL AND archived_at < NOW() - INTERVAL '30 days'
+    `);
+    if (deleted.rowCount > 0) {
+      console.log(`Deleted ${deleted.rowCount} archived articles older than 30 days`);
+    }
+  } catch (error) {
+    console.error('News housekeeping error:', error.message);
+  }
+}
+
+// Trigger a full news refresh (RSS + TLDR) server-side
+async function cronRefreshNews() {
+  if (!useDatabase) return;
+  console.log('Cron: starting scheduled news refresh...');
+  try {
+    const response = await axios.post(`http://127.0.0.1:${PORT}/api/pr/news-hooks`, {}, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 120000
+    });
+    console.log(`Cron: RSS refresh complete, newCount=${response.data.newCount || 0}`);
+  } catch (error) {
+    console.error('Cron: RSS refresh failed:', error.message);
+  }
+  try {
+    const response = await axios.post(`http://127.0.0.1:${PORT}/api/pr/fetch-tldr`, {}, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 120000
+    });
+    console.log(`Cron: TLDR refresh complete, newCount=${response.data.newCount || 0}`);
+  } catch (error) {
+    console.error('Cron: TLDR refresh failed:', error.message);
+  }
+}
+
 // Start server
 async function start() {
   validateEnvironment();
   await initDatabase();
+
+  // Run housekeeping on startup
+  await runNewsHousekeeping();
+
+  // 3 AM PST daily: auto-refresh news + housekeeping
+  // PST = UTC-8, so 3 AM PST = 11 AM UTC
+  cron.schedule('0 11 * * *', async () => {
+    console.log('Cron: 3 AM PST triggered');
+    await runNewsHousekeeping();
+    await cronRefreshNews();
+  });
+
+  // Run housekeeping every 6 hours as a safety net
+  cron.schedule('0 */6 * * *', () => {
+    runNewsHousekeeping();
+  });
   
   const host = useDatabase ? '0.0.0.0' : '127.0.0.1';
   
