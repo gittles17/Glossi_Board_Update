@@ -1891,22 +1891,29 @@ app.post('/api/pr/fetch-tldr', async (req, res) => {
       return res.status(503).json({ success: false, error: 'Database not configured' });
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const newsletterUrl = `https://tldr.tech/ai/${today}`;
 
     let html;
     try {
       const response = await axios.get(newsletterUrl, {
         timeout: 15000,
+        maxRedirects: 0,
+        validateStatus: s => s >= 200 && s < 300,
         headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' }
       });
       html = response.data;
     } catch {
-      const latestResponse = await axios.get('https://tldr.tech/api/latest/ai', {
+      const yesterdayDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const yesterday = `${yesterdayDate.getFullYear()}-${String(yesterdayDate.getMonth() + 1).padStart(2, '0')}-${String(yesterdayDate.getDate()).padStart(2, '0')}`;
+      const fallbackResponse = await axios.get(`https://tldr.tech/ai/${yesterday}`, {
         timeout: 15000,
+        maxRedirects: 0,
+        validateStatus: s => s >= 200 && s < 300,
         headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' }
       });
-      html = latestResponse.data;
+      html = fallbackResponse.data;
     }
 
     function decodeEntities(str) {
