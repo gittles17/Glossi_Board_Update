@@ -21083,6 +21083,28 @@ body.pr-resizing * {
   height: 14px;
 }
 
+.pr-visual-action-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.pr-visual-upload-btn {
+  background: transparent;
+  border: 1px solid #2f3336;
+  color: #e7e9ea;
+}
+
+.pr-visual-upload-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pr-visual-drop-target.drag-over {
+  outline: 2px solid #EC5F3F;
+  outline-offset: -2px;
+  opacity: 0.7;
+}
+
 /* Reference image pill (inline per-output) */
 .pr-ref-image-pill-row {
   display: flex;

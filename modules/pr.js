@@ -204,8 +204,18 @@ const CONTENT_TYPES = [
 ];
 
 function normalizeContentType(type) {
-  if (type === 'tweet_thread' || type === 'twitter_thread') return 'tweet';
-  return type;
+  if (!type) return type;
+  const aliases = {
+    'twitter': 'tweet',
+    'tweet_thread': 'tweet',
+    'twitter_thread': 'tweet',
+    'twitter_post': 'tweet',
+    'x_post': 'tweet',
+    'linkedin': 'linkedin_post',
+    'email': 'email_blast',
+    'blog': 'blog_post'
+  };
+  return aliases[type] || type;
 }
 
 class PRAgent {
@@ -11053,14 +11063,16 @@ class DistributeManager {
               </select>`;
       if (hasImage) {
         const img = media.find(m => m.type === 'image');
+        const isUploaded = img.source === 'upload';
         mediaHtml = `
-          <div class="pr-twitter-image-card">
+          <div class="pr-twitter-image-card pr-visual-drop-target" data-action="visual-drop-zone">
             <img src="${this.escapeHtml(img.url)}" alt="">
             <button class="pr-twitter-image-remove" data-action="remove-twitter-image" title="Remove image">
               <i class="ph-light ph-x"></i>
             </button>
+            <input type="file" class="pr-visual-file-input" data-action="visual-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
           </div>
-          <div class="pr-twitter-visual-feedback">
+          ${isUploaded ? '' : `<div class="pr-twitter-visual-feedback">
             <div class="pr-twitter-visual-feedback-row">
               ${modeSelectHtml}
               <select class="pr-og-provider-select" data-action="visual-provider-select">
@@ -11071,7 +11083,7 @@ class DistributeManager {
               <button class="pr-twitter-visual-feedback-btn" data-action="submit-feedback">Refine</button>
             </div>
             ${refPillHtml}
-          </div>`;
+          </div>`}`;
       } else if (output._visualGenerating) {
         mediaHtml = `
           <div class="pr-twitter-visual-loading">
@@ -11080,10 +11092,10 @@ class DistributeManager {
           </div>`;
       } else {
         mediaHtml = `
-          <div class="pr-twitter-generate-visual">
+          <div class="pr-twitter-generate-visual pr-visual-drop-target" data-action="visual-drop-zone">
             <div class="pr-twitter-generate-visual-hint">
               <i class="ph-light ph-image"></i>
-              <span>Click to generate an AI visual</span>
+              <span>Drop an image here, or generate one</span>
             </div>
             <div class="pr-twitter-visual-feedback">
               <div class="pr-twitter-visual-feedback-row">
@@ -11091,9 +11103,15 @@ class DistributeManager {
               </div>
             </div>
             ${refPillHtml}
-            <button class="pr-twitter-generate-visual-btn" data-action="generate-visual">
-              <i class="ph-light ph-magic-wand"></i> Generate Visual
-            </button>
+            <div class="pr-visual-action-row">
+              <button class="pr-twitter-generate-visual-btn" data-action="generate-visual">
+                <i class="ph-light ph-magic-wand"></i> Generate
+              </button>
+              <button class="pr-twitter-generate-visual-btn pr-visual-upload-btn" data-action="visual-upload-browse">
+                <i class="ph-light ph-upload-simple"></i> Upload
+              </button>
+            </div>
+            <input type="file" class="pr-visual-file-input" data-action="visual-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
           </div>`;
       }
     } else if (tweetFormat === 'link') {
@@ -11196,6 +11214,28 @@ class DistributeManager {
         output.visual_prompt = '';
         this.persistOutput(output);
         this.renderTwitterPreview(output);
+      });
+    });
+    container.querySelectorAll('[data-action="visual-drop-zone"]').forEach(zone => {
+      zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        const file = e.dataTransfer.files?.[0];
+        if (file && file.type.startsWith('image/')) this.uploadVisualFile(output, file);
+      });
+    });
+    container.querySelectorAll('[data-action="visual-upload-browse"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        container.querySelector('[data-action="visual-file-input"]')?.click();
+      });
+    });
+    container.querySelectorAll('[data-action="visual-file-input"]').forEach(input => {
+      input.addEventListener('change', (e) => {
+        const file = e.target.files?.[0];
+        if (file) this.uploadVisualFile(output, file);
+        e.target.value = '';
       });
     });
     container.querySelectorAll('[data-action="submit-feedback"]').forEach(btn => {
@@ -11371,7 +11411,7 @@ class DistributeManager {
       if (imageRes.success && imageRes.image) {
         if (!output.media_attachments) output.media_attachments = [];
         output.media_attachments = output.media_attachments.filter(m => m.type !== 'image');
-        output.media_attachments.unshift({ type: 'image', url: imageRes.image });
+        output.media_attachments.unshift({ type: 'image', url: imageRes.image, source: 'generated' });
         this.persistOutput(output);
         this.renderTwitterPreview(output);
       } else {
@@ -11431,7 +11471,7 @@ class DistributeManager {
       if (imageRes.success && imageRes.image) {
         if (!output.media_attachments) output.media_attachments = [];
         output.media_attachments = output.media_attachments.filter(m => m.type !== 'image');
-        output.media_attachments.unshift({ type: 'image', url: imageRes.image });
+        output.media_attachments.unshift({ type: 'image', url: imageRes.image, source: 'generated' });
         this.persistOutput(output);
         this.renderTwitterPreview(output);
       } else {
@@ -11555,6 +11595,23 @@ class DistributeManager {
       const data = await res.json();
       if (data.success) {
         this.addMedia({ type: 'image', url: data.url, filename: data.filename });
+      }
+    } catch (e) { /* silent */ }
+  }
+
+  async uploadVisualFile(output, file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('/api/pr/upload-media', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        if (!output.media_attachments) output.media_attachments = [];
+        output.media_attachments = output.media_attachments.filter(m => m.type !== 'image');
+        output.media_attachments.unshift({ type: 'image', url: data.url, filename: data.filename, source: 'upload' });
+        this.persistOutput(output);
+        this.renderTwitterPreview(output);
       }
     } catch (e) { /* silent */ }
   }
