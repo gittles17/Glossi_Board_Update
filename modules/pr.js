@@ -5828,7 +5828,6 @@ class NewsMonitor {
   setupDOM() {
     this.dom = {
       fetchNewsBtn: document.getElementById('pr-fetch-news-btn'),
-      fetchTldrBtn: document.getElementById('pr-fetch-tldr-btn'),
       regeneratePlansBtn: document.getElementById('pr-regenerate-plans-btn'),
       newsHooksList: document.getElementById('pr-news-hooks-list'),
       sourcesDrawer: document.getElementById('pr-sources-drawer'),
@@ -5860,7 +5859,6 @@ class NewsMonitor {
 
   setupEventListeners() {
     this.dom.fetchNewsBtn?.addEventListener('click', () => this.refreshNews());
-    this.dom.fetchTldrBtn?.addEventListener('click', () => this.fetchTldrNewsletter());
     this.dom.regeneratePlansBtn?.addEventListener('click', () => this.regenerateContentPlans());
 
     // Strategy sub-tab switching
@@ -6253,74 +6251,61 @@ class NewsMonitor {
       this.dom.fetchNewsBtn.disabled = true;
       this.dom.fetchNewsBtn.classList.add('spinning');
     }
-    
+
     const previousNews = this.newsHooks;
     if (this.dom.newsHooksList) {
       this.dom.newsHooksList.innerHTML = '';
     }
     this._newsLoaderId = startLoaderStatus(this.dom.newsHooksList, 'news');
 
+    let totalNew = 0;
+
     try {
-      const response = await fetch('/api/pr/news-hooks');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const rssResponse = await fetch('/api/pr/news-hooks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!rssResponse.ok) {
+        throw new Error(`RSS fetch failed: ${rssResponse.status}`);
       }
-
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch news');
+      const rssData = await rssResponse.json();
+      if (!rssData.success) {
+        throw new Error(rssData.error || 'Failed to fetch RSS news');
       }
-
-      this.newsHooks = data.news || [];
+      totalNew += rssData.newCount || 0;
+      this.newsHooks = rssData.news || [];
       this.normalizeNewsContentTypes();
       this.renderNews();
     } catch (error) {
       this.newsHooks = previousNews;
       this.renderNews();
-    } finally {
-      stopLoaderStatus(this._newsLoaderId);
-      this._newsLoaderId = null;
-      if (this.dom.fetchNewsBtn) {
-        this.dom.fetchNewsBtn.disabled = false;
-        this.dom.fetchNewsBtn.classList.remove('spinning');
-      }
     }
-  }
-
-  async fetchTldrNewsletter() {
-    if (this.dom.fetchTldrBtn) {
-      this.dom.fetchTldrBtn.disabled = true;
-      this.dom.fetchTldrBtn.classList.add('spinning');
-    }
-
-    this._newsLoaderId = startLoaderStatus(this.dom.newsHooksList, 'tldr');
 
     try {
-      const response = await fetch('/api/pr/fetch-tldr', {
+      const tldrResponse = await fetch('/api/pr/fetch-tldr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch TLDR newsletter');
+      if (tldrResponse.ok) {
+        const tldrData = await tldrResponse.json();
+        if (tldrData.success) {
+          totalNew += tldrData.newCount || 0;
+          this.newsHooks = tldrData.news || [];
+          this.normalizeNewsContentTypes();
+          this.renderNews();
+        }
       }
+    } catch { }
 
-      this.newsHooks = data.news || [];
-      this.normalizeNewsContentTypes();
-      this.renderNews();
-      this.prAgent.showToast(`TLDR AI: ${data.newCount || 0} new articles added`, 'success');
-    } catch (error) {
-      this.prAgent.showToast('Failed to fetch TLDR newsletter', 'error');
-    } finally {
-      stopLoaderStatus(this._newsLoaderId);
-      this._newsLoaderId = null;
-      if (this.dom.fetchTldrBtn) {
-        this.dom.fetchTldrBtn.disabled = false;
-        this.dom.fetchTldrBtn.classList.remove('spinning');
-      }
+    stopLoaderStatus(this._newsLoaderId);
+    this._newsLoaderId = null;
+    if (this.dom.fetchNewsBtn) {
+      this.dom.fetchNewsBtn.disabled = false;
+      this.dom.fetchNewsBtn.classList.remove('spinning');
+    }
+
+    if (totalNew > 0) {
+      this.prAgent.showToast(`${totalNew} new article${totalNew === 1 ? '' : 's'} added`, 'success');
     }
   }
 
