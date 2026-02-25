@@ -44,7 +44,8 @@ class Notebook {
       seedRaise: { enabled: true, title: 'Seed Raise', icon: 'trending-up' },
       pipeline: { enabled: true, title: 'Pipeline', icon: 'bar-chart' },
       meetings: { enabled: true, title: 'Meetings', icon: 'users' },
-      quickLinks: { title: 'Quick Links', icon: 'link', expandable: true }
+      quickLinks: { title: 'Quick Links', icon: 'link', expandable: true },
+      contentInsights: { enabled: false, title: 'Content Insights', icon: 'lightbulb' }
     };
   }
 
@@ -1739,6 +1740,17 @@ ${milestonesData}
 ---`);
       }
     }
+
+    if (this.dashboardSources.contentInsights.enabled) {
+      const insightsData = this.getContentInsightsData();
+      if (insightsData) {
+        parts.push(`--- Dashboard Source: Content Insights (Live) ---
+These insights are derived from analyzing published social media post performance. Use them to inform content strategy recommendations.
+
+${insightsData}
+---`);
+      }
+    }
     
     return parts.join('\n\n');
   }
@@ -2164,6 +2176,17 @@ ${milestonesData}
     });
     
     return lines.join('\n');
+  }
+
+  getContentInsightsData() {
+    const prAgent = window.prAgent;
+    if (!prAgent?.liveManager) return null;
+    const insights = prAgent.liveManager.cachedInsights;
+    if (insights) return insights;
+    if (!prAgent.liveManager.insightsLoading && prAgent.liveManager.allPosts?.length > 0) {
+      prAgent.liveManager.generateInsights();
+    }
+    return null;
   }
   
   /**
@@ -2722,7 +2745,8 @@ REPORT GUIDELINES:
       seedRaise: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>',
       pipeline: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>',
       meetings: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
-      quickLinks: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>'
+      quickLinks: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>',
+      contentInsights: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"></path></svg>'
     };
     
     // Render dashboard sources section

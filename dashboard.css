@@ -13334,6 +13334,130 @@ a.dropdown-item {
   border-color: var(--accent-green);
 }
 
+/* PR Live Data Sources */
+.pr-live-data-sources {
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.pr-live-data-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  padding: var(--space-1);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease;
+}
+
+.pr-live-data-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.pr-live-data-chevron {
+  color: var(--text-muted);
+  font-size: 12px;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.pr-live-data-sources.expanded .pr-live-data-chevron {
+  transform: rotate(90deg);
+}
+
+.pr-live-data-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pr-live-data-badge {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--accent-green);
+  background: rgba(91, 176, 154, 0.15);
+  padding: 2px 6px;
+  border-radius: var(--radius-xl);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pr-live-data-list {
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pr-live-data-sources.expanded .pr-live-data-list {
+  display: flex;
+}
+
+.pr-live-data-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.pr-live-data-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.pr-live-data-item.disabled {
+  opacity: 0.4;
+}
+
+.pr-live-data-toggle-wrap {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.pr-live-data-toggle {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent-green);
+  cursor: pointer;
+}
+
+.pr-live-data-icon {
+  color: var(--text-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.pr-live-data-item-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.pr-live-data-status {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.pr-live-data-status.loading i {
+  animation: pr-live-spin 0.8s linear infinite;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pr-live-data-status.ready::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--accent-green);
+  border-radius: 50%;
+}
+
 .pr-folder {
   margin-bottom: var(--space-1);
 }

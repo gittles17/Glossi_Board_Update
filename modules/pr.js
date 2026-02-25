@@ -232,6 +232,10 @@ class PRAgent {
     this.expandedFolders = {};
     this.isDraggingSource = false;
     this.phaseFilter = 'edit';
+    this.liveDataSources = {
+      contentInsights: { enabled: true, title: 'Content Insights' }
+    };
+    this.liveDataExpanded = true;
   }
 
   async apiCall(url, options = {}, retries = 2) {
@@ -692,6 +696,16 @@ class PRAgent {
           this.settings = result.settings;
           this.folders = result.settings.folders || [];
           this.expandedFolders = result.settings.expandedFolders || {};
+          if (result.settings.liveDataSources) {
+            Object.keys(result.settings.liveDataSources).forEach(key => {
+              if (this.liveDataSources[key]) {
+                this.liveDataSources[key].enabled = result.settings.liveDataSources[key].enabled;
+              }
+            });
+          }
+          if (result.settings.liveDataExpanded !== undefined) {
+            this.liveDataExpanded = result.settings.liveDataExpanded;
+          }
         } else {
           this.settings = {};
           this.folders = [];
@@ -737,10 +751,14 @@ class PRAgent {
   }
 
   async saveSources() {
-    // Save folder settings to API
     try {
       this.settings.folders = this.folders;
       this.settings.expandedFolders = this.expandedFolders;
+      this.settings.liveDataSources = {};
+      Object.keys(this.liveDataSources).forEach(key => {
+        this.settings.liveDataSources[key] = { enabled: this.liveDataSources[key].enabled };
+      });
+      this.settings.liveDataExpanded = this.liveDataExpanded;
       
       await fetch('/api/pr/settings', {
         method: 'POST',
@@ -748,10 +766,8 @@ class PRAgent {
         body: JSON.stringify({ settings: this.settings })
       });
     } catch (e) {
-      console.error('Failed to save settings:', e);
+      // silent
     }
-    
-    // Sources are saved individually via API calls when modified
   }
 
   async saveOutputs() {
@@ -760,13 +776,18 @@ class PRAgent {
 
   async saveSettings() {
     try {
+      this.settings.liveDataSources = {};
+      Object.keys(this.liveDataSources).forEach(key => {
+        this.settings.liveDataSources[key] = { enabled: this.liveDataSources[key].enabled };
+      });
+      this.settings.liveDataExpanded = this.liveDataExpanded;
       await fetch('/api/pr/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ settings: this.settings })
       });
     } catch (e) {
-      console.error('Failed to save settings:', e);
+      // silent
     }
   }
 
@@ -1717,8 +1738,9 @@ class PRAgent {
     if (!this.dom.sourcesList) return;
 
     const selectedCount = this.sources.filter(s => s.selected).length;
+    const enabledLiveCount = Object.values(this.liveDataSources).filter(s => s.enabled).length;
     if (this.dom.sourcesCount) {
-      this.dom.sourcesCount.textContent = this.sources.length;
+      this.dom.sourcesCount.textContent = this.sources.length + enabledLiveCount;
     }
     if (this.newsMonitor) this.newsMonitor.updateSourcesCount();
 
@@ -1735,6 +1757,35 @@ class PRAgent {
       url: '<i class="ph-light ph-link"></i>',
       file: '<i class="ph-light ph-file"></i>',
       audio: '<i class="ph-light ph-microphone"></i>'
+    };
+
+    const renderLiveDataSection = () => {
+      const expandedClass = this.liveDataExpanded ? 'expanded' : '';
+      const insightsSrc = this.liveDataSources.contentInsights;
+      const hasInsights = !!this.liveManager?.cachedInsights;
+      const isLoading = !!this.liveManager?.insightsLoading;
+      const statusClass = isLoading ? 'loading' : (hasInsights ? 'ready' : '');
+
+      return `
+        <div class="pr-live-data-sources ${expandedClass}">
+          <div class="pr-live-data-header" id="pr-live-data-header">
+            <i class="ph-light ph-caret-right pr-live-data-chevron"></i>
+            <span class="pr-live-data-title">Live Data</span>
+            <span class="pr-live-data-badge">Live</span>
+          </div>
+          <div class="pr-live-data-list">
+            <div class="pr-live-data-item ${insightsSrc.enabled ? '' : 'disabled'} ${statusClass}" data-live-key="contentInsights">
+              <label class="pr-live-data-toggle-wrap" onclick="event.stopPropagation()">
+                <input type="checkbox" class="pr-live-data-toggle" data-key="contentInsights" ${insightsSrc.enabled ? 'checked' : ''}>
+              </label>
+              <i class="ph-light ph-lightbulb pr-live-data-icon"></i>
+              <span class="pr-live-data-item-title">${insightsSrc.title}</span>
+              ${isLoading ? '<span class="pr-live-data-status loading"><i class="ph-light ph-circle-notch"></i></span>' : ''}
+              ${hasInsights && !isLoading ? '<span class="pr-live-data-status ready"></span>' : ''}
+            </div>
+          </div>
+        </div>
+      `;
     };
 
     const renderSourceItem = (source, isBackground = false) => {
@@ -1831,11 +1882,13 @@ class PRAgent {
       `;
     });
 
-    // Ungrouped sources (migrate to Content Sources on next save)
     html += ungrouped.map(s => renderSourceItem(s)).join('');
 
+    const liveDataHtml = renderLiveDataSection();
     const dropIndicator = '<div class="pr-drop-indicator" id="pr-drop-indicator"><i class="ph-light ph-upload-simple"></i><span>Drop files here</span></div>';
-    this.dom.sourcesList.innerHTML = html + dropIndicator;
+    this.dom.sourcesList.innerHTML = liveDataHtml + html + dropIndicator;
+
+    this.setupLiveDataHandlers();
 
     this.dom.sourcesList.querySelectorAll('.pr-folder-header').forEach(header => {
       header.addEventListener('click', () => {
@@ -1930,6 +1983,53 @@ class PRAgent {
         }
       }
     });
+  }
+
+  setupLiveDataHandlers() {
+    const header = document.getElementById('pr-live-data-header');
+    if (header) {
+      header.addEventListener('click', () => {
+        this.liveDataExpanded = !this.liveDataExpanded;
+        const section = header.closest('.pr-live-data-sources');
+        if (section) section.classList.toggle('expanded', this.liveDataExpanded);
+        this.saveSources();
+      });
+    }
+
+    this.dom.sourcesList.querySelectorAll('.pr-live-data-toggle').forEach(toggle => {
+      toggle.addEventListener('change', (e) => {
+        const key = e.target.dataset.key;
+        if (this.liveDataSources[key]) {
+          this.liveDataSources[key].enabled = e.target.checked;
+          const item = e.target.closest('.pr-live-data-item');
+          if (item) item.classList.toggle('disabled', !e.target.checked);
+          this.saveSources();
+          if (e.target.checked && key === 'contentInsights') {
+            this.ensureContentInsightsLoaded();
+          }
+        }
+      });
+    });
+  }
+
+  async ensureContentInsightsLoaded() {
+    if (this.liveManager?.cachedInsights) return;
+    if (this.liveManager?.insightsLoading) return;
+    const posts = this.liveManager?.allPosts;
+    if (!posts || posts.length === 0) {
+      await this.liveManager?.fetchAll?.();
+    }
+    if (this.liveManager?.allPosts?.length > 0) {
+      await this.liveManager.generateInsights();
+      this.renderSources();
+    }
+  }
+
+  getContentInsightsContext() {
+    if (!this.liveDataSources.contentInsights.enabled) return '';
+    const insights = this.liveManager?.cachedInsights;
+    if (!insights) return '';
+    return `--- Live Source: Content Insights ---\nThese insights are derived from analyzing published social media post performance. Use them to inform tone, topic selection, and platform strategy.\n\n${insights}\n---`;
   }
 
   setupExternalFileDrop() {
@@ -2471,8 +2571,14 @@ class PRAgent {
       return `[Source ${i + 1}] (ID: ${s.id})\nTitle: ${s.title}\nType: ${s.type}\nContent:\n${s.content}\n---`;
     }).join('\n\n');
 
+    const insightsContext = this.getContentInsightsContext();
+
     let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
     
+    if (insightsContext) {
+      userMessage += `CONTENT PERFORMANCE INSIGHTS (from your published posts):\n${insightsContext}\n\n`;
+    }
+
     if (this.angleContext) {
       userMessage += `STORY ANGLE (use this as your narrative framework):\n${this.angleContext.narrative}\n\n`;
       if (this.angleContext.target) {
