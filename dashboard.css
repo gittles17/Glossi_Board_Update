@@ -4416,6 +4416,9 @@ body.sidebar-open .top-nav {
 }
 
 .todo-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -4424,6 +4427,27 @@ body.sidebar-open .top-nav {
   padding: var(--space-2) 0;
   border-bottom: 1px solid var(--border-color);
   margin-bottom: var(--space-1);
+}
+
+.todo-group-add-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.todo-group:hover .todo-group-add-btn {
+  opacity: 1;
+}
+
+.todo-group-add-btn:hover {
+  color: var(--accent-primary);
 }
 
 /* Completed todos collapsible section */

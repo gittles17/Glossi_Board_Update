@@ -365,7 +365,12 @@ class GlossiDashboard {
       Object.entries(activeByOwner).forEach(([owner, todos]) => {
         html += `
           <div class="todo-group" data-owner="${owner}">
-            <div class="todo-group-header">${owner}</div>
+            <div class="todo-group-header">
+              <span>${owner}</span>
+              <button class="todo-group-add-btn" data-owner="${owner}" title="Add item for ${owner}">
+                <i class="ph-light ph-plus"></i>
+              </button>
+            </div>
             <div class="todo-group-items">
               ${todos.map(renderTodoItem).join('')}
             </div>
@@ -379,6 +384,13 @@ class GlossiDashboard {
     container.innerHTML = html;
     this.setupTodoEditListeners(container);
     this.setupTodoDragDrop();
+
+    container.querySelectorAll('.todo-group-add-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const owner = btn.dataset.owner;
+        this.addNewTodoForOwner(owner);
+      });
+    });
   }
 
   /**
@@ -468,17 +480,19 @@ class GlossiDashboard {
    * Add a new todo
    */
   addNewTodo() {
-    // Save any pending edits first
+    this.addNewTodoForOwner('Unassigned');
+  }
+
+  addNewTodoForOwner(owner) {
     this.savePendingTodoEdits();
-    
+
     const newTodo = storage.addTodo({
       text: 'New action item',
-      owner: 'Unassigned'
+      owner: owner || 'Unassigned'
     });
-    
+
     this.renderActionItems();
-    
-    // Focus the new todo for editing
+
     setTimeout(() => {
       const newEl = document.querySelector(`[data-todo-id="${newTodo.id}"] .todo-text`);
       if (newEl) {
