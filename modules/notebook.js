@@ -2183,7 +2183,7 @@ ${insightsData}
     if (!prAgent?.liveManager) return null;
     const insights = prAgent.liveManager.cachedInsights;
     if (insights) return insights;
-    if (!prAgent.liveManager.insightsLoading && prAgent.liveManager.allPosts?.length > 0) {
+    if (!prAgent.liveManager.insightsLoading && prAgent.liveManager.posts?.length > 0) {
       prAgent.liveManager.generateInsights();
     }
     return null;

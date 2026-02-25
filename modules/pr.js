@@ -2015,11 +2015,10 @@ class PRAgent {
   async ensureContentInsightsLoaded() {
     if (this.liveManager?.cachedInsights) return;
     if (this.liveManager?.insightsLoading) return;
-    const posts = this.liveManager?.allPosts;
-    if (!posts || posts.length === 0) {
-      await this.liveManager?.fetchAll?.();
+    if (!this.liveManager?.loaded) {
+      await this.liveManager?.fetchAllSilent?.();
     }
-    if (this.liveManager?.allPosts?.length > 0) {
+    if (this.liveManager?.posts?.length > 0) {
       await this.liveManager.generateInsights();
       this.renderSources();
     }
@@ -12285,13 +12284,71 @@ class LiveManager {
     this.charts = {};
     this.cachedInsights = null;
     this.insightsLoading = false;
-    this.timeRange = 'all';
+    this.timeRange = '7';
   }
 
   async init() {
     this.bindEvents();
     this.observeStageSwitch();
     this.listenForPublishEvents();
+    this.preloadInsights();
+  }
+
+  async preloadInsights() {
+    if (!this.prAgent.liveDataSources?.contentInsights?.enabled) return;
+    await this.fetchAllSilent();
+    if (this.posts.length > 0 && !this.cachedInsights) {
+      await this.generateInsights();
+      this.prAgent.renderSources();
+    }
+  }
+
+  async fetchAllSilent() {
+    if (this.loading || this.loaded) return;
+    this.loading = true;
+    try {
+      const noRetry = { retries: 0 };
+      const [linkedinRes, xRes, blogRes] = await Promise.allSettled([
+        this.prAgent.apiCall('/api/linkedin/posts', {}, noRetry.retries),
+        this.prAgent.apiCall('/api/x/posts', {}, noRetry.retries),
+        this.prAgent.apiCall('/api/blog/posts', {}, noRetry.retries)
+      ]);
+
+      this.posts = [];
+      this.postIndex.clear();
+      this.warnings = [];
+
+      if (linkedinRes.status === 'fulfilled' && linkedinRes.value?.success && linkedinRes.value.posts) {
+        for (const p of linkedinRes.value.posts) {
+          this.posts.push(p);
+          this.postIndex.set(String(p.id), p);
+        }
+      }
+      if (xRes.status === 'fulfilled' && xRes.value?.success && xRes.value.posts) {
+        for (const p of xRes.value.posts) {
+          this.posts.push(p);
+          this.postIndex.set(String(p.id), p);
+        }
+      }
+      if (blogRes.status === 'fulfilled' && blogRes.value?.success && blogRes.value.posts) {
+        for (const p of blogRes.value.posts) {
+          this.posts.push(p);
+          this.postIndex.set(String(p.id), p);
+        }
+      }
+
+      this.posts.sort((a, b) => {
+        const da = a.created_at ? new Date(a.created_at) : new Date(0);
+        const db = b.created_at ? new Date(b.created_at) : new Date(0);
+        return db - da;
+      });
+
+      this.loaded = true;
+    } catch {
+      // silent background fetch
+    } finally {
+      this.loading = false;
+    }
   }
 
   bindEvents() {
