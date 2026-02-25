@@ -11,6 +11,8 @@ class Notebook {
     this.conversations = [];
     this.reports = [];
     this.currentConversation = null;
+    this.openTabs = [];
+    this.activeTabId = null;
     this.selectedFile = null;
     this.selectedSourceType = 'text';
     this.selectedCategory = 'auto';
@@ -232,11 +234,35 @@ class Notebook {
       this.summaryHash = nbData.summaryHash;
     }
     
-    // Create a new conversation if none exists
+    // Restore tab state
+    if (nbData.openTabs && nbData.openTabs.length > 0) {
+      this.openTabs = nbData.openTabs.filter(id =>
+        this.conversations.some(c => c.id === id)
+      );
+    }
+    if (nbData.activeTabId) {
+      this.activeTabId = nbData.activeTabId;
+    }
+
+    // Ensure at least one conversation exists
     if (this.conversations.length === 0) {
-      this.currentConversation = this.createConversation();
+      const conv = this.createConversation();
+      this.openTabs = [conv.id];
+      this.activeTabId = conv.id;
+      this.currentConversation = conv;
     } else {
-      this.currentConversation = this.conversations[this.conversations.length - 1];
+      // Ensure openTabs has at least one entry
+      if (this.openTabs.length === 0) {
+        const last = this.conversations[this.conversations.length - 1];
+        this.openTabs = [last.id];
+        this.activeTabId = last.id;
+      }
+      // Validate activeTabId is in openTabs
+      if (!this.openTabs.includes(this.activeTabId)) {
+        this.activeTabId = this.openTabs[this.openTabs.length - 1];
+      }
+      this.currentConversation = this.conversations.find(c => c.id === this.activeTabId)
+        || this.conversations[this.conversations.length - 1];
     }
   }
 
@@ -259,7 +285,9 @@ class Notebook {
       enabledQuickLinks: this.enabledQuickLinks,
       quickLinkContent: this.quickLinkContent,
       sourceSummary: this.sourceSummary,
-      summaryHash: this.summaryHash
+      summaryHash: this.summaryHash,
+      openTabs: this.openTabs,
+      activeTabId: this.activeTabId
     });
     
     // For critical operations, flush to localStorage immediately
@@ -328,15 +356,182 @@ class Notebook {
   /**
    * Create a new conversation
    */
-  createConversation() {
+  createConversation(name = null) {
     const conversation = {
       id: 'conv_' + Date.now(),
+      name: name,
       messages: [],
       createdAt: new Date().toISOString()
     };
     this.conversations.push(conversation);
     this.saveData();
     return conversation;
+  }
+
+  getTabDisplayName(conv) {
+    if (conv.name) return conv.name;
+    if (conv.messages && conv.messages.length > 0) {
+      const first = conv.messages.find(m => m.role === 'user');
+      if (first) {
+        const trimmed = first.content.trim();
+        return trimmed.length > 30 ? trimmed.substring(0, 30) + '...' : trimmed;
+      }
+    }
+    return 'New Chat';
+  }
+
+  autoNameTab(convId, firstMessage) {
+    const conv = this.conversations.find(c => c.id === convId);
+    if (!conv || conv.name) return;
+    const trimmed = firstMessage.trim();
+    conv.name = trimmed.length > 30 ? trimmed.substring(0, 30) + '...' : trimmed;
+    this.saveData();
+    this.renderTabs();
+  }
+
+  openNewTab() {
+    const conv = this.createConversation();
+    this.openTabs.push(conv.id);
+    this.activeTabId = conv.id;
+    this.currentConversation = conv;
+    this.saveData();
+    this.renderTabs();
+    this.renderMessages();
+    const suggestionsEl = document.getElementById('kb-suggestions');
+    if (suggestionsEl) suggestionsEl.style.display = '';
+  }
+
+  switchTab(convId) {
+    if (convId === this.activeTabId) return;
+    const conv = this.conversations.find(c => c.id === convId);
+    if (!conv) return;
+    this.activeTabId = convId;
+    this.currentConversation = conv;
+    this.saveData();
+    this.renderTabs();
+    this.renderMessages();
+    const suggestionsEl = document.getElementById('kb-suggestions');
+    if (suggestionsEl) {
+      suggestionsEl.style.display = conv.messages.length > 0 ? 'none' : '';
+    }
+  }
+
+  closeTab(convId) {
+    const idx = this.openTabs.indexOf(convId);
+    if (idx === -1) return;
+    this.openTabs.splice(idx, 1);
+
+    if (this.openTabs.length === 0) {
+      this.openNewTab();
+      return;
+    }
+
+    if (this.activeTabId === convId) {
+      const newIdx = Math.min(idx, this.openTabs.length - 1);
+      this.switchTab(this.openTabs[newIdx]);
+    } else {
+      this.saveData();
+      this.renderTabs();
+    }
+  }
+
+  renameTab(convId, newName) {
+    const conv = this.conversations.find(c => c.id === convId);
+    if (!conv) return;
+    const trimmed = newName.trim();
+    conv.name = trimmed || null;
+    this.saveData();
+    this.renderTabs();
+  }
+
+  renderTabs() {
+    const container = document.getElementById('kb-tab-bar');
+    if (!container) return;
+
+    container.innerHTML = '';
+    container.setAttribute('role', 'tablist');
+    container.setAttribute('aria-label', 'Chat tabs');
+
+    this.openTabs.forEach(convId => {
+      const conv = this.conversations.find(c => c.id === convId);
+      if (!conv) return;
+
+      const tab = document.createElement('button');
+      tab.className = 'kb-tab' + (convId === this.activeTabId ? ' active' : '');
+      tab.dataset.convId = convId;
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', convId === this.activeTabId ? 'true' : 'false');
+      tab.setAttribute('aria-label', this.getTabDisplayName(conv));
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'kb-tab-name';
+      nameSpan.textContent = this.getTabDisplayName(conv);
+      nameSpan.title = this.getTabDisplayName(conv);
+
+      nameSpan.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        nameSpan.contentEditable = 'true';
+        nameSpan.textContent = conv.name || '';
+        nameSpan.focus();
+        const range = document.createRange();
+        range.selectNodeContents(nameSpan);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      });
+
+      const finishRename = () => {
+        nameSpan.contentEditable = 'false';
+        this.renameTab(convId, nameSpan.textContent);
+      };
+
+      nameSpan.addEventListener('blur', finishRename);
+      nameSpan.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          nameSpan.blur();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          nameSpan.textContent = conv.name || '';
+          nameSpan.contentEditable = 'false';
+        }
+      });
+
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'kb-tab-close';
+      closeBtn.innerHTML = '<i class="ph-light ph-x"></i>';
+      closeBtn.title = 'Close tab';
+      closeBtn.setAttribute('aria-label', `Close ${this.getTabDisplayName(conv)} tab`);
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.closeTab(convId);
+      });
+
+      tab.addEventListener('click', () => this.switchTab(convId));
+      tab.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        nameSpan.contentEditable = 'true';
+        nameSpan.textContent = conv.name || '';
+        nameSpan.focus();
+        const range = document.createRange();
+        range.selectNodeContents(nameSpan);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      });
+
+      tab.appendChild(nameSpan);
+      tab.appendChild(closeBtn);
+      container.appendChild(tab);
+    });
+
+    const newBtn = document.createElement('button');
+    newBtn.className = 'kb-new-tab-btn';
+    newBtn.innerHTML = '<i class="ph-light ph-plus"></i>';
+    newBtn.title = 'New chat';
+    newBtn.setAttribute('aria-label', 'Create new chat tab');
+    newBtn.addEventListener('click', () => this.openNewTab());
+    container.appendChild(newBtn);
   }
 
   /**
@@ -353,8 +548,10 @@ class Notebook {
     }
     
     this.currentConversation.messages = [];
+    this.currentConversation.name = null;
     this.saveData();
     this.renderMessages();
+    this.renderTabs();
   }
 
   /**
@@ -1336,12 +1533,22 @@ Respond with ONLY the category name (lowercase).`;
       input.style.height = 'auto';
     }
     
+    // Auto-name tab from first user message
+    const isFirstMessage = this.currentConversation.messages.length === 0;
+
     // Add user message
     this.currentConversation.messages.push({
       role: 'user',
       content: message,
       timestamp: new Date().toISOString()
     });
+
+    if (isFirstMessage) {
+      this.autoNameTab(this.currentConversation.id, message);
+      const suggestionsEl = document.getElementById('kb-suggestions');
+      if (suggestionsEl) suggestionsEl.style.display = 'none';
+    }
+
     this.renderMessages();
     
     // Show loading
@@ -2473,9 +2680,14 @@ REPORT GUIDELINES:
    * Render the Notebook
    */
   render() {
+    this.renderTabs();
     this.renderSources();
     this.renderMessages();
     this.renderReports();
+    const suggestionsEl = document.getElementById('kb-suggestions');
+    if (suggestionsEl && this.currentConversation) {
+      suggestionsEl.style.display = this.currentConversation.messages.length > 0 ? 'none' : '';
+    }
   }
 
   /**
