@@ -2065,11 +2065,10 @@ class PRAgent {
     const insights = this.getContentInsightsContext();
     if (!insights) return PR_SYSTEM_PROMPT;
 
-    const lowerInsights = insights.toLowerCase();
     const failingChannels = [];
-    if (/linkedin.*zero engagement|linkedin.*dead|linkedin.*0 (total )?engagement/i.test(insights)) failingChannels.push('linkedin');
-    if (/blog.*zero engagement|blog.*scored 0|blog posts have no engagement/i.test(insights)) failingChannels.push('blog');
-    if (/\bx\b.*zero engagement|\btwitter\b.*zero engagement/i.test(insights)) failingChannels.push('x');
+    if (/linkedin.*(zero|0|no|dead|flat|nothing|failed)/i.test(insights)) failingChannels.push('linkedin');
+    if (/blog.*(zero|0 engagement|no engagement|scored 0|no distribution|dead)/i.test(insights)) failingChannels.push('blog');
+    if (/\bx\b.*(zero|0|no engagement|dead|flat)/i.test(insights) && !/x.*(work|perform|engag.*[1-9])/i.test(insights)) failingChannels.push('x');
 
     const channelMap = { linkedin_post: 'linkedin', blog_post: 'blog', tweet: 'x' };
     const targetChannel = channelMap[contentType] || null;
@@ -2077,17 +2076,23 @@ class PRAgent {
 
     const channelLabel = { linkedin: 'LinkedIn', blog: 'Blog', x: 'X' }[targetChannel] || '';
 
-    let insightsBlock;
+    let basePrompt = PR_SYSTEM_PROMPT;
+
     if (isFailing) {
-      insightsBlock = `\n\nACTIVE CONTENT PERFORMANCE DATA:\n${insights}\n\n⚠️ ${channelLabel.toUpperCase()} HAS ZERO ENGAGEMENT. Keep the same Linear/Cursor voice and technical authority, but fix the HOOKS AND OPENINGS:\n- Do NOT open with abstract industry analysis or a news event followed by "here's what we built."\n- DO open with a concrete scenario, a surprising number, or a specific brand's real result.\n- Name-drop recognizable brands and people when possible to stop the scroll.\n- Lead with what a customer experienced or a problem brands face in concrete terms, then connect to what Glossi built.\n- Keep the builder-first, technically grounded voice throughout. This is a software company.\n- Use "we" (company voice), never "I" (personal voice).\n`;
+      const insightsBlock = `\n\nACTIVE CONTENT PERFORMANCE DATA:\n${insights}\n\n⚠️ ${channelLabel.toUpperCase()} HAS ZERO ENGAGEMENT WITH THE CURRENT APPROACH.\nKeep the same Linear/Cursor voice and technical authority, but you MUST change your opening strategy:\n\nFIRST SENTENCE RULES (non-negotiable):\n- Your first sentence must be a concrete number, a brand name, or a specific customer scenario.\n- FORBIDDEN first sentences: anything starting with a company/product name launch ("Google just dropped...", "Cursor shipped..."), any abstract observation about the industry, any rhetorical question about AI.\n- Good examples: "Enterprise brands produce 160,000 product images per year." or "Target has 60,000 3D models collecting dust." or "We cut Crate & Barrel's render queue from days to seconds."\n\nREST OF POST:\n- Keep the builder-first, technically grounded voice. This is a software company.\n- Name-drop real brands and concrete metrics throughout.\n- Use "we" (company voice), never "I".\n`;
+      basePrompt = basePrompt.replace(
+        'GLOSSI TIE-BACK (varies by channel):',
+        insightsBlock + '\nGLOSSI TIE-BACK (varies by channel):'
+      );
     } else {
-      insightsBlock = `\n\nACTIVE CONTENT PERFORMANCE DATA (apply to shape your output):\n${insights}\n\nUse these patterns to inform your approach. Replicate formats and hooks that are driving engagement. Avoid patterns flagged as underperforming.\n`;
+      const insightsBlock = `\n\nACTIVE CONTENT PERFORMANCE DATA (apply to shape your output):\n${insights}\n\nUse these patterns to inform your approach. Replicate formats and hooks that are driving engagement. Avoid patterns flagged as underperforming.\n`;
+      basePrompt = basePrompt.replace(
+        'GLOSSI TIE-BACK (varies by channel):',
+        insightsBlock + '\nGLOSSI TIE-BACK (varies by channel):'
+      );
     }
 
-    return PR_SYSTEM_PROMPT.replace(
-      'GLOSSI TIE-BACK (varies by channel):',
-      insightsBlock + '\nGLOSSI TIE-BACK (varies by channel):'
-    );
+    return basePrompt;
   }
 
   setupExternalFileDrop() {
