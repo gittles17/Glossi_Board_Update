@@ -2041,6 +2041,12 @@ class PRAgent {
     return insights;
   }
 
+  getSystemPromptWithInsights() {
+    const insights = this.getContentInsightsContext();
+    if (!insights) return PR_SYSTEM_PROMPT;
+    return PR_SYSTEM_PROMPT + `\n\nACTIVE CONTENT PERFORMANCE DATA (from your published posts):\n${insights}\n\nYou MUST shape your output based on the performance data above. These are hard constraints, not suggestions:\n- If a channel shows zero engagement, fundamentally change your approach for that channel (different format, different hook style, different structure).\n- If a content pattern is flagged as "not working," do NOT use that pattern even if the voice rules would normally suggest it.\n- Prioritize the exact formats, hooks, and storytelling approaches that the data shows are driving engagement.\n- When the data conflicts with the general content guidance above, the data wins.`;
+  }
+
   setupExternalFileDrop() {
     const dropZone = this.dom.sourcesList;
     if (!dropZone) return;
@@ -2580,13 +2586,7 @@ class PRAgent {
       return `[Source ${i + 1}] (ID: ${s.id})\nTitle: ${s.title}\nType: ${s.type}\nContent:\n${s.content}\n---`;
     }).join('\n\n');
 
-    const insightsContext = this.getContentInsightsContext();
-
     let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
-    
-    if (insightsContext) {
-      userMessage += `CONTENT PERFORMANCE INSIGHTS (apply these patterns to shape your output):\n${insightsContext}\n\n`;
-    }
 
     if (this.angleContext) {
       userMessage += `STORY ANGLE (use this as your narrative framework):\n${this.angleContext.narrative}\n\n`;
@@ -2607,7 +2607,7 @@ class PRAgent {
       const rawText = await this.streamContent({
         model: selectedModel,
         max_tokens: isTweet ? 1024 : 8192,
-        system: PR_SYSTEM_PROMPT,
+        system: this.getSystemPromptWithInsights(),
         messages: [{ role: 'user', content: isTweet ? userMessage + '\n\nREMINDER: The tweet MUST be under 280 characters. Count carefully. This is a hard platform limit.' : userMessage }],
       });
 
@@ -3450,10 +3450,6 @@ class PRAgent {
 
         const typeLabel = label;
         let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
-        const regenInsights = this.getContentInsightsContext();
-        if (regenInsights) {
-          userMessage += `CONTENT PERFORMANCE INSIGHTS (apply these patterns to shape your output):\n${regenInsights}\n\n`;
-        }
         const angleNarrative = newsItem?.angle_narrative || newsItem?.relevance || newsItem?.summary || '';
         if (angleNarrative) {
           userMessage += `STORY ANGLE (use this as your narrative framework):\n${angleNarrative}\n\n`;
@@ -3472,7 +3468,7 @@ class PRAgent {
           body: JSON.stringify({
             model: 'claude-opus-4-6',
             max_tokens: 8192,
-            system: PR_SYSTEM_PROMPT,
+            system: this.getSystemPromptWithInsights(),
             messages: [{ role: 'user', content: userMessage }]
           })
         });
@@ -8459,11 +8455,6 @@ ${primaryContext}${bgContext}`
     // Build prompt with primary/context separation for custom stories
     let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
 
-    const planInsights = this.prAgent.getContentInsightsContext();
-    if (planInsights) {
-      userMessage += `CONTENT PERFORMANCE INSIGHTS (apply these patterns to shape your output):\n${planInsights}\n\n`;
-    }
-
     if (isCustom && activeStory.primarySourceId) {
       // Separate primary source from background context
       const primarySource = selectedSources.find(s => s.id === activeStory.primarySourceId);
@@ -8529,7 +8520,7 @@ ${primaryContext}${bgContext}`
       const rawText = await this.prAgent.streamContent({
         model: selectedModel,
         max_tokens: isTweetType ? 1024 : 8192,
-        system: PR_SYSTEM_PROMPT,
+        system: this.prAgent.getSystemPromptWithInsights(),
         messages: [{ role: 'user', content: userMessage }],
       });
 
@@ -9514,10 +9505,6 @@ class AngleManager {
     }).join('\n\n');
 
     let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
-    const newsInsights = this.prAgent.getContentInsightsContext();
-    if (newsInsights) {
-      userMessage += `CONTENT PERFORMANCE INSIGHTS (apply these patterns to shape your output):\n${newsInsights}\n\n`;
-    }
     userMessage += `STORY ANGLE (use this as your narrative framework):\n${angle.narrative}\n\n`;
     if (planItem.target) {
       userMessage += `Target: ${planItem.target}\n\n`;
@@ -9534,7 +9521,7 @@ class AngleManager {
       const rawText = await this.prAgent.streamContent({
         model: selectedModel,
         max_tokens: isTweetADK ? 1024 : 8192,
-        system: PR_SYSTEM_PROMPT,
+        system: this.prAgent.getSystemPromptWithInsights(),
         messages: [{ role: 'user', content: userMessage }],
       });
 
@@ -12495,6 +12482,7 @@ class LiveManager {
 
   mergeNewPosts(incoming) {
     const newPosts = [];
+    let engagementChanged = false;
     for (const post of incoming) {
       if (!this.postIndex.has(String(post.id))) {
         newPosts.push(post);
@@ -12504,11 +12492,16 @@ class LiveManager {
         const existing = this.postIndex.get(String(post.id));
         if (post.likes !== existing.likes || post.comments !== existing.comments || post.shares !== existing.shares) {
           Object.assign(existing, { likes: post.likes, comments: post.comments, shares: post.shares, impressions: post.impressions });
+          engagementChanged = true;
         }
       }
     }
 
-    if (newPosts.length === 0) return;
+    if (newPosts.length > 0 || engagementChanged) {
+      this.cachedInsights = null;
+    }
+
+    if (newPosts.length === 0 && !engagementChanged) return;
 
     this.posts.sort((a, b) => {
       const da = a.created_at ? new Date(a.created_at) : new Date(0);
@@ -12521,6 +12514,9 @@ class LiveManager {
       this.renderAnalytics();
     } else {
       this.showNavBadge();
+      if (this.prAgent.liveDataSources?.contentInsights?.enabled) {
+        this.generateInsights().then(() => this.prAgent.renderSources());
+      }
     }
   }
 
