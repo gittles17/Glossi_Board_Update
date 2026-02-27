@@ -2029,22 +2029,25 @@ class PRAgent {
       await this.liveManager?.fetchAllSilent?.();
     }
     if (this.liveManager?.posts?.length > 0) {
+      const savedRange = this.liveManager.timeRange;
+      this.liveManager.timeRange = 'all';
       await this.liveManager.generateInsights();
+      this.liveManager.timeRange = savedRange;
       this.renderSources();
     }
   }
 
-  async waitForInsights(timeoutMs = 15000) {
+  async waitForInsights(timeoutMs = 20000) {
     if (!this.liveDataSources.contentInsights.enabled) return;
     if (this.liveManager?.cachedInsights) return;
-    if (!this.liveManager?.insightsLoading && !this.liveManager?.loading) {
+    const isActive = this.liveManager?.insightsLoading || this.liveManager?.loading;
+    if (!isActive) {
       await this.ensureContentInsightsLoaded();
-      return;
+      if (this.liveManager?.cachedInsights) return;
     }
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
       if (this.liveManager?.cachedInsights) return;
-      if (!this.liveManager?.insightsLoading && !this.liveManager?.loading) return;
       await new Promise(r => setTimeout(r, 1000));
     }
   }
@@ -12405,7 +12408,10 @@ class LiveManager {
     if (!this.prAgent.liveDataSources?.contentInsights?.enabled) return;
     await this.fetchAllSilent();
     if (this.posts.length > 0 && !this.cachedInsights) {
+      const savedRange = this.timeRange;
+      this.timeRange = 'all';
       await this.generateInsights();
+      this.timeRange = savedRange;
       this.prAgent.renderSources();
     }
   }
