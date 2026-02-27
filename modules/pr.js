@@ -4396,7 +4396,8 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
 
       let systemPrompt;
       if (isFullRewrite) {
-        systemPrompt = `${insightsPrompt}\n\nCURRENT CONTEXT (the user wants this completely rewritten):\n${context}\n\nUSER REQUEST: ${message}\n\nGenerate a completely new version following the CONTENT STRATEGY above. Return ONLY the complete new content (no explanations, no JSON wrapper, just the refined text).`;
+        const promptWithoutJson = insightsPrompt.replace(/\nRESPONSE FORMAT:[\s\S]*$/, '');
+        systemPrompt = `${promptWithoutJson}\n\nRESPONSE FORMAT: Return ONLY the complete post text as plain text. No JSON. No wrapper. No explanations. Separate paragraphs with blank lines. Include [Source X] citations inline.\n\nCURRENT CONTEXT (rewrite this completely):\n${context}\n\nUSER REQUEST: ${message}`;
       } else {
         const insightsCtx = this.getContentInsightsContext();
         const insightsSection = insightsCtx ? `\nCONTENT PERFORMANCE DATA (use these patterns to guide your refinement):\n${insightsCtx}\n` : '';
