@@ -1154,6 +1154,7 @@
 
     document.addEventListener('DOMContentLoaded', async () => {
       const pr = new PRAgent();
+      window.prAgent = pr;
       await pr.init();
       pr.setupFileUpload();
       pr.setupAudio();
