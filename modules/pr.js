@@ -2044,7 +2044,11 @@ class PRAgent {
   getSystemPromptWithInsights() {
     const insights = this.getContentInsightsContext();
     if (!insights) return PR_SYSTEM_PROMPT;
-    return PR_SYSTEM_PROMPT + `\n\nACTIVE CONTENT PERFORMANCE DATA (from your published posts):\n${insights}\n\nYou MUST shape your output based on the performance data above. These are hard constraints, not suggestions:\n- If a channel shows zero engagement, fundamentally change your approach for that channel (different format, different hook style, different structure).\n- If a content pattern is flagged as "not working," do NOT use that pattern even if the voice rules would normally suggest it.\n- Prioritize the exact formats, hooks, and storytelling approaches that the data shows are driving engagement.\n- When the data conflicts with the general content guidance above, the data wins.`;
+    const insightsBlock = `\n\n⚠️ ACTIVE CONTENT PERFORMANCE DATA (OVERRIDES DEFAULT CHANNEL GUIDANCE BELOW):\n${insights}\n\nTHESE ARE HARD CONSTRAINTS. The performance data above supersedes the default GLOSSI TIE-BACK and CONTENT TYPE GUIDANCE that follow. Specifically:\n- If the data shows a channel has zero engagement with the current approach, you MUST use a fundamentally different format, hook style, and structure for that channel. Do NOT follow the default channel guidance below.\n- If a content pattern (e.g. "abstract thought leadership") is flagged as not working, you are FORBIDDEN from using that pattern regardless of what the voice rules say.\n- Replicate the exact formats, hooks, and storytelling approaches that the data shows are driving engagement.\n- For example: if data shows founder storytelling and name-drops work on X but technical thought leadership gets zero engagement on LinkedIn, write a founder-voice personal narrative for LinkedIn, not a technical analysis.\n`;
+    return PR_SYSTEM_PROMPT.replace(
+      'GLOSSI TIE-BACK (varies by channel):',
+      insightsBlock + '\nGLOSSI TIE-BACK (varies by channel, BUT OVERRIDDEN by performance data above when they conflict):'
+    );
   }
 
   setupExternalFileDrop() {
