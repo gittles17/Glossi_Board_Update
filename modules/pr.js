@@ -2075,73 +2075,19 @@ class PRAgent {
     const targetChannel = channelMap[contentType] || null;
     const isFailing = targetChannel && failingChannels.includes(targetChannel);
 
+    const channelLabel = { linkedin: 'LinkedIn', blog: 'Blog', x: 'X' }[targetChannel] || '';
+
+    let insightsBlock;
     if (isFailing) {
-      return this.buildInsightsDrivenPrompt(insights, contentType, targetChannel);
+      insightsBlock = `\n\nACTIVE CONTENT PERFORMANCE DATA:\n${insights}\n\n⚠️ ${channelLabel.toUpperCase()} HAS ZERO ENGAGEMENT. Keep the same Linear/Cursor voice and technical authority, but fix the HOOKS AND OPENINGS:\n- Do NOT open with abstract industry analysis or a news event followed by "here's what we built."\n- DO open with a concrete scenario, a surprising number, or a specific brand's real result.\n- Name-drop recognizable brands and people when possible to stop the scroll.\n- Lead with what a customer experienced or a problem brands face in concrete terms, then connect to what Glossi built.\n- Keep the builder-first, technically grounded voice throughout. This is a software company.\n- Use "we" (company voice), never "I" (personal voice).\n`;
+    } else {
+      insightsBlock = `\n\nACTIVE CONTENT PERFORMANCE DATA (apply to shape your output):\n${insights}\n\nUse these patterns to inform your approach. Replicate formats and hooks that are driving engagement. Avoid patterns flagged as underperforming.\n`;
     }
 
-    const insightsBlock = `\n\nACTIVE CONTENT PERFORMANCE DATA (apply to shape your output):\n${insights}\n\nUse these patterns to inform your approach. Replicate formats and hooks that are driving engagement. Avoid patterns flagged as underperforming.\n`;
     return PR_SYSTEM_PROMPT.replace(
       'GLOSSI TIE-BACK (varies by channel):',
       insightsBlock + '\nGLOSSI TIE-BACK (varies by channel):'
     );
-  }
-
-  buildInsightsDrivenPrompt(insights, contentType, channel) {
-    const channelLabel = { linkedin: 'LinkedIn', blog: 'Blog', x: 'X' }[channel] || channel;
-    const wordTarget = { linkedin_post: '150-250', blog_post: '600-1000', tweet: '280 characters max' }[contentType] || '150-300';
-
-    return `You are Glossi's content strategist. Your job is to write content that gets engagement, not content that sounds impressive.
-
-⚠️ CRITICAL: The company name is "Glossi" (with an "i"). NEVER spell it as "Glossy".
-
-PERFORMANCE DATA FROM YOUR PUBLISHED POSTS:
-${insights}
-
-The data shows ${channelLabel} has ZERO engagement with the current approach. You must write something fundamentally different from what has been posted before.
-
-WHAT HAS FAILED ON ${channelLabel.toUpperCase()} (DO NOT DO ANY OF THESE):
-- Abstract technical thought leadership
-- Industry infrastructure analysis
-- Declarative, impersonal tone explaining what Glossi built
-- Opening with a news hook then pivoting to "here's what we built"
-- Technical jargon: "compositing," "deterministic," "architecture," "infrastructure"
-
-WHAT THE DATA SHOWS WORKS (DO THESE INSTEAD):
-- Customer/creator storytelling: center a real person's or brand's experience, not the product
-- Name-dropping culturally relevant brands or people to hook readers
-- Provocative, scenario-based hooks that pull readers into a concrete situation
-- "Before/after" transformation stories showing real results
-- Conversational company voice: write as "we" (the Glossi team), sharing what we've seen and built
-- Short, punchy, conversational tone
-
-WRITING RULES:
-- Write as "we" (the Glossi team), not "I". This is a company account, not a personal one.
-- Open with a hook that makes someone stop scrolling. Not a news event. A scenario, a question, a surprising customer result.
-- Every paragraph must feel conversational and direct, not like a press release
-- Use specific names, brands, and numbers from the sources when possible
-- Glossi should appear naturally in the story, not as the thesis of the post
-- NEVER use em dashes. Use commas, periods, semicolons, or parentheses.
-- TARGET: ${wordTarget} words
-
-GLOSSI CONTEXT:
-- First AI-native 3D product visualization platform
-- Core: compositing, not generation. Product 3D asset stays untouched. AI generates scenes around it.
-- Green screen for products. The product is sacred and untouchable.
-- Built on Unreal Engine 5, runs in browser
-- 50+ brands, $200K pipeline, 80% photo cost reduction
-
-SOURCING RULES:
-- Only make claims supported by the provided sources.
-- Include [Source X] citations for factual claims.
-- If you cannot source a claim, mark it [NEEDS SOURCE].
-
-${contentType === 'blog_post' ? `FOR BLOG POSTS, return structured sections in JSON using "blog_title", "blog_sections", and "blog_closing" fields.` : ''}
-${contentType === 'linkedin_post' ? `FORMAT: Flowing prose, 3-5 short paragraphs. No markdown headers. One hashtag max.` : ''}
-
-RESPONSE FORMAT:
-Return JSON with: "content", "citations", "strategy"${contentType === 'tweet' ? ', "tweet_format"' : ''}${contentType === 'blog_post' ? ', "blog_title", "blog_sections", "blog_closing"' : ''}${contentType === 'email_blast' ? ', "subject"' : ''}.
-
-Use \\n\\n between paragraphs in "content". Structure it for readability.`;
   }
 
   setupExternalFileDrop() {
