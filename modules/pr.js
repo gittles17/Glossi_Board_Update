@@ -2034,6 +2034,21 @@ class PRAgent {
     }
   }
 
+  async waitForInsights(timeoutMs = 15000) {
+    if (!this.liveDataSources.contentInsights.enabled) return;
+    if (this.liveManager?.cachedInsights) return;
+    if (!this.liveManager?.insightsLoading && !this.liveManager?.loading) {
+      await this.ensureContentInsightsLoaded();
+      return;
+    }
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (this.liveManager?.cachedInsights) return;
+      if (!this.liveManager?.insightsLoading && !this.liveManager?.loading) return;
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+
   getContentInsightsContext() {
     if (!this.liveDataSources.contentInsights.enabled) return '';
     const insights = this.liveManager?.cachedInsights;
@@ -2633,6 +2648,8 @@ Use \\n\\n between paragraphs in "content". Structure it for readability.`;
     if (!this.apiKey) {
       return;
     }
+
+    await this.waitForInsights();
 
     const contentType = this.dom.contentType?.value || 'tweet';
     const typeLabel = CONTENT_TYPES.find(t => t.id === contentType)?.label || contentType;
@@ -8498,7 +8515,8 @@ ${primaryContext}${bgContext}`
   }
 
   async generateTabContent(tabId, planItem, newsItem) {
-    // Determine if this is a custom story
+    await this.prAgent.waitForInsights();
+
     const activeStory = this._activeStoryKey ? this._stories.get(this._activeStoryKey) : null;
     const isCustom = activeStory?.custom === true;
 
@@ -9558,6 +9576,8 @@ class AngleManager {
   }
 
   async generatePieceContent(angle, planItem, tabId) {
+    await this.prAgent.waitForInsights();
+
     planItem.type = normalizeContentType(planItem.type);
     const selectedSources = this.prAgent.sources.filter(s => s.selected);
     if (!this.prAgent.apiKey) {
