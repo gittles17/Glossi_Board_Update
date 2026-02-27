@@ -4436,7 +4436,14 @@ Apply the requested refinement and return ONLY the complete refined content (no 
         })
       });
 
-      const refinedContent = sanitizeDashes(response.content[0].text.trim());
+      let rawRefined = response.content[0].text.trim();
+      if (rawRefined.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(rawRefined.match(/\{[\s\S]*\}/)?.[0] || rawRefined);
+          if (parsed.content) rawRefined = parsed.content;
+        } catch {}
+      }
+      const refinedContent = sanitizeDashes(rawRefined);
 
       // Migrate to drafts if needed (operate on targetOutput, not this.currentOutput)
       if (!targetOutput.drafts) {
