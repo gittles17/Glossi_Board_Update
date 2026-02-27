@@ -2041,14 +2041,87 @@ class PRAgent {
     return insights;
   }
 
-  getSystemPromptWithInsights() {
+  getSystemPromptWithInsights(contentType) {
     const insights = this.getContentInsightsContext();
     if (!insights) return PR_SYSTEM_PROMPT;
-    const insightsBlock = `\n\n⚠️ ACTIVE CONTENT PERFORMANCE DATA (OVERRIDES DEFAULT CHANNEL GUIDANCE BELOW):\n${insights}\n\nTHESE ARE HARD CONSTRAINTS. The performance data above supersedes the default GLOSSI TIE-BACK and CONTENT TYPE GUIDANCE that follow. Specifically:\n- If the data shows a channel has zero engagement with the current approach, you MUST use a fundamentally different format, hook style, and structure for that channel. Do NOT follow the default channel guidance below.\n- If a content pattern (e.g. "abstract thought leadership") is flagged as not working, you are FORBIDDEN from using that pattern regardless of what the voice rules say.\n- Replicate the exact formats, hooks, and storytelling approaches that the data shows are driving engagement.\n- For example: if data shows founder storytelling and name-drops work on X but technical thought leadership gets zero engagement on LinkedIn, write a founder-voice personal narrative for LinkedIn, not a technical analysis.\n`;
+
+    const lowerInsights = insights.toLowerCase();
+    const failingChannels = [];
+    if (/linkedin.*zero engagement|linkedin.*dead|linkedin.*0 (total )?engagement/i.test(insights)) failingChannels.push('linkedin');
+    if (/blog.*zero engagement|blog.*scored 0|blog posts have no engagement/i.test(insights)) failingChannels.push('blog');
+    if (/\bx\b.*zero engagement|\btwitter\b.*zero engagement/i.test(insights)) failingChannels.push('x');
+
+    const channelMap = { linkedin_post: 'linkedin', blog_post: 'blog', tweet: 'x' };
+    const targetChannel = channelMap[contentType] || null;
+    const isFailing = targetChannel && failingChannels.includes(targetChannel);
+
+    if (isFailing) {
+      return this.buildInsightsDrivenPrompt(insights, contentType, targetChannel);
+    }
+
+    const insightsBlock = `\n\nACTIVE CONTENT PERFORMANCE DATA (apply to shape your output):\n${insights}\n\nUse these patterns to inform your approach. Replicate formats and hooks that are driving engagement. Avoid patterns flagged as underperforming.\n`;
     return PR_SYSTEM_PROMPT.replace(
       'GLOSSI TIE-BACK (varies by channel):',
-      insightsBlock + '\nGLOSSI TIE-BACK (varies by channel, BUT OVERRIDDEN by performance data above when they conflict):'
+      insightsBlock + '\nGLOSSI TIE-BACK (varies by channel):'
     );
+  }
+
+  buildInsightsDrivenPrompt(insights, contentType, channel) {
+    const channelLabel = { linkedin: 'LinkedIn', blog: 'Blog', x: 'X' }[channel] || channel;
+    const wordTarget = { linkedin_post: '150-250', blog_post: '600-1000', tweet: '280 characters max' }[contentType] || '150-300';
+
+    return `You are Glossi's content strategist. Your job is to write content that gets engagement, not content that sounds impressive.
+
+⚠️ CRITICAL: The company name is "Glossi" (with an "i"). NEVER spell it as "Glossy".
+
+PERFORMANCE DATA FROM YOUR PUBLISHED POSTS:
+${insights}
+
+The data shows ${channelLabel} has ZERO engagement with the current approach. You must write something fundamentally different from what has been posted before.
+
+WHAT HAS FAILED ON ${channelLabel.toUpperCase()} (DO NOT DO ANY OF THESE):
+- Abstract technical thought leadership
+- Industry infrastructure analysis
+- Declarative, impersonal tone explaining what Glossi built
+- Opening with a news hook then pivoting to "here's what we built"
+- Technical jargon: "compositing," "deterministic," "architecture," "infrastructure"
+
+WHAT THE DATA SHOWS WORKS (DO THESE INSTEAD):
+- Founder/creator storytelling: center a real person's experience, not the product
+- Name-dropping culturally relevant brands or people to hook readers
+- Provocative, scenario-based hooks that pull readers into a concrete situation
+- "Before/after" transformation stories showing real results
+- Personal voice: write as if the founder is sharing a genuine insight, not a company publishing content
+- Short, punchy, conversational tone
+
+WRITING RULES:
+- Write in first person as Glossi's founder sharing a personal observation or story
+- Open with a hook that makes someone stop scrolling. Not a news event. A scenario, a question, a surprising result.
+- Every paragraph must feel like a person talking, not a company announcing
+- Use specific names, brands, and numbers from the sources when possible
+- Glossi should appear naturally in the story, not as the thesis of the post
+- NEVER use em dashes. Use commas, periods, semicolons, or parentheses.
+- TARGET: ${wordTarget} words
+
+GLOSSI CONTEXT:
+- First AI-native 3D product visualization platform
+- Core: compositing, not generation. Product 3D asset stays untouched. AI generates scenes around it.
+- Green screen for products. The product is sacred and untouchable.
+- Built on Unreal Engine 5, runs in browser
+- 50+ brands, $200K pipeline, 80% photo cost reduction
+
+SOURCING RULES:
+- Only make claims supported by the provided sources.
+- Include [Source X] citations for factual claims.
+- If you cannot source a claim, mark it [NEEDS SOURCE].
+
+${contentType === 'blog_post' ? `FOR BLOG POSTS, return structured sections in JSON using "blog_title", "blog_sections", and "blog_closing" fields.` : ''}
+${contentType === 'linkedin_post' ? `FORMAT: Flowing prose, 3-5 short paragraphs. No markdown headers. One hashtag max.` : ''}
+
+RESPONSE FORMAT:
+Return JSON with: "content", "citations", "strategy"${contentType === 'tweet' ? ', "tweet_format"' : ''}${contentType === 'blog_post' ? ', "blog_title", "blog_sections", "blog_closing"' : ''}${contentType === 'email_blast' ? ', "subject"' : ''}.
+
+Use \\n\\n between paragraphs in "content". Structure it for readability.`;
   }
 
   setupExternalFileDrop() {
@@ -2611,7 +2684,7 @@ class PRAgent {
       const rawText = await this.streamContent({
         model: selectedModel,
         max_tokens: isTweet ? 1024 : 8192,
-        system: this.getSystemPromptWithInsights(),
+        system: this.getSystemPromptWithInsights(contentType),
         messages: [{ role: 'user', content: isTweet ? userMessage + '\n\nREMINDER: The tweet MUST be under 280 characters. Count carefully. This is a hard platform limit.' : userMessage }],
       });
 
@@ -3472,7 +3545,7 @@ class PRAgent {
           body: JSON.stringify({
             model: 'claude-opus-4-6',
             max_tokens: 8192,
-            system: this.getSystemPromptWithInsights(),
+            system: this.getSystemPromptWithInsights(planItem.type),
             messages: [{ role: 'user', content: userMessage }]
           })
         });
@@ -8524,7 +8597,7 @@ ${primaryContext}${bgContext}`
       const rawText = await this.prAgent.streamContent({
         model: selectedModel,
         max_tokens: isTweetType ? 1024 : 8192,
-        system: this.prAgent.getSystemPromptWithInsights(),
+        system: this.prAgent.getSystemPromptWithInsights(planItem.type),
         messages: [{ role: 'user', content: userMessage }],
       });
 
@@ -9525,7 +9598,7 @@ class AngleManager {
       const rawText = await this.prAgent.streamContent({
         model: selectedModel,
         max_tokens: isTweetADK ? 1024 : 8192,
-        system: this.prAgent.getSystemPromptWithInsights(),
+        system: this.prAgent.getSystemPromptWithInsights(planItem.type),
         messages: [{ role: 'user', content: userMessage }],
       });
 
