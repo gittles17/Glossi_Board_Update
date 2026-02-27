@@ -70,6 +70,16 @@ SOURCING RULES (CRITICAL):
 - If sources are insufficient for the requested content type, tell the user what additional information is needed.
 - Do not invent quotes. Do not fabricate analyst commentary. Do not assume future features.
 
+CONTENT PERFORMANCE INSIGHTS (when provided):
+- You may receive performance data from published posts showing what content patterns are working and what is not.
+- Actively apply these insights to shape your output. They are strategic direction, not just context.
+- Favor patterns identified as high-performing: match topics, hooks, formats, and lengths that drove engagement.
+- Avoid patterns flagged as underperforming. Do not repeat approaches that failed.
+- Adapt channel-specific framing based on channel fit data (e.g. if data shows technical posts perform best on LinkedIn, lean technical for LinkedIn content).
+- Weave "Content Suggestions" from the insights directly into the content you produce when relevant.
+- Do NOT cite insights as a [Source X]. They inform your creative approach, not your factual claims.
+- If insights conflict with the user's custom instructions, the user's instructions take priority.
+
 GLOSSI CONTEXT:
 - Company name: "Glossi" (always with an "i", never "Glossy")
 - First AI-native 3D product visualization platform
@@ -2028,7 +2038,7 @@ class PRAgent {
     if (!this.liveDataSources.contentInsights.enabled) return '';
     const insights = this.liveManager?.cachedInsights;
     if (!insights) return '';
-    return `--- Live Source: Content Insights ---\nThese insights are derived from analyzing published social media post performance. Use them to inform tone, topic selection, and platform strategy.\n\n${insights}\n---`;
+    return insights;
   }
 
   setupExternalFileDrop() {
@@ -2575,7 +2585,7 @@ class PRAgent {
     let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
     
     if (insightsContext) {
-      userMessage += `CONTENT PERFORMANCE INSIGHTS (from your published posts):\n${insightsContext}\n\n`;
+      userMessage += `CONTENT PERFORMANCE INSIGHTS (apply these patterns to shape your output):\n${insightsContext}\n\n`;
     }
 
     if (this.angleContext) {
@@ -3440,6 +3450,10 @@ class PRAgent {
 
         const typeLabel = label;
         let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
+        const regenInsights = this.getContentInsightsContext();
+        if (regenInsights) {
+          userMessage += `CONTENT PERFORMANCE INSIGHTS (apply these patterns to shape your output):\n${regenInsights}\n\n`;
+        }
         const angleNarrative = newsItem?.angle_narrative || newsItem?.relevance || newsItem?.summary || '';
         if (angleNarrative) {
           userMessage += `STORY ANGLE (use this as your narrative framework):\n${angleNarrative}\n\n`;
@@ -8445,6 +8459,11 @@ ${primaryContext}${bgContext}`
     // Build prompt with primary/context separation for custom stories
     let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
 
+    const planInsights = this.prAgent.getContentInsightsContext();
+    if (planInsights) {
+      userMessage += `CONTENT PERFORMANCE INSIGHTS (apply these patterns to shape your output):\n${planInsights}\n\n`;
+    }
+
     if (isCustom && activeStory.primarySourceId) {
       // Separate primary source from background context
       const primarySource = selectedSources.find(s => s.id === activeStory.primarySourceId);
@@ -9495,6 +9514,10 @@ class AngleManager {
     }).join('\n\n');
 
     let userMessage = `Generate a ${typeLabel} based on the following sources.\n\n`;
+    const newsInsights = this.prAgent.getContentInsightsContext();
+    if (newsInsights) {
+      userMessage += `CONTENT PERFORMANCE INSIGHTS (apply these patterns to shape your output):\n${newsInsights}\n\n`;
+    }
     userMessage += `STORY ANGLE (use this as your narrative framework):\n${angle.narrative}\n\n`;
     if (planItem.target) {
       userMessage += `Target: ${planItem.target}\n\n`;

@@ -1745,7 +1745,7 @@ ${milestonesData}
       const insightsData = this.getContentInsightsData();
       if (insightsData) {
         parts.push(`--- Dashboard Source: Content Insights (Live) ---
-These insights are derived from analyzing published social media post performance. Use them to inform content strategy recommendations.
+Performance data from published social media posts. Apply these patterns when making content strategy recommendations.
 
 ${insightsData}
 ---`);
