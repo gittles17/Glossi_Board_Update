@@ -2107,17 +2107,17 @@ WHAT HAS FAILED ON ${channelLabel.toUpperCase()} (DO NOT DO ANY OF THESE):
 - Technical jargon: "compositing," "deterministic," "architecture," "infrastructure"
 
 WHAT THE DATA SHOWS WORKS (DO THESE INSTEAD):
-- Founder/creator storytelling: center a real person's experience, not the product
+- Customer/creator storytelling: center a real person's or brand's experience, not the product
 - Name-dropping culturally relevant brands or people to hook readers
 - Provocative, scenario-based hooks that pull readers into a concrete situation
 - "Before/after" transformation stories showing real results
-- Personal voice: write as if the founder is sharing a genuine insight, not a company publishing content
+- Conversational company voice: write as "we" (the Glossi team), sharing what we've seen and built
 - Short, punchy, conversational tone
 
 WRITING RULES:
-- Write in first person as Glossi's founder sharing a personal observation or story
-- Open with a hook that makes someone stop scrolling. Not a news event. A scenario, a question, a surprising result.
-- Every paragraph must feel like a person talking, not a company announcing
+- Write as "we" (the Glossi team), not "I". This is a company account, not a personal one.
+- Open with a hook that makes someone stop scrolling. Not a news event. A scenario, a question, a surprising customer result.
+- Every paragraph must feel conversational and direct, not like a press release
 - Use specific names, brands, and numbers from the sources when possible
 - Glossi should appear naturally in the story, not as the thesis of the post
 - NEVER use em dashes. Use commas, periods, semicolons, or parentheses.
