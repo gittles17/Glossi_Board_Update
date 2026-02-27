@@ -716,6 +716,9 @@ class PRAgent {
           if (result.settings.liveDataExpanded !== undefined) {
             this.liveDataExpanded = result.settings.liveDataExpanded;
           }
+          if (result.settings.cachedInsights && this.liveDataSources.contentInsights.enabled) {
+            this._serverCachedInsights = result.settings.cachedInsights;
+          }
         } else {
           this.settings = {};
           this.folders = [];
@@ -2054,8 +2057,7 @@ class PRAgent {
 
   getContentInsightsContext() {
     if (!this.liveDataSources.contentInsights.enabled) return '';
-    const insights = this.liveManager?.cachedInsights;
-    if (!insights) return '';
+    const insights = this.liveManager?.cachedInsights || this._serverCachedInsights || '';
     return insights;
   }
 
@@ -4422,9 +4424,12 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
       // Build context from the captured target output (not this.currentOutput)
       const context = this.buildChatContext(targetOutput);
       
-      const systemPrompt = `You are a PR content refinement assistant for Glossi. The user has generated PR content and wants to refine it.
+      const insightsCtx = this.getContentInsightsContext();
+      const insightsSection = insightsCtx ? `\nCONTENT PERFORMANCE DATA (use these patterns to guide your refinement):\n${insightsCtx}\n\nWhen refining, apply these insights. If the data shows a pattern is underperforming, steer the content away from it. If a pattern is working, lean into it.\n` : '';
 
-VOICE RULES (from PR system prompt):
+      const systemPrompt = `You are a PR content refinement assistant for Glossi. The user has generated PR content and wants to refine it.
+${insightsSection}
+VOICE RULES:
 - Open with what happened or what the product does. Never with how you feel.
 - Short sentences. Period-separated thoughts. Not comma-laden ones.
 - Numbers over adjectives.
@@ -13244,6 +13249,8 @@ CHANNEL FIT:
 
       const text = res?.content?.[0]?.text || res?.message || '';
       this.cachedInsights = text;
+      this.prAgent._serverCachedInsights = text;
+      this.persistInsightsToServer(text);
       this.renderInsightsText(text);
 
     } catch (err) {
@@ -13253,6 +13260,20 @@ CHANNEL FIT:
     } finally {
       this.insightsLoading = false;
       if (regenBtn) regenBtn.classList.remove('spinning');
+    }
+  }
+
+  async persistInsightsToServer(text) {
+    try {
+      const settings = this.prAgent.settings || {};
+      settings.cachedInsights = text;
+      await fetch('/api/pr/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings })
+      });
+    } catch {
+      // silent
     }
   }
 
