@@ -4390,19 +4390,27 @@ body{background:#fff;color:#171717;font-family:'Inter',system-ui,-apple-system,s
       // Build context from the captured target output (not this.currentOutput)
       const context = this.buildChatContext(targetOutput);
       
-      const insightsCtx = this.getContentInsightsContext();
-      const insightsSection = insightsCtx ? `\nCONTENT PERFORMANCE DATA (use these patterns to guide your refinement):\n${insightsCtx}\n\nWhen refining, apply these insights. If the data shows a pattern is underperforming, steer the content away from it. If a pattern is working, lean into it.\n` : '';
+      const contentType = this.currentOutput?.content_type || '';
+      const insightsPrompt = this.getSystemPromptWithInsights(contentType);
+      const isFullRewrite = /regenerate|rewrite|from scratch|start over|redo/i.test(message);
 
-      const systemPrompt = `You are a PR content refinement assistant for Glossi. The user has generated PR content and wants to refine it.
+      let systemPrompt;
+      if (isFullRewrite) {
+        systemPrompt = `${insightsPrompt}\n\nCURRENT CONTEXT (the user wants this completely rewritten):\n${context}\n\nUSER REQUEST: ${message}\n\nGenerate a completely new version following the CONTENT STRATEGY above. Return ONLY the complete new content (no explanations, no JSON wrapper, just the refined text).`;
+      } else {
+        const insightsCtx = this.getContentInsightsContext();
+        const insightsSection = insightsCtx ? `\nCONTENT PERFORMANCE DATA (use these patterns to guide your refinement):\n${insightsCtx}\n` : '';
+
+        systemPrompt = `You are a PR content refinement assistant for Glossi. The user wants to refine existing PR content.
 ${insightsSection}
 VOICE RULES:
-- Open with what happened or what the product does. Never with how you feel.
 - Short sentences. Period-separated thoughts. Not comma-laden ones.
 - Numbers over adjectives.
 - Name the specific technology.
 - Never use: "excited to announce", "thrilled", "groundbreaking", "game-changing"
 - No exclamation marks.
 - The confidence comes from specificity, not volume.
+- Use "we" (company voice), never "I".
 - NEVER use em dashes (\u2014), en dashes (\u2013), or double hyphens (--). Use commas, periods, semicolons, or parentheses instead.
 
 CURRENT CONTEXT:
@@ -4411,6 +4419,7 @@ ${context}
 USER REQUEST: ${message}
 
 Apply the requested refinement and return ONLY the complete refined content (no explanations, no tags, just the refined text).`;
+      }
 
       // Call API via proxy
       const response = await this.apiCall('/api/chat', {
