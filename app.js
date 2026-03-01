@@ -51,11 +51,15 @@ class GlossiDashboard {
       'ricky': 'Ricky',
       'jonathan': 'Jonathan',
       'will': 'Will',
-      'david': 'David'
+      'david': 'David',
+      'andrew': 'Andrew'
     };
     
+    // Canonical display order for action item groups
+    this.ownerOrder = ['Will', 'Jonathan', 'Ricky', 'Andrew', 'David', 'Adam'];
+    
     // Available team members for quick assignment (loaded in init from server/localStorage)
-    this.teamMembers = ['Ricky', 'Jonathan', 'Adam', 'Will', 'David', 'Unassigned'];
+    this.teamMembers = ['Will', 'Jonathan', 'Ricky', 'Andrew', 'David', 'Adam', 'Unassigned'];
   }
   
   /**
@@ -362,7 +366,13 @@ class GlossiDashboard {
     // Render active todos grouped by owner
     if (activeTodos.length > 0) {
       const activeByOwner = groupByOwner(activeTodos);
-      Object.entries(activeByOwner).forEach(([owner, todos]) => {
+      const sortedOwners = Object.keys(activeByOwner).sort((a, b) => {
+        const idxA = this.ownerOrder.indexOf(a);
+        const idxB = this.ownerOrder.indexOf(b);
+        return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+      });
+      sortedOwners.forEach(owner => {
+        const todos = activeByOwner[owner];
         html += `
           <div class="todo-group" data-owner="${owner}">
             <div class="todo-group-header">
