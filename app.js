@@ -409,28 +409,19 @@ class GlossiDashboard {
   setupTodoEditListeners(container) {
     // Text editing (contenteditable)
     container.querySelectorAll('.editable-item').forEach(item => {
-      let inputDebounce = null;
-
-      // Auto-save on typing (debounced) so edits persist even without blur
       item.addEventListener('input', (e) => {
-        clearTimeout(inputDebounce);
-        inputDebounce = setTimeout(() => {
-          const todoId = e.target.dataset.todoId;
-          const type = e.target.dataset.type;
-          const newValue = e.target.textContent.trim();
-          if (type === 'todo-text' && newValue) {
-            storage.updateTodo(todoId, { text: newValue });
-          }
-        }, 300);
-      });
-
-      item.addEventListener('blur', (e) => {
-        // Clear any pending debounce and save immediately on blur
-        clearTimeout(inputDebounce);
         const todoId = e.target.dataset.todoId;
         const type = e.target.dataset.type;
         const newValue = e.target.textContent.trim();
-        
+        if (type === 'todo-text' && newValue) {
+          storage.updateTodo(todoId, { text: newValue });
+        }
+      });
+
+      item.addEventListener('blur', (e) => {
+        const todoId = e.target.dataset.todoId;
+        const type = e.target.dataset.type;
+        const newValue = e.target.textContent.trim();
         if (type === 'todo-text' && newValue) {
           storage.updateTodo(todoId, { text: newValue });
         }
@@ -8588,6 +8579,17 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('beforeunload', flushBeforeLeave);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') flushBeforeLeave();
+  });
+
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href]');
+    if (!link) return;
+    const href = link.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:')) return;
+    if (link.target === '_blank') return;
+    e.preventDefault();
+    flushBeforeLeave();
+    window.location.href = href;
   });
 });
 
