@@ -1812,7 +1812,31 @@ class Storage {
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
-      this.save();
+    }
+    if (this._syncTimeout) {
+      clearTimeout(this._syncTimeout);
+      this._syncTimeout = null;
+    }
+    this._syncBeacon();
+  }
+
+  /**
+   * Fire-and-forget sync via sendBeacon (reliable during page unload)
+   */
+  _syncBeacon() {
+    try {
+      const payload = JSON.stringify({
+        data: this.data,
+        meetings: this.meetings,
+        settings: this.settings,
+        pipelineHistory: this.pipelineHistory,
+        statHistory: this.statHistory,
+        todos: this.todos,
+        teamMembers: this.teamMembers
+      });
+      navigator.sendBeacon('/api/data', new Blob([payload], { type: 'application/json' }));
+    } catch (e) {
+      // Best-effort; nothing more we can do during unload
     }
   }
 

@@ -8576,14 +8576,18 @@ document.addEventListener('DOMContentLoaded', () => {
   window.dashboard = new GlossiDashboard();
   window.dashboard.init();
   
-  // Flush pending edits and clear intervals before page unload
-  window.addEventListener('beforeunload', () => {
+  const flushBeforeLeave = () => {
     if (window.dashboard) {
       window.dashboard.savePendingTodoEdits();
       if (window.dashboard._pipelineRefreshInterval) clearInterval(window.dashboard._pipelineRefreshInterval);
       if (window.dashboard._pipelineSyncInterval) clearInterval(window.dashboard._pipelineSyncInterval);
     }
     storage.flushPendingSave();
+  };
+
+  window.addEventListener('beforeunload', flushBeforeLeave);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushBeforeLeave();
   });
 });
 
