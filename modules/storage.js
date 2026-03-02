@@ -94,6 +94,7 @@ class Storage {
     this.statHistory = [];
     this.saveTimeout = null;
     this.serverAvailable = false;
+    this.excludeFromSync = new Set();
   }
 
   /**
@@ -1825,15 +1826,7 @@ class Storage {
    */
   _syncBeacon() {
     try {
-      const payload = JSON.stringify({
-        data: this.data,
-        meetings: this.meetings,
-        settings: this.settings,
-        pipelineHistory: this.pipelineHistory,
-        statHistory: this.statHistory,
-        todos: this.todos,
-        teamMembers: this.teamMembers
-      });
+      const payload = JSON.stringify(this._buildSyncPayload());
       navigator.sendBeacon('/api/data', new Blob([payload], { type: 'application/json' }));
     } catch (e) {
       // Best-effort; nothing more we can do during unload
@@ -1876,25 +1869,40 @@ class Storage {
     this._syncTimeout = setTimeout(() => this._doSyncToServer(), 500);
   }
 
+  async syncNow() {
+    if (this._syncTimeout) {
+      clearTimeout(this._syncTimeout);
+      this._syncTimeout = null;
+    }
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
+    await this._doSyncToServer();
+  }
+
   /**
    * Perform the actual server sync
    */
+  _buildSyncPayload() {
+    const ex = this.excludeFromSync;
+    return {
+      data: ex.has('data') ? undefined : this.data,
+      meetings: ex.has('meetings') ? undefined : this.meetings,
+      settings: ex.has('settings') ? undefined : this.settings,
+      pipelineHistory: ex.has('pipelineHistory') ? undefined : this.pipelineHistory,
+      statHistory: ex.has('statHistory') ? undefined : this.statHistory,
+      todos: ex.has('todos') ? undefined : this.todos,
+      teamMembers: ex.has('teamMembers') ? undefined : this.teamMembers
+    };
+  }
+
   async _doSyncToServer() {
     try {
       const response = await fetch('/api/data', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          data: this.data,
-          meetings: this.meetings,
-          settings: this.settings,
-          pipelineHistory: this.pipelineHistory,
-          statHistory: this.statHistory,
-          todos: this.todos,
-          teamMembers: this.teamMembers
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this._buildSyncPayload())
       });
 
       if (response.ok) {

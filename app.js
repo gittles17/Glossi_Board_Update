@@ -8588,8 +8588,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:')) return;
     if (link.target === '_blank') return;
     e.preventDefault();
-    flushBeforeLeave();
-    window.location.href = href;
+    if (window.dashboard) {
+      window.dashboard.savePendingTodoEdits();
+    }
+    storage.syncNow().finally(() => {
+      window.location.href = href;
+    });
   });
 });
 

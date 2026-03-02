@@ -372,6 +372,7 @@
     // Initialize Notebook page
     document.addEventListener('DOMContentLoaded', async () => {
       const storage = new Storage();
+      storage.excludeFromSync = new Set(['todos', 'teamMembers']);
       await storage.init();
       
       const aiProcessor = new AIProcessor();
