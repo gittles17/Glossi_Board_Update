@@ -640,83 +640,95 @@ app.post('/api/chat/stream', async (req, res) => {
 
   const maxRetries = 3;
   const retryableStatuses = [429, 502, 503, 529];
+  const requestedModel = model || 'claude-opus-4-6';
+  const fallbackModel = requestedModel.includes('opus') ? 'claude-sonnet-4-20250514' : null;
+  const modelsToTry = fallbackModel ? [requestedModel, fallbackModel] : [requestedModel];
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await axios.post('https://api.anthropic.com/v1/messages', {
-        model: model || 'claude-opus-4-6',
-        max_tokens: max_tokens || 4096,
-        system: system || '',
-        messages,
-        stream: true
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01'
-        },
-        timeout: 180000,
-        responseType: 'stream'
-      });
+  for (const activeModel of modelsToTry) {
+    let succeeded = false;
 
-      let buffer = '';
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await axios.post('https://api.anthropic.com/v1/messages', {
+          model: activeModel,
+          max_tokens: max_tokens || 4096,
+          system: system || '',
+          messages,
+          stream: true
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01'
+          },
+          timeout: 180000,
+          responseType: 'stream'
+        });
 
-      response.data.on('data', (chunk) => {
-        buffer += chunk.toString();
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        let buffer = '';
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const jsonStr = line.slice(6).trim();
-            if (!jsonStr) continue;
-            try {
-              const event = JSON.parse(jsonStr);
-              if (event.type === 'content_block_delta' && event.delta?.text) {
-                res.write(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`);
-              } else if (event.type === 'message_stop') {
-                res.write('data: [DONE]\n\n');
-              }
-            } catch (e) { /* skip unparseable lines */ }
+        response.data.on('data', (chunk) => {
+          buffer += chunk.toString();
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const jsonStr = line.slice(6).trim();
+              if (!jsonStr) continue;
+              try {
+                const event = JSON.parse(jsonStr);
+                if (event.type === 'content_block_delta' && event.delta?.text) {
+                  res.write(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`);
+                } else if (event.type === 'message_stop') {
+                  res.write('data: [DONE]\n\n');
+                }
+              } catch (e) { /* skip unparseable lines */ }
+            }
           }
-        }
-      });
+        });
 
-      response.data.on('end', () => {
+        response.data.on('end', () => {
+          if (!res.writableEnded) {
+            res.write('data: [DONE]\n\n');
+            res.end();
+          }
+        });
+
+        response.data.on('error', (err) => {
+          if (!res.writableEnded) {
+            res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+            res.end();
+          }
+        });
+
+        req.on('close', () => {
+          response.data.destroy();
+        });
+
+        return;
+      } catch (error) {
+        const status = error.response?.status;
+        const isRetryable = retryableStatuses.includes(status) || (!status && error.code === 'ECONNRESET');
+
+        if (isRetryable && attempt < maxRetries) {
+          const retryAfter = error.response?.headers?.['retry-after'];
+          const delay = retryAfter ? parseInt(retryAfter, 10) * 1000 : Math.min(1000 * Math.pow(2, attempt), 8000);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+
+        if (activeModel !== modelsToTry[modelsToTry.length - 1]) {
+          console.warn(`Model ${activeModel} failed (${status || error.code}), falling back to ${modelsToTry[modelsToTry.indexOf(activeModel) + 1]}`);
+          break;
+        }
+
         if (!res.writableEnded) {
-          res.write('data: [DONE]\n\n');
+          res.write(`data: ${JSON.stringify({ error: error.response?.data?.error?.message || error.message })}\n\n`);
           res.end();
         }
-      });
-
-      response.data.on('error', (err) => {
-        if (!res.writableEnded) {
-          res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
-          res.end();
-        }
-      });
-
-      req.on('close', () => {
-        response.data.destroy();
-      });
-
-      return;
-    } catch (error) {
-      const status = error.response?.status;
-      const isRetryable = retryableStatuses.includes(status) || (!status && error.code === 'ECONNRESET');
-
-      if (isRetryable && attempt < maxRetries) {
-        const retryAfter = error.response?.headers?.['retry-after'];
-        const delay = retryAfter ? parseInt(retryAfter, 10) * 1000 : Math.min(1000 * Math.pow(2, attempt), 8000);
-        await new Promise(r => setTimeout(r, delay));
-        continue;
+        return;
       }
-
-      if (!res.writableEnded) {
-        res.write(`data: ${JSON.stringify({ error: error.response?.data?.error?.message || error.message })}\n\n`);
-        res.end();
-      }
-      return;
     }
   }
 });
