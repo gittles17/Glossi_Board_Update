@@ -92,6 +92,7 @@ class Storage {
     this.teamMembers = null;
     this.pipelineHistory = [];
     this.statHistory = [];
+    this.pipelineWeeklyHistory = [];
     this.saveTimeout = null;
     this.serverAvailable = false;
     this.excludeFromSync = new Set();
@@ -134,6 +135,9 @@ class Storage {
           if (result.data.stat_history) {
             this.statHistory = result.data.stat_history;
           }
+          if (result.data.pipeline_weekly_history) {
+            this.pipelineWeeklyHistory = result.data.pipeline_weekly_history;
+          }
           if (result.data.todos) {
             this.todos = result.data.todos;
           }
@@ -166,6 +170,9 @@ class Storage {
     }
     if (!this.statHistory) {
       this.statHistory = [];
+    }
+    if (!this.pipelineWeeklyHistory) {
+      this.pipelineWeeklyHistory = [];
     }
 
     // Ensure all required fields exist
@@ -220,12 +227,18 @@ class Storage {
       this.saveStatSnapshot();
     }
 
+    // Seed weekly pipeline history from Dahlia's email reports if empty
+    if (this.pipelineWeeklyHistory.length === 0) {
+      this.seedWeeklyPipelineHistory();
+    }
+
     return {
       data: this.data,
       settings: this.settings,
       meetings: this.meetings,
       pipelineHistory: this.pipelineHistory,
-      statHistory: this.statHistory
+      statHistory: this.statHistory,
+      pipelineWeeklyHistory: this.pipelineWeeklyHistory
     };
   }
 
@@ -1022,7 +1035,11 @@ class Storage {
       syncedAt: syncTime || new Date().toISOString()
     };
     this.data.lastUpdated = new Date().toISOString();
-    // Save immediately to server for cross-page access
+
+    if (this.shouldTakeWeeklySnapshot() && deals && deals.length > 0) {
+      this.savePipelineWeeklySnapshot(deals, 'sheet');
+    }
+
     this.save();
     return this.data.googleSheetPipeline;
   }
@@ -1032,6 +1049,262 @@ class Storage {
    */
   getGoogleSheetPipeline() {
     return this.data.googleSheetPipeline || null;
+  }
+
+  // =====================================================
+  // WEEKLY PIPELINE HISTORY (week-over-week tracking)
+  // =====================================================
+
+  getWeekKey(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.setDate(diff));
+    return monday.toISOString().split('T')[0];
+  }
+
+  savePipelineWeeklySnapshot(deals, source = 'sheet', highlights = []) {
+    const now = new Date();
+    const weekKey = this.getWeekKey(now);
+
+    const existing = this.pipelineWeeklyHistory.findIndex(s => s.weekOf === weekKey);
+
+    const snapshot = {
+      id: `week-${weekKey}`,
+      weekOf: weekKey,
+      capturedAt: now.toISOString(),
+      source,
+      deals: (deals || []).map(d => ({
+        name: d.name || '',
+        stage: d.stage || '',
+        value: d.value || '',
+        owner: d.owner || '',
+        note: d.note || d.nextTask || ''
+      })),
+      highlights
+    };
+
+    if (existing >= 0) {
+      this.pipelineWeeklyHistory[existing] = snapshot;
+    } else {
+      this.pipelineWeeklyHistory.push(snapshot);
+    }
+
+    if (this.pipelineWeeklyHistory.length > 52) {
+      this.pipelineWeeklyHistory.sort((a, b) => a.weekOf.localeCompare(b.weekOf));
+      this.pipelineWeeklyHistory = this.pipelineWeeklyHistory.slice(-52);
+    }
+
+    this.syncToServer();
+    return snapshot;
+  }
+
+  shouldTakeWeeklySnapshot() {
+    if (this.pipelineWeeklyHistory.length === 0) return true;
+    const lastWeek = this.pipelineWeeklyHistory
+      .sort((a, b) => b.weekOf.localeCompare(a.weekOf))[0];
+    if (!lastWeek) return true;
+    const currentWeek = this.getWeekKey(new Date());
+    return lastWeek.weekOf !== currentWeek;
+  }
+
+  getPipelineWeeklyHistory() {
+    return [...this.pipelineWeeklyHistory].sort((a, b) => b.weekOf.localeCompare(a.weekOf));
+  }
+
+  computeWeeklyChanges(currentSnapshot, previousSnapshot) {
+    if (!previousSnapshot || !currentSnapshot) return null;
+
+    const prevDeals = previousSnapshot.deals || [];
+    const currDeals = currentSnapshot.deals || [];
+    const prevMap = new Map(prevDeals.map(d => [d.name.toLowerCase(), d]));
+    const currMap = new Map(currDeals.map(d => [d.name.toLowerCase(), d]));
+
+    const newDeals = [];
+    const removedDeals = [];
+    const stageChanges = [];
+    const valueChanges = [];
+
+    currDeals.forEach(deal => {
+      const key = deal.name.toLowerCase();
+      const prev = prevMap.get(key);
+      if (!prev) {
+        newDeals.push(deal);
+      } else {
+        const prevStage = (prev.stage || '').toLowerCase();
+        const currStage = (deal.stage || '').toLowerCase();
+        if (prevStage !== currStage) {
+          stageChanges.push({
+            name: deal.name,
+            fromStage: prev.stage,
+            toStage: deal.stage,
+            value: deal.value,
+            note: deal.note
+          });
+        }
+        const prevVal = this.parseMoneyString(prev.value);
+        const currVal = this.parseMoneyString(deal.value);
+        if (prevVal !== currVal && (prevVal > 0 || currVal > 0)) {
+          valueChanges.push({
+            name: deal.name,
+            oldValue: prev.value,
+            newValue: deal.value,
+            stage: deal.stage
+          });
+        }
+      }
+    });
+
+    prevDeals.forEach(deal => {
+      const key = deal.name.toLowerCase();
+      if (!currMap.has(key)) {
+        removedDeals.push(deal);
+      }
+    });
+
+    return {
+      fromWeek: previousSnapshot.weekOf,
+      toWeek: currentSnapshot.weekOf,
+      newDeals,
+      removedDeals,
+      stageChanges,
+      valueChanges,
+      highlights: currentSnapshot.highlights || [],
+      dealCountChange: currDeals.length - prevDeals.length
+    };
+  }
+
+  parseMoneyString(val) {
+    if (!val) return 0;
+    const str = String(val).replace(/[^0-9.KMkm]/g, '');
+    let num = parseFloat(str) || 0;
+    if (/[Mm]/.test(val)) num *= 1000000;
+    else if (/[Kk]/.test(val)) num *= 1000;
+    return num;
+  }
+
+  getAllWeeklyChanges() {
+    const history = this.getPipelineWeeklyHistory();
+    const changes = [];
+    for (let i = 0; i < history.length - 1; i++) {
+      const change = this.computeWeeklyChanges(history[i], history[i + 1]);
+      if (change) changes.push(change);
+    }
+    return changes;
+  }
+
+  seedWeeklyPipelineHistory() {
+    const seeds = [
+      {
+        id: 'week-2026-02-03',
+        weekOf: '2026-02-03',
+        capturedAt: '2026-02-03T17:00:00Z',
+        source: 'email',
+        deals: [
+          { name: 'Peleman', stage: 'Proposal', value: '$50K', owner: 'Dahlia', note: 'Connecting with Thomas on pricing' },
+          { name: 'Silverside AI', stage: 'Discovery Call', value: '$50K', owner: 'Dahlia', note: 'Meeting with Hershey\'s team at Silverside' },
+          { name: 'Checkpoint Systems', stage: 'Proposal', value: '$50K', owner: 'Dahlia', note: 'Leadership busy, re-engaging next week' },
+          { name: 'MagnaFlow', stage: 'Demo', value: '$50K', owner: 'Dahlia', note: 'Engage the marketing team while design team evaluates' },
+          { name: 'Sunday Dinner', stage: 'Discovery Call', value: '$250K', owner: 'Dahlia', note: 'Cut from $500K to be conservative' },
+          { name: 'Fisher Footwear', stage: 'Connected', value: '', owner: 'Dahlia', note: 'Great call, referred by Sunday Dinner, 18 brands' }
+        ],
+        highlights: [
+          'Pipeline at ~$900K (down from $1.2M, Sunday Dinner adjusted $500K to $250K)',
+          'Fisher Footwear call went well, referred by Sunday Dinner',
+          'Expected Q1 SAAS revenue: $250K+ from 5 deals'
+        ]
+      },
+      {
+        id: 'week-2026-02-10',
+        weekOf: '2026-02-10',
+        capturedAt: '2026-02-10T17:00:00Z',
+        source: 'email',
+        deals: [
+          { name: 'Peleman', stage: 'Proposal', value: '$95K', owner: 'Dahlia', note: 'Verbal commit to 2-year deal, TCV $95K, reviewing SaaS agreement' },
+          { name: 'MagnaFlow', stage: 'Proposal', value: '$95K', owner: 'Dahlia', note: 'Verbal commit to 2-year deal, pitching to marketing team' },
+          { name: 'Silverside AI', stage: 'Demo', value: '$50K', owner: 'Dahlia', note: 'Head of AI and Hershey\'s team love Glossi, meeting CEO for commercial terms' },
+          { name: 'Epic Games', stage: 'Discovery Call', value: '', owner: 'Dahlia', note: 'Expanding use cases, committed to intros to Zalando and LVMH' },
+          { name: 'VNTANA', stage: 'Demo', value: '', owner: 'Dahlia', note: 'API automation partnership, presented today, moving forward' },
+          { name: 'Checkpoint Systems', stage: 'Proposal', value: '$50K', owner: 'Dahlia', note: 'Re-engaging post 2/16' },
+          { name: 'Sunday Dinner', stage: 'Discovery Call', value: '$250K', owner: 'Dahlia', note: '' },
+          { name: 'Fisher Footwear', stage: 'Connected', value: '', owner: 'Dahlia', note: '' }
+        ],
+        highlights: [
+          'Peleman value up to $95K with verbal commit on 2-year deal',
+          'MagnaFlow value up to $95K with verbal commit',
+          'Epic Games exploring joint co-selling opportunities',
+          'VNTANA API partnership presented and moving forward'
+        ]
+      },
+      {
+        id: 'week-2026-02-17',
+        weekOf: '2026-02-17',
+        capturedAt: '2026-02-18T09:00:00Z',
+        source: 'email',
+        deals: [
+          { name: 'MagnaFlow', stage: 'Proposal', value: '$95K', owner: 'Dahlia', note: 'Buy-in from tech AND marketing, meeting to discuss proposal, close by mid-March' },
+          { name: 'Peleman', stage: 'Proposal', value: '$95K', owner: 'Dahlia', note: 'Verbal commit, reviewing SaaS agreement' },
+          { name: 'Silverside AI', stage: 'Demo', value: '$50K', owner: 'Dahlia', note: 'Continuing CEO discussions' },
+          { name: 'Epic Games', stage: 'Discovery Call', value: '', owner: 'Dahlia', note: 'Use case expansion ongoing' },
+          { name: 'VNTANA', stage: 'Demo', value: '', owner: 'Dahlia', note: 'API deal progressing' },
+          { name: 'Checkpoint Systems', stage: 'Proposal', value: '$50K', owner: 'Dahlia', note: 'Post 2/16 re-engagement' },
+          { name: 'Sunday Dinner', stage: 'Discovery Call', value: '$250K', owner: 'Dahlia', note: '' },
+          { name: 'Fisher Footwear', stage: 'Connected', value: '', owner: 'Dahlia', note: '' }
+        ],
+        highlights: [
+          'MagnaFlow has buy-in from both tech and marketing, on track to close by mid-March',
+          'Automated Attio sequences launched for outreach',
+          '$150K target account meeting scheduled for mid-March'
+        ]
+      },
+      {
+        id: 'week-2026-02-24',
+        weekOf: '2026-02-24',
+        capturedAt: '2026-02-24T14:00:00Z',
+        source: 'email',
+        deals: [
+          { name: 'MagnaFlow', stage: 'Proposal', value: '$95K', owner: 'Dahlia', note: 'Onsite visit next week' },
+          { name: 'Peleman', stage: 'Proposal', value: '$95K', owner: 'Dahlia', note: '' },
+          { name: 'Epic Games', stage: 'POC', value: '', owner: 'Dahlia', note: 'Joint co-selling: Unilever, Amazon, Hugo Boss. Setting up account and onboarding' },
+          { name: 'Silverside AI', stage: 'Proposal', value: '$50K', owner: 'Dahlia', note: 'Meeting tomorrow, need Johnny for pricing discussion' },
+          { name: 'Sunday Dinner', stage: 'Discovery Call', value: '$250K', owner: 'Dahlia', note: '' },
+          { name: 'Fisher Footwear', stage: 'Connected', value: '', owner: 'Dahlia', note: '' },
+          { name: 'Mattel', stage: 'Connected', value: '', owner: 'Dahlia', note: 'Elizabeth Kelly, Creative Manager, met at ThinkLA' }
+        ],
+        highlights: [
+          'Pipeline at $965K after stalled/closed accounts cleaned from active pipeline',
+          'Epic Games advancing to joint co-selling with Unilever, Amazon, Hugo Boss',
+          'Silverside AI advancing to pricing discussions',
+          'Mattel new lead from ThinkLA networking',
+          'Stalled deals (Checkpoint, VNTANA) moved to separate tab for later follow-up'
+        ]
+      },
+      {
+        id: 'week-2026-03-02',
+        weekOf: '2026-03-02',
+        capturedAt: '2026-03-02T12:00:00Z',
+        source: 'email',
+        deals: [
+          { name: 'MagnaFlow', stage: 'POC', value: '$95K', owner: 'Dahlia', note: 'Big day tomorrow, focus on automation and roadmap' },
+          { name: 'Checkpoint Systems', stage: 'Discovery Call', value: '$50K', owner: 'Dahlia', note: 'Meeting Simon in person at PI Stride' },
+          { name: 'Silverside AI', stage: 'Proposal', value: '$50K', owner: 'Dahlia', note: 'Johnny hasn\'t met with Allie yet, slight delay' },
+          { name: 'Peleman', stage: 'Proposal', value: '$95K', owner: 'Dahlia', note: 'Reaching out to Thomas to get deal back on track' },
+          { name: 'Mattel', stage: 'Connected', value: '', owner: 'Dahlia', note: 'Scheduling call with Elizabeth Kelly' },
+          { name: 'Epic Games', stage: 'POC', value: '', owner: 'Dahlia', note: '' },
+          { name: 'Sunday Dinner', stage: 'Discovery Call', value: '$250K', owner: 'Dahlia', note: '' },
+          { name: 'Fisher Footwear', stage: 'Connected', value: '', owner: 'Dahlia', note: '' }
+        ],
+        highlights: [
+          'MagnaFlow advancing to POC with onsite visit',
+          'Checkpoint Systems re-engaged, meeting in person at PI Stride',
+          'PI Stride, Natural Products Expo West, and Shoptalk Vegas upcoming',
+          'Peleman outreach to Thomas to get deal back on track'
+        ]
+      }
+    ];
+
+    this.pipelineWeeklyHistory = seeds;
+    this.syncToServer();
   }
 
   /**
@@ -1892,6 +2165,7 @@ class Storage {
       settings: ex.has('settings') ? undefined : this.settings,
       pipelineHistory: ex.has('pipelineHistory') ? undefined : this.pipelineHistory,
       statHistory: ex.has('statHistory') ? undefined : this.statHistory,
+      pipelineWeeklyHistory: ex.has('pipelineWeeklyHistory') ? undefined : this.pipelineWeeklyHistory,
       todos: ex.has('todos') ? undefined : this.todos,
       teamMembers: ex.has('teamMembers') ? undefined : this.teamMembers
     };
@@ -1925,7 +2199,8 @@ class Storage {
       meetings: this.meetings,
       pipelineHistory: this.pipelineHistory,
       statHistory: this.statHistory,
-      settings: { ...this.settings, apiKey: '' }, // Don't export API key
+      pipelineWeeklyHistory: this.pipelineWeeklyHistory,
+      settings: { ...this.settings, apiKey: '' },
       exportedAt: new Date().toISOString()
     }, null, 2);
   }

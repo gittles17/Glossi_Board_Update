@@ -748,7 +748,7 @@ app.post('/api/data', async (req, res) => {
       return res.status(503).json({ success: false, error: 'Database not configured' });
     }
     
-    const { data, meetings, settings, pipelineHistory, statHistory, todos, teamMembers } = req.body;
+    const { data, meetings, settings, pipelineHistory, statHistory, pipelineWeeklyHistory, todos, teamMembers } = req.body;
     
     const saveData = async (key, value) => {
       if (value === undefined) return;
@@ -765,6 +765,7 @@ app.post('/api/data', async (req, res) => {
     await saveData('settings', settings);
     await saveData('pipeline_history', pipelineHistory);
     await saveData('stat_history', statHistory);
+    await saveData('pipeline_weekly_history', pipelineWeeklyHistory);
     await saveData('todos', todos);
     await saveData('team_members', teamMembers);
     

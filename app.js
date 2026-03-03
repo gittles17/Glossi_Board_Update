@@ -1447,6 +1447,15 @@ class GlossiDashboard {
       this.fetchPipelineFromSheet();
     });
 
+    // Pipeline view toggle (Pipeline vs Changes)
+    this.currentPipelineView = 'pipeline';
+    document.getElementById('pipeline-view-btn')?.addEventListener('click', () => {
+      this.switchPipelineView('pipeline');
+    });
+    document.getElementById('changes-view-btn')?.addEventListener('click', () => {
+      this.switchPipelineView('changes');
+    });
+
     // Close modals on overlay click
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('click', (e) => {
@@ -1775,6 +1784,164 @@ class GlossiDashboard {
     ).join(' ');
   }
   
+  switchPipelineView(view) {
+    this.currentPipelineView = view;
+    const pipelineView = document.getElementById('pipeline-view');
+    const changesView = document.getElementById('changes-view');
+    const pipelineBtn = document.getElementById('pipeline-view-btn');
+    const changesBtn = document.getElementById('changes-view-btn');
+
+    if (view === 'pipeline') {
+      if (pipelineView) pipelineView.style.display = '';
+      if (changesView) changesView.style.display = 'none';
+      if (pipelineBtn) pipelineBtn.classList.add('active');
+      if (changesBtn) changesBtn.classList.remove('active');
+    } else {
+      if (pipelineView) pipelineView.style.display = 'none';
+      if (changesView) changesView.style.display = '';
+      if (pipelineBtn) pipelineBtn.classList.remove('active');
+      if (changesBtn) changesBtn.classList.add('active');
+      this.renderPipelineChanges();
+    }
+  }
+
+  renderPipelineChanges() {
+    const weekTabs = document.getElementById('changes-week-tabs');
+    const content = document.getElementById('changes-content');
+    if (!weekTabs || !content) return;
+
+    const history = storage.getPipelineWeeklyHistory();
+    if (history.length < 2) {
+      weekTabs.innerHTML = '';
+      content.innerHTML = '<div class="changes-empty"><p>Need at least 2 weeks of data to show changes. Snapshots are taken automatically each week.</p></div>';
+      return;
+    }
+
+    const allChanges = storage.getAllWeeklyChanges();
+    if (allChanges.length === 0) {
+      weekTabs.innerHTML = '';
+      content.innerHTML = '<div class="changes-empty"><p>No changes detected between weeks.</p></div>';
+      return;
+    }
+
+    if (!this.selectedChangeWeek || !allChanges.find(c => c.toWeek === this.selectedChangeWeek)) {
+      this.selectedChangeWeek = allChanges[0].toWeek;
+    }
+
+    weekTabs.innerHTML = allChanges.map(change => {
+      const isActive = change.toWeek === this.selectedChangeWeek;
+      const weekDate = new Date(change.toWeek + 'T12:00:00');
+      const label = weekDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return `<button class="changes-week-tab ${isActive ? 'active' : ''}" data-week="${change.toWeek}">${label}</button>`;
+    }).join('');
+
+    weekTabs.querySelectorAll('.changes-week-tab').forEach(tab => {
+      tab.onclick = () => {
+        this.selectedChangeWeek = tab.dataset.week;
+        this.renderPipelineChanges();
+      };
+    });
+
+    const selected = allChanges.find(c => c.toWeek === this.selectedChangeWeek);
+    if (!selected) return;
+
+    const toSnapshot = history.find(s => s.weekOf === selected.toWeek);
+    const fromSnapshot = history.find(s => s.weekOf === selected.fromWeek);
+
+    const fromDate = new Date(selected.fromWeek + 'T12:00:00');
+    const toDate = new Date(selected.toWeek + 'T12:00:00');
+    const fromLabel = fromDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const toLabel = toDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    const totalChanges = selected.stageChanges.length + selected.newDeals.length + selected.removedDeals.length + selected.valueChanges.length;
+
+    let html = `<div class="changes-summary">`;
+    html += `<div class="changes-summary-stat"><span class="stat-label">Period</span><span class="stat-value">${fromLabel} &rarr; ${toLabel}</span></div>`;
+    html += `<div class="changes-summary-stat"><span class="stat-label">Deal Count</span><span class="stat-value ${selected.dealCountChange > 0 ? 'positive' : selected.dealCountChange < 0 ? 'negative' : ''}">${(toSnapshot?.deals?.length || 0)} ${selected.dealCountChange !== 0 ? '(' + (selected.dealCountChange > 0 ? '+' : '') + selected.dealCountChange + ')' : ''}</span></div>`;
+    html += `<div class="changes-summary-stat"><span class="stat-label">Changes</span><span class="stat-value">${totalChanges}</span></div>`;
+    html += `</div>`;
+
+    if (selected.stageChanges.length > 0) {
+      html += `<div class="changes-group">`;
+      html += `<div class="changes-group-title">Stage Movements <span class="count-badge">${selected.stageChanges.length}</span></div>`;
+      selected.stageChanges.forEach(change => {
+        html += `<div class="change-card">
+          <div class="change-icon stage-up"><i class="ph-light ph-arrow-right"></i></div>
+          <div class="change-body">
+            <div class="change-deal-name">${this.escapeHtml(change.name)}${change.value ? `<span class="change-value">${this.escapeHtml(change.value)}</span>` : ''}</div>
+            <div class="change-detail"><span class="change-stage-arrow"><span class="from-stage">${this.escapeHtml(change.fromStage)}</span> <span class="arrow">&rarr;</span> <span class="to-stage">${this.escapeHtml(change.toStage)}</span></span></div>
+            ${change.note ? `<div class="change-note">${this.escapeHtml(change.note)}</div>` : ''}
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    if (selected.newDeals.length > 0) {
+      html += `<div class="changes-group">`;
+      html += `<div class="changes-group-title">New Deals <span class="count-badge">${selected.newDeals.length}</span></div>`;
+      selected.newDeals.forEach(deal => {
+        html += `<div class="change-card">
+          <div class="change-icon new-deal"><i class="ph-light ph-plus"></i></div>
+          <div class="change-body">
+            <div class="change-deal-name">${this.escapeHtml(deal.name)}${deal.value ? `<span class="change-value">${this.escapeHtml(deal.value)}</span>` : ''}</div>
+            <div class="change-detail">${this.escapeHtml(deal.stage)}</div>
+            ${deal.note ? `<div class="change-note">${this.escapeHtml(deal.note)}</div>` : ''}
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    if (selected.removedDeals.length > 0) {
+      html += `<div class="changes-group">`;
+      html += `<div class="changes-group-title">Removed from Pipeline <span class="count-badge">${selected.removedDeals.length}</span></div>`;
+      selected.removedDeals.forEach(deal => {
+        html += `<div class="change-card">
+          <div class="change-icon removed"><i class="ph-light ph-minus"></i></div>
+          <div class="change-body">
+            <div class="change-deal-name">${this.escapeHtml(deal.name)}${deal.value ? `<span class="change-value">${this.escapeHtml(deal.value)}</span>` : ''}</div>
+            <div class="change-detail">was ${this.escapeHtml(deal.stage)}</div>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    if (selected.valueChanges.length > 0) {
+      html += `<div class="changes-group">`;
+      html += `<div class="changes-group-title">Value Changes <span class="count-badge">${selected.valueChanges.length}</span></div>`;
+      selected.valueChanges.forEach(change => {
+        const oldNum = storage.parseMoneyString(change.oldValue);
+        const newNum = storage.parseMoneyString(change.newValue);
+        const isUp = newNum > oldNum;
+        html += `<div class="change-card">
+          <div class="change-icon ${isUp ? 'value-up' : 'value-down'}"><i class="ph-light ph-${isUp ? 'trend-up' : 'trend-down'}"></i></div>
+          <div class="change-body">
+            <div class="change-deal-name">${this.escapeHtml(change.name)}</div>
+            <div class="change-detail"><span class="change-stage-arrow"><span class="from-stage">${this.escapeHtml(change.oldValue || '$0')}</span> <span class="arrow">&rarr;</span> <span class="to-stage">${this.escapeHtml(change.newValue || '$0')}</span></span></div>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    if (selected.highlights.length > 0) {
+      html += `<div class="changes-highlights">`;
+      html += `<div class="changes-highlights-title">Highlights</div>`;
+      selected.highlights.forEach(h => {
+        html += `<div class="changes-highlight-item">${this.escapeHtml(h)}</div>`;
+      });
+      html += `</div>`;
+    }
+
+    if (totalChanges === 0 && selected.highlights.length === 0) {
+      html += `<div class="changes-empty"><p>No significant changes this week.</p></div>`;
+    }
+
+    content.innerHTML = html;
+  }
+
   /**
    * Fetch pipeline data from Google Sheet
    */
