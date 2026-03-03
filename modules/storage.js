@@ -232,6 +232,23 @@ class Storage {
       this.seedWeeklyPipelineHistory();
     }
 
+    // Deduplicate weekly snapshots (fixes timezone bug that created same-week duplicates)
+    if (this.pipelineWeeklyHistory.length > 0) {
+      const byWeek = new Map();
+      this.pipelineWeeklyHistory.forEach(snap => {
+        const correctKey = this.getWeekKey(snap.weekOf + 'T12:00:00');
+        const existing = byWeek.get(correctKey);
+        if (!existing || new Date(snap.capturedAt) > new Date(existing.capturedAt)) {
+          byWeek.set(correctKey, { ...snap, weekOf: correctKey, id: `week-${correctKey}` });
+        }
+      });
+      const deduped = [...byWeek.values()].sort((a, b) => a.weekOf.localeCompare(b.weekOf));
+      if (deduped.length !== this.pipelineWeeklyHistory.length) {
+        this.pipelineWeeklyHistory = deduped;
+        this.syncToServer();
+      }
+    }
+
     return {
       data: this.data,
       settings: this.settings,
