@@ -369,6 +369,13 @@ async function initDatabase() {
             ALTER TABLE pr_news_hooks ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP;
           END $$;
         `);
+
+        // Migration: add updated_at to pr_sources
+        await pool.query(`
+          DO $$ BEGIN
+            ALTER TABLE pr_sources ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+          END $$;
+        `);
         
         // Articles feed
         await pool.query(`
@@ -414,6 +421,18 @@ async function initDatabase() {
             status VARCHAR(20) DEFAULT 'pending',
             published_at TIMESTAMP,
             created_at TIMESTAMP DEFAULT NOW()
+          )
+        `);
+
+        // Data point usage tracking for content freshness
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS pr_used_datapoints (
+            id SERIAL PRIMARY KEY,
+            output_id VARCHAR(50),
+            datapoint TEXT NOT NULL,
+            category VARCHAR(50),
+            entity VARCHAR(100),
+            used_at TIMESTAMP DEFAULT NOW()
           )
         `);
 
@@ -1005,6 +1024,89 @@ app.delete('/api/pr/sources/:id', async (req, res) => {
   }
 });
 
+// Extract and store data points from content
+app.post('/api/pr/extract-datapoints', async (req, res) => {
+  try {
+    const { output_id, content } = req.body;
+    if (!useDatabase || !content) {
+      return res.json({ success: true, datapoints: [] });
+    }
+
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicKey) {
+      return res.json({ success: true, datapoints: [] });
+    }
+
+    const response = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: 'claude-haiku-4-5',
+      max_tokens: 1024,
+      system: 'Extract structured data points from PR content. Return ONLY valid JSON.',
+      messages: [{
+        role: 'user',
+        content: `Extract all specific data points (customer names, metrics, statistics, brand references) from this content. Return a JSON array.
+
+CONTENT:
+${content.substring(0, 3000)}
+
+Return ONLY a JSON array in this format:
+[{"datapoint": "MagnaFlow 50x faster rendering", "category": "customer", "entity": "MagnaFlow"}, ...]
+
+Categories: "customer" (brand/company mention with result), "metric" (specific number/stat), "technology" (named tech), "market" (industry claim)
+Entity: the primary brand/company/product name referenced, or null if none.
+
+Return ONLY the JSON array.`
+      }]
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01'
+      },
+      timeout: 15000
+    });
+
+    const text = response.data?.content?.[0]?.text || '[]';
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    const datapoints = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+
+    for (const dp of datapoints) {
+      await pool.query(
+        'INSERT INTO pr_used_datapoints (output_id, datapoint, category, entity, used_at) VALUES ($1, $2, $3, $4, NOW())',
+        [output_id || null, dp.datapoint, dp.category || null, dp.entity || null]
+      );
+    }
+
+    res.json({ success: true, datapoints });
+  } catch (error) {
+    res.json({ success: true, datapoints: [] });
+  }
+});
+
+// Get used datapoints with frequency counts
+app.get('/api/pr/used-datapoints', async (req, res) => {
+  try {
+    if (!useDatabase) {
+      return res.json({ success: true, datapoints: [], overused: [] });
+    }
+
+    const result = await pool.query(`
+      SELECT entity, category, COUNT(*) as usage_count,
+        array_agg(DISTINCT datapoint) as examples,
+        MAX(used_at) as last_used
+      FROM pr_used_datapoints
+      WHERE used_at > NOW() - INTERVAL '30 days' AND entity IS NOT NULL
+      GROUP BY entity, category
+      ORDER BY COUNT(*) DESC
+    `);
+
+    const overused = result.rows.filter(r => parseInt(r.usage_count) >= 3);
+
+    res.json({ success: true, datapoints: result.rows, overused });
+  } catch (error) {
+    res.json({ success: true, datapoints: [], overused: [] });
+  }
+});
+
 // Get all outputs
 app.get('/api/pr/outputs', async (req, res) => {
   try {
@@ -1040,6 +1142,17 @@ app.post('/api/pr/outputs', async (req, res) => {
     `, [id, content_type, title, content, JSON.stringify(sources), JSON.stringify(citations), JSON.stringify(strategy), status, phase || 'edit', story_key || null, news_headline || null, JSON.stringify(drafts || null), content_plan_index != null ? content_plan_index : null, JSON.stringify(media_attachments || null), JSON.stringify(hashtags || null), first_comment || null, JSON.stringify(og_data || null), category || null, is_custom === true, angle_title || null, angle_narrative || null, published_channel || null, tweet_url || null, tweet_id || null, JSON.stringify(tweet_ids || null), published_at || null, JSON.stringify(published_snapshot || null), tweet_format || null, visual_title || null, link_url || null, link_title || null, link_desc || null, og_image || null]);
     
     res.json({ success: true });
+
+    // Async data point extraction (non-blocking)
+    if (content && useDatabase && process.env.ANTHROPIC_API_KEY) {
+      const textContent = typeof content === 'string' ? content : '';
+      if (textContent.length > 50) {
+        axios.post(`http://localhost:${PORT}/api/pr/extract-datapoints`, {
+          output_id: id,
+          content: textContent
+        }).catch(() => {});
+      }
+    }
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

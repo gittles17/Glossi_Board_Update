@@ -1295,9 +1295,16 @@
         });
       }
 
-      // Suggestion buttons - one-click refinement
       if (suggestionsContainer) {
         suggestionsContainer.addEventListener('click', async (e) => {
+          const toneBtn = e.target.closest('.pr-tone-preset-btn');
+          if (toneBtn) {
+            const prompt = toneBtn.dataset.tonePrompt;
+            const chatInput = document.getElementById('pr-chat-input');
+            if (chatInput) chatInput.value = prompt;
+            await pr.sendChatMessage();
+            return;
+          }
           const btn = e.target.closest('.pr-suggestion-btn');
           if (btn) {
             const suggestion = btn.dataset.suggestion;

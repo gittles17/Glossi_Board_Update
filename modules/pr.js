@@ -59,6 +59,13 @@ GLOSSI TIE-BACK:
 - Every piece needs a clear Glossi perspective. If it could be published by any company without changing a word, it's not specific enough.
 - The Glossi connection should be structural, not cosmetic. Never bolt it on as an afterthought.
 
+ARTICLE-FIRST RULE:
+- The imported article's data, examples, and narrative should be the PRIMARY content driver.
+- Glossi proof points are supporting evidence, not the main story.
+- If the article names companies, protocols, or trends, those must appear prominently in the output.
+- The Glossi tie-back answers "how does Glossi solve the problem this article raises?" not "here are our usual stats."
+- Using article-specific data makes content timely and newsworthy. Recycling the same company examples does not.
+
 SOURCING RULES (CRITICAL):
 - You may ONLY make claims that are directly supported by the provided sources.
 - Every factual claim must include a citation reference [Source X].
@@ -168,6 +175,33 @@ Return your response in this exact JSON structure:
 }`;
 
 const PR_SYSTEM_PROMPT = PR_VOICE_DNA;
+
+const TONE_PRESETS = [
+  {
+    id: 'founder',
+    label: 'Founder Mode',
+    icon: 'ph-user',
+    prompt: 'Rewrite this content in Founder Mode. Raw and opinionated. First person singular ("I"), not "we". Write like a founder posting on X or LinkedIn from personal experience. Strong opinions stated plainly. No hedging, no qualifiers. Reference what you have seen building the company. Sound like someone who has been in the room making the decisions, not someone summarizing them. Keep it under the original word count.'
+  },
+  {
+    id: 'editorial',
+    label: 'Editorial',
+    icon: 'ph-newspaper',
+    prompt: 'Rewrite this content in Editorial mode. Polished, analytical, third-person perspective. Write like a tech journalist or industry analyst covering the topic. Remove all "we" and "our" references. Frame Glossi as a company being observed, not a company speaking. Use precise language. Cite data points with context. The tone should feel like something published in a respected trade publication. Keep it under the original word count.'
+  },
+  {
+    id: 'product',
+    label: 'Product-Led',
+    icon: 'ph-code',
+    prompt: 'Rewrite this content in Product-Led mode. Changelog energy. What shipped, what it does, why it matters, move on. Think Linear release notes or Cursor changelogs. Lead with the capability, not the narrative. Strip out market analysis and trend commentary. Focus on what the product does and what result it produces. Short paragraphs. Concrete. Technical where appropriate. Keep it under the original word count.'
+  },
+  {
+    id: 'conversational',
+    label: 'Conversational',
+    icon: 'ph-chat-circle',
+    prompt: 'Rewrite this content in Conversational mode. Casual, approachable, Twitter-native energy. Write like you are explaining this to a smart friend over coffee. Use contractions. Use sentence fragments where they land better. Drop the corporate framing entirely. The insight should feel discovered, not presented. Shorter overall. Punchier. The kind of post someone screenshots and shares. Keep it under the original word count.'
+  }
+];
 
 function glossiLoaderSVG(extraClass = '') {
   const cls = extraClass ? `glossi-loader ${extraClass}` : 'glossi-loader';
@@ -1784,11 +1818,24 @@ class PRAgent {
       `;
     };
 
+    const getSourceFreshness = (source) => {
+      const rawDate = source.updated_at || source.updatedAt || source.createdAt || source.created_at || source.addedAt;
+      if (!rawDate) return '';
+      const date = new Date(rawDate);
+      if (isNaN(date.getTime())) return '';
+      const daysSince = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSince < 7) return 'fresh';
+      if (daysSince < 30) return 'aging';
+      return 'stale';
+    };
+
     const renderSourceItem = (source, isBackground = false) => {
       const rawDate = source.createdAt || source.created_at || source.addedAt;
       const parsed = rawDate ? new Date(rawDate) : null;
       const date = parsed && !isNaN(parsed.getTime()) ? parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
       const loadingClass = source.loading ? 'loading' : '';
+      const freshness = isBackground ? getSourceFreshness(source) : '';
+      const freshnessIndicator = freshness ? `<span class="pr-source-freshness ${freshness}" title="${freshness === 'fresh' ? 'Updated recently' : freshness === 'aging' ? 'Getting stale' : 'Needs update'}"></span>` : '';
       const loadingIndicator = source.loading ? `
         <div class="pr-source-loading-overlay">
           ${glossiLoaderSVG('glossi-loader-xs')}
@@ -1802,6 +1849,7 @@ class PRAgent {
             <div class="pr-source-header">
               <span class="pr-source-type-icon">${typeIcons[source.type] || typeIcons.text}</span>
               <span class="pr-source-title">${this.escapeHtml(source.title)}</span>
+              ${freshnessIndicator}
             </div>
             ${date ? `<div class="pr-source-meta"><span class="pr-source-date">${date}</span></div>` : ''}
           </div>
@@ -1820,9 +1868,17 @@ class PRAgent {
     const isGlossiExpanded = this.expandedFolders['About Glossi'] !== false;
     const isContentExpanded = this.expandedFolders['Content Sources'] !== false;
 
-    let html = '';
+    const allGlossiStale = glossiSources.length > 0 && glossiSources.every(s => getSourceFreshness(s) === 'stale');
+    const staleBannerDismissed = this._staleBannerDismissed || false;
+    const staleBannerHtml = (allGlossiStale && !staleBannerDismissed) ? `
+      <div class="pr-stale-banner" id="pr-stale-banner">
+        <i class="ph-light ph-warning"></i>
+        <span>Company sources haven't been updated in 30+ days. Fresh data leads to better engagement.</span>
+        <button class="pr-stale-banner-dismiss" id="pr-stale-banner-dismiss" title="Dismiss"><i class="ph-light ph-x"></i></button>
+      </div>` : '';
 
-    // About Glossi folder (always first)
+    let html = staleBannerHtml;
+
     html += `
       <div class="pr-folder pr-system-folder ${isGlossiExpanded ? 'expanded' : ''}" data-folder="About Glossi">
         <div class="pr-folder-header">
@@ -1885,6 +1941,15 @@ class PRAgent {
     this.dom.sourcesList.innerHTML = liveDataHtml + html + dropIndicator;
 
     this.setupLiveDataHandlers();
+
+    const staleDismissBtn = document.getElementById('pr-stale-banner-dismiss');
+    if (staleDismissBtn) {
+      staleDismissBtn.addEventListener('click', () => {
+        this._staleBannerDismissed = true;
+        const banner = document.getElementById('pr-stale-banner');
+        if (banner) banner.remove();
+      });
+    }
 
     this.dom.sourcesList.querySelectorAll('.pr-folder-header').forEach(header => {
       header.addEventListener('click', () => {
@@ -2044,9 +2109,9 @@ class PRAgent {
     return insights;
   }
 
-  getSystemPromptWithInsights(contentType) {
+  getSystemPromptWithInsights(contentType, freshnessData) {
     const insights = this.getContentInsightsContext();
-    if (!insights) return PR_VOICE_DNA;
+    if (!insights && !freshnessData) return PR_VOICE_DNA;
 
     const channelMap = { linkedin_post: 'LinkedIn', blog_post: 'Blog', tweet: 'X', email_blast: 'Email', product_announcement: 'Product', talking_points: 'Talking Points', investor_snippet: 'Investor Update' };
     const channelLabel = channelMap[contentType] || 'General';
@@ -2054,13 +2119,26 @@ class PRAgent {
     const recentPosts = this.getRecentPostsForChannel(contentType);
     const recentPostsBlock = recentPosts ? `\nRECENT ${channelLabel.toUpperCase()} POSTS (do not repeat the same stats, hooks, examples, or structure):\n${recentPosts}\n` : '';
 
+    let freshnessBlock = '';
+    if (freshnessData && freshnessData.overused && freshnessData.overused.length > 0) {
+      const overusedList = freshnessData.overused.map(d =>
+        `- ${d.entity} (used ${d.usage_count}x in last 30 days)`
+      ).join('\n');
+      freshnessBlock = `
+DATA FRESHNESS (critical for content variety):
+
+OVERUSED (3+ times in last 30 days, AVOID unless the article specifically references them):
+${overusedList}
+
+RULE: If an overused data point appears in your draft, replace it with article-specific data or an underutilized proof point from the sources.
+`;
+    }
+
     const contentStrategy = `
 
 CONTENT STRATEGY FOR ${channelLabel.toUpperCase()} (derived from your published post performance data):
 
-PERFORMANCE DATA:
-${insights}
-${recentPostsBlock}
+${insights ? `PERFORMANCE DATA:\n${insights}\n` : ''}${recentPostsBlock}${freshnessBlock}
 Based on the performance data above, follow this strategy for ${channelLabel} content:
 
 OPENING STRATEGY:
@@ -2072,7 +2150,7 @@ STORY STRUCTURE:
 - Lead with a customer's problem or result grounded in concrete terms (named brand, specific number).
 - Keep the "why" brief (1-2 sentences max on why current tools fail).
 - Show what we built through the green screen analogy and specific capabilities.
-- Prove it with named customer results (MagnaFlow 50x faster, Crate & Barrel instant renders, etc.).
+- Ground claims in specific customer results from the provided sources. Prioritize examples NOT in the OVERUSED list (see DATA FRESHNESS section if present).
 - Close with a forward-looking statement grounded in what we've already built.
 
 WHAT TO INCLUDE:
@@ -2633,12 +2711,10 @@ WHAT TO AVOID:
     this.isGenerating = true;
     this.updateGenerateButton();
     
-    // Switch to workspace tab immediately
     const workspaceTab = document.querySelector('[data-workspace-tab="content"]');
     if (workspaceTab) {
       workspaceTab.click();
     }
-    // Also handle mobile tab switch
     const mobileWorkspaceTab = document.querySelector('.pr-mobile-tab[data-tab="workspace"]');
     if (mobileWorkspaceTab) {
       mobileWorkspaceTab.click();
@@ -2646,6 +2722,12 @@ WHAT TO AVOID:
     
     const loaderContext = { tweet: 'tweet', linkedin_post: 'linkedin', blog_post: 'blog', email_blast: 'email', product_announcement: 'product', talking_points: 'talking_points', investor_snippet: 'investor' }[contentType] || 'general';
     this.showLoading(loaderContext);
+
+    let freshnessData = null;
+    try {
+      const fdRes = await this.apiCall('/api/pr/used-datapoints');
+      if (fdRes && fdRes.success) freshnessData = fdRes;
+    } catch { /* non-critical */ }
 
     const sourcesContext = selectedSources.map((s, i) => {
       return `[Source ${i + 1}] (ID: ${s.id})\nTitle: ${s.title}\nType: ${s.type}\nContent:\n${s.content}\n---`;
@@ -2672,7 +2754,7 @@ WHAT TO AVOID:
       const rawText = await this.streamContent({
         model: selectedModel,
         max_tokens: isTweet ? 1024 : 8192,
-        system: this.getSystemPromptWithInsights(contentType),
+        system: this.getSystemPromptWithInsights(contentType, freshnessData),
         messages: [{ role: 'user', content: isTweet ? userMessage + '\n\nREMINDER: The tweet MUST be under 280 characters. Count carefully. This is a hard platform limit.' : userMessage }],
       });
 
@@ -4566,17 +4648,25 @@ Return ONLY the JSON array, nothing else.`;
       const jsonMatch = responseText.match(/\[[\s\S]*\]/);
       const suggestions = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
 
-      // Render suggestions
-      container.innerHTML = suggestions.map(suggestion =>
+      const suggestionsHtml = suggestions.map(suggestion =>
         `<button class="pr-suggestion-btn" data-suggestion="${this.escapeHtml(suggestion)}">${this.escapeHtml(suggestion)}</button>`
       ).join('');
 
+      const tonePresetsHtml = TONE_PRESETS.map(p =>
+        `<button class="pr-tone-preset-btn" data-tone-id="${p.id}" data-tone-prompt="${this.escapeHtml(p.prompt)}" title="Rewrite in ${p.label} voice"><i class="ph-light ${p.icon}"></i> ${p.label}</button>`
+      ).join('');
+
+      container.innerHTML = suggestionsHtml + `<div class="pr-tone-presets-row">${tonePresetsHtml}</div>`;
+
     } catch (error) {
-      // Fallback to default suggestions
+      const tonePresetsHtml = TONE_PRESETS.map(p =>
+        `<button class="pr-tone-preset-btn" data-tone-id="${p.id}" data-tone-prompt="${this.escapeHtml(p.prompt)}" title="Rewrite in ${p.label} voice"><i class="ph-light ${p.icon}"></i> ${p.label}</button>`
+      ).join('');
       container.innerHTML = `
         <button class="pr-suggestion-btn" data-suggestion="Make more direct">Make more direct</button>
         <button class="pr-suggestion-btn" data-suggestion="Shorten by 20%">Shorten by 20%</button>
         <button class="pr-suggestion-btn" data-suggestion="Add specific metrics">Add specific metrics</button>
+        <div class="pr-tone-presets-row">${tonePresetsHtml}</div>
       `;
     }
 
@@ -13186,6 +13276,15 @@ class LiveManager {
         `${ch}: ${d.count} posts, ${d.likes} likes, ${d.comments} comments, ${d.shares} shares`
       ).join('\n');
 
+      let freshnessSection = '';
+      try {
+        const fdRes = await this.prAgent.apiCall('/api/pr/used-datapoints');
+        if (fdRes?.success && fdRes.overused?.length > 0) {
+          freshnessSection = '\nDATA POINT USAGE (last 30 days):\n' +
+            fdRes.overused.map(d => `- ${d.entity}: used ${d.usage_count}x (examples: ${(d.examples || []).slice(0, 2).join(', ')})`).join('\n') + '\n';
+        }
+      } catch { /* non-critical */ }
+
       const prompt = `Analyze this social media content performance data for Glossi (a 3D product visualization and creative automation platform). Identify patterns and give actionable suggestions.
 
 TOP PERFORMING POSTS:
@@ -13198,8 +13297,8 @@ CHANNEL BREAKDOWN:
 ${channelBreakdown}
 
 TOTALS: ${stats.total} posts, ${stats.totalEngagement} total engagement, ${stats.engagementRate} avg engagement/post
-
-Respond in exactly this format with 4 sections. Use concise bullet points. No fluff.
+${freshnessSection}
+Respond in exactly this format with 5 sections. Use concise bullet points. No fluff.
 
 WORKING:
 - [pattern 1 about what content performs best]
@@ -13218,7 +13317,11 @@ SUGGESTIONS:
 
 CHANNEL FIT:
 - [which content type works best on which platform]
-- [recommendation 2]`;
+- [recommendation 2]
+
+DATA FRESHNESS:
+- [which data points or customer examples are overused based on the usage data above]
+- [recommendation for which proof points or angles to use next]`;
 
       const res = await this.prAgent.apiCall('/api/chat', {
         method: 'POST',
