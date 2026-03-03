@@ -2249,33 +2249,48 @@ app.post('/api/pr/analyze-url', async (req, res) => {
       }
     }
 
-    // Fetch article content
-    const fetchResponse = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      timeout: 30000
-    });
-
-    const html = fetchResponse.data;
-    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const articleTitle = titleMatch ? titleMatch[1].trim() : new URL(url).hostname;
-
-    // Extract text content
-    let text = html;
-    text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-    text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-    text = text.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '');
-    text = text.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '');
-    text = text.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
-    text = text.replace(/<[^>]+>/g, ' ');
-    text = text.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
-    text = text.replace(/\s+/g, ' ').trim();
-    const articleContent = text.substring(0, 3000);
-
     // Extract domain for outlet name
     const domain = new URL(url).hostname.replace('www.', '');
     const outlet = normalizeOutletName(domain);
+
+    // Fetch article content (graceful fallback if site blocks server requests)
+    let articleTitle = '';
+    let articleContent = '';
+    try {
+      const fetchResponse = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Cache-Control': 'no-cache'
+        },
+        timeout: 15000,
+        maxRedirects: 5
+      });
+
+      const html = fetchResponse.data;
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      articleTitle = titleMatch ? titleMatch[1].trim() : '';
+
+      let text = html;
+      text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+      text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+      text = text.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '');
+      text = text.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '');
+      text = text.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
+      text = text.replace(/<[^>]+>/g, ' ');
+      text = text.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+      text = text.replace(/\s+/g, ' ').trim();
+      articleContent = text.substring(0, 3000);
+    } catch (fetchErr) {
+      console.warn(`Could not fetch article content (${fetchErr.message}), analyzing from URL only`);
+    }
+
+    if (!articleTitle) {
+      const pathParts = new URL(url).pathname.split('/').filter(Boolean).pop() || '';
+      articleTitle = pathParts.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || outlet;
+    }
 
     // Analyze with Claude
     const analysisPrompt = `You are analyzing a single article for Glossi, an AI-powered 3D product visualization platform.
@@ -2289,7 +2304,7 @@ ARTICLE:
 Title: ${articleTitle}
 Source: ${outlet}
 URL: ${url}
-Content: ${articleContent}
+${articleContent ? `Content: ${articleContent}` : 'Content: (could not fetch, analyze based on title, source, and URL)'}
 
 Analyze this article and return a JSON object with:
 {
